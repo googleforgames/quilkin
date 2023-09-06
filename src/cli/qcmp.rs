@@ -52,7 +52,12 @@ impl Ping {
                 .await
                 .unwrap();
 
-            let Ok(socket_result) = tokio::time::timeout(std::time::Duration::from_secs(1), socket.recv_from(&mut buf)).await else {
+            let Ok(socket_result) = tokio::time::timeout(
+                std::time::Duration::from_secs(1),
+                socket.recv_from(&mut buf),
+            )
+            .await
+            else {
                 tracing::error!(endpoint=%self.endpoint, "exceeded timeout duration");
                 continue;
             };

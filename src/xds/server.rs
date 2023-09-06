@@ -301,8 +301,16 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
     ) -> Result<tonic::Response<Self::StreamAggregatedResourcesStream>, tonic::Status> {
         tracing::info!("control plane discovery stream attempt");
         let mut responses = responses.into_inner();
-        let Some(identifier) = responses.next().await.ok_or_else(|| tonic::Status::cancelled("received empty first response"))??.control_plane.map(|cp| cp.identifier) else {
-            return Err(tonic::Status::invalid_argument("DiscoveryResponse.control_plane.identifier is required in the first message"))
+        let Some(identifier) = responses
+            .next()
+            .await
+            .ok_or_else(|| tonic::Status::cancelled("received empty first response"))??
+            .control_plane
+            .map(|cp| cp.identifier)
+        else {
+            return Err(tonic::Status::invalid_argument(
+                "DiscoveryResponse.control_plane.identifier is required in the first message",
+            ));
         };
 
         tracing::info!(%identifier, "new control plane discovery stream");
