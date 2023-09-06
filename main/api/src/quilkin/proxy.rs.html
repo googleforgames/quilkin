@@ -235,13 +235,6 @@
 <a href="#235" id="235">235</a>
 <a href="#236" id="236">236</a>
 <a href="#237" id="237">237</a>
-<a href="#238" id="238">238</a>
-<a href="#239" id="239">239</a>
-<a href="#240" id="240">240</a>
-<a href="#241" id="241">241</a>
-<a href="#242" id="242">242</a>
-<a href="#243" id="243">243</a>
-<a href="#244" id="244">244</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -267,11 +260,10 @@
 <span class="kw">use crate</span>::{
     endpoint::{Endpoint, EndpointAddress},
     filters::{Filter, ReadContext},
-    ttl_map::TryResult,
     Config,
 };
 
-<span class="kw">pub use </span>sessions::{Session, SessionArgs, SessionKey, SessionMap};
+<span class="kw">pub use </span>sessions::{Session, SessionKey, SessionMap};
 
 <span class="doccomment">/// Packet received from local port
 </span><span class="attr">#[derive(Debug)]
@@ -448,24 +440,20 @@
             dest: endpoint.address.clone(),
         };
 
-        <span class="kw">let </span>send_future = <span class="kw">match </span>sessions.try_get(<span class="kw-2">&amp;</span>session_key) {
-            TryResult::Present(entry) =&gt; entry.send(packet),
-            TryResult::Absent =&gt; {
-                <span class="kw">let </span>session_args = SessionArgs {
-                    config: config.clone(),
-                    source: session_key.source.clone(),
-                    downstream_socket: downstream_socket.clone(),
-                    dest: endpoint.clone(),
+        <span class="kw">let </span>send_future = <span class="kw">match </span>sessions.get(<span class="kw-2">&amp;</span>session_key) {
+            <span class="prelude-val">Some</span>(entry) =&gt; entry.send(packet),
+            <span class="prelude-val">None </span>=&gt; {
+                <span class="kw">let </span>session = Session::new(
+                    config.clone(),
+                    session_key.source.clone(),
+                    downstream_socket.clone(),
+                    endpoint.clone(),
                     asn_info,
-                };
+                )<span class="question-mark">?</span>;
 
-                <span class="kw">let </span>session = session_args.into_session().<span class="kw">await</span><span class="question-mark">?</span>;
                 <span class="kw">let </span>future = session.send(packet);
                 sessions.insert(session_key, session);
                 future
-            }
-            TryResult::Locked =&gt; {
-                <span class="kw">return </span><span class="prelude-val">Err</span>(PipelineError::SessionMapLocked);
             }
         };
 
@@ -477,8 +465,6 @@
 </span><span class="kw">pub enum </span>PipelineError {
     <span class="attr">#[error(<span class="string">&quot;No upstream endpoints available&quot;</span>)]
     </span>NoUpstreamEndpoints,
-    <span class="attr">#[error(<span class="string">&quot;session map was locked&quot;</span>)]
-    </span>SessionMapLocked,
     <span class="attr">#[error(<span class="string">&quot;filter {0}&quot;</span>)]
     </span>Filter(<span class="attr">#[from] </span><span class="kw">crate</span>::filters::FilterError),
     <span class="attr">#[error(<span class="string">&quot;qcmp: {0}&quot;</span>)]

@@ -368,6 +368,23 @@
 <a href="#368" id="368">368</a>
 <a href="#369" id="369">369</a>
 <a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -388,7 +405,12 @@
 
 <span class="kw">use </span>std::sync::Arc;
 
-<span class="kw">use </span>tokio::{net::UdpSocket, select, sync::watch, time::Instant};
+<span class="kw">use </span>tokio::{
+    net::UdpSocket,
+    select,
+    sync::{watch, OnceCell},
+    time::Instant,
+};
 
 <span class="kw">use crate</span>::{
     endpoint::{Endpoint, EndpointAddress},
@@ -405,7 +427,7 @@
     <span class="doccomment">/// created_at is time at which the session was created
     </span>created_at: Instant,
     <span class="doccomment">/// socket that sends and receives from and to the endpoint address
-    </span>upstream_socket: Arc&lt;UdpSocket&gt;,
+    </span>upstream_socket: Arc&lt;OnceCell&lt;Arc&lt;UdpSocket&gt;&gt;&gt;,
     <span class="doccomment">/// dest is where to send data to
     </span>dest: Endpoint,
     <span class="doccomment">/// address of original sender
@@ -438,49 +460,55 @@
     dest: EndpointAddress,
 }
 
-<span class="kw">pub struct </span>SessionArgs {
-    <span class="kw">pub </span>config: Arc&lt;<span class="kw">crate</span>::Config&gt;,
-    <span class="kw">pub </span>source: EndpointAddress,
-    <span class="kw">pub </span>downstream_socket: Arc&lt;UdpSocket&gt;,
-    <span class="kw">pub </span>dest: Endpoint,
-    <span class="kw">pub </span>asn_info: <span class="prelude-ty">Option</span>&lt;IpNetEntry&gt;,
-}
-
-<span class="kw">impl </span>SessionArgs {
-    <span class="doccomment">/// Creates a new Session, and starts the process of receiving udp sockets
-    /// from its ephemeral port from endpoint(s)
-    </span><span class="kw">pub async fn </span>into_session(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Session, <span class="kw">super</span>::PipelineError&gt; {
-        Session::new(<span class="self">self</span>).<span class="kw">await
-    </span>}
-}
-
 <span class="kw">impl </span>Session {
     <span class="doccomment">/// internal constructor for a Session from SessionArgs
     </span><span class="attr">#[tracing::instrument(skip_all)]
-    </span><span class="kw">async fn </span>new(args: SessionArgs) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw">super</span>::PipelineError&gt; {
-        <span class="kw">let </span>addr = (std::net::Ipv4Addr::UNSPECIFIED, <span class="number">0</span>);
-        <span class="kw">let </span>upstream_socket = Arc::new(UdpSocket::bind(addr).<span class="kw">await</span><span class="question-mark">?</span>);
-        upstream_socket
-            .connect(args.dest.address.to_socket_addr().<span class="kw">await</span><span class="question-mark">?</span>)
-            .<span class="kw">await</span><span class="question-mark">?</span>;
+    </span><span class="kw">pub fn </span>new(
+        config: Arc&lt;<span class="kw">crate</span>::Config&gt;,
+        source: EndpointAddress,
+        downstream_socket: Arc&lt;UdpSocket&gt;,
+        dest: Endpoint,
+        asn_info: <span class="prelude-ty">Option</span>&lt;IpNetEntry&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw">super</span>::PipelineError&gt; {
         <span class="kw">let </span>(shutdown_tx, shutdown_rx) = watch::channel::&lt;()&gt;(());
 
         <span class="kw">let </span>s = Session {
-            config: args.config.clone(),
-            upstream_socket,
-            source: args.source.clone(),
-            dest: args.dest,
+            config: config.clone(),
+            upstream_socket: Arc::new(OnceCell::new()),
+            source: source.clone(),
+            dest,
             created_at: Instant::now(),
             shutdown_tx,
-            asn_info: args.asn_info,
+            asn_info,
         };
 
         <span class="macro">tracing::debug!</span>(source = %s.source, dest = <span class="question-mark">?</span>s.dest, <span class="string">&quot;Session created&quot;</span>);
 
         <span class="self">self</span>::metrics::total_sessions().inc();
         s.active_session_metric().inc();
-        s.run(args.downstream_socket, shutdown_rx);
+        s.run(downstream_socket, shutdown_rx);
         <span class="prelude-val">Ok</span>(s)
+    }
+
+    <span class="kw">fn </span>upstream_socket(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+    ) -&gt; <span class="kw">impl </span>std::future::Future&lt;Output = <span class="prelude-ty">Result</span>&lt;Arc&lt;UdpSocket&gt;, <span class="kw">super</span>::PipelineError&gt;&gt; {
+        <span class="kw">let </span>upstream_socket = <span class="self">self</span>.upstream_socket.clone();
+        <span class="kw">let </span>address = <span class="self">self</span>.dest.address.clone();
+
+        <span class="kw">async move </span>{
+            upstream_socket
+                .get_or_try_init(|| <span class="kw">async </span>{
+                    <span class="kw">let </span>upstream_socket =
+                        UdpSocket::bind((std::net::Ipv4Addr::UNSPECIFIED, <span class="number">0</span>)).<span class="kw">await</span><span class="question-mark">?</span>;
+                    upstream_socket
+                        .connect(address.to_socket_addr().<span class="kw">await</span><span class="question-mark">?</span>)
+                        .<span class="kw">await</span><span class="question-mark">?</span>;
+                    <span class="prelude-val">Ok</span>(Arc::new(upstream_socket))
+                })
+                .<span class="kw">await
+                </span>.cloned()
+        }
     }
 
     <span class="doccomment">/// run starts processing receiving upstream udp packets
@@ -489,12 +517,20 @@
         <span class="kw">let </span>source = <span class="self">self</span>.source.clone();
         <span class="kw">let </span>config = <span class="self">self</span>.config.clone();
         <span class="kw">let </span>endpoint = <span class="self">self</span>.dest.clone();
-        <span class="kw">let </span>upstream_socket = <span class="self">self</span>.upstream_socket.clone();
+        <span class="kw">let </span>upstream_socket = <span class="self">self</span>.upstream_socket();
         <span class="kw">let </span>asn_info = <span class="self">self</span>.asn_info.clone();
 
         tokio::spawn(<span class="kw">async move </span>{
             <span class="kw">let </span><span class="kw-2">mut </span>buf: Vec&lt;u8&gt; = <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">65535</span>];
             <span class="kw">let </span><span class="kw-2">mut </span>last_received_at = <span class="prelude-val">None</span>;
+            <span class="kw">let </span>upstream_socket = <span class="kw">match </span>upstream_socket.<span class="kw">await </span>{
+                <span class="prelude-val">Ok</span>(socket) =&gt; socket,
+                <span class="prelude-val">Err</span>(error) =&gt; {
+                    <span class="macro">tracing::error!</span>(%error, <span class="string">&quot;upstream socket failed to initialise&quot;</span>);
+                    <span class="kw">return</span>;
+                }
+            };
+
             <span class="kw">loop </span>{
                 <span class="macro">tracing::debug!</span>(source = %source, dest = <span class="question-mark">?</span>endpoint, <span class="string">&quot;Awaiting incoming packet&quot;</span>);
                 <span class="kw">let </span>asn_info = asn_info.as_ref();
@@ -596,8 +632,8 @@
         contents = %<span class="kw">crate</span>::utils::base64_encode(buf),
         <span class="string">&quot;sending packet upstream&quot;</span>);
 
-        <span class="kw">let </span>socket = <span class="self">self</span>.upstream_socket.clone();
-        <span class="kw">async move </span>{ socket.send(buf).<span class="kw">await</span>.map_err(From::from) }
+        <span class="kw">let </span>socket = <span class="self">self</span>.upstream_socket();
+        <span class="kw">async move </span>{ socket.<span class="kw">await</span><span class="question-mark">?</span>.send(buf).<span class="kw">await</span>.map_err(From::from) }
     }
 }
 
@@ -647,7 +683,7 @@
 
     <span class="kw">use crate</span>::{
         endpoint::{Endpoint, EndpointAddress},
-        proxy::sessions::{ReceivedPacketContext, SessionArgs},
+        proxy::sessions::ReceivedPacketContext,
         test_utils::{create_socket, new_test_config, TestHelper},
     };
 
@@ -659,17 +695,15 @@
         <span class="kw">let </span>socket = Arc::new(create_socket().<span class="kw">await</span>);
         <span class="kw">let </span>msg = <span class="string">&quot;hello&quot;</span>;
 
-        <span class="kw">let </span>sess = Session::new(SessionArgs {
-            config: &lt;<span class="kw">_</span>&gt;::default(),
-            source: addr.clone(),
-            downstream_socket: socket.clone(),
-            dest: endpoint,
-            asn_info: <span class="prelude-val">None</span>,
-        })
-        .<span class="kw">await
-        </span>.unwrap();
+        <span class="kw">let </span>sess =
+            Session::new(&lt;<span class="kw">_</span>&gt;::default(), addr.clone(), socket.clone(), endpoint, <span class="prelude-val">None</span>).unwrap();
 
-        sess.send(msg.as_bytes()).<span class="kw">await</span>.unwrap();
+        sess.upstream_socket()
+            .<span class="kw">await
+            </span>.unwrap()
+            .send(msg.as_bytes())
+            .<span class="kw">await
+            </span>.unwrap();
 
         <span class="kw">let </span><span class="kw-2">mut </span>buf = <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">1024</span>];
         <span class="kw">let </span>(size, recv_addr) = timeout(Duration::from_secs(<span class="number">5</span>), socket.recv_from(<span class="kw-2">&amp;mut </span>buf))
