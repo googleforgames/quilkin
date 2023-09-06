@@ -60,6 +60,7 @@ impl Timestamp {
         };
 
         // Create a normal DateTime from the NaiveDateTime
+        #[allow(deprecated)]
         let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
 
         let now = Utc::now();
