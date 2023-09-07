@@ -5,7 +5,7 @@
 * A \*nix terminal
 * A binary release of Quilkin from the [Github releases page](https://github.com/googleforgames/quilkin/releases) or by running `cargo install quilkin`
 * [ncat](https://nmap.org/ncat/guide/)
-* [netcat](http://netcat.sourceforge.net/)
+* [netcat](https://nmap.org/ncat/)
 
 ## 1. Start an udp echo service
 
