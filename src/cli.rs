@@ -19,10 +19,12 @@ use std::{
     sync::Arc,
 };
 
+use clap::builder::TypedValueParser;
 use clap::crate_version;
 use tokio::{signal, sync::watch};
 
 use crate::{admin::Mode, Config};
+use strum_macros::{Display, EnumString};
 
 pub use self::{
     agent::Agent, generate_config_schema::GenerateConfigSchema, manage::Manage, proxy::Proxy,
@@ -68,6 +70,26 @@ pub struct Cli {
     pub quiet: bool,
     #[clap(subcommand)]
     pub command: Commands,
+    #[clap(
+    long,
+    default_value_t = LogFormats::Detect,
+    value_parser = clap::builder::PossibleValuesParser::new(["detect", "json", "pretty", "ppretty"])
+    .map(|s| s.parse::<LogFormats>().unwrap()),
+    )]
+    pub log_format: LogFormats,
+}
+
+/// The various log format options
+#[derive(Copy, Clone, PartialEq, Eq, Debug, EnumString, Display)]
+pub enum LogFormats {
+    #[strum(serialize = "detect")]
+    Detect,
+    #[strum(serialize = "json")]
+    Json,
+    #[strum(serialize = "pretty")]
+    Pretty,
+    #[strum(serialize = "ppretty")]
+    PrettyPretty,
 }
 
 /// The various Quilkin commands.
@@ -101,11 +123,22 @@ impl Cli {
             let env_filter = tracing_subscriber::EnvFilter::builder()
                 .with_default_directive(tracing_subscriber::filter::LevelFilter::INFO.into())
                 .from_env_lossy();
-            tracing_subscriber::fmt()
-                .json()
+            let subscriber = tracing_subscriber::fmt()
                 .with_file(true)
-                .with_env_filter(env_filter)
-                .init();
+                .with_env_filter(env_filter);
+
+            match self.log_format {
+                LogFormats::Detect => {
+                    if atty::isnt(atty::Stream::Stdout) {
+                        subscriber.json().init();
+                    } else {
+                        subscriber.init();
+                    }
+                }
+                LogFormats::Json => subscriber.json().init(),
+                LogFormats::Pretty => subscriber.init(),
+                LogFormats::PrettyPretty => subscriber.pretty().init(),
+            }
         }
 
         tracing::info!(
