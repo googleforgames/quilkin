@@ -18,7 +18,12 @@ pub(crate) mod metrics;
 
 use std::sync::Arc;
 
-use tokio::{net::UdpSocket, select, sync::watch, time::Instant};
+use tokio::{
+    net::UdpSocket,
+    select,
+    sync::{watch, OnceCell},
+    time::Instant,
+};
 
 use crate::{
     endpoint::{Endpoint, EndpointAddress},
@@ -35,7 +40,7 @@ pub struct Session {
     /// created_at is time at which the session was created
     created_at: Instant,
     /// socket that sends and receives from and to the endpoint address
-    upstream_socket: Arc<UdpSocket>,
+    upstream_socket: Arc<OnceCell<Arc<UdpSocket>>>,
     /// dest is where to send data to
     dest: Endpoint,
     /// address of original sender
@@ -68,49 +73,55 @@ struct ReceivedPacketContext<'a> {
     dest: EndpointAddress,
 }
 
-pub struct SessionArgs {
-    pub config: Arc<crate::Config>,
-    pub source: EndpointAddress,
-    pub downstream_socket: Arc<UdpSocket>,
-    pub dest: Endpoint,
-    pub asn_info: Option<IpNetEntry>,
-}
-
-impl SessionArgs {
-    /// Creates a new Session, and starts the process of receiving udp sockets
-    /// from its ephemeral port from endpoint(s)
-    pub async fn into_session(self) -> Result<Session, super::PipelineError> {
-        Session::new(self).await
-    }
-}
-
 impl Session {
     /// internal constructor for a Session from SessionArgs
     #[tracing::instrument(skip_all)]
-    async fn new(args: SessionArgs) -> Result<Self, super::PipelineError> {
-        let addr = (std::net::Ipv4Addr::UNSPECIFIED, 0);
-        let upstream_socket = Arc::new(UdpSocket::bind(addr).await?);
-        upstream_socket
-            .connect(args.dest.address.to_socket_addr().await?)
-            .await?;
+    pub fn new(
+        config: Arc<crate::Config>,
+        source: EndpointAddress,
+        downstream_socket: Arc<UdpSocket>,
+        dest: Endpoint,
+        asn_info: Option<IpNetEntry>,
+    ) -> Result<Self, super::PipelineError> {
         let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
 
         let s = Session {
-            config: args.config.clone(),
-            upstream_socket,
-            source: args.source.clone(),
-            dest: args.dest,
+            config: config.clone(),
+            upstream_socket: Arc::new(OnceCell::new()),
+            source: source.clone(),
+            dest,
             created_at: Instant::now(),
             shutdown_tx,
-            asn_info: args.asn_info,
+            asn_info,
         };
 
         tracing::debug!(source = %s.source, dest = ?s.dest, "Session created");
 
         self::metrics::total_sessions().inc();
         s.active_session_metric().inc();
-        s.run(args.downstream_socket, shutdown_rx);
+        s.run(downstream_socket, shutdown_rx);
         Ok(s)
+    }
+
+    fn upstream_socket(
+        &self,
+    ) -> impl std::future::Future<Output = Result<Arc<UdpSocket>, super::PipelineError>> {
+        let upstream_socket = self.upstream_socket.clone();
+        let address = self.dest.address.clone();
+
+        async move {
+            upstream_socket
+                .get_or_try_init(|| async {
+                    let upstream_socket =
+                        UdpSocket::bind((std::net::Ipv4Addr::UNSPECIFIED, 0)).await?;
+                    upstream_socket
+                        .connect(address.to_socket_addr().await?)
+                        .await?;
+                    Ok(Arc::new(upstream_socket))
+                })
+                .await
+                .cloned()
+        }
     }
 
     /// run starts processing receiving upstream udp packets
@@ -119,12 +130,20 @@ impl Session {
         let source = self.source.clone();
         let config = self.config.clone();
         let endpoint = self.dest.clone();
-        let upstream_socket = self.upstream_socket.clone();
+        let upstream_socket = self.upstream_socket();
         let asn_info = self.asn_info.clone();
 
         tokio::spawn(async move {
             let mut buf: Vec<u8> = vec![0; 65535];
             let mut last_received_at = None;
+            let upstream_socket = match upstream_socket.await {
+                Ok(socket) => socket,
+                Err(error) => {
+                    tracing::error!(%error, "upstream socket failed to initialise");
+                    return;
+                }
+            };
+
             loop {
                 tracing::debug!(source = %source, dest = ?endpoint, "Awaiting incoming packet");
                 let asn_info = asn_info.as_ref();
@@ -226,8 +245,8 @@ impl Session {
         contents = %crate::utils::base64_encode(buf),
         "sending packet upstream");
 
-        let socket = self.upstream_socket.clone();
-        async move { socket.send(buf).await.map_err(From::from) }
+        let socket = self.upstream_socket();
+        async move { socket.await?.send(buf).await.map_err(From::from) }
     }
 }
 
@@ -277,7 +296,7 @@ mod tests {
 
     use crate::{
         endpoint::{Endpoint, EndpointAddress},
-        proxy::sessions::{ReceivedPacketContext, SessionArgs},
+        proxy::sessions::ReceivedPacketContext,
         test_utils::{create_socket, new_test_config, TestHelper},
     };
 
@@ -289,17 +308,15 @@ mod tests {
         let socket = Arc::new(create_socket().await);
         let msg = "hello";
 
-        let sess = Session::new(SessionArgs {
-            config: <_>::default(),
-            source: addr.clone(),
-            downstream_socket: socket.clone(),
-            dest: endpoint,
-            asn_info: None,
-        })
-        .await
-        .unwrap();
+        let sess =
+            Session::new(<_>::default(), addr.clone(), socket.clone(), endpoint, None).unwrap();
 
-        sess.send(msg.as_bytes()).await.unwrap();
+        sess.upstream_socket()
+            .await
+            .unwrap()
+            .send(msg.as_bytes())
+            .await
+            .unwrap();
 
         let mut buf = vec![0; 1024];
         let (size, recv_addr) = timeout(Duration::from_secs(5), socket.recv_from(&mut buf))

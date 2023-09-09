@@ -9,10 +9,9 @@
 [![Discord](https://img.shields.io/discord/773975408265134100)](https://discord.gg/mfBNZjBDnc)
 [![Twitter Follow](https://img.shields.io/twitter/follow/quilkindev?style=social)](https://twitter.com/quilkindev)
 
-Quilkin is a non-transparent UDP proxy specifically designed for use with large scale multiplayer dedicated game servers
-deployments, to ensure security, access control, telemetry data, metrics and more.
- 
-It is designed to be used behind game clients as well as in front of dedicated game servers.
+Quilkin is a non-transparent UDP proxy specifically designed for use with large scale multiplayer dedicated game 
+servers deployments that ensures security, access control, telemetry data, metrics and more without the end user 
+having to custom build and integrate this functionality into their game clients and servers directly.
 
 ## Announcements
 

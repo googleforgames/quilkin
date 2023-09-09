@@ -68,7 +68,11 @@ pub async fn spawn(port: u16) -> crate::Result<()> {
                             }
                         };
 
-                        let Protocol::Ping { client_timestamp, nonce, } = command else {
+                        let Protocol::Ping {
+                            client_timestamp,
+                            nonce,
+                        } = command
+                        else {
                             tracing::warn!("rejected unsupported QCMP packet");
                             continue;
                         };
@@ -206,7 +210,13 @@ impl Protocol {
     ///
     /// [ntp]: https://en.wikipedia.org/wiki/Network_Time_Protocol#Clock_synchronization_algorithm
     pub fn round_trip_delay(&self, client_response_timestamp: i64) -> Option<i64> {
-        let Protocol::PingReply { client_timestamp, server_start_timestamp, server_transmit_timestamp, .. } = self else {
+        let Protocol::PingReply {
+            client_timestamp,
+            server_start_timestamp,
+            server_transmit_timestamp,
+            ..
+        } = self
+        else {
             return None;
         };
 
@@ -243,7 +253,8 @@ impl Protocol {
     /// is not a QCMP packet, and returning `Err` when it was detected as a
     /// QCMP packet, but there was an error in parsing the payload.
     pub fn parse(input: &[u8]) -> Result<Option<Self>> {
-        let Ok((input, _)) = complete::tag::<_, _, nom::error::Error<_>>(MAGIC_NUMBER)(input) else {
+        let Ok((input, _)) = complete::tag::<_, _, nom::error::Error<_>>(MAGIC_NUMBER)(input)
+        else {
             return Ok(None);
         };
 
