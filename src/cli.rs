@@ -80,9 +80,10 @@ pub struct Cli {
 }
 
 /// The various log format options
-#[derive(Copy, Clone, PartialEq, Eq, Debug, EnumString, Display)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, EnumString, Display, Default)]
 pub enum LogFormats {
     #[strum(serialize = "detect")]
+    #[default]
     Detect,
     #[strum(serialize = "json")]
     Json,
@@ -340,6 +341,7 @@ mod tests {
                 }),
                 ..<_>::default()
             }),
+            log_format: LogFormats::default(),
         };
 
         let control_plane_admin_port = crate::test_utils::available_addr().await.port();
@@ -358,6 +360,7 @@ mod tests {
                     path: endpoints_file.path().to_path_buf(),
                 },
             }),
+            log_format: LogFormats::default(),
         };
 
         let proxy_admin_port = crate::test_utils::available_addr().await.port();
@@ -370,6 +373,7 @@ mod tests {
                 management_server: vec!["http://localhost:7800".parse().unwrap()],
                 ..<_>::default()
             }),
+            log_format: LogFormats::default(),
         };
 
         tokio::spawn(relay.drive());
