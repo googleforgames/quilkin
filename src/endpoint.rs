@@ -21,12 +21,7 @@ mod locality;
 
 use serde::{Deserialize, Serialize};
 
-use crate::xds::config::endpoint::v3::{lb_endpoint::HostIdentifier, Endpoint as EnvoyEndpoint};
-
-pub use self::{
-    address::EndpointAddress,
-    locality::{Locality, LocalityEndpoints, LocalitySet},
-};
+pub use self::{address::EndpointAddress, locality::Locality};
 
 pub type EndpointMetadata = crate::metadata::MetadataView<Metadata>;
 
@@ -80,38 +75,32 @@ impl std::str::FromStr for Endpoint {
     }
 }
 
-impl From<Endpoint> for crate::xds::config::endpoint::v3::LbEndpoint {
+impl From<Endpoint> for crate::cluster::proto::Endpoint {
     fn from(endpoint: Endpoint) -> Self {
         Self {
-            host_identifier: Some(HostIdentifier::Endpoint(EnvoyEndpoint {
-                address: Some(endpoint.address.into()),
-                ..<_>::default()
-            })),
+            host: endpoint.address.host.to_string(),
+            port: endpoint.address.port.into(),
             metadata: Some(endpoint.metadata.into()),
-            ..<_>::default()
         }
     }
 }
 
-impl TryFrom<crate::xds::config::endpoint::v3::LbEndpoint> for Endpoint {
+impl TryFrom<crate::cluster::proto::Endpoint> for Endpoint {
     type Error = eyre::Error;
 
-    fn try_from(
-        endpoint: crate::xds::config::endpoint::v3::LbEndpoint,
-    ) -> Result<Self, Self::Error> {
-        let address = match endpoint.host_identifier {
-            Some(HostIdentifier::Endpoint(endpoint)) => EndpointAddress::try_from(endpoint)?,
-            _ => return Err(eyre::eyre!("Endpoint host identifier not supported")),
-        };
+    fn try_from(endpoint: crate::cluster::proto::Endpoint) -> Result<Self, Self::Error> {
+        let host: address::AddressKind = endpoint.host.parse()?;
+        if endpoint.port > u16::MAX as u32 {
+            return Err(eyre::eyre!("invalid endpoint port"));
+        }
 
         Ok(Self {
-            address,
+            address: (host, endpoint.port as u16).into(),
             metadata: endpoint
                 .metadata
-                .map(crate::metadata::MetadataView::try_from)
+                .map(TryFrom::try_from)
                 .transpose()?
                 .unwrap_or_default(),
-            ..<_>::default()
         })
     }
 }
@@ -140,6 +129,12 @@ impl PartialOrd for Endpoint {
     }
 }
 
+impl std::hash::Hash for Endpoint {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.address.hash(state);
+    }
+}
+
 /// Metadata specific to endpoints.
 #[derive(
     Default, Debug, Deserialize, Serialize, PartialEq, Clone, PartialOrd, Eq, schemars::JsonSchema,
@@ -151,6 +146,15 @@ pub struct Metadata {
         deserialize_with = "base64_set::deserialize"
     )]
     pub tokens: base64_set::Set,
+}
+
+impl From<Metadata> for crate::metadata::MetadataView<Metadata> {
+    fn from(metadata: Metadata) -> Self {
+        Self {
+            known: metadata,
+            ..<_>::default()
+        }
+    }
 }
 
 impl From<Metadata> for prost_types::Struct {

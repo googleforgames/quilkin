@@ -30,7 +30,7 @@ fn run_quilkin(port: u16, endpoint: SocketAddr) {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         let config = Arc::new(quilkin::Config::default());
         config.clusters.modify(|clusters| {
-            clusters.insert_default(vec![quilkin::endpoint::Endpoint::new(endpoint.into())])
+            clusters.insert_default([quilkin::endpoint::Endpoint::new(endpoint.into())].into())
         });
 
         let proxy = quilkin::cli::Proxy {

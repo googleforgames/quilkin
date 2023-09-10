@@ -14,17 +14,18 @@
  * limitations under the License.
  */
 
-use std::collections::HashMap;
+use std::collections::BTreeSet;
 
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::endpoint::{Endpoint, EndpointAddress, Locality, LocalityEndpoints, LocalitySet};
+use crate::endpoint::{Endpoint, Locality};
 
-const DEFAULT_CLUSTER_NAME: &str = "default";
 const SUBSYSTEM: &str = "cluster";
+
+crate::include_proto!("quilkin.config.v1alpha1");
+pub(crate) use self::quilkin::config::v1alpha1 as proto;
 
 pub(crate) fn active_clusters() -> &'static prometheus::IntGauge {
     static ACTIVE_CLUSTERS: Lazy<prometheus::IntGauge> = Lazy::new(|| {
@@ -56,175 +57,105 @@ pub(crate) fn active_endpoints() -> &'static prometheus::IntGauge {
     &ACTIVE_ENDPOINTS
 }
 
-#[derive(Clone, Default, Debug, Deserialize, Eq, JsonSchema, PartialEq, Serialize)]
-pub struct Cluster {
-    #[serde(skip, default = "default_cluster_name")]
-    pub name: String,
-    pub localities: LocalitySet,
-}
-
-impl Cluster {
-    /// Creates a new `Cluster` called `name` containing `localities`.
-    pub fn new(name: impl Into<String>, localities: impl Into<LocalitySet>) -> Self {
-        Self {
-            name: name.into(),
-            localities: localities.into(),
-        }
-    }
-
-    /// Creates a new `Cluster` called `"default"` containing `endpoints`.
-    pub fn new_default(endpoints: impl Into<LocalitySet>) -> Self {
-        Self::new("default", endpoints)
-    }
-
-    /// Adds a new set of endpoints to the cluster.
-    pub fn insert(&mut self, endpoints: impl Into<LocalityEndpoints>) {
-        self.localities.insert(endpoints.into());
-    }
-
-    pub fn update_locality(&mut self, locality: &Locality) {
-        if let Some(endpoints) = self.localities.remove(&None) {
-            self.localities
-                .insert(endpoints.with_locality(locality.clone()));
-        }
-    }
-
-    /// Provides a flat iterator over the list of endpoints.
-    pub fn endpoints(&self) -> impl Iterator<Item = &Endpoint> + '_ {
-        self.localities
-            .iter()
-            .flat_map(|locality| locality.endpoints.iter())
-    }
-
-    pub fn merge(&mut self, cluster: &Self) {
-        self.localities.merge(&cluster.localities);
-    }
-}
-
-fn default_cluster_name() -> String {
-    DEFAULT_CLUSTER_NAME.into()
-}
-
 /// Represents a full snapshot of all clusters.
-#[derive(Clone, Default, Debug, Serialize)]
-pub struct ClusterMap(DashMap<String, Cluster>);
+#[derive(Clone, Default, Debug)]
+pub struct ClusterMap(DashMap<Option<Locality>, BTreeSet<Endpoint>>);
 
-type DashMapRef<'inner> = dashmap::mapref::one::Ref<'inner, String, Cluster>;
-type DashMapRefMut<'inner> = dashmap::mapref::one::RefMut<'inner, String, Cluster>;
+type DashMapRef<'inner> = dashmap::mapref::one::Ref<'inner, Option<Locality>, BTreeSet<Endpoint>>;
+type DashMapRefMut<'inner> =
+    dashmap::mapref::one::RefMut<'inner, Option<Locality>, BTreeSet<Endpoint>>;
 
 impl ClusterMap {
-    /// Creates a new `Cluster` called `name` containing `endpoints`.
-    pub fn new_with_default_cluster(localities: impl Into<LocalityEndpoints>) -> Self {
-        Self::from_iter([Cluster::new_default(vec![localities.into()])])
+    pub fn new_default(cluster: BTreeSet<Endpoint>) -> Self {
+        let this = Self::default();
+        this.insert_default(cluster);
+        this
     }
 
-    pub fn insert(&self, cluster: Cluster) -> Option<Cluster> {
-        self.0.insert(cluster.name.clone(), cluster)
+    pub fn insert(
+        &self,
+        locality: Option<Locality>,
+        cluster: BTreeSet<Endpoint>,
+    ) -> Option<BTreeSet<Endpoint>> {
+        self.0.insert(locality, cluster)
     }
 
-    pub fn get(&self, key: &str) -> Option<DashMapRef> {
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    pub fn get(&self, key: &Option<Locality>) -> Option<DashMapRef> {
         self.0.get(key)
     }
 
-    pub fn get_mut(&self, key: &str) -> Option<DashMapRefMut> {
+    pub fn get_mut(&self, key: &Option<Locality>) -> Option<DashMapRefMut> {
         self.0.get_mut(key)
     }
 
     pub fn get_default(&self) -> Option<DashMapRef> {
-        self.get(DEFAULT_CLUSTER_NAME)
+        self.get(&None)
     }
 
     pub fn get_default_mut(&self) -> Option<DashMapRefMut> {
-        self.get_mut(DEFAULT_CLUSTER_NAME)
+        self.get_mut(&None)
     }
 
-    pub fn remove_endpoint(&self, endpoint: &Endpoint) -> Option<()> {
-        self.0.iter_mut().find_map(|mut cluster| {
-            for le in cluster.localities.iter_mut() {
-                if let Some(endpoint) = le
-                    .endpoints
-                    .iter()
-                    .find(|rhs| endpoint.address == rhs.address)
-                    .cloned()
-                {
-                    le.endpoints.remove(&endpoint);
-                }
+    pub fn insert_default(&self, endpoints: BTreeSet<Endpoint>) {
+        self.insert(None, endpoints);
+    }
+
+    pub fn remove_endpoint(&self, needle: &Endpoint) -> bool {
+        self.remove_endpoint_if(|endpoint| endpoint.address == needle.address)
+    }
+
+    pub fn remove_endpoint_if(&self, closure: impl Fn(&Endpoint) -> bool) -> bool {
+        for mut entry in self.0.iter_mut() {
+            let set = entry.value_mut();
+            if let Some(endpoint) = set.iter().find(|endpoint| (closure)(endpoint)).cloned() {
+                return set.remove(&endpoint);
             }
+        }
 
-            None
-        })
+        false
     }
 
-    pub fn remove_endpoint_if(&self, closure: impl Fn(&Endpoint) -> bool) -> Option<()> {
-        self.0.iter_mut().find_map(|mut cluster| {
-            cluster.localities.iter_mut().find_map(|le| {
-                le.endpoints
-                    .iter()
-                    .find(|endpoint| (closure)(endpoint))
-                    .cloned()
-                    .and_then(|endpoint| le.endpoints.remove(&endpoint).then_some(()))
-            })
-        })
-    }
-
-    pub fn insert_default(&self, cluster: impl Into<LocalityEndpoints>) {
-        self.0.insert(
-            DEFAULT_CLUSTER_NAME.into(),
-            Cluster::new_default(vec![cluster.into()]),
-        );
-    }
-
-    pub fn iter(&self) -> dashmap::iter::Iter<String, Cluster> {
+    pub fn iter(&self) -> dashmap::iter::Iter<Option<Locality>, BTreeSet<Endpoint>> {
         self.0.iter()
     }
 
-    pub fn entry(&self, key: String) -> dashmap::mapref::entry::Entry<String, Cluster> {
+    pub fn entry(
+        &self,
+        key: Option<Locality>,
+    ) -> dashmap::mapref::entry::Entry<Option<Locality>, BTreeSet<Endpoint>> {
         self.0.entry(key)
     }
 
-    pub fn default_entry(&self, key: String) -> DashMapRefMut {
-        let mut entry = self.entry(key.clone()).or_default();
-        entry.name.is_empty().then(|| entry.name = key);
-        entry
-    }
-
-    pub fn default_cluster_mut(&self) -> DashMapRefMut {
-        self.default_entry(DEFAULT_CLUSTER_NAME.into())
-    }
-
-    /// Updates the locality of any endpoints which have no locality in any
-    /// clusters to `locality`.
-    pub fn update_unlocated_endpoints(&self, locality: &Locality) {
-        for mut entry in self.0.iter_mut() {
-            entry.update_locality(locality);
-        }
-    }
-
-    pub fn localities(&self) -> impl Iterator<Item = LocalityEndpoints> + '_ {
-        self.0
-            .iter()
-            .flat_map(|entry| entry.value().localities.clone().into_iter())
+    pub fn default_entry(&self) -> DashMapRefMut {
+        self.entry(None).or_default()
     }
 
     pub fn endpoints(&self) -> impl Iterator<Item = Endpoint> + '_ {
-        self.localities().flat_map(|locality| locality.endpoints)
+        self.0
+            .iter()
+            .flat_map(|entry| entry.value().iter().cloned().collect::<Vec<_>>())
     }
 
-    pub fn merge(&self, map: Self) {
-        for cluster in map.iter() {
-            let span = tracing::info_span!("applied_cluster", cluster = cluster.name,);
-            let _entered = span.enter();
-
-            let cluster = cluster.value();
-            self.default_entry(cluster.name.clone()).merge(cluster);
+    pub fn update_unlocated_endpoints(&self, locality: Locality) {
+        if let Some((_, set)) = self.0.remove(&None) {
+            self.0.insert(Some(locality), set);
         }
     }
 
-    pub fn contains_only_unique_endpoints(&self) -> bool {
-        self.endpoints()
-            .collect::<std::collections::BTreeSet<_>>()
-            .len()
-            == self.endpoints().count()
+    pub fn merge(&self, locality: Option<Locality>, endpoints: BTreeSet<Endpoint>) {
+        if let Some(mut set) = self.get_mut(&locality) {
+            *set = endpoints;
+        } else {
+            self.insert(locality, endpoints);
+        }
     }
 }
 
@@ -241,16 +172,31 @@ impl PartialEq for ClusterMap {
     }
 }
 
+#[derive(Default, Debug, Deserialize, Serialize, PartialEq, Clone, Eq, schemars::JsonSchema)]
+pub(crate) struct EndpointWithLocality {
+    pub endpoints: BTreeSet<Endpoint>,
+    pub locality: Option<Locality>,
+}
+
+impl From<(Option<Locality>, BTreeSet<Endpoint>)> for EndpointWithLocality {
+    fn from((locality, endpoints): (Option<Locality>, BTreeSet<Endpoint>)) -> Self {
+        Self {
+            locality,
+            endpoints,
+        }
+    }
+}
+
 impl schemars::JsonSchema for ClusterMap {
     fn schema_name() -> String {
-        <HashMap<String, Cluster>>::schema_name()
+        <Vec<EndpointWithLocality>>::schema_name()
     }
     fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
-        <HashMap<String, Cluster>>::json_schema(gen)
+        <Vec<EndpointWithLocality>>::json_schema(gen)
     }
 
     fn is_referenceable() -> bool {
-        <HashMap<String, Cluster>>::is_referenceable()
+        <Vec<EndpointWithLocality>>::is_referenceable()
     }
 }
 
@@ -259,151 +205,72 @@ impl<'de> Deserialize<'de> for ClusterMap {
     where
         D: serde::Deserializer<'de>,
     {
-        let map = DashMap::<String, Cluster>::deserialize(deserializer)?;
-
-        for mut entry in map.iter_mut() {
-            entry.name = entry.key().clone();
+        let vec = Vec::<EndpointWithLocality>::deserialize(deserializer)?;
+        if vec
+            .iter()
+            .map(|le| &le.locality)
+            .collect::<BTreeSet<_>>()
+            .len()
+            != vec.len()
+        {
+            return Err(serde::de::Error::custom(
+                "duplicate localities found in cluster map",
+            ));
         }
 
-        Ok(Self(map))
+        Ok(Self(DashMap::from_iter(vec.into_iter().map(
+            |EndpointWithLocality {
+                 locality,
+                 endpoints,
+             }| (locality, endpoints),
+        ))))
     }
 }
 
-impl From<DashMap<String, Cluster>> for ClusterMap {
-    fn from(value: DashMap<String, Cluster>) -> Self {
+impl Serialize for ClusterMap {
+    fn serialize<S>(&self, ser: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.0
+            .iter()
+            .map(|entry| EndpointWithLocality::from((entry.key().clone(), entry.value().clone())))
+            .collect::<Vec<_>>()
+            .serialize(ser)
+    }
+}
+
+impl From<DashMap<Option<Locality>, BTreeSet<Endpoint>>> for ClusterMap {
+    fn from(value: DashMap<Option<Locality>, BTreeSet<Endpoint>>) -> Self {
         Self(value)
     }
 }
 
-impl From<Cluster> for ClusterMap {
-    fn from(value: Cluster) -> Self {
-        Self::from([value])
-    }
-}
-
-impl<const N: usize> From<[Cluster; N]> for ClusterMap {
-    fn from(value: [Cluster; N]) -> Self {
-        Self::from_iter(value)
-    }
-}
-
-impl FromIterator<Cluster> for ClusterMap {
-    fn from_iter<T>(iter: T) -> Self
-    where
-        T: IntoIterator<Item = Cluster>,
-    {
-        Self(
-            iter.into_iter()
-                .map(|cluster| (cluster.name.clone(), cluster))
-                .collect(),
-        )
-    }
-}
-
-impl<const N: usize> From<[(String, Cluster); N]> for ClusterMap {
-    fn from(value: [(String, Cluster); N]) -> Self {
-        Self::from_iter(value)
-    }
-}
-
-impl FromIterator<(String, Cluster)> for ClusterMap {
-    fn from_iter<T>(iter: T) -> Self
-    where
-        T: IntoIterator<Item = (String, Cluster)>,
-    {
-        Self(iter.into_iter().collect())
-    }
-}
-
-impl From<Cluster> for crate::xds::config::endpoint::v3::ClusterLoadAssignment {
-    fn from(cluster: Cluster) -> Self {
+impl From<(Option<Locality>, BTreeSet<Endpoint>)> for proto::Cluster {
+    fn from((locality, endpoints): (Option<Locality>, BTreeSet<Endpoint>)) -> Self {
         Self {
-            cluster_name: cluster.name,
-            endpoints: cluster.localities.into_iter().map(From::from).collect(),
-            ..Self::default()
+            locality: locality.map(From::from),
+            endpoints: endpoints.iter().map(From::from).collect(),
         }
     }
 }
 
-impl From<&'_ Cluster> for crate::xds::config::cluster::v3::Cluster {
-    fn from(cluster: &Cluster) -> Self {
+impl From<(&Option<Locality>, &BTreeSet<Endpoint>)> for proto::Cluster {
+    fn from((locality, endpoints): (&Option<Locality>, &BTreeSet<Endpoint>)) -> Self {
         Self {
-            name: cluster.name.clone(),
-            load_assignment: Some(cluster.into()),
-            ..Self::default()
+            locality: locality.clone().map(From::from),
+            endpoints: endpoints.iter().map(From::from).collect(),
         }
     }
 }
 
-impl From<&'_ Cluster> for crate::xds::config::endpoint::v3::ClusterLoadAssignment {
-    fn from(cluster: &Cluster) -> Self {
+impl From<&'_ Endpoint> for proto::Endpoint {
+    fn from(endpoint: &Endpoint) -> Self {
         Self {
-            cluster_name: cluster.name.clone(),
-            endpoints: cluster.localities.iter().cloned().map(From::from).collect(),
-            ..Self::default()
+            host: endpoint.address.host.to_string(),
+            port: endpoint.address.port.into(),
+            metadata: Some((&endpoint.metadata).into()),
         }
-    }
-}
-
-impl TryFrom<crate::xds::config::endpoint::v3::ClusterLoadAssignment> for Cluster {
-    type Error = eyre::Error;
-
-    fn try_from(
-        mut cla: crate::xds::config::endpoint::v3::ClusterLoadAssignment,
-    ) -> Result<Self, Self::Error> {
-        use crate::xds::config::endpoint::v3::lb_endpoint;
-
-        let localities = cla
-            .endpoints
-            .into_iter()
-            .map(|locality| {
-                let endpoints = locality
-                    .lb_endpoints
-                    .into_iter()
-                    .map(|endpoint| {
-                        let metadata = endpoint.metadata;
-                        let endpoint = match endpoint.host_identifier {
-                            Some(lb_endpoint::HostIdentifier::Endpoint(endpoint)) => Ok(endpoint),
-                            Some(lb_endpoint::HostIdentifier::EndpointName(name_reference)) => {
-                                match cla.named_endpoints.remove(&name_reference) {
-                                    Some(endpoint) => Ok(endpoint),
-                                    None => Err(eyre::eyre!(
-                                        "no endpoint found name reference {}",
-                                        name_reference
-                                    )),
-                                }
-                            }
-                            None => Err(eyre::eyre!("no host found for endpoint")),
-                        }?;
-
-                        // Extract the endpoint's address.
-                        let address: EndpointAddress = endpoint
-                            .address
-                            .and_then(|address| address.address)
-                            .ok_or_else(|| eyre::eyre!("No address provided."))?
-                            .try_into()?;
-
-                        let endpoint = Endpoint::with_metadata(
-                            address,
-                            metadata
-                                .map(crate::metadata::MetadataView::try_from)
-                                .transpose()?
-                                .unwrap_or_default(),
-                        );
-                        Ok(endpoint)
-                    })
-                    .collect::<Result<_, eyre::Error>>()?;
-
-                let locality = locality.locality.map(From::from);
-
-                Ok(LocalityEndpoints::new(endpoints).with_locality(locality))
-            })
-            .collect::<Result<_, eyre::Error>>()?;
-
-        Ok(Cluster {
-            name: cla.cluster_name,
-            localities,
-        })
     }
 }
 
@@ -419,50 +286,36 @@ mod tests {
         let de1 = Locality::region("de-1");
 
         let mut endpoint = Endpoint::new((Ipv4Addr::LOCALHOST, 7777).into());
+        let cluster1 = ClusterMap::default();
 
-        let mut cluster1 = Cluster::new_default(vec![LocalityEndpoints::from((
-            endpoint.clone(),
-            nl1.clone(),
-        ))]);
+        cluster1.insert(Some(nl1.clone()), [endpoint.clone()].into());
+        cluster1.merge(Some(de1.clone()), [endpoint.clone()].into());
 
-        let cluster2 = Cluster::new_default(vec![LocalityEndpoints::from((
-            endpoint.clone(),
-            de1.clone(),
-        ))]);
-
-        cluster1.merge(&cluster2);
-
-        assert_eq!(cluster1.localities[&Some(nl1.clone())].endpoints.len(), 1);
-        assert!(cluster1.localities[&Some(nl1.clone())]
-            .endpoints
+        assert_eq!(cluster1.get(&Some(nl1.clone())).unwrap().len(), 1);
+        assert!(cluster1
+            .get(&Some(nl1.clone()))
+            .unwrap()
             .contains(&endpoint));
-        assert_eq!(cluster1.localities[&Some(de1.clone())].endpoints.len(), 1);
-        assert!(cluster1.localities[&Some(de1.clone())]
-            .endpoints
+        assert_eq!(cluster1.get(&Some(de1.clone())).unwrap().len(), 1);
+        assert!(cluster1
+            .get(&Some(de1.clone()))
+            .unwrap()
             .contains(&endpoint));
 
         endpoint.address.port = 8080;
-        let cluster3 = Cluster::new_default(vec![LocalityEndpoints::from((
-            endpoint.clone(),
-            de1.clone(),
-        ))]);
 
-        cluster1.merge(&cluster3);
+        cluster1.merge(Some(de1.clone()), [endpoint.clone()].into());
 
-        assert_eq!(cluster1.localities[&Some(nl1.clone())].endpoints.len(), 1);
-        assert_eq!(cluster1.localities[&Some(de1.clone())].endpoints.len(), 1);
-        assert!(cluster1.localities[&Some(de1.clone())]
-            .endpoints
+        assert_eq!(cluster1.get(&Some(nl1.clone())).unwrap().len(), 1);
+        assert_eq!(cluster1.get(&Some(de1.clone())).unwrap().len(), 1);
+        assert!(cluster1
+            .get(&Some(de1.clone()))
+            .unwrap()
             .contains(&endpoint));
 
-        let cluster4 = Cluster::new_default(vec![LocalityEndpoints {
-            locality: Some(de1.clone()),
-            endpoints: <_>::default(),
-        }]);
+        cluster1.merge(Some(de1.clone()), <_>::default());
 
-        cluster1.merge(&cluster4);
-
-        assert_eq!(cluster1.localities[&Some(nl1)].endpoints.len(), 1);
-        assert!(cluster1.localities[&Some(de1)].endpoints.is_empty());
+        assert_eq!(cluster1.get(&Some(nl1.clone())).unwrap().len(), 1);
+        assert!(cluster1.get(&Some(de1.clone())).unwrap().is_empty());
     }
 }

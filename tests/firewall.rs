@@ -230,7 +230,7 @@ async fn test(
 
     server_config
         .clusters
-        .modify(|clusters| clusters.insert_default(vec![Endpoint::new(echo.clone())]));
+        .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
 
     t.run_server(server_config, server_proxy, None);
 

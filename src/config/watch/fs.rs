@@ -87,14 +87,15 @@ mod tests {
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
         source.clusters.modify(|clusters| {
-            clusters
-                .default_cluster_mut()
-                .insert(crate::endpoint::Endpoint::with_metadata(
+            clusters.insert_default(
+                [crate::endpoint::Endpoint::with_metadata(
                     (std::net::Ipv4Addr::LOCALHOST, 4321).into(),
                     crate::endpoint::Metadata {
                         tokens: <_>::from([Vec::from(*b"1x7ijy6")]),
                     },
-                ));
+                )]
+                .into(),
+            );
         });
 
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;

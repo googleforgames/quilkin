@@ -38,10 +38,13 @@ async fn echo() {
     };
     let server_config = std::sync::Arc::new(quilkin::Config::default());
     server_config.clusters.modify(|clusters| {
-        clusters.insert_default(vec![
-            Endpoint::new(server1.clone()),
-            Endpoint::new(server2.clone()),
-        ])
+        clusters.insert_default(
+            [
+                Endpoint::new(server1.clone()),
+                Endpoint::new(server2.clone()),
+            ]
+            .into(),
+        )
     });
 
     t.run_server(server_config, server_proxy, None);

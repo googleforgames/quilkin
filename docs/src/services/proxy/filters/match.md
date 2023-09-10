@@ -15,11 +15,9 @@ quilkin.filters.match.v1alpha1.Match
 # let yaml = "
 version: v1alpha1
 clusters: 
-  default:
-    localities:
-      - endpoints:
-        - address: 127.0.0.1:26000
-        - address: 127.0.0.1:26001
+  - endpoints:
+    - address: 127.0.0.1:26000
+    - address: 127.0.0.1:26001
 filters:
   - name: quilkin.filters.capture.v1alpha1.Capture
     config:

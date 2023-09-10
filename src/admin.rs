@@ -149,12 +149,10 @@ mod tests {
         let response = super::check_proxy_readiness(&config);
         assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
 
-        let cluster = crate::cluster::Cluster::new_default(vec![vec![Endpoint::new(
-            (std::net::Ipv4Addr::LOCALHOST, 25999).into(),
-        )]
-        .into()]);
-
-        config.clusters.write().insert(cluster);
+        config
+            .clusters
+            .write()
+            .insert_default([Endpoint::new((std::net::Ipv4Addr::LOCALHOST, 25999).into())].into());
 
         let response = super::check_proxy_readiness(&config);
         assert_eq!(response.status(), StatusCode::OK);

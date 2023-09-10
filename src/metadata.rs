@@ -23,8 +23,6 @@ pub mod build {
 
 use std::{collections::HashMap, convert::TryFrom};
 
-use crate::xds::config::core::v3::Metadata as ProtoMetadata;
-
 pub use symbol::{Key, Reference, Symbol};
 
 /// Shared state between [`Filter`][crate::filters::Filter]s during processing for a single packet.
@@ -243,67 +241,67 @@ impl<T: Default> MetadataView<T> {
     }
 }
 
-// This impl means that any `T` that we can try convert from a protobuf struct
-// at run-time can be constructed statically without going through
-// conversion first.
-impl<T, E> From<T> for MetadataView<T>
-where
-    T: TryFrom<prost_types::Struct, Error = E> + Default,
-{
-    fn from(known: T) -> Self {
-        Self {
-            known,
-            unknown: <_>::default(),
-        }
-    }
-}
-
-impl<T: Into<prost_types::Struct> + Default> From<MetadataView<T>> for ProtoMetadata {
+impl<T: Into<prost_types::Struct> + Default> From<MetadataView<T>> for prost_types::Struct {
     fn from(metadata: MetadataView<T>) -> Self {
-        let mut filter_metadata = HashMap::new();
-        filter_metadata.insert(String::from("quilkin.dev"), metadata.known.into());
-        filter_metadata.extend(
+        let mut prost_struct = prost_types::Struct::default();
+        prost_struct.fields.insert(
+            String::from("quilkin.dev"),
+            crate::prost::value_from_struct(metadata.known.into()),
+        );
+
+        prost_struct.fields.extend(
             metadata
                 .unknown
                 .into_iter()
-                .filter_map(|(k, v)| crate::prost::struct_from_json(v).map(|v| (k, v))),
+                .map(|(k, v)| (k, crate::prost::from_json(v))),
         );
 
-        Self {
-            filter_metadata,
-            ..<_>::default()
-        }
+        prost_struct
     }
 }
 
-impl<T, E> TryFrom<ProtoMetadata> for MetadataView<T>
+impl<T: Into<prost_types::Struct> + Default + Clone> From<&'_ MetadataView<T>>
+    for prost_types::Struct
+{
+    fn from(metadata: &MetadataView<T>) -> Self {
+        let mut prost_struct = prost_types::Struct::default();
+        prost_struct.fields.insert(
+            String::from("quilkin.dev"),
+            crate::prost::value_from_struct(metadata.known.clone().into()),
+        );
+
+        prost_struct.fields.extend(
+            metadata
+                .unknown
+                .iter()
+                .map(|(k, v)| (k.clone(), crate::prost::from_json(v.clone()))),
+        );
+
+        prost_struct
+    }
+}
+
+impl<T, E> TryFrom<prost_types::Struct> for MetadataView<T>
 where
+    E: Send + Sync + std::error::Error + 'static,
     T: TryFrom<prost_types::Struct, Error = E> + Default,
 {
-    type Error = E;
+    type Error = eyre::Error;
 
-    fn try_from(mut value: ProtoMetadata) -> Result<Self, Self::Error> {
+    fn try_from(mut value: prost_types::Struct) -> Result<Self, Self::Error> {
         let known = value
-            .filter_metadata
+            .fields
             .remove(KEY)
-            .map(T::try_from)
+            .map(|value| match value.kind {
+                Some(prost_types::value::Kind::StructValue(value)) => {
+                    T::try_from(value).map_err(From::from)
+                }
+                _ => Err(eyre::eyre!("wrong type for known metadata")),
+            })
             .transpose()?
             .unwrap_or_default();
 
-        let value = prost_types::value::Kind::StructValue(prost_types::Struct {
-            fields: value
-                .filter_metadata
-                .into_iter()
-                .map(|(k, v)| {
-                    (
-                        k,
-                        prost_types::Value {
-                            kind: Some(prost_types::value::Kind::StructValue(v)),
-                        },
-                    )
-                })
-                .collect(),
-        });
+        let value = prost_types::value::Kind::StructValue(value);
 
         Ok(Self {
             known,

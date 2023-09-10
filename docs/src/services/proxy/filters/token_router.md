@@ -20,20 +20,18 @@ filters:
     config:
         metadataKey: myapp.com/myownkey
 clusters:
-  default:
-    localities:
-      - endpoints:
-        - address: 127.0.0.1:26000
-          metadata:
-            quilkin.dev:
-              tokens:
-                - MXg3aWp5Ng== # Authentication is provided by these ids, and matched against
-                - OGdqM3YyaQ== # the value stored in Filter dynamic metadata
-        - address: 127.0.0.1:26001
-          metadata:
-            quilkin.dev:
-              tokens:
-                - bmt1eTcweA==
+  - endpoints:
+    - address: 127.0.0.1:26000
+      metadata:
+        quilkin.dev:
+          tokens:
+            - MXg3aWp5Ng== # Authentication is provided by these ids, and matched against
+            - OGdqM3YyaQ== # the value stored in Filter dynamic metadata
+    - address: 127.0.0.1:26001
+      metadata:
+        quilkin.dev:
+          tokens:
+            - bmt1eTcweA==
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 # assert_eq!(config.filters.load().len(), 1);
@@ -84,20 +82,18 @@ filters:
           remove: true
   - name: quilkin.filters.token_router.v1alpha1.TokenRouter
 clusters:
-  default:
-    localities:
-      - endpoints:
-        - address: 127.0.0.1:26000
-          metadata:
-            quilkin.dev:
-              tokens:
-                - MXg3aWp5Ng== # Authentication is provided by these ids, and matched against
-                - OGdqM3YyaQ== # the value stored in Filter dynamic metadata
-        - address: 127.0.0.1:26001
-          metadata:
-            quilkin.dev:
-              tokens:
-                - bmt1eTcweA==
+  - endpoints:
+    - address: 127.0.0.1:26000
+      metadata:
+        quilkin.dev:
+          tokens:
+            - MXg3aWp5Ng== # Authentication is provided by these ids, and matched against
+            - OGdqM3YyaQ== # the value stored in Filter dynamic metadata
+    - address: 127.0.0.1:26001
+      metadata:
+        quilkin.dev:
+          tokens:
+             - bmt1eTcweA==
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 # assert_eq!(config.filters.load().len(), 2);

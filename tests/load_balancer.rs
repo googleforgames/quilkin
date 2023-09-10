@@ -49,13 +49,7 @@ policy: ROUND_ROBIN
     let server_port = 12346;
     let server_config = std::sync::Arc::new(quilkin::Config::default());
     server_config.clusters.modify(|clusters| {
-        clusters.insert_default(
-            echo_addresses
-                .iter()
-                .cloned()
-                .map(Endpoint::new)
-                .collect::<Vec<_>>(),
-        )
+        clusters.insert_default(echo_addresses.iter().cloned().map(Endpoint::new).collect())
     });
     server_config.filters.store(
         quilkin::filters::FilterChain::try_from(vec![Filter {

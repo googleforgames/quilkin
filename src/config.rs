@@ -24,12 +24,11 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    cluster::{Cluster, ClusterMap},
+    cluster::ClusterMap,
     filters::prelude::*,
     xds::{
-        config::{endpoint::v3::ClusterLoadAssignment, listener::v3::Listener},
-        service::discovery::v3::DiscoveryResponse,
-        Resource, ResourceType,
+        config::listener::v3::Listener, service::discovery::v3::DiscoveryResponse, Resource,
+        ResourceType,
     },
 };
 
@@ -89,16 +88,16 @@ impl Config {
 
         replace_if_present!(filters, id);
 
-        if let Some(new_clusters) = map
-            .get("clusters")
-            .map(|value| serde_json::from_value(value.clone()))
-            .transpose()?
-        {
-            tracing::debug!(?new_clusters, old_clusters=?self.clusters, "merging new clusters");
+        if let Some(value) = map.get("clusters").cloned() {
+            tracing::debug!(%value, "replacing clusters");
+            let value: ClusterMap = serde_json::from_value(value)?;
             self.clusters.modify(|clusters| {
-                clusters.merge(new_clusters);
+                for cluster in value.iter() {
+                    clusters.merge(cluster.key().clone(), cluster.value().clone());
+                }
+
                 if let Some(locality) = locality {
-                    clusters.update_unlocated_endpoints(&locality);
+                    clusters.update_unlocated_endpoints(locality);
                 }
             });
         }
@@ -116,14 +115,6 @@ impl Config {
     ) -> Result<DiscoveryResponse, eyre::Error> {
         let mut resources = Vec::new();
         match resource_type {
-            ResourceType::Endpoint => {
-                for entry in self.clusters.read().iter() {
-                    resources.push(
-                        resource_type
-                            .encode_to_any(&ClusterLoadAssignment::try_from(entry.value())?)?,
-                    );
-                }
-            }
             ResourceType::Listener => {
                 resources.push(resource_type.encode_to_any(&Listener {
                     filter_chains: vec![(&*self.filters.load()).try_into()?],
@@ -131,31 +122,28 @@ impl Config {
                 })?);
             }
             ResourceType::Cluster => {
-                let clusters: Vec<_> = if names.is_empty() {
-                    self.clusters
-                        .read()
-                        .iter()
-                        .map(|entry| entry.value().clone())
-                        .collect()
+                if names.is_empty() {
+                    for cluster in self.clusters.read().iter() {
+                        resources.push(resource_type.encode_to_any(
+                            &crate::cluster::proto::Cluster::try_from((
+                                cluster.key(),
+                                cluster.value(),
+                            ))?,
+                        )?);
+                    }
                 } else {
-                    names
-                        .iter()
-                        .filter_map(|name| {
-                            self.clusters
-                                .read()
-                                .get(name)
-                                .map(|entry| entry.value().clone())
-                        })
-                        .collect()
+                    for locality in names.iter().filter_map(|name| name.parse().ok()) {
+                        if let Some(cluster) = self.clusters.read().get(&Some(locality)) {
+                            resources.push(resource_type.encode_to_any(
+                                &crate::cluster::proto::Cluster::try_from((
+                                    cluster.key(),
+                                    cluster.value(),
+                                ))?,
+                            )?);
+                        }
+                    }
                 };
-
-                for cluster in clusters {
-                    resources.push(resource_type.encode_to_any(
-                        &crate::xds::config::cluster::v3::Cluster::try_from(&cluster)?,
-                    )?);
-                }
             }
-            resource => return Err(eyre::eyre!("Unsupported resource {}", resource.type_url())),
         };
 
         Ok(DiscoveryResponse {
@@ -169,18 +157,7 @@ impl Config {
     pub fn apply(&self, response: &Resource) -> crate::Result<()> {
         tracing::trace!(resource=?response, "applying resource");
 
-        let apply_cluster = |cluster: Cluster| {
-            self.clusters
-                .write()
-                .default_entry(cluster.name.clone())
-                .merge(&cluster);
-        };
-
         match response {
-            Resource::Endpoint(cla) => {
-                let cluster = Cluster::try_from(*cla.clone()).unwrap();
-                (apply_cluster)(cluster)
-            }
             Resource::Listener(listener) => {
                 let chain = listener
                     .filter_chains
@@ -193,12 +170,15 @@ impl Config {
                 self.filters.store(Arc::new(chain.try_into()?));
             }
             Resource::Cluster(cluster) => {
-                cluster
-                    .load_assignment
-                    .clone()
-                    .map(Cluster::try_from)
-                    .transpose()?
-                    .map(apply_cluster);
+                self.clusters.write().merge(
+                    cluster.locality.clone().map(From::from),
+                    cluster
+                        .endpoints
+                        .iter()
+                        .cloned()
+                        .map(crate::endpoint::Endpoint::try_from)
+                        .collect::<Result<_, _>>()?,
+                );
             }
         }
 
@@ -209,7 +189,7 @@ impl Config {
 
     pub fn apply_metrics(&self) {
         let clusters = self.clusters.read();
-        crate::cluster::active_clusters().set(clusters.localities().count() as i64);
+        crate::cluster::active_clusters().set(clusters.len() as i64);
         crate::cluster::active_endpoints().set(clusters.endpoints().count() as i64);
     }
 }
@@ -341,7 +321,7 @@ mod tests {
     fn deserialise_client() {
         let config = Config::default();
         config.clusters.modify(|clusters| {
-            clusters.insert_default(vec![Endpoint::new("127.0.0.1:25999".parse().unwrap())])
+            clusters.insert_default([Endpoint::new("127.0.0.1:25999".parse().unwrap())].into())
         });
 
         let _ = serde_yaml::to_string(&config).unwrap();
@@ -351,10 +331,13 @@ mod tests {
     fn deserialise_server() {
         let config = Config::default();
         config.clusters.modify(|clusters| {
-            clusters.insert_default(vec![
-                Endpoint::new("127.0.0.1:26000".parse().unwrap()),
-                Endpoint::new("127.0.0.1:26001".parse().unwrap()),
-            ])
+            clusters.insert_default(
+                [
+                    Endpoint::new("127.0.0.1:26000".parse().unwrap()),
+                    Endpoint::new("127.0.0.1:26001".parse().unwrap()),
+                ]
+                .into(),
+            )
         });
 
         let _ = serde_yaml::to_string(&config).unwrap();
@@ -364,7 +347,7 @@ mod tests {
     fn parse_default_values() {
         let config: Config = serde_json::from_value(json!({
             "version": "v1alpha1",
-             "clusters":{}
+             "clusters":[]
         }))
         .unwrap();
 
@@ -387,24 +370,20 @@ id: server-proxy
     fn parse_client() {
         let config: Config = serde_json::from_value(json!({
             "version": "v1alpha1",
-            "clusters":{
-                "default":{
-                    "localities": [{
-                        "endpoints": [{
-                            "address": "127.0.0.1:25999"
-                        }],
-                    }]
-                }
-            }
+            "clusters": [{
+                "endpoints": [{
+                    "address": "127.0.0.1:25999"
+                }],
+            }]
         }))
         .unwrap();
 
         let value = config.clusters.read();
         assert_eq!(
             &*value,
-            &ClusterMap::new_with_default_cluster(vec![Endpoint::new(
-                (std::net::Ipv4Addr::LOCALHOST, 25999).into(),
-            )])
+            &ClusterMap::new_default(
+                [Endpoint::new((std::net::Ipv4Addr::LOCALHOST, 25999).into(),)].into()
+            )
         )
     }
 
@@ -412,30 +391,29 @@ id: server-proxy
     fn parse_ipv6_endpoint() {
         let config: Config = serde_json::from_value(json!({
             "version": "v1alpha1",
-            "clusters":{
-                "default":{
-                    "localities": [{
-                        "endpoints": [{
-                            "address": "[2345:0425:2CA1:0000:0000:0567:5673:24b5]:25999"
-                        }],
-                    }]
-                }
-            }
+            "clusters":[{
+                "endpoints": [{
+                    "address": "[2345:0425:2CA1:0000:0000:0567:5673:24b5]:25999"
+                }],
+            }]
         }))
         .unwrap();
 
         let value = config.clusters.read();
         assert_eq!(
             &*value,
-            &ClusterMap::new_with_default_cluster(vec![Endpoint::new(
-                (
-                    "2345:0425:2CA1:0000:0000:0567:5673:24b5"
-                        .parse::<Ipv6Addr>()
-                        .unwrap(),
-                    25999
-                )
-                    .into()
-            )])
+            &ClusterMap::new_default(
+                [Endpoint::new(
+                    (
+                        "2345:0425:2CA1:0000:0000:0567:5673:24b5"
+                            .parse::<Ipv6Addr>()
+                            .unwrap(),
+                        25999
+                    )
+                        .into()
+                )]
+                .into()
+            )
         )
     }
 
@@ -443,55 +421,54 @@ id: server-proxy
     fn parse_server() {
         let config: Config = serde_json::from_value(json!({
             "version": "v1alpha1",
-            "clusters":{
-                "default":{
-                    "localities": [{
-                        "endpoints": [
-                            {
-                                "address" : "127.0.0.1:26000",
-                                "metadata": {
-                                    "quilkin.dev": {
-                                        "tokens": ["MXg3aWp5Ng==", "OGdqM3YyaQ=="],
-                                    }
-                                }
-                            },
-                            {
-                                "address" : "[2345:0425:2CA1:0000:0000:0567:5673:24b5]:25999",
-                                "metadata": {
-                                    "quilkin.dev": {
-                                        "tokens": ["bmt1eTcweA=="],
-                                    }
-                                }
+            "clusters": [{
+                "endpoints": [
+                    {
+                        "address" : "127.0.0.1:26000",
+                        "metadata": {
+                            "quilkin.dev": {
+                                "tokens": ["MXg3aWp5Ng==", "OGdqM3YyaQ=="],
                             }
-                        ],
-                    }]
-                }
-            }
+                        }
+                    },
+                    {
+                        "address" : "[2345:0425:2CA1:0000:0000:0567:5673:24b5]:25999",
+                        "metadata": {
+                            "quilkin.dev": {
+                                "tokens": ["bmt1eTcweA=="],
+                            }
+                        }
+                    }
+                ],
+            }]
         }))
         .unwrap_or_default();
 
         let value = config.clusters.read();
         assert_eq!(
             &*value,
-            &ClusterMap::new_with_default_cluster(vec![
-                Endpoint::with_metadata(
-                    "127.0.0.1:26000".parse().unwrap(),
-                    Metadata {
-                        tokens: vec!["1x7ijy6", "8gj3v2i"]
-                            .into_iter()
-                            .map(From::from)
-                            .collect(),
-                    },
-                ),
-                Endpoint::with_metadata(
-                    "[2345:0425:2CA1:0000:0000:0567:5673:24b5]:25999"
-                        .parse()
-                        .unwrap(),
-                    Metadata {
-                        tokens: vec!["nkuy70x"].into_iter().map(From::from).collect(),
-                    },
-                ),
-            ])
+            &ClusterMap::new_default(
+                [
+                    Endpoint::with_metadata(
+                        "127.0.0.1:26000".parse().unwrap(),
+                        Metadata {
+                            tokens: vec!["1x7ijy6", "8gj3v2i"]
+                                .into_iter()
+                                .map(From::from)
+                                .collect(),
+                        },
+                    ),
+                    Endpoint::with_metadata(
+                        "[2345:0425:2CA1:0000:0000:0567:5673:24b5]:25999"
+                            .parse()
+                            .unwrap(),
+                        Metadata {
+                            tokens: vec!["nkuy70x"].into_iter().map(From::from).collect(),
+                        },
+                    ),
+                ]
+                .into()
+            )
         );
     }
 
@@ -502,10 +479,8 @@ id: server-proxy
 version: v1alpha1
 foo: bar
 clusters:
-    default:
-        localities:
-            - endpoints:
-                - address: 127.0.0.1:7001
+    - endpoints:
+        - address: 127.0.0.1:7001
 ",
             "
 # proxy
@@ -514,10 +489,8 @@ foo: bar
 id: client-proxy
 port: 7000
 clusters:
-    default:
-        localities:
-            - endpoints:
-                - address: 127.0.0.1:7001
+    - endpoints:
+        - address: 127.0.0.1:7001
 ",
             "
 # admin
@@ -530,12 +503,10 @@ admin:
 # static.endpoints
 version: v1alpha1
 clusters:
-    default:
-        localities:
-            - endpoints:
-                - address: 127.0.0.1:7001
-                  connection_ids:
-                    - Mxg3aWp5Ng==
+    - endpoints:
+        - address: 127.0.0.1:7001
+          connection_ids:
+            - Mxg3aWp5Ng==
 ",
             "
 # static.filters
