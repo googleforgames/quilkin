@@ -72,8 +72,8 @@ pub struct Cli {
     pub command: Commands,
     #[clap(
     long,
-    default_value_t = LogFormats::Detect,
-    value_parser = clap::builder::PossibleValuesParser::new(["detect", "json", "pretty", "ppretty"])
+    default_value_t = LogFormats::Auto,
+    value_parser = clap::builder::PossibleValuesParser::new(["auto", "json", "plain", "pretty"])
     .map(|s| s.parse::<LogFormats>().unwrap()),
     )]
     pub log_format: LogFormats,
@@ -82,15 +82,15 @@ pub struct Cli {
 /// The various log format options
 #[derive(Copy, Clone, PartialEq, Eq, Debug, EnumString, Display, Default)]
 pub enum LogFormats {
-    #[strum(serialize = "detect")]
+    #[strum(serialize = "auto")]
     #[default]
-    Detect,
+    Auto,
     #[strum(serialize = "json")]
     Json,
+    #[strum(serialize = "plain")]
+    Plain,
     #[strum(serialize = "pretty")]
     Pretty,
-    #[strum(serialize = "ppretty")]
-    PrettyPretty,
 }
 
 /// The various Quilkin commands.
@@ -129,7 +129,7 @@ impl Cli {
                 .with_env_filter(env_filter);
 
             match self.log_format {
-                LogFormats::Detect => {
+                LogFormats::Auto => {
                     if atty::isnt(atty::Stream::Stdout) {
                         subscriber.json().init();
                     } else {
@@ -137,8 +137,8 @@ impl Cli {
                     }
                 }
                 LogFormats::Json => subscriber.json().init(),
-                LogFormats::Pretty => subscriber.init(),
-                LogFormats::PrettyPretty => subscriber.pretty().init(),
+                LogFormats::Plain => subscriber.init(),
+                LogFormats::Pretty => subscriber.pretty().init(),
             }
         }
 
