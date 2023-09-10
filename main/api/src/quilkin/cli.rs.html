@@ -412,6 +412,43 @@
 <a href="#412" id="412">412</a>
 <a href="#413" id="413">413</a>
 <a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -433,10 +470,12 @@
     sync::Arc,
 };
 
+<span class="kw">use </span>clap::builder::TypedValueParser;
 <span class="kw">use </span>clap::crate_version;
 <span class="kw">use </span>tokio::{signal, sync::watch};
 
 <span class="kw">use crate</span>::{admin::Mode, Config};
+<span class="kw">use </span>strum_macros::{Display, EnumString};
 
 <span class="kw">pub use </span><span class="self">self</span>::{
     agent::Agent, generate_config_schema::GenerateConfigSchema, manage::Manage, proxy::Proxy,
@@ -482,6 +521,27 @@
     </span><span class="kw">pub </span>quiet: bool,
     <span class="attr">#[clap(subcommand)]
     </span><span class="kw">pub </span>command: Commands,
+    <span class="attr">#[clap(
+    long,
+    default_value_t = LogFormats::Auto,
+    value_parser = clap::builder::PossibleValuesParser::new([<span class="string">&quot;auto&quot;</span>, <span class="string">&quot;json&quot;</span>, <span class="string">&quot;plain&quot;</span>, <span class="string">&quot;pretty&quot;</span>]</span>)
+    .map(|s| s.parse::&lt;LogFormats&gt;().unwrap()),
+    )]
+    <span class="kw">pub </span>log_format: LogFormats,
+}
+
+<span class="doccomment">/// The various log format options
+</span><span class="attr">#[derive(Copy, Clone, PartialEq, Eq, Debug, EnumString, Display, Default)]
+</span><span class="kw">pub enum </span>LogFormats {
+    <span class="attr">#[strum(serialize = <span class="string">&quot;auto&quot;</span>)]
+    #[default]
+    </span>Auto,
+    <span class="attr">#[strum(serialize = <span class="string">&quot;json&quot;</span>)]
+    </span>Json,
+    <span class="attr">#[strum(serialize = <span class="string">&quot;plain&quot;</span>)]
+    </span>Plain,
+    <span class="attr">#[strum(serialize = <span class="string">&quot;pretty&quot;</span>)]
+    </span>Pretty,
 }
 
 <span class="doccomment">/// The various Quilkin commands.
@@ -515,11 +575,22 @@
             <span class="kw">let </span>env_filter = tracing_subscriber::EnvFilter::builder()
                 .with_default_directive(tracing_subscriber::filter::LevelFilter::INFO.into())
                 .from_env_lossy();
-            tracing_subscriber::fmt()
-                .json()
+            <span class="kw">let </span>subscriber = tracing_subscriber::fmt()
                 .with_file(<span class="bool-val">true</span>)
-                .with_env_filter(env_filter)
-                .init();
+                .with_env_filter(env_filter);
+
+            <span class="kw">match </span><span class="self">self</span>.log_format {
+                LogFormats::Auto =&gt; {
+                    <span class="kw">if </span>atty::isnt(atty::Stream::Stdout) {
+                        subscriber.json().init();
+                    } <span class="kw">else </span>{
+                        subscriber.init();
+                    }
+                }
+                LogFormats::Json =&gt; subscriber.json().init(),
+                LogFormats::Plain =&gt; subscriber.init(),
+                LogFormats::Pretty =&gt; subscriber.pretty().init(),
+            }
         }
 
         <span class="macro">tracing::info!</span>(
@@ -721,6 +792,7 @@
                 }),
                 ..&lt;<span class="kw">_</span>&gt;::default()
             }),
+            log_format: LogFormats::default(),
         };
 
         <span class="kw">let </span>control_plane_admin_port = <span class="kw">crate</span>::test_utils::available_addr().<span class="kw">await</span>.port();
@@ -739,6 +811,7 @@
                     path: endpoints_file.path().to_path_buf(),
                 },
             }),
+            log_format: LogFormats::default(),
         };
 
         <span class="kw">let </span>proxy_admin_port = <span class="kw">crate</span>::test_utils::available_addr().<span class="kw">await</span>.port();
@@ -751,6 +824,7 @@
                 management_server: <span class="macro">vec!</span>[<span class="string">&quot;http://localhost:7800&quot;</span>.parse().unwrap()],
                 ..&lt;<span class="kw">_</span>&gt;::default()
             }),
+            log_format: LogFormats::default(),
         };
 
         tokio::spawn(relay.drive());
