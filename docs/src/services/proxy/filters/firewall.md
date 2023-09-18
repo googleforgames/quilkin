@@ -17,15 +17,17 @@ filters:
     config:
       on_read:
         - action: ALLOW
-          source: 192.168.51.0/24
+          sources:
+            - 192.168.51.0/24
           ports:
-             - 10
-             - 1000-7000
+            - 10
+            - 1000-7000
       on_write:
         - action: DENY
-          source: 192.168.51.0/24
+          sources:
+            - 192.168.51.0/24
           ports:
-             - 7000
+            - 7000
 clusters:
   default:
     localities:

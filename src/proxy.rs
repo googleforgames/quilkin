@@ -14,19 +14,18 @@
  * limitations under the License.
  */
 
-mod sessions;
+use std::{net::SocketAddr, sync::Arc};
 
-use std::sync::Arc;
-
-use tokio::net::UdpSocket;
+pub use sessions::{Session, SessionKey, SessionMap};
 
 use crate::{
     endpoint::{Endpoint, EndpointAddress},
     filters::{Filter, ReadContext},
+    utils::net::DualStackLocalSocket,
     Config,
 };
 
-pub use sessions::{Session, SessionKey, SessionMap};
+mod sessions;
 
 /// Packet received from local port
 #[derive(Debug)]
@@ -34,7 +33,7 @@ struct DownstreamPacket {
     asn_info: Option<crate::maxmind_db::IpNetEntry>,
     contents: Vec<u8>,
     received_at: i64,
-    source: std::net::SocketAddr,
+    source: SocketAddr,
 }
 
 /// Represents the required arguments to run a worker task that
@@ -43,7 +42,7 @@ pub(crate) struct DownstreamReceiveWorkerConfig {
     /// ID of the worker.
     pub worker_id: usize,
     /// Socket with reused port from which the worker receives packets.
-    pub socket: Arc<UdpSocket>,
+    pub socket: Arc<DualStackLocalSocket>,
     pub config: Arc<Config>,
     pub sessions: SessionMap,
 }
@@ -65,7 +64,7 @@ impl DownstreamReceiveWorkerConfig {
             loop {
                 tracing::debug!(
                     id = worker_id,
-                    addr = ?socket.local_addr(),
+                    port = ?socket.local_ipv6_addr().map(|addr| addr.port()),
                     "Awaiting packet"
                 );
 
@@ -107,7 +106,7 @@ impl DownstreamReceiveWorkerConfig {
         packet: DownstreamPacket,
         source: std::net::SocketAddr,
         worker_id: usize,
-        socket: &Arc<UdpSocket>,
+        socket: &Arc<DualStackLocalSocket>,
         config: &Arc<Config>,
         sessions: &SessionMap,
     ) {
@@ -158,7 +157,7 @@ impl DownstreamReceiveWorkerConfig {
     async fn process_downstream_received_packet(
         packet: DownstreamPacket,
         config: Arc<Config>,
-        downstream_socket: Arc<UdpSocket>,
+        downstream_socket: Arc<DualStackLocalSocket>,
         sessions: SessionMap,
     ) -> Result<usize, PipelineError> {
         let endpoints: Vec<_> = config.clusters.read().endpoints().collect();
@@ -193,7 +192,7 @@ impl DownstreamReceiveWorkerConfig {
         packet: &[u8],
         recv_addr: &EndpointAddress,
         endpoint: &Endpoint,
-        downstream_socket: &Arc<UdpSocket>,
+        downstream_socket: &Arc<DualStackLocalSocket>,
         config: &Arc<Config>,
         sessions: &SessionMap,
         asn_info: Option<crate::maxmind_db::IpNetEntry>,

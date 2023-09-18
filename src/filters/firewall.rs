@@ -130,7 +130,7 @@ mod tests {
         let firewall = Firewall {
             on_read: vec![Rule {
                 action: Action::Allow,
-                source: "192.168.75.0/24".parse().unwrap(),
+                sources: vec!["192.168.75.0/24".parse().unwrap()],
                 ports: vec![PortRange::new(10, 100).unwrap()],
             }],
             on_write: vec![],
@@ -161,7 +161,7 @@ mod tests {
             on_read: vec![],
             on_write: vec![Rule {
                 action: Action::Allow,
-                source: "192.168.75.0/24".parse().unwrap(),
+                sources: vec!["192.168.75.0/24".parse().unwrap()],
                 ports: vec![PortRange::new(10, 100).unwrap()],
             }],
         };
