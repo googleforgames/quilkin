@@ -211,6 +211,44 @@ proxy. To see a basic usage of the command-line interface run through the
 for deploying quilkin for your game network.</li>
 </ul>
 <pre><code class="language-shell">$ quilkin --help
+warning: use of deprecated method `chrono::DateTime::&lt;Tz&gt;::timestamp_nanos`: use `timestamp_nanos_opt()` instead
+  --&gt; src/protocol.rs:51:62
+   |
+51 |                         let received_at = chrono::Utc::now().timestamp_nanos();
+   |                                                              ^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+
+warning: use of deprecated method `chrono::DateTime::&lt;Tz&gt;::timestamp_nanos`: use `timestamp_nanos_opt()` instead
+  --&gt; src/cli/qcmp.rs:73:48
+   |
+73 |             let recv_time = chrono::Utc::now().timestamp_nanos();
+   |                                                ^^^^^^^^^^^^^^^
+
+warning: use of deprecated method `chrono::DateTime::&lt;Tz&gt;::timestamp_nanos`: use `timestamp_nanos_opt()` instead
+   --&gt; src/proxy/sessions.rs:166:70
+    |
+166 | ...                   let received_at = chrono::Utc::now().timestamp_nanos();
+    |                                                            ^^^^^^^^^^^^^^^
+
+warning: use of deprecated method `chrono::DateTime::&lt;Tz&gt;::timestamp_nanos`: use `timestamp_nanos_opt()` instead
+  --&gt; src/proxy.rs:76:69
+   |
+76 | ...                   received_at: chrono::Utc::now().timestamp_nanos(),
+   |                                                       ^^^^^^^^^^^^^^^
+
+warning: use of deprecated method `chrono::DateTime::&lt;Tz&gt;::timestamp_nanos`: use `timestamp_nanos_opt()` instead
+   --&gt; src/protocol.rs:129:50
+    |
+129 |             client_timestamp: chrono::Utc::now().timestamp_nanos(),
+    |                                                  ^^^^^^^^^^^^^^^
+
+warning: use of deprecated method `chrono::DateTime::&lt;Tz&gt;::timestamp_nanos`: use `timestamp_nanos_opt()` instead
+   --&gt; src/protocol.rs:141:59
+    |
+141 |             server_transmit_timestamp: chrono::Utc::now().timestamp_nanos(),
+    |                                                           ^^^^^^^^^^^^^^^
+
 The Command-Line Interface for Quilkin
 
 Usage: quilkin [OPTIONS] &lt;COMMAND&gt;

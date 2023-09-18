@@ -520,21 +520,27 @@
 
     <span class="kw">use </span>std::sync::Arc;
 
+    <span class="kw">use </span><span class="kw">crate</span>::test_utils::AddressType;
     <span class="kw">use crate</span>::{config::Config, endpoint::Endpoint, filters::<span class="kw-2">*</span>};
 
     <span class="attr">#[tokio::test]
     </span><span class="kw">async fn </span>token_routing() {
         <span class="kw">let </span><span class="kw-2">mut </span>helper = <span class="kw">crate</span>::test_utils::TestHelper::default();
-        <span class="kw">let </span>token = uuid::Uuid::new_v4().into_bytes();
+        <span class="kw">let </span>token = <span class="string">&quot;mytoken&quot;</span>;
         <span class="kw">let </span>address = {
-            <span class="kw">let </span><span class="kw-2">mut </span>addr = Endpoint::new(helper.run_echo_server().<span class="kw">await</span>);
+            <span class="kw">let </span><span class="kw-2">mut </span>addr = Endpoint::new(helper.run_echo_server(<span class="kw-2">&amp;</span>AddressType::Random).<span class="kw">await</span>);
             addr.metadata.known.tokens.insert(token.into());
             addr
         };
         <span class="kw">let </span>localities = <span class="kw">crate</span>::endpoint::LocalityEndpoints::from(address.clone());
 
-        <span class="kw">let </span>xds_port = <span class="kw">crate</span>::test_utils::available_addr().<span class="kw">await</span>.port();
-        <span class="kw">let </span>xds_config: Arc&lt;Config&gt; = serde_json::from_value(<span class="macro">serde_json::json!</span>({
+        <span class="macro">tracing::debug!</span>(<span class="question-mark">?</span>address);
+        <span class="macro">tracing::debug!</span>(<span class="question-mark">?</span>localities);
+
+        <span class="kw">let </span>xds_port = <span class="kw">crate</span>::test_utils::available_addr(<span class="kw-2">&amp;</span>AddressType::Random)
+            .<span class="kw">await
+            </span>.port();
+        <span class="kw">let </span>json = <span class="macro">serde_json::json!</span>({
             <span class="string">&quot;version&quot;</span>: <span class="string">&quot;v1alpha1&quot;</span>,
             <span class="string">&quot;id&quot;</span>: <span class="string">&quot;test-proxy&quot;</span>,
             <span class="string">&quot;clusters&quot;</span>: {
@@ -542,11 +548,10 @@
                     <span class="string">&quot;localities&quot;</span>: [localities]
                 }
             },
-        }))
-        .map(Arc::new)
-        .unwrap();
+        });
+        <span class="kw">let </span>xds_config: Arc&lt;Config&gt; = serde_json::from_value(json).map(Arc::new).unwrap();
 
-        <span class="kw">let </span>client_addr = <span class="kw">crate</span>::test_utils::available_addr().<span class="kw">await</span>;
+        <span class="kw">let </span>client_addr = <span class="kw">crate</span>::test_utils::available_addr(<span class="kw-2">&amp;</span>AddressType::Random).<span class="kw">await</span>;
         <span class="kw">let </span>client_config = serde_json::from_value(<span class="macro">serde_json::json!</span>({
             <span class="string">&quot;version&quot;</span>: <span class="string">&quot;v1alpha1&quot;</span>,
             <span class="string">&quot;id&quot;</span>: <span class="string">&quot;test-proxy&quot;</span>,
@@ -562,7 +567,7 @@
         tokio::spawn(server::spawn(xds_port, xds_config.clone()));
         <span class="kw">let </span>client_proxy = <span class="kw">crate</span>::cli::Proxy {
             port: client_addr.port(),
-            management_server: <span class="macro">vec!</span>[<span class="macro">format!</span>(<span class="string">&quot;http://0.0.0.0:{}&quot;</span>, xds_port).parse().unwrap()],
+            management_server: <span class="macro">vec!</span>[<span class="macro">format!</span>(<span class="string">&quot;http://[::1]:{}&quot;</span>, xds_port).parse().unwrap()],
             ..&lt;<span class="kw">_</span>&gt;::default()
         };
 
@@ -629,32 +634,27 @@
             .unwrap(),
         ));
 
-        <span class="kw">let </span>client = tokio::net::UdpSocket::bind((std::net::Ipv4Addr::UNSPECIFIED, <span class="number">0</span>))
-            .<span class="kw">await
-            </span>.unwrap();
-
-        <span class="kw">let </span>data = <span class="string">&quot;Hello World!&quot;</span>.as_bytes();
+        <span class="kw">let </span>fixture = <span class="string">&quot;Hello World!&quot;</span>;
+        <span class="kw">let </span>data = fixture.as_bytes();
         <span class="kw">let </span><span class="kw-2">mut </span>packet = data.to_vec();
-        packet.extend(token);
-        packet.push(<span class="number">1</span>);
+        packet.extend(token.as_bytes());
+
+        <span class="kw">let </span>client = helper.open_socket_and_recv_single_packet().<span class="kw">await</span>;
 
         client
+            .socket
             .send_to(
                 <span class="kw-2">&amp;</span>packet,
                 (std::net::Ipv4Addr::UNSPECIFIED, client_addr.port()),
             )
             .<span class="kw">await
             </span>.unwrap();
-        <span class="kw">let </span><span class="kw-2">mut </span>buf = <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">12</span>];
-        tokio::time::timeout(
-            std::time::Duration::from_secs(<span class="number">1</span>),
-            client.recv_from(<span class="kw-2">&amp;mut </span>buf),
-        )
-        .<span class="kw">await
-        </span>.unwrap()
-        .unwrap();
+        <span class="kw">let </span>response = tokio::time::timeout(std::time::Duration::from_secs(<span class="number">1</span>), client.packet_rx)
+            .<span class="kw">await
+            </span>.unwrap()
+            .unwrap();
 
-        <span class="macro">assert_eq!</span>(data, buf);
+        <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">&quot;{}{}&quot;</span>, fixture, token), response);
     }
 
     <span class="attr">#[tokio::test]

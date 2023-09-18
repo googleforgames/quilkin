@@ -178,6 +178,28 @@
 <a href="#178" id="178">178</a>
 <a href="#179" id="179">179</a>
 <a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -194,16 +216,19 @@
  * limitations under the License.
  */
 
-</span><span class="kw">use </span>std::{io, net::SocketAddr};
+</span><span class="kw">use </span>std::{
+    io,
+    net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
+};
 
 <span class="kw">use </span>socket2::{Protocol, Socket, Type};
-<span class="kw">use </span>tokio::{net::UdpSocket, select};
+<span class="kw">use </span>tokio::{net::ToSocketAddrs, net::UdpSocket};
 
 <span class="kw">use </span><span class="kw">crate</span>::Result;
 
-<span class="doccomment">/// returns a UdpSocket with address and port reuse.
-</span><span class="kw">pub fn </span>socket_with_reuse(port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;UdpSocket&gt; {
-    socket_with_reuse_and_address((std::net::Ipv4Addr::UNSPECIFIED, port).into())
+<span class="doccomment">/// returns a UdpSocket with address and port reuse, on Ipv6Addr::UNSPECIFIED
+</span><span class="kw">fn </span>socket_with_reuse(port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;UdpSocket&gt; {
+    socket_with_reuse_and_address((Ipv6Addr::UNSPECIFIED, port).into())
 }
 
 <span class="kw">fn </span>socket_with_reuse_and_address(addr: SocketAddr) -&gt; <span class="prelude-ty">Result</span>&lt;UdpSocket&gt; {
@@ -215,6 +240,10 @@
     <span class="kw">let </span>sock = Socket::new(domain, Type::DGRAM, <span class="prelude-val">Some</span>(Protocol::UDP))<span class="question-mark">?</span>;
     enable_reuse(<span class="kw-2">&amp;</span>sock)<span class="question-mark">?</span>;
     sock.set_nonblocking(<span class="bool-val">true</span>)<span class="question-mark">?</span>;
+    <span class="kw">if </span>domain == socket2::Domain::IPV6 {
+        <span class="comment">// be explicit so we can have dual stack sockets.
+        </span>sock.set_only_v6(<span class="bool-val">false</span>)<span class="question-mark">?</span>;
+    }
     sock.bind(<span class="kw-2">&amp;</span>addr.into())<span class="question-mark">?</span>;
     UdpSocket::from_std(sock.into()).map_err(|error| <span class="macro">eyre::eyre!</span>(error))
 }
@@ -231,127 +260,142 @@
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="doccomment">/// Socket that can accept and send data from either a local ipv4 address or ipv6 address.
+<span class="doccomment">/// An ipv6 socket that can accept and send data from either a local ipv4 address or ipv6 address
+/// with port reuse enabled and only_v6 set to false.
 </span><span class="kw">pub struct </span>DualStackLocalSocket {
-    v4: UdpSocket,
-    v6: UdpSocket,
+    socket: UdpSocket,
 }
 
 <span class="kw">impl </span>DualStackLocalSocket {
     <span class="kw">pub fn </span>new(port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;DualStackLocalSocket&gt; {
-        <span class="comment">// if ephemeral port, make sure they are on the same ports.
-        </span><span class="kw">if </span>port == <span class="number">0 </span>{
-            <span class="kw">let </span>v4 = socket_with_reuse_and_address((std::net::Ipv4Addr::UNSPECIFIED, port).into())<span class="question-mark">?</span>;
-            <span class="kw">let </span>port = v4.local_addr()<span class="question-mark">?</span>.port();
-
-            <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="self">Self </span>{
-                v4,
-                v6: socket_with_reuse_and_address((std::net::Ipv6Addr::UNSPECIFIED, port).into())<span class="question-mark">?</span>,
-            });
-        }
-
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
-            v4: socket_with_reuse_and_address((std::net::Ipv4Addr::UNSPECIFIED, port).into())<span class="question-mark">?</span>,
-            v6: socket_with_reuse_and_address((std::net::Ipv6Addr::UNSPECIFIED, port).into())<span class="question-mark">?</span>,
+            socket: socket_with_reuse(port)<span class="question-mark">?</span>,
         })
     }
 
-    <span class="comment">// Receives datagrams from either an ipv4 address or ipv6. Match on the returned [`SocketAddr`] to
-    // determine if the received data is in the ipv4_buf or ipv6_buf on a successful result.
-    </span><span class="kw">pub async fn </span>recv_from(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        v4_buf: <span class="kw-2">&amp;mut </span>[u8],
-        v6_buf: <span class="kw-2">&amp;mut </span>[u8],
-    ) -&gt; io::Result&lt;(usize, SocketAddr)&gt; {
-        <span class="macro">select! </span>{
-            v4 = <span class="self">self</span>.v4.recv_from(v4_buf) =&gt; {
-                v4
-            }
-            v6 = <span class="self">self</span>.v6.recv_from(v6_buf) =&gt; {
-                v6
-            }
-        }
+    <span class="doccomment">/// Primarily used for testing of ipv4 vs ipv6 addresses.
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new_with_address(addr: SocketAddr) -&gt; <span class="prelude-ty">Result</span>&lt;DualStackLocalSocket&gt; {
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            socket: socket_with_reuse_and_address(addr)<span class="question-mark">?</span>,
+        })
     }
+
+    <span class="kw">pub async fn </span>recv_from(<span class="kw-2">&amp;</span><span class="self">self</span>, buf: <span class="kw-2">&amp;mut </span>[u8]) -&gt; io::Result&lt;(usize, SocketAddr)&gt; {
+        <span class="self">self</span>.socket.recv_from(buf).<span class="kw">await
+    </span>}
 
     <span class="kw">pub fn </span>local_ipv4_addr(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; io::Result&lt;SocketAddr&gt; {
-        <span class="self">self</span>.v4.local_addr()
-    }
-
-    <span class="kw">pub fn </span>local_ip6_addr(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; io::Result&lt;SocketAddr&gt; {
-        <span class="self">self</span>.v6.local_addr()
-    }
-
-    <span class="kw">pub async fn </span>send_to(<span class="kw-2">&amp;</span><span class="self">self</span>, buf: <span class="kw-2">&amp;</span>[u8], target: <span class="kw-2">&amp;</span>SocketAddr) -&gt; io::Result&lt;usize&gt; {
-        <span class="kw">match </span>target {
-            SocketAddr::V4(<span class="kw">_</span>) =&gt; <span class="self">self</span>.v4.send_to(buf, target).<span class="kw">await</span>,
-            SocketAddr::V6(<span class="kw">_</span>) =&gt; <span class="self">self</span>.v6.send_to(buf, target).<span class="kw">await</span>,
+        <span class="kw">let </span>addr = <span class="self">self</span>.socket.local_addr()<span class="question-mark">?</span>;
+        <span class="kw">match </span>addr {
+            SocketAddr::V4(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(addr),
+            SocketAddr::V6(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>((Ipv4Addr::UNSPECIFIED, addr.port()).into()),
         }
     }
+
+    <span class="kw">pub fn </span>local_ipv6_addr(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; io::Result&lt;SocketAddr&gt; {
+        <span class="kw">let </span>addr = <span class="self">self</span>.socket.local_addr()<span class="question-mark">?</span>;
+        <span class="kw">match </span>addr {
+            SocketAddr::V4(v4addr) =&gt; <span class="prelude-val">Ok</span>(SocketAddr::new(
+                IpAddr::V6(v4addr.ip().to_ipv6_mapped()),
+                addr.port(),
+            )),
+            SocketAddr::V6(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(addr),
+        }
+    }
+
+    <span class="kw">pub async fn </span>send_to&lt;A: ToSocketAddrs&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, buf: <span class="kw-2">&amp;</span>[u8], target: A) -&gt; io::Result&lt;usize&gt; {
+        <span class="self">self</span>.socket.send_to(buf, target).<span class="kw">await
+    </span>}
 }
 
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
-    <span class="kw">use </span><span class="kw">crate</span>::test_utils::{available_addr, TestHelper};
-    <span class="kw">use </span><span class="kw">crate</span>::utils::net::DualStackLocalSocket;
-    <span class="kw">use </span>std::net::SocketAddr;
-    <span class="kw">use </span>std::str::from_utf8;
-    <span class="kw">use </span>std::sync::Arc;
-    <span class="kw">use </span>std::time::Duration;
-    <span class="kw">use </span>tokio::sync::oneshot;
+    <span class="kw">use </span>std::{
+        net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
+        time::Duration,
+    };
+
     <span class="kw">use </span>tokio::time::timeout;
 
-    <span class="attr">#[tokio::test]
-    </span><span class="kw">async fn </span>socket_with_reuse() {
-        <span class="kw">let </span>expected = available_addr().<span class="kw">await</span>;
-        <span class="kw">let </span>socket = <span class="kw">super</span>::socket_with_reuse(expected.port()).unwrap();
-        <span class="kw">let </span>addr = socket.local_addr().unwrap();
+    <span class="kw">use </span><span class="kw">crate</span>::endpoint::address::AddressKind;
+    <span class="kw">use </span><span class="kw">crate</span>::test_utils::{available_addr, AddressType, TestHelper};
 
-        <span class="macro">assert_eq!</span>(expected, socket.local_addr().unwrap());
+    <span class="attr">#[tokio::test]
+    </span><span class="kw">async fn </span>dual_stack_socket_reusable() {
+        <span class="kw">let </span>expected = available_addr(<span class="kw-2">&amp;</span>AddressType::Random).<span class="kw">await</span>;
+        <span class="kw">let </span>socket = <span class="kw">super</span>::DualStackLocalSocket::new(expected.port()).unwrap();
+        <span class="kw">let </span>addr = socket.local_ipv4_addr().unwrap();
+
+        <span class="kw">match </span>expected {
+            SocketAddr::V4(<span class="kw">_</span>) =&gt; <span class="macro">assert_eq!</span>(expected, socket.local_ipv4_addr().unwrap()),
+            SocketAddr::V6(<span class="kw">_</span>) =&gt; <span class="macro">assert_eq!</span>(expected, socket.local_ipv6_addr().unwrap()),
+        }
+
+        <span class="macro">assert_eq!</span>(expected.port(), socket.local_ipv4_addr().unwrap().port());
+        <span class="macro">assert_eq!</span>(expected.port(), socket.local_ipv6_addr().unwrap().port());
 
         <span class="comment">// should be able to do it a second time, since we are reusing the address.
-        </span><span class="kw">let </span>socket = <span class="kw">super</span>::socket_with_reuse(expected.port()).unwrap();
-        <span class="kw">let </span>addr2 = socket.local_addr().unwrap();
-        <span class="macro">assert_eq!</span>(addr, addr2);
+        </span><span class="kw">let </span>socket = <span class="kw">super</span>::DualStackLocalSocket::new(expected.port()).unwrap();
+
+        <span class="kw">match </span>expected {
+            SocketAddr::V4(<span class="kw">_</span>) =&gt; <span class="macro">assert_eq!</span>(expected, socket.local_ipv4_addr().unwrap()),
+            SocketAddr::V6(<span class="kw">_</span>) =&gt; <span class="macro">assert_eq!</span>(expected, socket.local_ipv6_addr().unwrap()),
+        }
+        <span class="macro">assert_eq!</span>(addr.port(), socket.local_ipv4_addr().unwrap().port());
+        <span class="macro">assert_eq!</span>(addr.port(), socket.local_ipv6_addr().unwrap().port());
     }
 
     <span class="attr">#[tokio::test]
-    </span><span class="kw">async fn </span>dual_domain_socket() {
-        <span class="kw">let </span><span class="kw-2">mut </span>t = TestHelper::default();
+    </span><span class="kw">async fn </span>dual_stack_socket() {
+        <span class="comment">// Since the TestHelper uses the DualStackSocket, we can use it to test ourselves.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>t = TestHelper::default();
 
-        <span class="kw">let </span>expected = available_addr().<span class="kw">await</span>;
-        <span class="kw">let </span>socket = Arc::new(DualStackLocalSocket::new(expected.port()).unwrap());
-
-        <span class="comment">// TODO: when DualStackSocket is used everywhere, add a test for Ipv6 as well.
-        </span><span class="kw">let </span>echo_addr = t.run_echo_server().<span class="kw">await</span>;
-
-        <span class="kw">let </span>(packet_tx, packet_rx) = oneshot::channel::&lt;String&gt;();
-        <span class="kw">let </span>socket_recv = socket.clone();
-        tokio::spawn(<span class="kw">async move </span>{
-            <span class="kw">let </span><span class="kw-2">mut </span>v4_buf = <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">1024</span>];
-            <span class="kw">let </span><span class="kw-2">mut </span>v6_buf = <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">1024</span>];
-            <span class="kw">let </span>(size, addr) = socket_recv
-                .recv_from(<span class="kw-2">&amp;mut </span>v4_buf, <span class="kw-2">&amp;mut </span>v6_buf)
-                .<span class="kw">await
-                </span>.unwrap();
-
-            <span class="kw">let </span>contents = <span class="kw">match </span>addr {
-                SocketAddr::V4(<span class="kw">_</span>) =&gt; <span class="kw-2">&amp;</span>v4_buf[..size],
-                SocketAddr::V6(<span class="kw">_</span>) =&gt; <span class="kw-2">&amp;</span>v6_buf[..size],
-            };
-
-            packet_tx
-                .send(from_utf8(contents).unwrap().to_string())
-                .unwrap();
-        });
+        <span class="kw">let </span>echo_addr = t.run_echo_server(<span class="kw-2">&amp;</span>AddressType::Random).<span class="kw">await</span>;
+        <span class="kw">let </span>(<span class="kw-2">mut </span>rx, socket) = t.open_socket_and_recv_multiple_packets().<span class="kw">await</span>;
 
         <span class="kw">let </span>msg = <span class="string">&quot;hello&quot;</span>;
+        <span class="kw">let </span>addr = echo_addr.to_socket_addr().<span class="kw">await</span>.unwrap();
+
+        socket.send_to(msg.as_bytes(), <span class="kw-2">&amp;</span>addr).<span class="kw">await</span>.unwrap();
+        <span class="macro">assert_eq!</span>(
+            msg,
+            timeout(Duration::from_secs(<span class="number">5</span>), rx.recv())
+                .<span class="kw">await
+                </span>.expect(<span class="string">&quot;should not timeout&quot;</span>)
+                .unwrap()
+        );
+
+        <span class="comment">// try again, but from the opposite type of IP Address
+        // Proof that a dual stack ipv6 socket can send to both ipv6 and ipv4.
+        </span><span class="kw">let </span>ipv4_echo_addr = (Ipv4Addr::UNSPECIFIED, echo_addr.port).into();
+        <span class="kw">let </span>opp_addr: SocketAddr = <span class="kw">match </span>echo_addr.host {
+            AddressKind::Ip(ip) =&gt; <span class="kw">match </span>ip {
+                IpAddr::V4(<span class="kw">_</span>) =&gt; (Ipv6Addr::UNSPECIFIED, echo_addr.port).into(),
+                IpAddr::V6(<span class="kw">_</span>) =&gt; ipv4_echo_addr,
+            },
+            <span class="comment">// we&#39;re not testing this, since DNS resolves to IP.
+            </span>AddressKind::Name(<span class="kw">_</span>) =&gt; <span class="macro">unreachable!</span>(),
+        };
+
+        socket.send_to(msg.as_bytes(), <span class="kw-2">&amp;</span>opp_addr).<span class="kw">await</span>.unwrap();
+        <span class="macro">assert_eq!</span>(
+            msg,
+            timeout(Duration::from_secs(<span class="number">5</span>), rx.recv())
+                .<span class="kw">await
+                </span>.expect(<span class="string">&quot;should not timeout&quot;</span>)
+                .unwrap()
+        );
+
+        <span class="comment">// Since all other sockets are actual ipv6 sockets, let&#39;s force a test with a real ipv4 socket sending to our dual
+        // stack socket.
+        </span><span class="kw">let </span>(<span class="kw-2">mut </span>rx, socket) = t.open_ipv4_socket_and_recv_multiple_packets().<span class="kw">await</span>;
         socket
-            .send_to(msg.as_bytes(), <span class="kw-2">&amp;</span>echo_addr.to_socket_addr().<span class="kw">await</span>.unwrap())
+            .send_to(msg.as_bytes(), <span class="kw-2">&amp;</span>ipv4_echo_addr)
             .<span class="kw">await
             </span>.unwrap();
         <span class="macro">assert_eq!</span>(
             msg,
-            timeout(Duration::from_secs(<span class="number">5</span>), packet_rx)
+            timeout(Duration::from_secs(<span class="number">5</span>), rx.recv())
                 .<span class="kw">await
                 </span>.expect(<span class="string">&quot;should not timeout&quot;</span>)
                 .unwrap()

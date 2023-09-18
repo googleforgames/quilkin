@@ -168,14 +168,52 @@
                     <main>
                         <h1 id="proxy"><a class="header" href="#proxy">Proxy</a></h1>
 <div class="table-wrapper"><table><thead><tr><th>Services</th><th>Ports</th><th>Protocol</th></tr></thead><tbody>
-<tr><td>Proxy</td><td>7777</td><td>UDP (IPv4)</td></tr>
-<tr><td>QCMP</td><td>7600</td><td>UDP (IPv4 &amp;&amp; IPv6)</td></tr>
+<tr><td>Proxy</td><td>7777</td><td>UDP (IPv4 OR IPv6)</td></tr>
+<tr><td>QCMP</td><td>7600</td><td>UDP (IPv4 OR IPv6)</td></tr>
 </tbody></table>
 </div>
 <p>&quot;Proxy&quot; is the primary Quilkin service, which acts as a non-transparent UDP
 proxy.</p>
 <p>To view all the options for the <code>proxy</code> subcommand, run: </p>
 <pre><code class="language-shell">$ quilkin proxy --help
+warning: use of deprecated method `chrono::DateTime::&lt;Tz&gt;::timestamp_nanos`: use `timestamp_nanos_opt()` instead
+  --&gt; src/protocol.rs:51:62
+   |
+51 |                         let received_at = chrono::Utc::now().timestamp_nanos();
+   |                                                              ^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+
+warning: use of deprecated method `chrono::DateTime::&lt;Tz&gt;::timestamp_nanos`: use `timestamp_nanos_opt()` instead
+  --&gt; src/cli/qcmp.rs:73:48
+   |
+73 |             let recv_time = chrono::Utc::now().timestamp_nanos();
+   |                                                ^^^^^^^^^^^^^^^
+
+warning: use of deprecated method `chrono::DateTime::&lt;Tz&gt;::timestamp_nanos`: use `timestamp_nanos_opt()` instead
+   --&gt; src/proxy/sessions.rs:166:70
+    |
+166 | ...                   let received_at = chrono::Utc::now().timestamp_nanos();
+    |                                                            ^^^^^^^^^^^^^^^
+
+warning: use of deprecated method `chrono::DateTime::&lt;Tz&gt;::timestamp_nanos`: use `timestamp_nanos_opt()` instead
+  --&gt; src/proxy.rs:76:69
+   |
+76 | ...                   received_at: chrono::Utc::now().timestamp_nanos(),
+   |                                                       ^^^^^^^^^^^^^^^
+
+warning: use of deprecated method `chrono::DateTime::&lt;Tz&gt;::timestamp_nanos`: use `timestamp_nanos_opt()` instead
+   --&gt; src/protocol.rs:129:50
+    |
+129 |             client_timestamp: chrono::Utc::now().timestamp_nanos(),
+    |                                                  ^^^^^^^^^^^^^^^
+
+warning: use of deprecated method `chrono::DateTime::&lt;Tz&gt;::timestamp_nanos`: use `timestamp_nanos_opt()` instead
+   --&gt; src/protocol.rs:141:59
+    |
+141 |             server_transmit_timestamp: chrono::Utc::now().timestamp_nanos(),
+    |                                                           ^^^^^^^^^^^^^^^
+
 Run Quilkin as a UDP reverse proxy
 
 Usage: quilkin proxy [OPTIONS]

@@ -394,10 +394,11 @@
 
 <span class="kw">use </span>tonic::transport::Endpoint;
 
-<span class="kw">use crate</span>::{proxy::SessionMap, utils::net, xds::ResourceType, Config, <span class="prelude-ty">Result</span>};
+<span class="kw">use crate</span>::{proxy::SessionMap, xds::ResourceType, Config, <span class="prelude-ty">Result</span>};
 
 <span class="attr">#[cfg(doc)]
 </span><span class="kw">use </span><span class="kw">crate</span>::filters::FilterFactory;
+<span class="kw">use </span><span class="kw">crate</span>::utils::net::DualStackLocalSocket;
 
 <span class="macro">define_port!</span>(<span class="number">7777</span>);
 
@@ -529,7 +530,7 @@
         <span class="comment">// Contains config for each worker task.
         </span><span class="kw">let </span><span class="kw-2">mut </span>workers = Vec::with_capacity(num_workers);
         <span class="kw">for </span>worker_id <span class="kw">in </span><span class="number">0</span>..num_workers {
-            <span class="kw">let </span>socket = Arc::new(net::socket_with_reuse(<span class="self">self</span>.port)<span class="question-mark">?</span>);
+            <span class="kw">let </span>socket = Arc::new(DualStackLocalSocket::new(<span class="self">self</span>.port)<span class="question-mark">?</span>);
             workers.push(<span class="kw">crate</span>::proxy::DownstreamReceiveWorkerConfig {
                 worker_id,
                 socket: socket.clone(),
@@ -557,7 +558,7 @@
     <span class="kw">use crate</span>::{
         config,
         endpoint::Endpoint,
-        test_utils::{available_addr, create_socket, load_test_filters, TestHelper},
+        test_utils::{available_addr, create_socket, load_test_filters, AddressType, TestHelper},
     };
 
     <span class="attr">#[tokio::test]
@@ -567,7 +568,7 @@
         <span class="kw">let </span>endpoint1 = t.open_socket_and_recv_single_packet().<span class="kw">await</span>;
         <span class="kw">let </span>endpoint2 = t.open_socket_and_recv_single_packet().<span class="kw">await</span>;
 
-        <span class="kw">let </span>local_addr = available_addr().<span class="kw">await</span>;
+        <span class="kw">let </span>local_addr = available_addr(<span class="kw-2">&amp;</span>AddressType::Random).<span class="kw">await</span>;
         <span class="kw">let </span>proxy = <span class="kw">crate</span>::cli::Proxy {
             port: local_addr.port(),
             ..&lt;<span class="kw">_</span>&gt;::default()
@@ -576,8 +577,8 @@
         <span class="kw">let </span>config = Arc::new(<span class="kw">crate</span>::Config::default());
         config.clusters.modify(|clusters| {
             clusters.insert_default(<span class="macro">vec!</span>[
-                Endpoint::new(endpoint1.socket.local_addr().unwrap().into()),
-                Endpoint::new(endpoint2.socket.local_addr().unwrap().into()),
+                Endpoint::new(endpoint1.socket.local_ipv4_addr().unwrap().into()),
+                Endpoint::new(endpoint2.socket.local_ipv6_addr().unwrap().into()),
             ])
         });
 
@@ -610,8 +611,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>t = TestHelper::default();
 
         <span class="kw">let </span>endpoint = t.open_socket_and_recv_single_packet().<span class="kw">await</span>;
-
-        <span class="kw">let </span>local_addr = available_addr().<span class="kw">await</span>;
+        <span class="kw">let </span>local_addr = available_addr(<span class="kw-2">&amp;</span>AddressType::Random).<span class="kw">await</span>;
         <span class="kw">let </span>proxy = <span class="kw">crate</span>::cli::Proxy {
             port: local_addr.port(),
             ..&lt;<span class="kw">_</span>&gt;::default()
@@ -619,7 +619,7 @@
         <span class="kw">let </span>config = Arc::new(Config::default());
         config.clusters.modify(|clusters| {
             clusters.insert_default(<span class="macro">vec!</span>[Endpoint::new(
-                endpoint.socket.local_addr().unwrap().into(),
+                endpoint.socket.local_ipv4_addr().unwrap().into(),
             )])
         });
         t.run_server(config, proxy, <span class="prelude-val">None</span>);
@@ -645,7 +645,7 @@
 
         load_test_filters();
         <span class="kw">let </span>endpoint = t.open_socket_and_recv_single_packet().<span class="kw">await</span>;
-        <span class="kw">let </span>local_addr = available_addr().<span class="kw">await</span>;
+        <span class="kw">let </span>local_addr = available_addr(<span class="kw-2">&amp;</span>AddressType::Random).<span class="kw">await</span>;
         <span class="kw">let </span>config = Arc::new(Config::default());
         config.filters.store(
             <span class="kw">crate</span>::filters::FilterChain::try_from(<span class="macro">vec!</span>[config::Filter {
@@ -658,7 +658,7 @@
         );
         config.clusters.modify(|clusters| {
             clusters.insert_default(<span class="macro">vec!</span>[Endpoint::new(
-                endpoint.socket.local_addr().unwrap().into(),
+                endpoint.socket.local_ipv4_addr().unwrap().into(),
             )])
         });
         t.run_server(
@@ -691,12 +691,12 @@
         <span class="kw">let </span>t = TestHelper::default();
 
         <span class="kw">let </span>socket = Arc::new(create_socket().<span class="kw">await</span>);
-        <span class="kw">let </span>addr = socket.local_addr().unwrap();
+        <span class="kw">let </span>addr = socket.local_ipv6_addr().unwrap();
         <span class="kw">let </span>endpoint = t.open_socket_and_recv_single_packet().<span class="kw">await</span>;
         <span class="kw">let </span>msg = <span class="string">&quot;hello&quot;</span>;
         <span class="kw">let </span>config = Arc::new(Config::default());
         config.clusters.modify(|clusters| {
-            clusters.insert_default(<span class="macro">vec!</span>[endpoint.socket.local_addr().unwrap()])
+            clusters.insert_default(<span class="macro">vec!</span>[endpoint.socket.local_ipv6_addr().unwrap()])
         });
 
         <span class="comment">// we&#39;ll test a single DownstreamReceiveWorkerConfig
@@ -726,7 +726,7 @@
 
         <span class="kw">let </span>msg = <span class="string">&quot;hello&quot;</span>;
         <span class="kw">let </span>endpoint = t.open_socket_and_recv_single_packet().<span class="kw">await</span>;
-        <span class="kw">let </span>local_addr = available_addr().<span class="kw">await</span>;
+        <span class="kw">let </span>local_addr = available_addr(<span class="kw-2">&amp;</span>AddressType::Random).<span class="kw">await</span>;
         <span class="kw">let </span>proxy = <span class="kw">crate</span>::cli::Proxy {
             port: local_addr.port(),
             ..&lt;<span class="kw">_</span>&gt;::default()
@@ -734,7 +734,7 @@
 
         <span class="kw">let </span>config = Arc::new(<span class="kw">crate</span>::Config::default());
         config.clusters.modify(|clusters| {
-            clusters.insert_default(<span class="macro">vec!</span>[endpoint.socket.local_addr().unwrap()])
+            clusters.insert_default(<span class="macro">vec!</span>[endpoint.socket.local_ipv4_addr().unwrap()])
         });
 
         proxy.run_recv_from(<span class="kw-2">&amp;</span>config, &lt;<span class="kw">_</span>&gt;::default()).unwrap();

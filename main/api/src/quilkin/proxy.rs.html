@@ -234,7 +234,6 @@
 <a href="#234" id="234">234</a>
 <a href="#235" id="235">235</a>
 <a href="#236" id="236">236</a>
-<a href="#237" id="237">237</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -251,19 +250,18 @@
  * limitations under the License.
  */
 
-</span><span class="kw">mod </span>sessions;
+</span><span class="kw">use </span>std::{net::SocketAddr, sync::Arc};
 
-<span class="kw">use </span>std::sync::Arc;
-
-<span class="kw">use </span>tokio::net::UdpSocket;
+<span class="kw">pub use </span>sessions::{Session, SessionKey, SessionMap};
 
 <span class="kw">use crate</span>::{
     endpoint::{Endpoint, EndpointAddress},
     filters::{Filter, ReadContext},
+    utils::net::DualStackLocalSocket,
     Config,
 };
 
-<span class="kw">pub use </span>sessions::{Session, SessionKey, SessionMap};
+<span class="kw">mod </span>sessions;
 
 <span class="doccomment">/// Packet received from local port
 </span><span class="attr">#[derive(Debug)]
@@ -271,7 +269,7 @@
     asn_info: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::maxmind_db::IpNetEntry&gt;,
     contents: Vec&lt;u8&gt;,
     received_at: i64,
-    source: std::net::SocketAddr,
+    source: SocketAddr,
 }
 
 <span class="doccomment">/// Represents the required arguments to run a worker task that
@@ -280,7 +278,7 @@
     <span class="doccomment">/// ID of the worker.
     </span><span class="kw">pub </span>worker_id: usize,
     <span class="doccomment">/// Socket with reused port from which the worker receives packets.
-    </span><span class="kw">pub </span>socket: Arc&lt;UdpSocket&gt;,
+    </span><span class="kw">pub </span>socket: Arc&lt;DualStackLocalSocket&gt;,
     <span class="kw">pub </span>config: Arc&lt;Config&gt;,
     <span class="kw">pub </span>sessions: SessionMap,
 }
@@ -302,7 +300,7 @@
             <span class="kw">loop </span>{
                 <span class="macro">tracing::debug!</span>(
                     id = worker_id,
-                    addr = <span class="question-mark">?</span>socket.local_addr(),
+                    port = <span class="question-mark">?</span>socket.local_ipv6_addr().map(|addr| addr.port()),
                     <span class="string">&quot;Awaiting packet&quot;
                 </span>);
 
@@ -344,7 +342,7 @@
         packet: DownstreamPacket,
         source: std::net::SocketAddr,
         worker_id: usize,
-        socket: <span class="kw-2">&amp;</span>Arc&lt;UdpSocket&gt;,
+        socket: <span class="kw-2">&amp;</span>Arc&lt;DualStackLocalSocket&gt;,
         config: <span class="kw-2">&amp;</span>Arc&lt;Config&gt;,
         sessions: <span class="kw-2">&amp;</span>SessionMap,
     ) {
@@ -395,7 +393,7 @@
     </span><span class="kw">async fn </span>process_downstream_received_packet(
         packet: DownstreamPacket,
         config: Arc&lt;Config&gt;,
-        downstream_socket: Arc&lt;UdpSocket&gt;,
+        downstream_socket: Arc&lt;DualStackLocalSocket&gt;,
         sessions: SessionMap,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;usize, PipelineError&gt; {
         <span class="kw">let </span>endpoints: Vec&lt;<span class="kw">_</span>&gt; = config.clusters.read().endpoints().collect();
@@ -430,7 +428,7 @@
         packet: <span class="kw-2">&amp;</span>[u8],
         recv_addr: <span class="kw-2">&amp;</span>EndpointAddress,
         endpoint: <span class="kw-2">&amp;</span>Endpoint,
-        downstream_socket: <span class="kw-2">&amp;</span>Arc&lt;UdpSocket&gt;,
+        downstream_socket: <span class="kw-2">&amp;</span>Arc&lt;DualStackLocalSocket&gt;,
         config: <span class="kw-2">&amp;</span>Arc&lt;Config&gt;,
         sessions: <span class="kw-2">&amp;</span>SessionMap,
         asn_info: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::maxmind_db::IpNetEntry&gt;,

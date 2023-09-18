@@ -318,7 +318,7 @@
         <span class="kw">let </span>firewall = Firewall {
             on_read: <span class="macro">vec!</span>[Rule {
                 action: Action::Allow,
-                source: <span class="string">&quot;192.168.75.0/24&quot;</span>.parse().unwrap(),
+                sources: <span class="macro">vec!</span>[<span class="string">&quot;192.168.75.0/24&quot;</span>.parse().unwrap()],
                 ports: <span class="macro">vec!</span>[PortRange::new(<span class="number">10</span>, <span class="number">100</span>).unwrap()],
             }],
             on_write: <span class="macro">vec!</span>[],
@@ -349,7 +349,7 @@
             on_read: <span class="macro">vec!</span>[],
             on_write: <span class="macro">vec!</span>[Rule {
                 action: Action::Allow,
-                source: <span class="string">&quot;192.168.75.0/24&quot;</span>.parse().unwrap(),
+                sources: <span class="macro">vec!</span>[<span class="string">&quot;192.168.75.0/24&quot;</span>.parse().unwrap()],
                 ports: <span class="macro">vec!</span>[PortRange::new(<span class="number">10</span>, <span class="number">100</span>).unwrap()],
             }],
         };

@@ -385,6 +385,13 @@
 <a href="#385" id="385">385</a>
 <a href="#386" id="386">386</a>
 <a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -401,9 +408,7 @@
  * limitations under the License.
  */
 
-</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>metrics;
-
-<span class="kw">use </span>std::sync::Arc;
+</span><span class="kw">use </span>std::{net::SocketAddr, sync::Arc};
 
 <span class="kw">use </span>tokio::{
     net::UdpSocket,
@@ -416,8 +421,10 @@
     endpoint::{Endpoint, EndpointAddress},
     filters::{Filter, WriteContext},
     maxmind_db::IpNetEntry,
-    utils::Loggable,
+    utils::{net::DualStackLocalSocket, Loggable},
 };
+
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>metrics;
 
 <span class="kw">pub type </span>SessionMap = <span class="kw">crate</span>::ttl_map::TtlMap&lt;SessionKey, Session&gt;;
 
@@ -466,7 +473,7 @@
     </span><span class="kw">pub fn </span>new(
         config: Arc&lt;<span class="kw">crate</span>::Config&gt;,
         source: EndpointAddress,
-        downstream_socket: Arc&lt;UdpSocket&gt;,
+        downstream_socket: Arc&lt;DualStackLocalSocket&gt;,
         dest: Endpoint,
         asn_info: <span class="prelude-ty">Option</span>&lt;IpNetEntry&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw">super</span>::PipelineError&gt; {
@@ -497,13 +504,16 @@
         <span class="kw">let </span>address = <span class="self">self</span>.dest.address.clone();
 
         <span class="kw">async move </span>{
+            <span class="kw">let </span>connect_addr = address.to_socket_addr().<span class="kw">await</span><span class="question-mark">?</span>;
+            <span class="kw">let </span>bind_addr: SocketAddr = <span class="kw">match </span>connect_addr {
+                SocketAddr::V4(<span class="kw">_</span>) =&gt; (std::net::Ipv4Addr::UNSPECIFIED, <span class="number">0</span>).into(),
+                SocketAddr::V6(<span class="kw">_</span>) =&gt; (std::net::Ipv6Addr::UNSPECIFIED, <span class="number">0</span>).into(),
+            };
+
             upstream_socket
                 .get_or_try_init(|| <span class="kw">async </span>{
-                    <span class="kw">let </span>upstream_socket =
-                        UdpSocket::bind((std::net::Ipv4Addr::UNSPECIFIED, <span class="number">0</span>)).<span class="kw">await</span><span class="question-mark">?</span>;
-                    upstream_socket
-                        .connect(address.to_socket_addr().<span class="kw">await</span><span class="question-mark">?</span>)
-                        .<span class="kw">await</span><span class="question-mark">?</span>;
+                    <span class="kw">let </span>upstream_socket = UdpSocket::bind(bind_addr).<span class="kw">await</span><span class="question-mark">?</span>;
+                    upstream_socket.connect(connect_addr).<span class="kw">await</span><span class="question-mark">?</span>;
                     <span class="prelude-val">Ok</span>(Arc::new(upstream_socket))
                 })
                 .<span class="kw">await
@@ -513,7 +523,11 @@
 
     <span class="doccomment">/// run starts processing receiving upstream udp packets
     /// and sending them back downstream
-    </span><span class="kw">fn </span>run(<span class="kw-2">&amp;</span><span class="self">self</span>, downstream_socket: Arc&lt;UdpSocket&gt;, <span class="kw-2">mut </span>shutdown_rx: watch::Receiver&lt;()&gt;) {
+    </span><span class="kw">fn </span>run(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        downstream_socket: Arc&lt;DualStackLocalSocket&gt;,
+        <span class="kw-2">mut </span>shutdown_rx: watch::Receiver&lt;()&gt;,
+    ) {
         <span class="kw">let </span>source = <span class="self">self</span>.source.clone();
         <span class="kw">let </span>config = <span class="self">self</span>.config.clone();
         <span class="kw">let </span>endpoint = <span class="self">self</span>.dest.clone();
@@ -591,7 +605,7 @@
 
     <span class="doccomment">/// process_recv_packet processes a packet that is received by this session.
     </span><span class="kw">async fn </span>process_recv_packet(
-        downstream_socket: <span class="kw-2">&amp;</span>Arc&lt;UdpSocket&gt;,
+        downstream_socket: <span class="kw-2">&amp;</span>Arc&lt;DualStackLocalSocket&gt;,
         packet_ctx: ReceivedPacketContext&lt;<span class="lifetime">&#39;_</span>&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;usize, Error&gt; {
         <span class="kw">let </span>ReceivedPacketContext {
@@ -617,7 +631,7 @@
         <span class="kw">let </span>packet = context.contents.as_ref();
         <span class="macro">tracing::trace!</span>(%from, dest = %addr, contents = %<span class="kw">crate</span>::utils::base64_encode(packet), <span class="string">&quot;sending packet downstream&quot;</span>);
         downstream_socket
-            .send_to(packet, addr)
+            .send_to(packet, <span class="kw-2">&amp;</span>addr)
             .<span class="kw">await
             </span>.map_err(Error::SendTo)
     }
@@ -677,20 +691,20 @@
 </span><span class="kw">mod </span>tests {
     <span class="kw">use </span>std::{str::from_utf8, sync::Arc, time::Duration};
 
-    <span class="kw">use super</span>::<span class="kw-2">*</span>;
-
     <span class="kw">use </span>tokio::time::timeout;
 
     <span class="kw">use crate</span>::{
         endpoint::{Endpoint, EndpointAddress},
         proxy::sessions::ReceivedPacketContext,
-        test_utils::{create_socket, new_test_config, TestHelper},
+        test_utils::{create_socket, new_test_config, AddressType, TestHelper},
     };
+
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
     <span class="attr">#[tokio::test]
     </span><span class="kw">async fn </span>session_send_and_receive() {
         <span class="kw">let </span><span class="kw-2">mut </span>t = TestHelper::default();
-        <span class="kw">let </span>addr = t.run_echo_server().<span class="kw">await</span>;
+        <span class="kw">let </span>addr = t.run_echo_server(<span class="kw-2">&amp;</span>AddressType::Random).<span class="kw">await</span>;
         <span class="kw">let </span>endpoint = Endpoint::new(addr.clone());
         <span class="kw">let </span>socket = Arc::new(create_socket().<span class="kw">await</span>);
         <span class="kw">let </span>msg = <span class="string">&quot;hello&quot;</span>;
@@ -721,7 +735,7 @@
 
         <span class="kw">let </span>socket = Arc::new(create_socket().<span class="kw">await</span>);
         <span class="kw">let </span>endpoint = Endpoint::new(<span class="string">&quot;127.0.1.1:80&quot;</span>.parse().unwrap());
-        <span class="kw">let </span>dest: EndpointAddress = socket.local_addr().unwrap().into();
+        <span class="kw">let </span>dest: EndpointAddress = socket.local_ipv4_addr().unwrap().into();
 
         <span class="comment">// first test with no filtering
         </span><span class="kw">let </span>msg = <span class="string">&quot;hello&quot;</span>;
