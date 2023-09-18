@@ -530,6 +530,30 @@
 <a href="#530" id="530">530</a>
 <a href="#531" id="531">531</a>
 <a href="#532" id="532">532</a>
+<a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a>
+<a href="#543" id="543">543</a>
+<a href="#544" id="544">544</a>
+<a href="#545" id="545">545</a>
+<a href="#546" id="546">546</a>
+<a href="#547" id="547">547</a>
+<a href="#548" id="548">548</a>
+<a href="#549" id="549">549</a>
+<a href="#550" id="550">550</a>
+<a href="#551" id="551">551</a>
+<a href="#552" id="552">552</a>
+<a href="#553" id="553">553</a>
+<a href="#554" id="554">554</a>
+<a href="#555" id="555">555</a>
+<a href="#556" id="556">556</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -749,8 +773,12 @@
 
 <span class="kw">impl </span>AdsClient {
     <span class="doccomment">/// Starts a new stream to the xDS management server.
-    </span><span class="kw">pub fn </span>xds_client_stream(<span class="kw-2">&amp;</span><span class="self">self</span>, config: Arc&lt;Config&gt;) -&gt; AdsStream {
-        AdsStream::xds_client_stream(<span class="self">self</span>, config)
+    </span><span class="kw">pub fn </span>xds_client_stream(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        config: Arc&lt;Config&gt;,
+        idle_request_interval_secs: u64,
+    ) -&gt; AdsStream {
+        AdsStream::xds_client_stream(<span class="self">self</span>, config, idle_request_interval_secs)
     }
 }
 
@@ -770,6 +798,7 @@
             management_servers,
         }: <span class="kw-2">&amp;</span>AdsClient,
         config: Arc&lt;Config&gt;,
+        idle_request_interval_secs: u64,
     ) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>client = client.clone();
         <span class="kw">let </span>identifier = identifier.clone();
@@ -817,19 +846,35 @@
                     );
 
                     <span class="kw">loop </span>{
-                        <span class="kw">match </span>stream.next().<span class="kw">await </span>{
-                            <span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(ack)) =&gt; {
+                        <span class="kw">let </span>next_response = tokio::time::timeout(
+                            std::time::Duration::from_secs(idle_request_interval_secs),
+                            stream.next(),
+                        );
+
+                        <span class="kw">match </span>next_response.<span class="kw">await </span>{
+                            <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(ack))) =&gt; {
                                 <span class="macro">tracing::trace!</span>(<span class="string">&quot;received ack&quot;</span>);
                                 requests.send(ack)<span class="question-mark">?</span>;
                                 <span class="kw">continue</span>;
                             }
-                            <span class="prelude-val">Some</span>(<span class="prelude-val">Err</span>(error)) =&gt; {
+                            <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="prelude-val">Err</span>(error))) =&gt; {
                                 <span class="macro">tracing::warn!</span>(%error, <span class="string">&quot;xds stream error&quot;</span>);
                                 <span class="kw">break</span>;
                             }
-                            <span class="prelude-val">None </span>=&gt; {
+                            <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; {
                                 <span class="macro">tracing::warn!</span>(<span class="string">&quot;xDS stream terminated&quot;</span>);
                                 <span class="kw">break</span>;
+                            }
+                            <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
+                                <span class="macro">tracing::info!</span>(
+                                    <span class="string">&quot;exceeded idle request interval sending new requests&quot;
+                                </span>);
+                                <span class="self">Self</span>::refresh_resources(
+                                    <span class="kw-2">&amp;</span>identifier,
+                                    <span class="kw-2">&amp;</span>subscribed_resources,
+                                    <span class="kw-2">&amp;mut </span>requests,
+                                )
+                                .<span class="kw">await</span><span class="question-mark">?</span>;
                             }
                         }
                     }
@@ -899,7 +944,10 @@
                         .<span class="kw">await</span><span class="question-mark">?
                         </span>.into_inner();
 
-                    <span class="kw">let </span>control_plane = <span class="kw">super</span>::server::ControlPlane::from_arc(config.clone());
+                    <span class="kw">let </span>control_plane = <span class="kw">super</span>::server::ControlPlane::from_arc(
+                        config.clone(),
+                        <span class="kw">super</span>::server::IDLE_REQUEST_INTERVAL_SECS,
+                    );
                     <span class="kw">let </span><span class="kw-2">mut </span>stream = control_plane.stream_aggregated_resources(stream).<span class="kw">await</span><span class="question-mark">?</span>;
                     <span class="kw">while let </span><span class="prelude-val">Some</span>(result) = stream.next().<span class="kw">await </span>{
                         <span class="kw">let </span>response = result<span class="question-mark">?</span>;

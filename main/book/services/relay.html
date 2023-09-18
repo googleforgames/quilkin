@@ -197,9 +197,14 @@ Commands:
   help    Print this message or the help of the given subcommand(s)
 
 Options:
-  -m, --mds-port &lt;MDS_PORT&gt;  Port for mDS service [env: QUILKIN_MDS_PORT=] [default: 7900]
-  -x, --xds-port &lt;XDS_PORT&gt;  Port for xDS management_server service [env: QUILKIN_PORT=] [default: 7800]
-  -h, --help                 Print help
+  -m, --mds-port &lt;MDS_PORT&gt;
+          Port for mDS service [env: QUILKIN_MDS_PORT=] [default: 7900]
+  -x, --xds-port &lt;XDS_PORT&gt;
+          Port for xDS management_server service [env: QUILKIN_PORT=] [default: 7800]
+      --idle-request-interval-secs &lt;IDLE_REQUEST_INTERVAL_SECS&gt;
+          The interval in seconds at which the relay will send a discovery request to an management server after receiving no updates [env: QUILKIN_IDLE_REQUEST_INTERVAL_SECS=] [default: 30]
+  -h, --help
+          Print help
 </code></pre>
 <h2 id="quickstart"><a class="header" href="#quickstart">Quickstart</a></h2>
 <p>To get started with the relay service we need to start the relay service, and

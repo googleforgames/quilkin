@@ -191,6 +191,8 @@ Options:
           The port to listen on [env: QUILKIN_QCMP_PORT=] [default: 7600]
   -t, --to &lt;TO&gt;
           One or more socket addresses to forward packets to [env: QUILKIN_DEST=]
+      --idle-request-interval-secs &lt;IDLE_REQUEST_INTERVAL_SECS&gt;
+          The interval in seconds at which the relay will send a discovery request to an management server after receiving no updates [env: QUILKIN_IDLE_REQUEST_INTERVAL_SECS=] [default: 30]
   -h, --help
           Print help
 </code></pre>

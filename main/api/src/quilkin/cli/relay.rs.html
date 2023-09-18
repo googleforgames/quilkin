@@ -120,6 +120,12 @@
 <a href="#120" id="120">120</a>
 <a href="#121" id="121">121</a>
 <a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2023 Google LLC
  *
@@ -156,6 +162,10 @@
     <span class="doccomment">/// Port for xDS management_server service
     </span><span class="attr">#[clap(short, long, env = <span class="kw">super</span>::PORT_ENV_VAR, default_value_t = <span class="kw">super</span>::manage::PORT)]
     </span><span class="kw">pub </span>xds_port: u16,
+    <span class="doccomment">/// The interval in seconds at which the relay will send a discovery request
+    /// to an management server after receiving no updates.
+    </span><span class="attr">#[clap(long, env = <span class="string">&quot;QUILKIN_IDLE_REQUEST_INTERVAL_SECS&quot;</span>, default_value_t = <span class="kw">crate</span>::xds::server::IDLE_REQUEST_INTERVAL_SECS)]
+    </span><span class="kw">pub </span>idle_request_interval_secs: u64,
     <span class="attr">#[clap(subcommand)]
     </span><span class="kw">pub </span>providers: <span class="prelude-ty">Option</span>&lt;Providers&gt;,
 }
@@ -165,6 +175,7 @@
         <span class="self">Self </span>{
             mds_port: PORT,
             xds_port: <span class="kw">super</span>::manage::PORT,
+            idle_request_interval_secs: <span class="kw">crate</span>::xds::server::IDLE_REQUEST_INTERVAL_SECS,
             providers: <span class="prelude-val">None</span>,
         }
     }
@@ -179,6 +190,7 @@
         <span class="kw">let </span>xds_server = <span class="kw">crate</span>::xds::server::spawn(<span class="self">self</span>.xds_port, config.clone());
         <span class="kw">let </span>mds_server = tokio::spawn(<span class="kw">crate</span>::xds::server::control_plane_discovery_server(
             <span class="self">self</span>.mds_port,
+            <span class="self">self</span>.idle_request_interval_secs,
             config.clone(),
         ));
 

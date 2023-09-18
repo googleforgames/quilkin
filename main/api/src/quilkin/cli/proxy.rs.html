@@ -374,6 +374,12 @@
 <a href="#374" id="374">374</a>
 <a href="#375" id="375">375</a>
 <a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -422,6 +428,10 @@
     <span class="doccomment">/// One or more socket addresses to forward packets to.
     </span><span class="attr">#[clap(short, long, env = <span class="string">&quot;QUILKIN_DEST&quot;</span>)]
     </span><span class="kw">pub </span>to: Vec&lt;SocketAddr&gt;,
+    <span class="doccomment">/// The interval in seconds at which the relay will send a discovery request
+    /// to an management server after receiving no updates.
+    </span><span class="attr">#[clap(long, env = <span class="string">&quot;QUILKIN_IDLE_REQUEST_INTERVAL_SECS&quot;</span>, default_value_t = <span class="kw">crate</span>::xds::server::IDLE_REQUEST_INTERVAL_SECS)]
+    </span><span class="kw">pub </span>idle_request_interval_secs: u64,
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>Proxy {
@@ -432,6 +442,7 @@
             port: PORT,
             qcmp_port: QCMP_PORT,
             to: &lt;<span class="kw">_</span>&gt;::default(),
+            idle_request_interval_secs: <span class="kw">crate</span>::xds::server::IDLE_REQUEST_INTERVAL_SECS,
         }
     }
 }
@@ -483,7 +494,8 @@
             <span class="kw">let </span>client =
                 <span class="kw">crate</span>::xds::AdsClient::connect(String::clone(<span class="kw-2">&amp;</span>id), <span class="self">self</span>.management_server.clone())
                     .<span class="kw">await</span><span class="question-mark">?</span>;
-            <span class="kw">let </span><span class="kw-2">mut </span>stream = client.xds_client_stream(config.clone());
+            <span class="kw">let </span><span class="kw-2">mut </span>stream =
+                client.xds_client_stream(config.clone(), <span class="self">self</span>.idle_request_interval_secs);
 
             tokio::time::sleep(std::time::Duration::from_nanos(<span class="number">1</span>)).<span class="kw">await</span>;
             stream
