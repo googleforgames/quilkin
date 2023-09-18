@@ -48,7 +48,7 @@ pub async fn spawn(port: u16) -> crate::Result<()> {
 
                 match socket.recv_from(&mut buf).await {
                     Ok((size, source)) => {
-                        let received_at = chrono::Utc::now().timestamp_nanos();
+                        let received_at = chrono::Utc::now().timestamp_nanos_opt().unwrap();
                         let command = match Protocol::parse(&buf[..size]) {
                             Ok(Some(command)) => command,
                             Ok(None) => {
@@ -126,7 +126,7 @@ impl Protocol {
     pub fn ping_with_nonce(nonce: u8) -> Self {
         Self::Ping {
             nonce,
-            client_timestamp: chrono::Utc::now().timestamp_nanos(),
+            client_timestamp: chrono::Utc::now().timestamp_nanos_opt().unwrap(),
         }
     }
 
@@ -138,7 +138,7 @@ impl Protocol {
             nonce,
             client_timestamp,
             server_start_timestamp,
-            server_transmit_timestamp: chrono::Utc::now().timestamp_nanos(),
+            server_transmit_timestamp: chrono::Utc::now().timestamp_nanos_opt().unwrap(),
         }
     }
 

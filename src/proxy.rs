@@ -73,7 +73,7 @@ impl DownstreamReceiveWorkerConfig {
                         match result {
                             Ok((size, source)) => {
                                 let packet = DownstreamPacket {
-                                    received_at: chrono::Utc::now().timestamp_nanos(),
+                                    received_at: chrono::Utc::now().timestamp_nanos_opt().unwrap(),
                                     asn_info: crate::maxmind_db::MaxmindDb::lookup(source.ip()),
                                     contents: buf[..size].to_vec(),
                                     source,
