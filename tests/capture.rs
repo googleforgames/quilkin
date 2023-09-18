@@ -23,7 +23,7 @@ use quilkin::{
     endpoint::Endpoint,
     filters::{Capture, StaticFilter, TokenRouter},
     metadata::MetadataView,
-    test_utils::TestHelper,
+    test_utils::{AddressType, TestHelper},
 };
 
 /// This test covers both token_router and capture filters,
@@ -31,7 +31,7 @@ use quilkin::{
 #[tokio::test]
 async fn token_router() {
     let mut t = TestHelper::default();
-    let echo = t.run_echo_server().await;
+    let echo = t.run_echo_server(&AddressType::Random).await;
     let server_port = 12348;
     let server_proxy = quilkin::cli::Proxy {
         port: server_port,

@@ -2,7 +2,7 @@
 
 | services | ports | Protocol |
 |----------|-------|-----------|
-| QCMP | 7600 | UDP(IPv4 && IPv6) |
+| QCMP | 7600 | UDP(IPv4 OR IPv6) |
 
 > **Note:** This service is currently in active experimentation and development
   so there may be bugs which cause it to be unusable  for production, as always

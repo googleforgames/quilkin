@@ -14,13 +14,11 @@
  * limitations under the License.
  */
 
+use std::net::Ipv4Addr;
 /// Common utilities for testing
 use std::{net::SocketAddr, str::from_utf8, sync::Arc, sync::Once};
 
-use tokio::{
-    net::UdpSocket,
-    sync::{mpsc, oneshot, watch},
-};
+use tokio::sync::{mpsc, oneshot, watch};
 use tracing_subscriber::EnvFilter;
 
 use crate::{
@@ -29,6 +27,7 @@ use crate::{
     endpoint::{Endpoint, EndpointAddress, LocalityEndpoints},
     filters::{prelude::*, FilterRegistry},
     metadata::Value,
+    utils::net::DualStackLocalSocket,
 };
 
 static LOG_ONCE: Once = Once::new();
@@ -44,11 +43,36 @@ pub fn enable_log(filter: impl Into<EnvFilter>) {
     });
 }
 
+/// Which type of Address do you want? Random may give ipv4 or ipv6
+pub enum AddressType {
+    Random,
+    Ipv4,
+    Ipv6,
+}
+
 /// Returns a local address on a port that is not assigned to another test.
-pub async fn available_addr() -> SocketAddr {
+/// If Random address tye is used, it might be v4, Might be v6. It's random.
+pub async fn available_addr(address_type: &AddressType) -> SocketAddr {
     let socket = create_socket().await;
-    let addr = socket.local_addr().unwrap();
+    let addr = get_address(address_type, &socket);
+
     tracing::debug!(addr = ?addr, "test_util::available_addr");
+    addr
+}
+
+fn get_address(address_type: &AddressType, socket: &DualStackLocalSocket) -> SocketAddr {
+    let addr = match address_type {
+        AddressType::Random => {
+            // sometimes give ipv6, sometimes ipv4.
+            match rand::random() {
+                true => socket.local_ipv6_addr().unwrap(),
+                false => socket.local_ipv4_addr().unwrap(),
+            }
+        }
+        AddressType::Ipv4 => socket.local_ipv4_addr().unwrap(),
+        AddressType::Ipv6 => socket.local_ipv6_addr().unwrap(),
+    };
+    tracing::debug!(addr = ?addr, "test_util::get_address");
     addr
 }
 
@@ -102,7 +126,7 @@ pub struct TestHelper {
 /// Returned from [creating a socket](TestHelper::open_socket_and_recv_single_packet)
 pub struct OpenSocketRecvPacket {
     /// The opened socket
-    pub socket: Arc<UdpSocket>,
+    pub socket: Arc<DualStackLocalSocket>,
     /// A channel on which the received packet will be forwarded.
     pub packet_rx: oneshot::Receiver<String>,
 }
@@ -136,7 +160,7 @@ impl TestHelper {
         let socket_recv = socket.clone();
         tokio::spawn(async move {
             let mut buf = vec![0; 1024];
-            let size = socket_recv.recv(&mut buf).await.unwrap();
+            let (size, _) = socket_recv.recv_from(&mut buf).await.unwrap();
             packet_tx
                 .send(from_utf8(&buf[..size]).unwrap().to_string())
                 .unwrap();
@@ -148,9 +172,28 @@ impl TestHelper {
     /// returned channel.
     pub async fn open_socket_and_recv_multiple_packets(
         &mut self,
-    ) -> (mpsc::Receiver<String>, Arc<UdpSocket>) {
-        let (packet_tx, packet_rx) = mpsc::channel::<String>(10);
+    ) -> (mpsc::Receiver<String>, Arc<DualStackLocalSocket>) {
         let socket = Arc::new(create_socket().await);
+        let packet_rx = self.recv_multiple_packets(&socket).await;
+        (packet_rx, socket)
+    }
+
+    // Same as above, but sometimes you just need an ipv4 socket
+    pub async fn open_ipv4_socket_and_recv_multiple_packets(
+        &mut self,
+    ) -> (mpsc::Receiver<String>, Arc<DualStackLocalSocket>) {
+        let socket = Arc::new(
+            DualStackLocalSocket::new_with_address((Ipv4Addr::UNSPECIFIED, 0).into()).unwrap(),
+        );
+        let packet_rx = self.recv_multiple_packets(&socket).await;
+        (packet_rx, socket)
+    }
+
+    async fn recv_multiple_packets(
+        &mut self,
+        socket: &Arc<DualStackLocalSocket>,
+    ) -> mpsc::Receiver<String> {
+        let (packet_tx, packet_rx) = mpsc::channel::<String>(10);
         let mut shutdown_rx = self.get_shutdown_subscriber().await;
         let socket_recv = socket.clone();
         tokio::spawn(async move {
@@ -174,24 +217,30 @@ impl TestHelper {
                 }
             }
         });
-        (packet_rx, socket)
+        packet_rx
     }
 
     /// Runs a simple UDP server that echos back payloads.
     /// Returns the server's address.
-    pub async fn run_echo_server(&mut self) -> EndpointAddress {
-        self.run_echo_server_with_tap(|_, _, _| {}).await
+    pub async fn run_echo_server(&mut self, address_type: &AddressType) -> EndpointAddress {
+        self.run_echo_server_with_tap(address_type, |_, _, _| {})
+            .await
     }
 
     /// Runs a simple UDP server that echos back payloads.
     /// The provided function is invoked for each received payload.
     /// Returns the server's address.
-    pub async fn run_echo_server_with_tap<F>(&mut self, tap: F) -> EndpointAddress
+    pub async fn run_echo_server_with_tap<F>(
+        &mut self,
+        address_type: &AddressType,
+        tap: F,
+    ) -> EndpointAddress
     where
         F: Fn(SocketAddr, &[u8], SocketAddr) + Send + 'static,
     {
         let socket = create_socket().await;
-        let addr = socket.local_addr().unwrap();
+        // sometimes give ipv6, sometimes ipv4.
+        let addr = get_address(address_type, &socket);
         let mut shutdown = self.get_shutdown_subscriber().await;
         let local_addr = addr;
         tokio::spawn(async move {
@@ -288,8 +337,8 @@ where
 }
 
 /// Opens a new socket bound to an ephemeral port
-pub async fn create_socket() -> UdpSocket {
-    crate::utils::net::socket_with_reuse(0).unwrap()
+pub async fn create_socket() -> DualStackLocalSocket {
+    DualStackLocalSocket::new(0).unwrap()
 }
 
 pub fn config_with_dummy_endpoint() -> Config {
@@ -343,12 +392,12 @@ mod tests {
 
     use tokio::time::timeout;
 
-    use crate::test_utils::TestHelper;
+    use crate::test_utils::{AddressType, TestHelper};
 
     #[tokio::test]
     async fn test_echo_server() {
         let mut t = TestHelper::default();
-        let echo_addr = t.run_echo_server().await;
+        let echo_addr = t.run_echo_server(&AddressType::Random).await;
         let endpoint = t.open_socket_and_recv_single_packet().await;
         let msg = "hello";
         endpoint
