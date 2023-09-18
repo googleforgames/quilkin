@@ -156,7 +156,7 @@ impl Session {
                                 tracing::error!(%error, %source, dest = ?endpoint, "Error receiving packet");
                             },
                             Ok((size, recv_addr)) => {
-                                let received_at = chrono::Utc::now().timestamp_nanos();
+                                let received_at = chrono::Utc::now().timestamp_nanos_opt().unwrap();
                                 if let Some(last_received_at) = last_received_at {
                                     crate::metrics::packet_jitter(crate::metrics::WRITE, asn_info).set(received_at - last_received_at);
                                 }
