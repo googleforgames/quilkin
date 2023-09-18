@@ -18,12 +18,17 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use tokio::time::Duration;
 
-use quilkin::{protocol::Protocol, test_utils::TestHelper};
+use quilkin::{
+    protocol::Protocol,
+    test_utils::{AddressType, TestHelper},
+};
 
 #[tokio::test]
 async fn proxy_ping() {
     let mut t = TestHelper::default();
-    let server_port = quilkin::test_utils::available_addr().await.port();
+    let server_port = quilkin::test_utils::available_addr(&AddressType::Random)
+        .await
+        .port();
     let server_proxy = quilkin::cli::Proxy {
         qcmp_port: server_port,
         to: vec![(Ipv4Addr::UNSPECIFIED, 0).into()],
@@ -36,7 +41,9 @@ async fn proxy_ping() {
 
 #[tokio::test]
 async fn agent_ping() {
-    let qcmp_port = quilkin::test_utils::available_addr().await.port();
+    let qcmp_port = quilkin::test_utils::available_addr(&AddressType::Random)
+        .await
+        .port();
     let agent = quilkin::cli::Agent {
         qcmp_port,
         ..<_>::default()
@@ -65,7 +72,7 @@ async fn ping(port: u16) {
         .await
         .unwrap()
         .unwrap();
-    let recv_time = chrono::Utc::now().timestamp_nanos();
+    let recv_time = chrono::Utc::now().timestamp_nanos_opt().unwrap();
     let reply = Protocol::parse(&buf[..size]).unwrap().unwrap();
 
     assert_eq!(ping.nonce(), reply.nonce());

@@ -1,8 +1,8 @@
 # Administration
 
-| services | ports | Protocol |
-|----------|-------|-----------|
-| Administration | 8000 | HTTP (IPv4 OR IPv6) |
+| services       | ports | Protocol            |
+|----------------|-------|---------------------|
+| Administration | 8000  | HTTP (IPv4 OR IPv6) |
 
 ## Logging
 By default, Quilkin will log `INFO` level events, you can change this by setting

@@ -16,7 +16,7 @@
 
 //! Types representing where the data is the sent.
 
-mod address;
+pub(crate) mod address;
 mod locality;
 
 use serde::{Deserialize, Serialize};

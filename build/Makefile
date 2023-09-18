@@ -85,7 +85,9 @@ test-quilkin: ensure-build-image
 		--entrypoint=cargo $(BUILD_IMAGE_TAG) clippy --tests -- -D warnings
 	docker run --rm $(common_rust_args) \
 		--entrypoint=cargo $(BUILD_IMAGE_TAG) fmt -- --check
-	docker run --rm $(common_rust_args) \
+	# --network=host because docker containers are not great at ipv6.
+	docker run --rm $(common_rust_args)  \
+			--network=host \
 			-e RUST_BACKTRACE=1 --entrypoint=cargo $(BUILD_IMAGE_TAG) test -- --nocapture
 
 # Run tests against the examples
@@ -241,8 +243,10 @@ docs:
 # Start an interactive shell inside the build image
 # Useful for testing, or adhoc cargo, gcloud, kubectl or terraform commands
 shell: ensure-gcloud-dirs ensure-kube-dirs ensure-build-image
+	# we --network=host because docker containers are not great at ipv6.
 	docker run --rm -it $(DOCKER_RUN_ARGS) $(common_rust_args) \
 		$(gcloud_mount_args) $(kube_mount_args) \
+		 --network=host \
 		 --entrypoint=bash $(BUILD_IMAGE_TAG)
 
 ensure-build-image: ensure-cargo-registry

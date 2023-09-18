@@ -17,10 +17,9 @@
 //! Logic for parsing and generating Quilkin Control Message Protocol (QCMP) messages.
 
 use nom::bytes::complete;
-use std::net::SocketAddr;
 use tracing::Instrument;
 
-use crate::utils::net;
+use crate::utils::net::DualStackLocalSocket;
 
 // Magic number to distinguish control packets from regular traffic.
 const MAGIC_NUMBER: &[u8] = b"QLKN";
@@ -34,29 +33,23 @@ const DISCRIMINANT_LEN: usize = 1;
 type Result<T, E = Error> = std::result::Result<T, E>;
 
 pub async fn spawn(port: u16) -> crate::Result<()> {
-    let socket = net::DualStackLocalSocket::new(port)?;
+    let socket = DualStackLocalSocket::new(port)?;
     let v4_addr = socket.local_ipv4_addr()?;
-    let v6_addr = socket.local_ip6_addr()?;
+    let v6_addr = socket.local_ipv6_addr()?;
     tokio::spawn(
         async move {
             // Initialize a buffer for the UDP packet. We use the maximum size of a UDP
             // packet, which is the maximum value of 16 a bit integer.
-            let mut v4_buf = vec![0; 1 << 16];
-            let mut v6_buf = vec![0; 1 << 16];
+            let mut buf = vec![0; 1 << 16];
             let mut output_buf = Vec::new();
 
             loop {
                 tracing::info!(%v4_addr, %v6_addr, "awaiting qcmp packets");
 
-                match socket.recv_from(&mut v4_buf, &mut v6_buf).await {
+                match socket.recv_from(&mut buf).await {
                     Ok((size, source)) => {
-                        let received_at = chrono::Utc::now().timestamp_nanos();
-                        let contents = match source {
-                            SocketAddr::V4(_) => &v4_buf[..size],
-                            SocketAddr::V6(_) => &v6_buf[..size],
-                        };
-
-                        let command = match Protocol::parse(contents) {
+                        let received_at = chrono::Utc::now().timestamp_nanos_opt().unwrap();
+                        let command = match Protocol::parse(&buf[..size]) {
                             Ok(Some(command)) => command,
                             Ok(None) => {
                                 tracing::debug!("rejected non-qcmp packet");
@@ -133,7 +126,7 @@ impl Protocol {
     pub fn ping_with_nonce(nonce: u8) -> Self {
         Self::Ping {
             nonce,
-            client_timestamp: chrono::Utc::now().timestamp_nanos(),
+            client_timestamp: chrono::Utc::now().timestamp_nanos_opt().unwrap(),
         }
     }
 
@@ -145,7 +138,7 @@ impl Protocol {
             nonce,
             client_timestamp,
             server_start_timestamp,
-            server_transmit_timestamp: chrono::Utc::now().timestamp_nanos(),
+            server_transmit_timestamp: chrono::Utc::now().timestamp_nanos_opt().unwrap(),
         }
     }
 

@@ -289,7 +289,11 @@ impl TryFrom<crate::xds::config::endpoint::v3::Endpoint> for EndpointAddress {
 
 impl fmt::Display for EndpointAddress {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}:{}", self.host, self.port)
+        if let AddressKind::Ip(IpAddr::V6(ip)) = self.host {
+            write!(f, "[{}]:{}", ip, self.port)
+        } else {
+            write!(f, "{}:{}", self.host, self.port)
+        }
     }
 }
 
@@ -318,7 +322,15 @@ impl FromStr for AddressKind {
     type Err = std::convert::Infallible;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(s.parse()
+        // check for wrapping "[..]" in an ipv6 host
+        let mut host = s.to_string();
+        let len = host.len();
+        if len > 2 && s.starts_with('[') && s.ends_with(']') {
+            host = host[1..len - 1].to_string();
+        }
+
+        Ok(host
+            .parse()
             .map(Self::Ip)
             .unwrap_or_else(|_| Self::Name(s.to_owned())))
     }
@@ -339,5 +351,72 @@ impl Serialize for EndpointAddress {
         S: serde::Serializer,
     {
         serializer.serialize_str(&self.to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn endpoint_from_string() {
+        // ipv
+        let endpoint = "127.0.12.1:4567".parse::<EndpointAddress>().unwrap();
+        match endpoint.host {
+            AddressKind::Name(_) => panic!("Shouldn't be a name"),
+            AddressKind::Ip(ip) => assert_eq!("127.0.12.1", ip.to_string()),
+        };
+        assert_eq!(4567, endpoint.port);
+
+        // ipv6
+        let endpoint = "[2345:0425:2ca1:0000:0000:0567:5673:24b5]:25999"
+            .parse::<EndpointAddress>()
+            .unwrap();
+        match endpoint.host {
+            AddressKind::Name(_) => panic!("Shouldn't be a name"),
+            AddressKind::Ip(ip) => {
+                assert_eq!("2345:425:2ca1::567:5673:24b5", ip.to_string())
+            }
+        };
+        assert_eq!(25999, endpoint.port);
+    }
+
+    #[test]
+    fn address_kind_from_string() {
+        let ak = "127.0.12.1".parse::<AddressKind>().unwrap();
+
+        match ak {
+            AddressKind::Name(_) => panic!("Shouldn't be a name"),
+            AddressKind::Ip(ip) => assert_eq!("127.0.12.1", ip.to_string()),
+        }
+
+        // ipv6
+        let ak = "[2345:0425:2ca1:0000:0000:0567:5673:24b5]"
+            .parse::<AddressKind>()
+            .unwrap();
+        match ak {
+            AddressKind::Name(_) => panic!("Shouldn't be a name"),
+            AddressKind::Ip(ip) => {
+                assert_eq!("2345:425:2ca1::567:5673:24b5", ip.to_string())
+            }
+        };
+
+        let ak = "2345:0425:2ca1:0000:0000:0567:5673:24b5"
+            .parse::<AddressKind>()
+            .unwrap();
+        match ak {
+            AddressKind::Name(_) => panic!("Shouldn't be a name"),
+            AddressKind::Ip(ip) => {
+                assert_eq!("2345:425:2ca1::567:5673:24b5", ip.to_string())
+            }
+        };
+
+        let ak = "my.domain.com".parse::<AddressKind>().unwrap();
+        match ak {
+            AddressKind::Name(name) => {
+                assert_eq!("my.domain.com", name)
+            }
+            AddressKind::Ip(_) => panic!("shouldn't be an ip"),
+        };
     }
 }

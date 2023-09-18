@@ -18,10 +18,11 @@ use std::{net::SocketAddr, sync::Arc, time::Duration};
 
 use tonic::transport::Endpoint;
 
-use crate::{proxy::SessionMap, utils::net, xds::ResourceType, Config, Result};
+use crate::{proxy::SessionMap, xds::ResourceType, Config, Result};
 
 #[cfg(doc)]
 use crate::filters::FilterFactory;
+use crate::utils::net::DualStackLocalSocket;
 
 define_port!(7777);
 
@@ -159,7 +160,7 @@ impl Proxy {
         // Contains config for each worker task.
         let mut workers = Vec::with_capacity(num_workers);
         for worker_id in 0..num_workers {
-            let socket = Arc::new(net::socket_with_reuse(self.port)?);
+            let socket = Arc::new(DualStackLocalSocket::new(self.port)?);
             workers.push(crate::proxy::DownstreamReceiveWorkerConfig {
                 worker_id,
                 socket: socket.clone(),
@@ -187,7 +188,7 @@ mod tests {
     use crate::{
         config,
         endpoint::Endpoint,
-        test_utils::{available_addr, create_socket, load_test_filters, TestHelper},
+        test_utils::{available_addr, create_socket, load_test_filters, AddressType, TestHelper},
     };
 
     #[tokio::test]
@@ -197,7 +198,7 @@ mod tests {
         let endpoint1 = t.open_socket_and_recv_single_packet().await;
         let endpoint2 = t.open_socket_and_recv_single_packet().await;
 
-        let local_addr = available_addr().await;
+        let local_addr = available_addr(&AddressType::Random).await;
         let proxy = crate::cli::Proxy {
             port: local_addr.port(),
             ..<_>::default()
@@ -206,8 +207,8 @@ mod tests {
         let config = Arc::new(crate::Config::default());
         config.clusters.modify(|clusters| {
             clusters.insert_default(vec![
-                Endpoint::new(endpoint1.socket.local_addr().unwrap().into()),
-                Endpoint::new(endpoint2.socket.local_addr().unwrap().into()),
+                Endpoint::new(endpoint1.socket.local_ipv4_addr().unwrap().into()),
+                Endpoint::new(endpoint2.socket.local_ipv6_addr().unwrap().into()),
             ])
         });
 
@@ -240,8 +241,7 @@ mod tests {
         let mut t = TestHelper::default();
 
         let endpoint = t.open_socket_and_recv_single_packet().await;
-
-        let local_addr = available_addr().await;
+        let local_addr = available_addr(&AddressType::Random).await;
         let proxy = crate::cli::Proxy {
             port: local_addr.port(),
             ..<_>::default()
@@ -249,7 +249,7 @@ mod tests {
         let config = Arc::new(Config::default());
         config.clusters.modify(|clusters| {
             clusters.insert_default(vec![Endpoint::new(
-                endpoint.socket.local_addr().unwrap().into(),
+                endpoint.socket.local_ipv4_addr().unwrap().into(),
             )])
         });
         t.run_server(config, proxy, None);
@@ -275,7 +275,7 @@ mod tests {
 
         load_test_filters();
         let endpoint = t.open_socket_and_recv_single_packet().await;
-        let local_addr = available_addr().await;
+        let local_addr = available_addr(&AddressType::Random).await;
         let config = Arc::new(Config::default());
         config.filters.store(
             crate::filters::FilterChain::try_from(vec![config::Filter {
@@ -288,7 +288,7 @@ mod tests {
         );
         config.clusters.modify(|clusters| {
             clusters.insert_default(vec![Endpoint::new(
-                endpoint.socket.local_addr().unwrap().into(),
+                endpoint.socket.local_ipv4_addr().unwrap().into(),
             )])
         });
         t.run_server(
@@ -321,12 +321,12 @@ mod tests {
         let t = TestHelper::default();
 
         let socket = Arc::new(create_socket().await);
-        let addr = socket.local_addr().unwrap();
+        let addr = socket.local_ipv6_addr().unwrap();
         let endpoint = t.open_socket_and_recv_single_packet().await;
         let msg = "hello";
         let config = Arc::new(Config::default());
         config.clusters.modify(|clusters| {
-            clusters.insert_default(vec![endpoint.socket.local_addr().unwrap()])
+            clusters.insert_default(vec![endpoint.socket.local_ipv6_addr().unwrap()])
         });
 
         // we'll test a single DownstreamReceiveWorkerConfig
@@ -356,7 +356,7 @@ mod tests {
 
         let msg = "hello";
         let endpoint = t.open_socket_and_recv_single_packet().await;
-        let local_addr = available_addr().await;
+        let local_addr = available_addr(&AddressType::Random).await;
         let proxy = crate::cli::Proxy {
             port: local_addr.port(),
             ..<_>::default()
@@ -364,7 +364,7 @@ mod tests {
 
         let config = Arc::new(crate::Config::default());
         config.clusters.modify(|clusters| {
-            clusters.insert_default(vec![endpoint.socket.local_addr().unwrap()])
+            clusters.insert_default(vec![endpoint.socket.local_ipv4_addr().unwrap()])
         });
 
         proxy.run_recv_from(&config, <_>::default()).unwrap();

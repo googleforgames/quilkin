@@ -22,7 +22,7 @@ use quilkin::{
     config::Filter,
     endpoint::Endpoint,
     filters::{LocalRateLimit, StaticFilter},
-    test_utils::{available_addr, TestHelper},
+    test_utils::{available_addr, AddressType, TestHelper},
 };
 
 #[tokio::test]
@@ -33,9 +33,9 @@ async fn local_rate_limit_filter() {
 max_packets: 2
 period: 1
 ";
-    let echo = t.run_echo_server().await;
+    let echo = t.run_echo_server(&AddressType::Random).await;
 
-    let server_addr = available_addr().await;
+    let server_addr = available_addr(&AddressType::Random).await;
     let server_proxy = quilkin::cli::Proxy {
         port: server_addr.port(),
         ..<_>::default()
