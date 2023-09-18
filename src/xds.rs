@@ -302,7 +302,10 @@ mod tests {
         )
         .await
         .unwrap();
-        let mut stream = client.xds_client_stream(config.clone());
+        let mut stream = client.xds_client_stream(
+            config.clone(),
+            crate::xds::server::IDLE_REQUEST_INTERVAL_SECS,
+        );
         tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
         // Each time, we create a new upstream endpoint and send a cluster update for it.

@@ -34,6 +34,10 @@ pub struct Relay {
     /// Port for xDS management_server service
     #[clap(short, long, env = super::PORT_ENV_VAR, default_value_t = super::manage::PORT)]
     pub xds_port: u16,
+    /// The interval in seconds at which the relay will send a discovery request
+    /// to an management server after receiving no updates.
+    #[clap(long, env = "QUILKIN_IDLE_REQUEST_INTERVAL_SECS", default_value_t = crate::xds::server::IDLE_REQUEST_INTERVAL_SECS)]
+    pub idle_request_interval_secs: u64,
     #[clap(subcommand)]
     pub providers: Option<Providers>,
 }
@@ -43,6 +47,7 @@ impl Default for Relay {
         Self {
             mds_port: PORT,
             xds_port: super::manage::PORT,
+            idle_request_interval_secs: crate::xds::server::IDLE_REQUEST_INTERVAL_SECS,
             providers: None,
         }
     }
@@ -57,6 +62,7 @@ impl Relay {
         let xds_server = crate::xds::server::spawn(self.xds_port, config.clone());
         let mds_server = tokio::spawn(crate::xds::server::control_plane_discovery_server(
             self.mds_port,
+            self.idle_request_interval_secs,
             config.clone(),
         ));
 

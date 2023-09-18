@@ -46,6 +46,10 @@ pub struct Proxy {
     /// One or more socket addresses to forward packets to.
     #[clap(short, long, env = "QUILKIN_DEST")]
     pub to: Vec<SocketAddr>,
+    /// The interval in seconds at which the relay will send a discovery request
+    /// to an management server after receiving no updates.
+    #[clap(long, env = "QUILKIN_IDLE_REQUEST_INTERVAL_SECS", default_value_t = crate::xds::server::IDLE_REQUEST_INTERVAL_SECS)]
+    pub idle_request_interval_secs: u64,
 }
 
 impl Default for Proxy {
@@ -56,6 +60,7 @@ impl Default for Proxy {
             port: PORT,
             qcmp_port: QCMP_PORT,
             to: <_>::default(),
+            idle_request_interval_secs: crate::xds::server::IDLE_REQUEST_INTERVAL_SECS,
         }
     }
 }
@@ -107,7 +112,8 @@ impl Proxy {
             let client =
                 crate::xds::AdsClient::connect(String::clone(&id), self.management_server.clone())
                     .await?;
-            let mut stream = client.xds_client_stream(config.clone());
+            let mut stream =
+                client.xds_client_stream(config.clone(), self.idle_request_interval_secs);
 
             tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
             stream
