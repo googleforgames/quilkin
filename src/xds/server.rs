@@ -38,12 +38,17 @@ use crate::{
     },
 };
 
+pub(crate) const IDLE_REQUEST_INTERVAL_SECS: u64 = 30;
+
 #[tracing::instrument(skip_all)]
 pub fn spawn(
     port: u16,
     config: std::sync::Arc<crate::Config>,
 ) -> impl std::future::Future<Output = crate::Result<()>> {
-    let server = AggregatedDiscoveryServiceServer::new(ControlPlane::from_arc(config));
+    let server = AggregatedDiscoveryServiceServer::new(ControlPlane::from_arc(
+        config,
+        IDLE_REQUEST_INTERVAL_SECS,
+    ));
     let server = tonic::transport::Server::builder().add_service(server);
     tracing::info!("serving management server on port `{port}`");
     server
@@ -53,9 +58,13 @@ pub fn spawn(
 
 pub(crate) fn control_plane_discovery_server(
     port: u16,
+    idle_request_interval_secs: u64,
     config: Arc<Config>,
 ) -> impl std::future::Future<Output = crate::Result<()>> {
-    let server = AggregatedControlPlaneDiscoveryServiceServer::new(ControlPlane::from_arc(config));
+    let server = AggregatedControlPlaneDiscoveryServiceServer::new(ControlPlane::from_arc(
+        config,
+        idle_request_interval_secs,
+    ));
     let server = tonic::transport::Server::builder().add_service(server);
     tracing::info!("serving relay server on port `{port}`");
     server
@@ -66,6 +75,7 @@ pub(crate) fn control_plane_discovery_server(
 #[derive(Clone)]
 pub struct ControlPlane {
     config: Arc<Config>,
+    idle_request_interval_secs: u64,
     watchers: Arc<crate::xds::resource::ResourceMap<Watchers>>,
 }
 
@@ -88,13 +98,14 @@ impl Default for Watchers {
 
 impl ControlPlane {
     /// Creates a new server for managing [`Config`].
-    pub fn new(config: Config) -> Self {
-        Self::from_arc(Arc::new(config))
+    pub fn new(config: Config, idle_request_interval_secs: u64) -> Self {
+        Self::from_arc(Arc::new(config), idle_request_interval_secs)
     }
 
-    pub fn from_arc(config: Arc<Config>) -> Self {
+    pub fn from_arc(config: Arc<Config>, idle_request_interval_secs: u64) -> Self {
         let this = Self {
             config,
+            idle_request_interval_secs,
             watchers: <_>::default(),
         };
 
@@ -315,6 +326,7 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
 
         tracing::info!(%identifier, "new control plane discovery stream");
         let config = self.config.clone();
+        let idle_request_interval_secs = self.idle_request_interval_secs;
         let stream = super::client::AdsStream::connect(
             Arc::from(&*identifier),
             move |(mut requests, _rx), _subscribed_resources| async move {
@@ -334,9 +346,23 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
                 );
 
                 loop {
-                    if let Some(ack) = response_handler.next().await {
+                    let next_response = tokio::time::timeout(
+                        std::time::Duration::from_secs(idle_request_interval_secs),
+                        response_handler.next(),
+                    );
+
+                    if let Ok(Some(ack)) = next_response.await {
                         tracing::info!("sending ack request");
                         requests.send(ack?)?;
+                    } else {
+                        tracing::info!("exceeded idle interval, sending request");
+                        crate::xds::client::MdsStream::discovery_request_without_cache(
+                            &identifier,
+                            &mut requests,
+                            crate::xds::ResourceType::Cluster,
+                            &[],
+                        )
+                        .map_err(|error| tonic::Status::internal(error.to_string()))?;
                     }
                 }
             },
@@ -399,7 +425,7 @@ mod tests {
         };
 
         let config = Arc::new(Config::default());
-        let client = ControlPlane::from_arc(config.clone());
+        let client = ControlPlane::from_arc(config.clone(), IDLE_REQUEST_INTERVAL_SECS);
         let (tx, rx) = tokio::sync::mpsc::channel(256);
 
         let mut request = DiscoveryRequest {

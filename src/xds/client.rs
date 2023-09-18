@@ -217,8 +217,12 @@ impl MdsClient {
 
 impl AdsClient {
     /// Starts a new stream to the xDS management server.
-    pub fn xds_client_stream(&self, config: Arc<Config>) -> AdsStream {
-        AdsStream::xds_client_stream(self, config)
+    pub fn xds_client_stream(
+        &self,
+        config: Arc<Config>,
+        idle_request_interval_secs: u64,
+    ) -> AdsStream {
+        AdsStream::xds_client_stream(self, config, idle_request_interval_secs)
     }
 }
 
@@ -238,6 +242,7 @@ impl AdsStream {
             management_servers,
         }: &AdsClient,
         config: Arc<Config>,
+        idle_request_interval_secs: u64,
     ) -> Self {
         let mut client = client.clone();
         let identifier = identifier.clone();
@@ -285,19 +290,35 @@ impl AdsStream {
                     );
 
                     loop {
-                        match stream.next().await {
-                            Some(Ok(ack)) => {
+                        let next_response = tokio::time::timeout(
+                            std::time::Duration::from_secs(idle_request_interval_secs),
+                            stream.next(),
+                        );
+
+                        match next_response.await {
+                            Ok(Some(Ok(ack))) => {
                                 tracing::trace!("received ack");
                                 requests.send(ack)?;
                                 continue;
                             }
-                            Some(Err(error)) => {
+                            Ok(Some(Err(error))) => {
                                 tracing::warn!(%error, "xds stream error");
                                 break;
                             }
-                            None => {
+                            Ok(None) => {
                                 tracing::warn!("xDS stream terminated");
                                 break;
+                            }
+                            Err(_) => {
+                                tracing::info!(
+                                    "exceeded idle request interval sending new requests"
+                                );
+                                Self::refresh_resources(
+                                    &identifier,
+                                    &subscribed_resources,
+                                    &mut requests,
+                                )
+                                .await?;
                             }
                         }
                     }
@@ -367,7 +388,10 @@ impl MdsStream {
                         .await?
                         .into_inner();
 
-                    let control_plane = super::server::ControlPlane::from_arc(config.clone());
+                    let control_plane = super::server::ControlPlane::from_arc(
+                        config.clone(),
+                        super::server::IDLE_REQUEST_INTERVAL_SECS,
+                    );
                     let mut stream = control_plane.stream_aggregated_resources(stream).await?;
                     while let Some(result) = stream.next().await {
                         let response = result?;
