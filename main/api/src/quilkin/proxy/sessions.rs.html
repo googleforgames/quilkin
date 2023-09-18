@@ -557,7 +557,7 @@
                                 <span class="macro">tracing::error!</span>(%error, %source, dest = <span class="question-mark">?</span>endpoint, <span class="string">&quot;Error receiving packet&quot;</span>);
                             },
                             <span class="prelude-val">Ok</span>((size, recv_addr)) =&gt; {
-                                <span class="kw">let </span>received_at = chrono::Utc::now().timestamp_nanos();
+                                <span class="kw">let </span>received_at = chrono::Utc::now().timestamp_nanos_opt().unwrap();
                                 <span class="kw">if let </span><span class="prelude-val">Some</span>(last_received_at) = last_received_at {
                                     <span class="kw">crate</span>::metrics::packet_jitter(<span class="kw">crate</span>::metrics::WRITE, asn_info).set(received_at - last_received_at);
                                 }

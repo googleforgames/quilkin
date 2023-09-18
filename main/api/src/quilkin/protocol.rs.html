@@ -508,7 +508,7 @@
 
                 <span class="kw">match </span>socket.recv_from(<span class="kw-2">&amp;mut </span>buf).<span class="kw">await </span>{
                     <span class="prelude-val">Ok</span>((size, source)) =&gt; {
-                        <span class="kw">let </span>received_at = chrono::Utc::now().timestamp_nanos();
+                        <span class="kw">let </span>received_at = chrono::Utc::now().timestamp_nanos_opt().unwrap();
                         <span class="kw">let </span>command = <span class="kw">match </span>Protocol::parse(<span class="kw-2">&amp;</span>buf[..size]) {
                             <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(command)) =&gt; command,
                             <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; {
@@ -586,7 +586,7 @@
     </span><span class="kw">pub fn </span>ping_with_nonce(nonce: u8) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::Ping {
             nonce,
-            client_timestamp: chrono::Utc::now().timestamp_nanos(),
+            client_timestamp: chrono::Utc::now().timestamp_nanos_opt().unwrap(),
         }
     }
 
@@ -598,7 +598,7 @@
             nonce,
             client_timestamp,
             server_start_timestamp,
-            server_transmit_timestamp: chrono::Utc::now().timestamp_nanos(),
+            server_transmit_timestamp: chrono::Utc::now().timestamp_nanos_opt().unwrap(),
         }
     }
 

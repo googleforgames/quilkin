@@ -309,7 +309,7 @@
                         <span class="kw">match </span>result {
                             <span class="prelude-val">Ok</span>((size, source)) =&gt; {
                                 <span class="kw">let </span>packet = DownstreamPacket {
-                                    received_at: chrono::Utc::now().timestamp_nanos(),
+                                    received_at: chrono::Utc::now().timestamp_nanos_opt().unwrap(),
                                     asn_info: <span class="kw">crate</span>::maxmind_db::MaxmindDb::lookup(source.ip()),
                                     contents: buf[..size].to_vec(),
                                     source,

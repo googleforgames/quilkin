@@ -187,44 +187,6 @@ relay's ADS endpoint, you use the same <code>--management-server</code> argument
 connecting to control planes.</p>
 <p>To view all options for the <code>relay</code> subcommand, run:</p>
 <pre><code class="language-shell">$ quilkin relay --help
-warning: use of deprecated method `chrono::DateTime::&lt;Tz&gt;::timestamp_nanos`: use `timestamp_nanos_opt()` instead
-  --&gt; src/protocol.rs:51:62
-   |
-51 |                         let received_at = chrono::Utc::now().timestamp_nanos();
-   |                                                              ^^^^^^^^^^^^^^^
-   |
-   = note: `#[warn(deprecated)]` on by default
-
-warning: use of deprecated method `chrono::DateTime::&lt;Tz&gt;::timestamp_nanos`: use `timestamp_nanos_opt()` instead
-  --&gt; src/cli/qcmp.rs:73:48
-   |
-73 |             let recv_time = chrono::Utc::now().timestamp_nanos();
-   |                                                ^^^^^^^^^^^^^^^
-
-warning: use of deprecated method `chrono::DateTime::&lt;Tz&gt;::timestamp_nanos`: use `timestamp_nanos_opt()` instead
-   --&gt; src/proxy/sessions.rs:166:70
-    |
-166 | ...                   let received_at = chrono::Utc::now().timestamp_nanos();
-    |                                                            ^^^^^^^^^^^^^^^
-
-warning: use of deprecated method `chrono::DateTime::&lt;Tz&gt;::timestamp_nanos`: use `timestamp_nanos_opt()` instead
-  --&gt; src/proxy.rs:76:69
-   |
-76 | ...                   received_at: chrono::Utc::now().timestamp_nanos(),
-   |                                                       ^^^^^^^^^^^^^^^
-
-warning: use of deprecated method `chrono::DateTime::&lt;Tz&gt;::timestamp_nanos`: use `timestamp_nanos_opt()` instead
-   --&gt; src/protocol.rs:129:50
-    |
-129 |             client_timestamp: chrono::Utc::now().timestamp_nanos(),
-    |                                                  ^^^^^^^^^^^^^^^
-
-warning: use of deprecated method `chrono::DateTime::&lt;Tz&gt;::timestamp_nanos`: use `timestamp_nanos_opt()` instead
-   --&gt; src/protocol.rs:141:59
-    |
-141 |             server_transmit_timestamp: chrono::Utc::now().timestamp_nanos(),
-    |                                                           ^^^^^^^^^^^^^^^
-
 Runs Quilkin as a relay service that runs a Manager Discovery Service (mDS) for accepting cluster and configuration information from xDS management services, and exposing it as a single merged xDS service for proxy services
 
 Usage: quilkin relay [OPTIONS] [COMMAND]
