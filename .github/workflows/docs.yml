@@ -20,6 +20,7 @@ jobs:
       - run: mkdir -p ${{ env.docs_dir }}
       - run: |
           export GITHUB_REF_NAME=${{ github.ref_name }}
+          [[ $GITHUB_REF_NAME = v* ]] && export QUILKIN_RELEASE=1
           export QUILKIN_VERSION=$(make --directory=./build version --no-print-directory)
           echo GITHUB_REF_NAME=${GITHUB_REF_NAME}
           echo QUILKIN_VERSION=${QUILKIN_VERSION}

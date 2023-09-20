@@ -249,7 +249,7 @@ impl ControlPlane {
                             // Currently just resend previous discovery response.
                         } else if uuid::Uuid::parse_str(&new_message.response_nonce).is_ok() {
                             if pending_acks.cache_get(&new_message.response_nonce).is_some() {
-                                tracing::info!(nonce = %new_message.response_nonce, "ACK");
+                                tracing::debug!(nonce = %new_message.response_nonce, "ACK");
                                 continue
                             } else {
                                 tracing::trace!(nonce = %new_message.response_nonce, "Unknown nonce: could not be found in cache");
