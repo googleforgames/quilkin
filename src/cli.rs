@@ -268,7 +268,7 @@ mod tests {
 
     use crate::{
         config::{Filter, Providers},
-        endpoint::{Endpoint, LocalityEndpoints},
+        endpoint::Endpoint,
         filters::{Capture, StaticFilter, TokenRouter},
         test_utils::{create_socket, AddressType, TestHelper},
     };
@@ -309,21 +309,17 @@ mod tests {
 
         let endpoints_file = tempfile::NamedTempFile::new().unwrap();
         let config = Config::default();
+        let server_port = server_socket.local_ipv4_addr().unwrap().port();
         std::fs::write(endpoints_file.path(), {
-            config
-                .clusters
-                .write()
-                .default_cluster_mut()
-                .insert(LocalityEndpoints::from(vec![Endpoint::with_metadata(
-                    (
-                        std::net::Ipv4Addr::LOCALHOST,
-                        server_socket.local_ipv4_addr().unwrap().port(),
-                    )
-                        .into(),
+            config.clusters.write().insert_default(
+                [Endpoint::with_metadata(
+                    (std::net::Ipv4Addr::LOCALHOST, server_port).into(),
                     crate::endpoint::Metadata {
                         tokens: vec!["abc".into()].into_iter().collect(),
                     },
-                )]));
+                )]
+                .into(),
+            );
             serde_yaml::to_string(&config).unwrap()
         })
         .unwrap();
@@ -353,15 +349,17 @@ mod tests {
             quiet: true,
             admin_address: Some((Ipv4Addr::LOCALHOST, control_plane_admin_port).into()),
             config: <_>::default(),
-            command: Commands::Manage(Manage {
+            command: Commands::Agent(Agent {
                 relay: vec!["http://localhost:7900".parse().unwrap()],
-                port: 7801,
                 region: None,
                 sub_zone: None,
                 zone: None,
-                provider: Providers::File {
+                qcmp_port: crate::test_utils::available_addr(&AddressType::Random)
+                    .await
+                    .port(),
+                provider: Some(Providers::File {
                     path: endpoints_file.path().to_path_buf(),
-                },
+                }),
             }),
             log_format: LogFormats::default(),
         };
@@ -394,21 +392,17 @@ mod tests {
             let token = random_three_characters();
 
             tracing::info!(?token, "writing new config");
+            let server_port = server_socket.local_ipv4_addr().unwrap().port();
             std::fs::write(endpoints_file.path(), {
-                config
-                    .clusters
-                    .write()
-                    .default_cluster_mut()
-                    .insert(LocalityEndpoints::from(vec![Endpoint::with_metadata(
-                        (
-                            std::net::Ipv4Addr::LOCALHOST,
-                            server_socket.local_ipv4_addr().unwrap().port(),
-                        )
-                            .into(),
+                config.clusters.write().insert_default(
+                    [Endpoint::with_metadata(
+                        (std::net::Ipv4Addr::LOCALHOST, server_port).into(),
                         crate::endpoint::Metadata {
                             tokens: vec![token.clone()].into_iter().collect(),
                         },
-                    )]));
+                    )]
+                    .into(),
+                );
                 serde_yaml::to_string(&config).unwrap()
             })
             .unwrap();

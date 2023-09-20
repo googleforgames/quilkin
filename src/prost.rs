@@ -55,12 +55,9 @@ pub fn value_from_kind(kind: Kind) -> Value {
     }
 }
 
-pub fn struct_from_json(value: Value) -> Option<prost_types::Struct> {
-    match from_json(value) {
-        prost_types::Value {
-            kind: Some(Kind::StructValue(r#struct)),
-        } => Some(r#struct),
-        _ => None,
+pub fn value_from_struct(value: prost_types::Struct) -> prost_types::Value {
+    prost_types::Value {
+        kind: Some(prost_types::value::Kind::StructValue(value)),
     }
 }
 

@@ -22,9 +22,8 @@ use tokio::sync::{mpsc, oneshot, watch};
 use tracing_subscriber::EnvFilter;
 
 use crate::{
-    cluster::Cluster,
     config::Config,
-    endpoint::{Endpoint, EndpointAddress, LocalityEndpoints},
+    endpoint::{Endpoint, EndpointAddress},
     filters::{prelude::*, FilterRegistry},
     metadata::Value,
     utils::net::DualStackLocalSocket,
@@ -344,19 +343,14 @@ pub async fn create_socket() -> DualStackLocalSocket {
 pub fn config_with_dummy_endpoint() -> Config {
     let config = Config::default();
 
-    config.clusters.write().insert(Cluster {
-        name: "default".into(),
-        localities: vec![LocalityEndpoints {
-            locality: None,
-            endpoints: [Endpoint {
-                address: (std::net::Ipv4Addr::LOCALHOST, 8080).into(),
-                ..<_>::default()
-            }]
-            .into(),
+    config.clusters.write().insert(
+        None,
+        [Endpoint {
+            address: (std::net::Ipv4Addr::LOCALHOST, 8080).into(),
+            ..<_>::default()
         }]
-        .into_iter()
-        .collect(),
-    });
+        .into(),
+    );
 
     config
 }

@@ -43,7 +43,7 @@ period: 1
     let server_config = std::sync::Arc::new(quilkin::Config::default());
     server_config
         .clusters
-        .modify(|clusters| clusters.insert_default(vec![Endpoint::new(echo.clone())]));
+        .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
     server_config.filters.store(
         quilkin::filters::FilterChain::try_from(vec![Filter {
             name: LocalRateLimit::factory().name().into(),

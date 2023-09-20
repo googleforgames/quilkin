@@ -28,10 +28,8 @@ data:
           on_write: COMPRESS
           mode: SNAPPY
     clusters:
-      default:
-        localities:
-          - endpoints:
-              - address: 127.0.0.1:26000
+      - endpoints:
+        - address: 127.0.0.1:26000
 ---
 apiVersion: "agones.dev/v1"
 kind: Fleet

@@ -33,7 +33,7 @@ async fn health_server() {
     };
     let server_config = std::sync::Arc::new(quilkin::Config::default());
     server_config.clusters.modify(|clusters| {
-        clusters.insert_default(vec!["127.0.0.1:0".parse::<Endpoint>().unwrap()])
+        clusters.insert_default(["127.0.0.1:0".parse::<Endpoint>().unwrap()].into())
     });
     t.run_server(
         server_config,

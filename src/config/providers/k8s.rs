@@ -1,6 +1,6 @@
 pub mod agones;
 
-use std::sync::Arc;
+use std::{collections::BTreeSet, sync::Arc};
 
 use futures::Stream;
 use k8s_openapi::api::core::v1::ConfigMap;
@@ -8,7 +8,7 @@ use kube::runtime::watcher::Event;
 
 use agones::GameServer;
 
-use crate::endpoint::{Endpoint, Locality, LocalityEndpoints};
+use crate::endpoint::{Endpoint, Locality};
 
 pub fn update_filters_from_configmap(
     client: kube::Client,
@@ -96,8 +96,10 @@ pub fn update_endpoints_from_gameservers(
         for await event in gameserver_events(client, namespace) {
             match event? {
                 Event::Applied(server) => {
+                    tracing::debug!("received applied event from k8s");
                     if !server.is_allocated() {
                         yield Ok(());
+                        tracing::debug!("skipping unallocated server");
                         continue;
                     }
 
@@ -108,24 +110,17 @@ pub fn update_endpoints_from_gameservers(
                             continue;
                         }
                     };
-                    tracing::trace!(endpoint=%serde_json::to_value(&endpoint).unwrap(), "Adding endpoint");
-                    match &locality {
-                        Some(locality) => config
-                            .clusters
-                            .write()
-                            .default_cluster_mut()
-                            .insert((endpoint, locality.clone())),
-                        None => config
-                            .clusters
-                            .write()
-                            .default_cluster_mut()
-                            .insert(endpoint),
-                    };
-                    tracing::trace!(clusters=%serde_json::to_value(&config.clusters).unwrap(), "current clusters");
+                    tracing::debug!(endpoint=%serde_json::to_value(&endpoint).unwrap(), "Adding endpoint");
+                    config.clusters.write()
+                        .entry(locality.clone())
+                        .or_default()
+                        .value_mut()
+                        .replace(endpoint);
                 }
 
                 Event::Restarted(servers) => {
-                    let servers: Vec<_> = servers
+                    tracing::debug!("received restart event from k8s");
+                    let servers: BTreeSet<_> = servers
                         .into_iter()
                         .filter(GameServer::is_allocated)
                         .map(Endpoint::try_from)
@@ -139,12 +134,17 @@ pub fn update_endpoints_from_gameservers(
                             }
                         })
                         .collect();
-                    let endpoints = LocalityEndpoints::from((servers, locality.clone()));
-                    tracing::trace!(?endpoints, "Restarting with endpoints");
-                    config.clusters.write().insert_default(endpoints);
+
+                    tracing::trace!(
+                        endpoints=%serde_json::to_value(servers.clone()).unwrap(),
+                        "Restarting with endpoints"
+                    );
+
+                    config.clusters.write().merge(locality.clone(), servers);
                 }
 
                 Event::Deleted(server) => {
+                    tracing::debug!("received delete event from k8s");
                     let found = if let Some(endpoint) = server.endpoint() {
                         config.clusters.write().remove_endpoint(&endpoint)
                     } else {
@@ -153,7 +153,7 @@ pub fn update_endpoints_from_gameservers(
                         })
                     };
 
-                    if found.is_none() {
+                    if !found {
                         tracing::warn!(
                             endpoint=%serde_json::to_value(server.endpoint()).unwrap(),
                             name=%serde_json::to_value(server.metadata.name).unwrap(),

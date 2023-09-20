@@ -181,7 +181,6 @@ filters:
             .as_mut()
             .map(|annotations| annotations.remove(token_key).unwrap());
         gameservers.replace(name.as_str(), &pp, &gs).await.unwrap();
-
         // now we should send a packet, and not get a response.
         let mut failed = false;
         for i in 0..30 {
@@ -196,6 +195,10 @@ filters:
                 failed = true;
                 break;
             }
+        }
+        if !failed {
+            debug_pods(&client, "role=proxy".into()).await;
+            debug_pods(&client, "role=xds".into()).await;
         }
         assert!(failed, "Packet should have failed");
     }

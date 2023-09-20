@@ -37,7 +37,7 @@ on_write: COMPRESS
     let server_config = std::sync::Arc::new(quilkin::Config::default());
     server_config
         .clusters
-        .modify(|clusters| clusters.insert_default(vec![Endpoint::new(echo.clone())]));
+        .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
     server_config.filters.store(
         quilkin::filters::FilterChain::try_from(vec![Filter {
             name: Compress::factory().name().into(),
@@ -63,7 +63,7 @@ on_write: DECOMPRESS
     let client_config = std::sync::Arc::new(quilkin::Config::default());
     client_config
         .clusters
-        .modify(|clusters| clusters.insert_default(vec![Endpoint::new(server_addr.into())]));
+        .modify(|clusters| clusters.insert_default([Endpoint::new(server_addr.into())].into()));
     client_config.filters.store(
         quilkin::filters::FilterChain::try_from(vec![Filter {
             name: Compress::factory().name().into(),

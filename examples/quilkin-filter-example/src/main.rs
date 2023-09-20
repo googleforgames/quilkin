@@ -105,9 +105,12 @@ async fn main() -> quilkin::Result<()> {
         .try_into()?,
     ));
     config.clusters.modify(|map| {
-        map.insert_default(vec![quilkin::endpoint::Endpoint::new(
-            (std::net::Ipv4Addr::LOCALHOST, 4321).into(),
-        )])
+        map.insert_default(
+            [quilkin::endpoint::Endpoint::new(
+                (std::net::Ipv4Addr::LOCALHOST, 4321).into(),
+            )]
+            .into(),
+        )
     });
 
     proxy.run(config.into(), shutdown_rx).await

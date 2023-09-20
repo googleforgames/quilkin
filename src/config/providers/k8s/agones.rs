@@ -299,18 +299,6 @@ impl TryFrom<GameServer> for Endpoint {
     }
 }
 
-impl TryFrom<Vec<GameServer>> for crate::endpoint::LocalityEndpoints {
-    type Error = tonic::Status;
-
-    fn try_from(servers: Vec<GameServer>) -> Result<Self, Self::Error> {
-        Ok(servers
-            .into_iter()
-            .map(Endpoint::try_from)
-            .collect::<Result<std::collections::BTreeSet<_>, _>>()?
-            .into())
-    }
-}
-
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 pub struct Health {
     /// Whether health checking is disabled or not

@@ -206,6 +206,12 @@ impl From<(String, u16)> for EndpointAddress {
     }
 }
 
+impl From<(AddressKind, u16)> for EndpointAddress {
+    fn from((host, port): (AddressKind, u16)) -> Self {
+        Self { host, port }
+    }
+}
+
 impl From<EndpointAddress> for EnvoySocketAddress {
     fn from(address: EndpointAddress) -> Self {
         use crate::xds::config::core::v3::socket_address::{PortSpecifier, Protocol};

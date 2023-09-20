@@ -51,10 +51,13 @@ quilkin.dev:
     };
     let server_config = std::sync::Arc::new(quilkin::Config::default());
     server_config.clusters.modify(|clusters| {
-        clusters.insert_default(vec![Endpoint::with_metadata(
-            echo.clone(),
-            serde_yaml::from_str::<MetadataView<_>>(endpoint_metadata).unwrap(),
-        )])
+        clusters.insert_default(
+            [Endpoint::with_metadata(
+                echo.clone(),
+                serde_yaml::from_str::<MetadataView<_>>(endpoint_metadata).unwrap(),
+            )]
+            .into(),
+        )
     });
 
     server_config.filters.store(

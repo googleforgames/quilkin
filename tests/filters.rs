@@ -54,7 +54,7 @@ async fn test_filter() {
 
     server_config
         .clusters
-        .modify(|clusters| clusters.insert_default(vec![Endpoint::new(echo.clone())]));
+        .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
 
     t.run_server(server_config, server_proxy, None);
 
@@ -66,9 +66,12 @@ async fn test_filter() {
     };
     let client_config = std::sync::Arc::new(quilkin::Config::default());
     client_config.clusters.modify(|clusters| {
-        clusters.insert_default(vec![Endpoint::new(
-            SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port).into(),
-        )])
+        clusters.insert_default(
+            [Endpoint::new(
+                SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port).into(),
+            )]
+            .into(),
+        )
     });
     client_config.filters.store(
         quilkin::filters::FilterChain::try_from(vec![Filter {
@@ -131,7 +134,7 @@ async fn debug_filter() {
     };
     server_config
         .clusters
-        .modify(|clusters| clusters.insert_default(vec![Endpoint::new(echo.clone())]));
+        .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
     server_config.filters.store(
         quilkin::filters::FilterChain::try_from(vec![Filter {
             name: factory.name().into(),
@@ -152,9 +155,12 @@ async fn debug_filter() {
     };
     let client_config = std::sync::Arc::new(quilkin::Config::default());
     client_config.clusters.modify(|clusters| {
-        clusters.insert_default(vec![Endpoint::new(
-            SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port).into(),
-        )])
+        clusters.insert_default(
+            [Endpoint::new(
+                SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port).into(),
+            )]
+            .into(),
+        )
     });
     client_config.filters.store(
         quilkin::filters::FilterChain::try_from(vec![Filter {

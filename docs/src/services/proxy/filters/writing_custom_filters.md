@@ -105,10 +105,8 @@ version: v1alpha1
 filters:
   - name: greet.v1
 clusters:
-  default:
-    localities:
-        - endpoints:
-            - address: 127.0.0.1:4321
+  - endpoints:
+      - address: 127.0.0.1:4321
 ```
 
 Next we to setup our network of services, for this example we're going to use

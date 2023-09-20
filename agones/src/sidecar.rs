@@ -77,10 +77,8 @@ filters:
         on_write: DO_NOTHING
         bytes: c2lkZWNhcg== # sidecar
 clusters:
-  default:
-    localities:
-      - endpoints:
-          - address: 127.0.0.1:7654
+  - endpoints:
+    - address: 127.0.0.1:7654
 "#;
 
         let config_map = config_maps

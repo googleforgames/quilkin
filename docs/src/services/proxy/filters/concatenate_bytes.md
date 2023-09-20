@@ -19,10 +19,8 @@ filters:
         on_write: DO_NOTHING
         bytes: MXg3aWp5Ng==
 clusters:
-  default:
-    localities:
-        - endpoints:
-            - address: 127.0.0.1:7001
+  - endpoints:
+      - address: 127.0.0.1:7001
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 # assert_eq!(config.filters.load().len(), 1);

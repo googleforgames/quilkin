@@ -61,7 +61,7 @@ impl Manage {
         if let Some(locality) = &locality {
             config
                 .clusters
-                .modify(|map| map.update_unlocated_endpoints(locality));
+                .modify(|map| map.update_unlocated_endpoints(locality.clone()));
         }
 
         let provider_task = self.provider.spawn(config.clone(), locality.clone());

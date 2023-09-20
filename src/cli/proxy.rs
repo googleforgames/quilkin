@@ -93,7 +93,14 @@ impl Proxy {
 
         if !self.to.is_empty() {
             config.clusters.modify(|clusters| {
-                clusters.default_cluster_mut().localities = vec![self.to.clone().into()].into();
+                clusters.insert(
+                    None,
+                    self.to
+                        .iter()
+                        .cloned()
+                        .map(crate::endpoint::Endpoint::from)
+                        .collect(),
+                );
             });
         }
 
@@ -116,9 +123,7 @@ impl Proxy {
                 client.xds_client_stream(config.clone(), self.idle_request_interval_secs);
 
             tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
-            stream
-                .discovery_request(ResourceType::Endpoint, &[])
-                .await?;
+            stream.discovery_request(ResourceType::Cluster, &[]).await?;
             tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
             stream
                 .discovery_request(ResourceType::Listener, &[])
@@ -206,10 +211,13 @@ mod tests {
 
         let config = Arc::new(crate::Config::default());
         config.clusters.modify(|clusters| {
-            clusters.insert_default(vec![
-                Endpoint::new(endpoint1.socket.local_ipv4_addr().unwrap().into()),
-                Endpoint::new(endpoint2.socket.local_ipv6_addr().unwrap().into()),
-            ])
+            clusters.insert_default(
+                [
+                    Endpoint::new(endpoint1.socket.local_ipv4_addr().unwrap().into()),
+                    Endpoint::new(endpoint2.socket.local_ipv6_addr().unwrap().into()),
+                ]
+                .into(),
+            );
         });
 
         t.run_server(config, proxy, None);
@@ -248,9 +256,12 @@ mod tests {
         };
         let config = Arc::new(Config::default());
         config.clusters.modify(|clusters| {
-            clusters.insert_default(vec![Endpoint::new(
-                endpoint.socket.local_ipv4_addr().unwrap().into(),
-            )])
+            clusters.insert_default(
+                [Endpoint::new(
+                    endpoint.socket.local_ipv4_addr().unwrap().into(),
+                )]
+                .into(),
+            );
         });
         t.run_server(config, proxy, None);
 
@@ -287,9 +298,12 @@ mod tests {
             .unwrap(),
         );
         config.clusters.modify(|clusters| {
-            clusters.insert_default(vec![Endpoint::new(
-                endpoint.socket.local_ipv4_addr().unwrap().into(),
-            )])
+            clusters.insert_default(
+                [Endpoint::new(
+                    endpoint.socket.local_ipv4_addr().unwrap().into(),
+                )]
+                .into(),
+            );
         });
         t.run_server(
             config,
@@ -326,7 +340,7 @@ mod tests {
         let msg = "hello";
         let config = Arc::new(Config::default());
         config.clusters.modify(|clusters| {
-            clusters.insert_default(vec![endpoint.socket.local_ipv6_addr().unwrap()])
+            clusters.insert_default([endpoint.socket.local_ipv6_addr().unwrap().into()].into())
         });
 
         // we'll test a single DownstreamReceiveWorkerConfig
@@ -364,7 +378,12 @@ mod tests {
 
         let config = Arc::new(crate::Config::default());
         config.clusters.modify(|clusters| {
-            clusters.insert_default(vec![endpoint.socket.local_ipv4_addr().unwrap()])
+            clusters.insert_default(
+                [crate::endpoint::Endpoint::from(
+                    endpoint.socket.local_ipv4_addr().unwrap(),
+                )]
+                .into(),
+            )
         });
 
         proxy.run_recv_from(&config, <_>::default()).unwrap();

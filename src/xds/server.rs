@@ -118,7 +118,6 @@ impl ControlPlane {
                     if let Err(error) = watcher.changed().await {
                         tracing::error!(%error, "error watching changes");
                     }
-                    this.push_update(ResourceType::Endpoint);
                     this.push_update(ResourceType::Cluster);
                 }
             }
@@ -397,7 +396,7 @@ mod tests {
 
     #[tokio::test]
     async fn valid_response() {
-        const RESOURCE: ResourceType = ResourceType::Endpoint;
+        const RESOURCE: ResourceType = ResourceType::Cluster;
         const LISTENER_TYPE: ResourceType = ResourceType::Listener;
 
         let mut response = DiscoveryResponse {

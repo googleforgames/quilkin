@@ -22,14 +22,14 @@ endpoint configuration to specify two endpoints with `token` metadata attached t
 {{#include ../../../../examples/proxy.yaml:17:100}}
 ```
 
-This is a great use of a static configuration file, as we only get a singular `--to` endpoint address via the 
+This is a great use of a static configuration file, as we only get a singular `--to` endpoint address via the
 command line arguments.
 
 We can also configure [Filters](./filters.md) via the configuration file. See that section for documentation.
 
 ## Dynamic Configuration
 
-If you need to dynamically change either Filters and/or Endpoints at runtime, see the [Control Plane](../xds.md) 
+If you need to dynamically change either Filters and/or Endpoints at runtime, see the [Control Plane](../xds.md)
 documentation on the configuration API surface, and built in dynamic management providers.
 
 ## Json Schema
@@ -66,58 +66,33 @@ properties:
     items:
       '$ref': {} # Refer to the Filter documentation for a filter configuration schema.
   clusters:
-    type: object
-    description: |
-      grouping of clusters, each with a key for a name
-    additionalProperties:
-      type: object
-      description: |
-        An individual cluster
-      properties:
-        localities:          
-          type: array
-          description: |
-            grouping of endpoints, per cluster.
-          items:
-            type: object
-            properties:
-              endpoints:
-                type: array
-                description: |
-                  A list of upstream endpoints to forward packets to.
-                items:
-                  type: object
-                  description: |
-                    An upstream endpoint
-                  properties:
-                    address:
-                      type: string
-                      description: |
-                        Socket address of the endpoint. This must be of the ´IP:Port` form e.g `192.168.1.1:7001`
-                      metadata:
-                        type: object
-                        description: |
-                          Arbitrary key value pairs that is associated with the endpoint.
-                          These are visible to Filters when processing packets and can be used to provide more context about endpoints (e.g whether or not to route a packet to an endpoint).
-                          Keys must be of type string otherwise the configuration is rejected.
-                  required:
-                    - address
-  management_servers:
     type: array
     description: |
-      A list of XDS management servers to fetch configuration from.
-      Multiple servers can be provided for redundancy for the proxy to
-      fall back to upon error.
+      grouping of endpoints, per cluster.
     items:
       type: object
-      description: |
-        Configuration for a management server.
-    properties:
-      address:
-        type: string
-        description: |
-          Address of the management server. This must have the `http(s)` scheme prefix.
-          Example: `http://example.com`
+      properties:
+        endpoints:
+          type: array
+          description: |
+            A list of upstream endpoints to forward packets to.
+          items:
+            type: object
+            description: |
+              An upstream endpoint
+            properties:
+              address:
+                type: string
+                description: |
+                  Socket address of the endpoint. This must be of the ´IP:Port` form e.g `192.168.1.1:7001`
+                metadata:
+                  type: object
+                  description: |
+                    Arbitrary key value pairs that is associated with the endpoint.
+                    These are visible to Filters when processing packets and can be used to provide more context about endpoints (e.g whether or not to route a packet to an endpoint).
+                    Keys must be of type string otherwise the configuration is rejected.
+            required:
+              - address
 ```
 
 [examples]: https://github.com/googleforgames/quilkin/blob/{{GITHUB_REF_NAME}}/examples

@@ -161,24 +161,22 @@ mod tests {
             addr.metadata.known.tokens.insert(token.into());
             addr
         };
-        let localities = crate::endpoint::LocalityEndpoints::from(address.clone());
+        let clusters = crate::cluster::ClusterMap::default();
 
         tracing::debug!(?address);
-        tracing::debug!(?localities);
+        clusters.insert_default([address].into());
+        tracing::debug!(?clusters);
 
         let xds_port = crate::test_utils::available_addr(&AddressType::Random)
             .await
             .port();
-        let json = serde_json::json!({
+        let xds_config: Arc<crate::Config> = serde_json::from_value(serde_json::json!({
             "version": "v1alpha1",
             "id": "test-proxy",
-            "clusters": {
-                "default": {
-                    "localities": [localities]
-                }
-            },
-        });
-        let xds_config: Arc<Config> = serde_json::from_value(json).map(Arc::new).unwrap();
+            "clusters": clusters,
+        }))
+        .map(Arc::new)
+        .unwrap();
 
         let client_addr = crate::test_utils::available_addr(&AddressType::Random).await;
         let client_config = serde_json::from_value(serde_json::json!({
@@ -315,8 +313,8 @@ mod tests {
             let local_addr: crate::endpoint::EndpointAddress = socket.local_addr().unwrap().into();
 
             config.clusters.modify(|clusters| {
-                let mut cluster = clusters.default_cluster_mut();
-                cluster.localities.clear();
+                let mut cluster = clusters.default_entry();
+                cluster.clear();
                 cluster.insert(Endpoint::new(local_addr.clone()));
             });
             tokio::time::sleep(std::time::Duration::from_millis(500)).await;
@@ -351,7 +349,7 @@ mod tests {
                     .read()
                     .get_default()
                     .unwrap()
-                    .endpoints()
+                    .iter()
                     .next()
                     .unwrap()
                     .address
