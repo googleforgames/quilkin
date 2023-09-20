@@ -760,7 +760,7 @@
         <span class="kw">let </span>client = connect_to_server
             .instrument(<span class="macro">tracing::trace_span!</span>(<span class="string">&quot;client_connect&quot;</span>))
             .<span class="kw">await</span><span class="question-mark">?</span>;
-        <span class="macro">tracing::info!</span>(<span class="string">&quot;Connected to relay server&quot;</span>);
+        <span class="macro">tracing::info!</span>(<span class="string">&quot;Connected to management server&quot;</span>);
         <span class="prelude-val">Ok</span>(client)
     }
 }
@@ -951,7 +951,7 @@
                     <span class="kw">let </span><span class="kw-2">mut </span>stream = control_plane.stream_aggregated_resources(stream).<span class="kw">await</span><span class="question-mark">?</span>;
                     <span class="kw">while let </span><span class="prelude-val">Some</span>(result) = stream.next().<span class="kw">await </span>{
                         <span class="kw">let </span>response = result<span class="question-mark">?</span>;
-                        <span class="macro">tracing::info!</span>(config=%serde_json::to_value(<span class="kw-2">&amp;</span>config).unwrap(), <span class="string">&quot;received discovery response&quot;</span>);
+                        <span class="macro">tracing::debug!</span>(config=%serde_json::to_value(<span class="kw-2">&amp;</span>config).unwrap(), <span class="string">&quot;received discovery response&quot;</span>);
                         requests.send(response)<span class="question-mark">?</span>;
                     }
 
@@ -1062,7 +1062,7 @@
 ) -&gt; std::pin::Pin&lt;Box&lt;<span class="kw">dyn </span>futures::Stream&lt;Item = <span class="prelude-ty">Result</span>&lt;DiscoveryRequest&gt;&gt; + Send&gt;&gt; {
     Box::pin(<span class="macro">async_stream::try_stream! </span>{
         <span class="kw">let </span>_stream_metrics = <span class="kw">super</span>::metrics::StreamConnectionMetrics::new(identifier.clone());
-        <span class="macro">tracing::info!</span>(<span class="string">&quot;awaiting response&quot;</span>);
+        <span class="macro">tracing::debug!</span>(<span class="string">&quot;awaiting response&quot;</span>);
         <span class="kw">for await </span>response <span class="kw">in </span>stream
         {
             <span class="kw">let </span>response = <span class="kw">match </span>response {
@@ -1076,7 +1076,7 @@
             <span class="kw">let </span>control_plane_identifier = response.control_plane.as_ref().map(|cp| cp.identifier.clone()).unwrap_or_default();
 
             <span class="kw">super</span>::metrics::discovery_responses(<span class="kw-2">&amp;</span>control_plane_identifier, <span class="kw-2">&amp;</span>response.type_url).inc();
-            <span class="macro">tracing::info!</span>(
+            <span class="macro">tracing::debug!</span>(
                 version = <span class="kw-2">&amp;*</span>response.version_info,
                 r#type = <span class="kw-2">&amp;*</span>response.type_url,
                 nonce = <span class="kw-2">&amp;*</span>response.nonce,
@@ -1090,7 +1090,7 @@
                 .map(Resource::try_from)
                 .try_for_each(|resource| {
                     <span class="kw">let </span>resource = resource<span class="question-mark">?</span>;
-                    <span class="macro">tracing::info!</span>(<span class="string">&quot;applying resource&quot;</span>);
+                    <span class="macro">tracing::debug!</span>(<span class="string">&quot;applying resource&quot;</span>);
                     (on_new_resource)(<span class="kw-2">&amp;</span>resource)
                 });
 

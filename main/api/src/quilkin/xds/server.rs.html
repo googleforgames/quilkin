@@ -757,7 +757,7 @@
                             <span class="comment">// Currently just resend previous discovery response.
                         </span>} <span class="kw">else if </span>uuid::Uuid::parse_str(<span class="kw-2">&amp;</span>new_message.response_nonce).is_ok() {
                             <span class="kw">if </span>pending_acks.cache_get(<span class="kw-2">&amp;</span>new_message.response_nonce).is_some() {
-                                <span class="macro">tracing::info!</span>(nonce = %new_message.response_nonce, <span class="string">&quot;ACK&quot;</span>);
+                                <span class="macro">tracing::debug!</span>(nonce = %new_message.response_nonce, <span class="string">&quot;ACK&quot;</span>);
                                 <span class="kw">continue
                             </span>} <span class="kw">else </span>{
                                 <span class="macro">tracing::trace!</span>(nonce = %new_message.response_nonce, <span class="string">&quot;Unknown nonce: could not be found in cache&quot;</span>);
