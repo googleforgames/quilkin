@@ -204,7 +204,7 @@ impl<C: ServiceClient> Client<C> {
         let client = connect_to_server
             .instrument(tracing::trace_span!("client_connect"))
             .await?;
-        tracing::info!("Connected to relay server");
+        tracing::info!("Connected to management server");
         Ok(client)
     }
 }
@@ -395,7 +395,7 @@ impl MdsStream {
                     let mut stream = control_plane.stream_aggregated_resources(stream).await?;
                     while let Some(result) = stream.next().await {
                         let response = result?;
-                        tracing::info!(config=%serde_json::to_value(&config).unwrap(), "received discovery response");
+                        tracing::debug!(config=%serde_json::to_value(&config).unwrap(), "received discovery response");
                         requests.send(response)?;
                     }
 
@@ -506,7 +506,7 @@ pub fn handle_discovery_responses(
 ) -> std::pin::Pin<Box<dyn futures::Stream<Item = Result<DiscoveryRequest>> + Send>> {
     Box::pin(async_stream::try_stream! {
         let _stream_metrics = super::metrics::StreamConnectionMetrics::new(identifier.clone());
-        tracing::info!("awaiting response");
+        tracing::debug!("awaiting response");
         for await response in stream
         {
             let response = match response {
@@ -520,7 +520,7 @@ pub fn handle_discovery_responses(
             let control_plane_identifier = response.control_plane.as_ref().map(|cp| cp.identifier.clone()).unwrap_or_default();
 
             super::metrics::discovery_responses(&control_plane_identifier, &response.type_url).inc();
-            tracing::info!(
+            tracing::debug!(
                 version = &*response.version_info,
                 r#type = &*response.type_url,
                 nonce = &*response.nonce,
@@ -534,7 +534,7 @@ pub fn handle_discovery_responses(
                 .map(Resource::try_from)
                 .try_for_each(|resource| {
                     let resource = resource?;
-                    tracing::info!("applying resource");
+                    tracing::debug!("applying resource");
                     (on_new_resource)(&resource)
                 });
 
