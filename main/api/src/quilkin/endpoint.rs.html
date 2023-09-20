@@ -316,6 +316,10 @@
 <a href="#316" id="316">316</a>
 <a href="#317" id="317">317</a>
 <a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -339,12 +343,7 @@
 
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 
-<span class="kw">use </span><span class="kw">crate</span>::xds::config::endpoint::v3::{lb_endpoint::HostIdentifier, Endpoint <span class="kw">as </span>EnvoyEndpoint};
-
-<span class="kw">pub use </span><span class="self">self</span>::{
-    address::EndpointAddress,
-    locality::{Locality, LocalityEndpoints, LocalitySet},
-};
+<span class="kw">pub use </span><span class="self">self</span>::{address::EndpointAddress, locality::Locality};
 
 <span class="kw">pub type </span>EndpointMetadata = <span class="kw">crate</span>::metadata::MetadataView&lt;Metadata&gt;;
 
@@ -398,38 +397,32 @@
     }
 }
 
-<span class="kw">impl </span>From&lt;Endpoint&gt; <span class="kw">for </span><span class="kw">crate</span>::xds::config::endpoint::v3::LbEndpoint {
+<span class="kw">impl </span>From&lt;Endpoint&gt; <span class="kw">for </span><span class="kw">crate</span>::cluster::proto::Endpoint {
     <span class="kw">fn </span>from(endpoint: Endpoint) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            host_identifier: <span class="prelude-val">Some</span>(HostIdentifier::Endpoint(EnvoyEndpoint {
-                address: <span class="prelude-val">Some</span>(endpoint.address.into()),
-                ..&lt;<span class="kw">_</span>&gt;::default()
-            })),
+            host: endpoint.address.host.to_string(),
+            port: endpoint.address.port.into(),
             metadata: <span class="prelude-val">Some</span>(endpoint.metadata.into()),
-            ..&lt;<span class="kw">_</span>&gt;::default()
         }
     }
 }
 
-<span class="kw">impl </span>TryFrom&lt;<span class="kw">crate</span>::xds::config::endpoint::v3::LbEndpoint&gt; <span class="kw">for </span>Endpoint {
+<span class="kw">impl </span>TryFrom&lt;<span class="kw">crate</span>::cluster::proto::Endpoint&gt; <span class="kw">for </span>Endpoint {
     <span class="kw">type </span>Error = eyre::Error;
 
-    <span class="kw">fn </span>try_from(
-        endpoint: <span class="kw">crate</span>::xds::config::endpoint::v3::LbEndpoint,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
-        <span class="kw">let </span>address = <span class="kw">match </span>endpoint.host_identifier {
-            <span class="prelude-val">Some</span>(HostIdentifier::Endpoint(endpoint)) =&gt; EndpointAddress::try_from(endpoint)<span class="question-mark">?</span>,
-            <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;Endpoint host identifier not supported&quot;</span>)),
-        };
+    <span class="kw">fn </span>try_from(endpoint: <span class="kw">crate</span>::cluster::proto::Endpoint) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
+        <span class="kw">let </span>host: address::AddressKind = endpoint.host.parse()<span class="question-mark">?</span>;
+        <span class="kw">if </span>endpoint.port &gt; u16::MAX <span class="kw">as </span>u32 {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;invalid endpoint port&quot;</span>));
+        }
 
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
-            address,
+            address: (host, endpoint.port <span class="kw">as </span>u16).into(),
             metadata: endpoint
                 .metadata
-                .map(<span class="kw">crate</span>::metadata::MetadataView::try_from)
+                .map(TryFrom::try_from)
                 .transpose()<span class="question-mark">?
                 </span>.unwrap_or_default(),
-            ..&lt;<span class="kw">_</span>&gt;::default()
         })
     }
 }
@@ -458,6 +451,12 @@
     }
 }
 
+<span class="kw">impl </span>std::hash::Hash <span class="kw">for </span>Endpoint {
+    <span class="kw">fn </span>hash&lt;H: std::hash::Hasher&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>H) {
+        <span class="self">self</span>.address.hash(state);
+    }
+}
+
 <span class="doccomment">/// Metadata specific to endpoints.
 </span><span class="attr">#[derive(
     Default, Debug, Deserialize, Serialize, PartialEq, Clone, PartialOrd, Eq, schemars::JsonSchema,
@@ -469,6 +468,15 @@
         deserialize_with = <span class="string">&quot;base64_set::deserialize&quot;
     </span>)]
     </span><span class="kw">pub </span>tokens: base64_set::Set,
+}
+
+<span class="kw">impl </span>From&lt;Metadata&gt; <span class="kw">for </span><span class="kw">crate</span>::metadata::MetadataView&lt;Metadata&gt; {
+    <span class="kw">fn </span>from(metadata: Metadata) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            known: metadata,
+            ..&lt;<span class="kw">_</span>&gt;::default()
+        }
+    }
 }
 
 <span class="kw">impl </span>From&lt;Metadata&gt; <span class="kw">for </span>prost_types::Struct {

@@ -254,9 +254,12 @@ async fn main() -&gt; quilkin::Result&lt;()&gt; {
         .try_into()?,
     ));
     config.clusters.modify(|map| {
-        map.insert_default(vec![quilkin::endpoint::Endpoint::new(
-            (std::net::Ipv4Addr::LOCALHOST, 4321).into(),
-        )])
+        map.insert_default(
+            [quilkin::endpoint::Endpoint::new(
+                (std::net::Ipv4Addr::LOCALHOST, 4321).into(),
+            )]
+            .into(),
+        )
     });
 
     proxy.run(config.into(), shutdown_rx).await
@@ -269,10 +272,8 @@ version: v1alpha1
 filters:
   - name: greet.v1
 clusters:
-  default:
-    localities:
-        - endpoints:
-            - address: 127.0.0.1:4321
+  - endpoints:
+      - address: 127.0.0.1:4321
 </code></pre>
 <p>Next we to setup our network of services, for this example we're going to use
 the <code>netcat</code> tool to spawn a UDP echo server and interactive client for us to

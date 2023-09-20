@@ -152,7 +152,7 @@
         <span class="kw">if let </span><span class="prelude-val">Some</span>(locality) = <span class="kw-2">&amp;</span>locality {
             config
                 .clusters
-                .modify(|map| map.update_unlocated_endpoints(locality));
+                .modify(|map| map.update_unlocated_endpoints(locality.clone()));
         }
 
         <span class="kw">let </span>provider_task = <span class="self">self</span>.provider.spawn(config.clone(), locality.clone());

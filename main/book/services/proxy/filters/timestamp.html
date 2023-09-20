@@ -189,10 +189,8 @@ filters:
     config:
         metadataKey: example.com/session_duration
 clusters:
-  default:
-    localities:
-      - endpoints:
-        - address: 127.0.0.1:26000
+  - endpoints:
+    - address: 127.0.0.1:26000
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">}</span></code></pre></pre>

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["MetadataError"],"struct":["Endpoint","EndpointAddress","Locality","LocalityEndpoints","LocalitySet","Metadata"],"type":["EndpointMetadata"]};
+window.SIDEBAR_ITEMS = {"enum":["MetadataError"],"struct":["Endpoint","EndpointAddress","Locality","Metadata"],"type":["EndpointMetadata"]};

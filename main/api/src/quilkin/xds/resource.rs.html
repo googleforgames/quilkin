@@ -159,46 +159,6 @@
 <a href="#159" id="159">159</a>
 <a href="#160" id="160">160</a>
 <a href="#161" id="161">161</a>
-<a href="#162" id="162">162</a>
-<a href="#163" id="163">163</a>
-<a href="#164" id="164">164</a>
-<a href="#165" id="165">165</a>
-<a href="#166" id="166">166</a>
-<a href="#167" id="167">167</a>
-<a href="#168" id="168">168</a>
-<a href="#169" id="169">169</a>
-<a href="#170" id="170">170</a>
-<a href="#171" id="171">171</a>
-<a href="#172" id="172">172</a>
-<a href="#173" id="173">173</a>
-<a href="#174" id="174">174</a>
-<a href="#175" id="175">175</a>
-<a href="#176" id="176">176</a>
-<a href="#177" id="177">177</a>
-<a href="#178" id="178">178</a>
-<a href="#179" id="179">179</a>
-<a href="#180" id="180">180</a>
-<a href="#181" id="181">181</a>
-<a href="#182" id="182">182</a>
-<a href="#183" id="183">183</a>
-<a href="#184" id="184">184</a>
-<a href="#185" id="185">185</a>
-<a href="#186" id="186">186</a>
-<a href="#187" id="187">187</a>
-<a href="#188" id="188">188</a>
-<a href="#189" id="189">189</a>
-<a href="#190" id="190">190</a>
-<a href="#191" id="191">191</a>
-<a href="#192" id="192">192</a>
-<a href="#193" id="193">193</a>
-<a href="#194" id="194">194</a>
-<a href="#195" id="195">195</a>
-<a href="#196" id="196">196</a>
-<a href="#197" id="197">197</a>
-<a href="#198" id="198">198</a>
-<a href="#199" id="199">199</a>
-<a href="#200" id="200">200</a>
-<a href="#201" id="201">201</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -217,9 +177,7 @@
 
 </span><span class="kw">use </span>prost::Message;
 
-<span class="kw">use </span><span class="kw">crate</span>::xds::config::{
-    cluster::v3::Cluster, endpoint::v3::ClusterLoadAssignment, listener::v3::Listener,
-};
+<span class="kw">use </span><span class="kw">crate</span>::xds::config::listener::v3::Listener;
 
 <span class="kw">pub type </span>ResourceMap&lt;V&gt; = enum_map::EnumMap&lt;ResourceType, V&gt;;
 
@@ -235,38 +193,32 @@
 
 <span class="macro">type_urls! </span>{
     <span class="string">&quot;type.googleapis.com&quot;</span>: {
-        CLUSTER_TYPE = <span class="string">&quot;envoy.config.cluster.v3.Cluster&quot;</span>,
-        ENDPOINT_TYPE = <span class="string">&quot;envoy.config.endpoint.v3.ClusterLoadAssignment&quot;</span>,
-        EXTENSION_CONFIG_TYPE = <span class="string">&quot;envoy.config.core.v3.TypedExtensionConfig&quot;</span>,
+        CLUSTER_TYPE = <span class="string">&quot;quilkin.config.v1alpha1.Cluster&quot;</span>,
         LISTENER_TYPE = <span class="string">&quot;envoy.config.listener.v3.Listener&quot;</span>,
-        ROUTE_TYPE = <span class="string">&quot;envoy.config.route.v3.RouteConfiguration&quot;</span>,
-        RUNTIME_TYPE = <span class="string">&quot;envoy.service.runtime.v3.Runtime&quot;</span>,
-        SCOPED_ROUTE_TYPE = <span class="string">&quot;envoy.config.route.v3.ScopedRouteConfiguration&quot;</span>,
-        SECRET_TYPE = <span class="string">&quot;envoy.extensions.transport_sockets.tls.v3.Secret&quot;</span>,
-        VIRTUAL_HOST_TYPE = <span class="string">&quot;envoy.config.route.v3.VirtualHost&quot;</span>,
     }
 }
 
 <span class="attr">#[derive(Clone, Debug)]
 </span><span class="kw">pub enum </span>Resource {
-    Cluster(Box&lt;Cluster&gt;),
-    Endpoint(Box&lt;ClusterLoadAssignment&gt;),
+    Cluster(Box&lt;<span class="kw">crate</span>::cluster::proto::Cluster&gt;),
     Listener(Box&lt;Listener&gt;),
 }
 
 <span class="kw">impl </span>Resource {
-    <span class="kw">pub fn </span>name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>str {
+    <span class="kw">pub fn </span>name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
         <span class="kw">match </span><span class="self">self </span>{
-            <span class="self">Self</span>::Endpoint(endpoint) =&gt; <span class="kw-2">&amp;</span>endpoint.cluster_name,
-            <span class="self">Self</span>::Cluster(cluster) =&gt; <span class="kw-2">&amp;</span>cluster.name,
-            <span class="self">Self</span>::Listener(listener) =&gt; <span class="kw-2">&amp;</span>listener.name,
+            <span class="self">Self</span>::Cluster(cluster) =&gt; cluster
+                .locality
+                .clone()
+                .map(|locality| <span class="kw">crate</span>::endpoint::Locality::from(locality).to_string())
+                .unwrap_or_default(),
+            <span class="self">Self</span>::Listener(listener) =&gt; listener.name.to_string(),
         }
     }
 
     <span class="kw">pub fn </span>resource_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ResourceType {
         <span class="kw">match </span><span class="self">self </span>{
             <span class="self">Self</span>::Cluster(<span class="kw">_</span>) =&gt; ResourceType::Cluster,
-            <span class="self">Self</span>::Endpoint(<span class="kw">_</span>) =&gt; ResourceType::Endpoint,
             <span class="self">Self</span>::Listener(<span class="kw">_</span>) =&gt; ResourceType::Listener,
         }
     }
@@ -282,7 +234,6 @@
     <span class="kw">fn </span>try_from(any: prost_types::Any) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
         <span class="prelude-val">Ok</span>(<span class="kw">match </span><span class="kw-2">&amp;*</span>any.type_url {
             CLUSTER_TYPE =&gt; Resource::Cluster(&lt;<span class="kw">_</span>&gt;::decode(<span class="kw-2">&amp;*</span>any.value)<span class="question-mark">?</span>),
-            ENDPOINT_TYPE =&gt; Resource::Endpoint(&lt;<span class="kw">_</span>&gt;::decode(<span class="kw-2">&amp;*</span>any.value)<span class="question-mark">?</span>),
             LISTENER_TYPE =&gt; Resource::Listener(&lt;<span class="kw">_</span>&gt;::decode(<span class="kw-2">&amp;*</span>any.value)<span class="question-mark">?</span>),
             url =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(UnknownResourceType(url.into()).into()),
         })
@@ -292,41 +243,17 @@
 <span class="attr">#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, enum_map::Enum)]
 </span><span class="kw">pub enum </span>ResourceType {
     Cluster,
-    Endpoint,
-    ExtensionConfig,
     Listener,
-    Route,
-    Runtime,
-    ScopedRoute,
-    Secret,
-    VirtualHost,
 }
 
 <span class="kw">impl </span>ResourceType {
-    <span class="kw">pub const </span>VARIANTS: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[<span class="self">Self</span>] = <span class="kw-2">&amp;</span>[
-        <span class="self">Self</span>::Cluster,
-        <span class="self">Self</span>::Endpoint,
-        <span class="self">Self</span>::ExtensionConfig,
-        <span class="self">Self</span>::Listener,
-        <span class="self">Self</span>::Route,
-        <span class="self">Self</span>::Runtime,
-        <span class="self">Self</span>::ScopedRoute,
-        <span class="self">Self</span>::Secret,
-        <span class="self">Self</span>::VirtualHost,
-    ];
+    <span class="kw">pub const </span>VARIANTS: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[<span class="self">Self</span>] = <span class="kw-2">&amp;</span>[<span class="self">Self</span>::Cluster, <span class="self">Self</span>::Listener];
 
     <span class="doccomment">/// Returns the corresponding type URL for the response type.
     </span><span class="kw">pub const fn </span>type_url(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
         <span class="kw">match </span><span class="self">self </span>{
             <span class="self">Self</span>::Cluster =&gt; CLUSTER_TYPE,
-            <span class="self">Self</span>::Endpoint =&gt; ENDPOINT_TYPE,
-            <span class="self">Self</span>::ExtensionConfig =&gt; EXTENSION_CONFIG_TYPE,
             <span class="self">Self</span>::Listener =&gt; LISTENER_TYPE,
-            <span class="self">Self</span>::Route =&gt; ROUTE_TYPE,
-            <span class="self">Self</span>::Runtime =&gt; RUNTIME_TYPE,
-            <span class="self">Self</span>::ScopedRoute =&gt; SCOPED_ROUTE_TYPE,
-            <span class="self">Self</span>::Secret =&gt; SECRET_TYPE,
-            <span class="self">Self</span>::VirtualHost =&gt; VIRTUAL_HOST_TYPE,
         }
     }
 
@@ -353,14 +280,7 @@
     <span class="kw">fn </span>try_from(url: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, UnknownResourceType&gt; {
         <span class="prelude-val">Ok</span>(<span class="kw">match </span>url {
             CLUSTER_TYPE =&gt; <span class="self">Self</span>::Cluster,
-            ENDPOINT_TYPE =&gt; <span class="self">Self</span>::Endpoint,
-            EXTENSION_CONFIG_TYPE =&gt; <span class="self">Self</span>::ExtensionConfig,
             LISTENER_TYPE =&gt; <span class="self">Self</span>::Listener,
-            ROUTE_TYPE =&gt; <span class="self">Self</span>::Route,
-            RUNTIME_TYPE =&gt; <span class="self">Self</span>::Runtime,
-            SCOPED_ROUTE_TYPE =&gt; <span class="self">Self</span>::ScopedRoute,
-            SECRET_TYPE =&gt; <span class="self">Self</span>::Secret,
-            VIRTUAL_HOST_TYPE =&gt; <span class="self">Self</span>::VirtualHost,
             unknown =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(UnknownResourceType(unknown.to_owned())),
         })
     }

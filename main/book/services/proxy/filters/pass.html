@@ -178,11 +178,9 @@ combination with conditional flow filters like <a href="match.html"><code>Matche
 </span><span class="boring">let yaml = &quot;
 </span>version: v1alpha1
 clusters: 
-  default:
-    localities:
-      - endpoints:
-        - address: 127.0.0.1:26000
-        - address: 127.0.0.1:26001
+  - endpoints:
+    - address: 127.0.0.1:26000
+    - address: 127.0.0.1:26001
 filters:
   - name: quilkin.filters.capture.v1alpha1.Capture
     config:

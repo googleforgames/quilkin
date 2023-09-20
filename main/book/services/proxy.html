@@ -174,7 +174,7 @@
 </div>
 <p>&quot;Proxy&quot; is the primary Quilkin service, which acts as a non-transparent UDP
 proxy.</p>
-<p>To view all the options for the <code>proxy</code> subcommand, run: </p>
+<p>To view all the options for the <code>proxy</code> subcommand, run:</p>
 <pre><code class="language-shell">$ quilkin proxy --help
 Run Quilkin as a UDP reverse proxy
 
@@ -197,38 +197,36 @@ Options:
           Print help
 </code></pre>
 <h2 id="endpoints"><a class="header" href="#endpoints">Endpoints</a></h2>
-<p>An Endpoint represents an address that Quilkin forwards packets to that it has received from the 
+<p>An Endpoint represents an address that Quilkin forwards packets to that it has received from the
 source port.</p>
-<p>It is represented by an IP address and port. An Endpoint can optionally be associated with an arbitrary set of 
+<p>It is represented by an IP address and port. An Endpoint can optionally be associated with an arbitrary set of
 <a href="#endpoint-metadata">metadata</a> as well.</p>
 <h2 id="proxy-filters"><a class="header" href="#proxy-filters">Proxy Filters</a></h2>
 <p>Filters are the way for a Quilkin proxy to intercept UDP packet traffic from the
 source and <a href="#endpoints">Endpoints</a> in either direction, and be able to inspect,
-manipulate, and route the packets as desired. </p>
-<p>See <a href="./proxy/filters.html">Filters</a>  for a deeper dive into Filters, as well as the list of build in Filters that come with 
+manipulate, and route the packets as desired.</p>
+<p>See <a href="./proxy/filters.html">Filters</a>  for a deeper dive into Filters, as well as the list of build in Filters that come with
 Quilkin.</p>
 <h2 id="endpoint-metadata"><a class="header" href="#endpoint-metadata">Endpoint Metadata</a></h2>
 <p>Endpoint metadata is an arbitrary set of key value pairs that are associated with an Endpoint.</p>
-<p>These are visible to Filters when processing packets and can be used to provide more context about endpoints (e.g 
+<p>These are visible to Filters when processing packets and can be used to provide more context about endpoints (e.g
 whether or not to route a packet to an endpoint). Keys must be of type string otherwise the configuration is rejected.</p>
 <p>Metadata associated with an endpoint contain arbitrary key value pairs which <a href="./proxy/filters.html">Filters</a> can consult when processing packets (e.g they can contain information that determine whether or not to route a particular packet to an endpoint).</p>
 <h3 id="specialist-endpoint-metadata"><a class="header" href="#specialist-endpoint-metadata">Specialist Endpoint Metadata</a></h3>
-<p>Access tokens that can be associated with an endpoint are simply a special piece of metadata well known to Quilkin 
+<p>Access tokens that can be associated with an endpoint are simply a special piece of metadata well known to Quilkin
 and utilised by the built-in <a href="./proxy/filters/token_router.html">TokenRouter</a> filter to route packets.</p>
-<p>Such well known values are placed within an object in the endpoint metadata, under the special key <code>quilkin.dev</code>. 
+<p>Such well known values are placed within an object in the endpoint metadata, under the special key <code>quilkin.dev</code>.
 Currently, only the <code>tokens</code> key is in use.</p>
 <p>As an example, the following shows the configuration for an endpoint with its metadata:</p>
 <pre><code class="language-yaml">clusters:
-  default:
-    localities:
-      - endpoints:
-        - address: 127.0.0.1:26000
-          metadata:
-            canary: false
-            quilkin.dev: # This object is extracted by Quilkin and is usually reserved for built-in features
-                tokens:
-                - MXg3aWp5Ng== # base64 for 1x7ijy6
-                - OGdqM3YyaQ== # base64 for 8gj3v2i
+  - endpoints:
+    - address: 127.0.0.1:26000
+      metadata:
+        canary: false
+        quilkin.dev: # This object is extracted by Quilkin and is usually reserved for built-in features
+            tokens:
+            - MXg3aWp5Ng== # base64 for 1x7ijy6
+            - OGdqM3YyaQ== # base64 for 8gj3v2i
 </code></pre>
 <p>An endpoint's metadata can be specified alongside the endpoint in <a href="./proxy/configuration.html">static configuration</a> or using the <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint_components.proto#envoy-v3-api-field-config-endpoint-v3-lbendpoint-metadata">xDS endpoint metadata</a> field when using <a href="./xds.html">dynamic configuration</a> via xDS.</p>
 <h2 id="session"><a class="header" href="#session">Session</a></h2>
@@ -237,16 +235,16 @@ Currently, only the <code>tokens</code> key is in use.</p>
 Session serves the same purpose, and can be thought of as a lightweight version of a <code>TCP</code> session in that, while a
 TCP session requires a protocol to establish and teardown:</p>
 <ul>
-<li>A Quilkin session is automatically created upon receiving the first packet from a client via the [Local Port] to be 
+<li>A Quilkin session is automatically created upon receiving the first packet from a client via the [Local Port] to be
 sent to an upstream <a href="#endpoints">Endpoint</a>.</li>
-<li>The session is automatically deleted after a period of inactivity (where no packet was sent between either 
+<li>The session is automatically deleted after a period of inactivity (where no packet was sent between either
 party) - currently 60 seconds.</li>
 </ul>
-<p>A session is identified by the 4-tuple <code>(client IP, client Port, server IP, server Port)</code> where the client is the 
-downstream endpoint which initiated the communication with Quilkin and the server is one of the upstream Endpoints 
+<p>A session is identified by the 4-tuple <code>(client IP, client Port, server IP, server Port)</code> where the client is the
+downstream endpoint which initiated the communication with Quilkin and the server is one of the upstream Endpoints
 that Quilkin proxies traffic to.</p>
-<p>Sessions are established <em>after</em> the filter chain completes. The destination Endpoint of a packet is determined by 
-the <a href="./proxy/filters.html">filter chain</a>, so a Session can only be created after filter chain completion. For example, if the 
+<p>Sessions are established <em>after</em> the filter chain completes. The destination Endpoint of a packet is determined by
+the <a href="./proxy/filters.html">filter chain</a>, so a Session can only be created after filter chain completion. For example, if the
 filter chain drops all packets, then no session will ever be created.</p>
 
                     </main>

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["Cluster","ClusterMap"]};
+window.SIDEBAR_ITEMS = {"struct":["ClusterMap"]};

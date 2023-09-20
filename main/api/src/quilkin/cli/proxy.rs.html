@@ -380,6 +380,25 @@
 <a href="#380" id="380">380</a>
 <a href="#381" id="381">381</a>
 <a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -475,7 +494,14 @@
 
         <span class="kw">if </span>!<span class="self">self</span>.to.is_empty() {
             config.clusters.modify(|clusters| {
-                clusters.default_cluster_mut().localities = <span class="macro">vec!</span>[<span class="self">self</span>.to.clone().into()].into();
+                clusters.insert(
+                    <span class="prelude-val">None</span>,
+                    <span class="self">self</span>.to
+                        .iter()
+                        .cloned()
+                        .map(<span class="kw">crate</span>::endpoint::Endpoint::from)
+                        .collect(),
+                );
             });
         }
 
@@ -498,9 +524,7 @@
                 client.xds_client_stream(config.clone(), <span class="self">self</span>.idle_request_interval_secs);
 
             tokio::time::sleep(std::time::Duration::from_nanos(<span class="number">1</span>)).<span class="kw">await</span>;
-            stream
-                .discovery_request(ResourceType::Endpoint, <span class="kw-2">&amp;</span>[])
-                .<span class="kw">await</span><span class="question-mark">?</span>;
+            stream.discovery_request(ResourceType::Cluster, <span class="kw-2">&amp;</span>[]).<span class="kw">await</span><span class="question-mark">?</span>;
             tokio::time::sleep(std::time::Duration::from_nanos(<span class="number">1</span>)).<span class="kw">await</span>;
             stream
                 .discovery_request(ResourceType::Listener, <span class="kw-2">&amp;</span>[])
@@ -588,10 +612,13 @@
 
         <span class="kw">let </span>config = Arc::new(<span class="kw">crate</span>::Config::default());
         config.clusters.modify(|clusters| {
-            clusters.insert_default(<span class="macro">vec!</span>[
-                Endpoint::new(endpoint1.socket.local_ipv4_addr().unwrap().into()),
-                Endpoint::new(endpoint2.socket.local_ipv6_addr().unwrap().into()),
-            ])
+            clusters.insert_default(
+                [
+                    Endpoint::new(endpoint1.socket.local_ipv4_addr().unwrap().into()),
+                    Endpoint::new(endpoint2.socket.local_ipv6_addr().unwrap().into()),
+                ]
+                .into(),
+            );
         });
 
         t.run_server(config, proxy, <span class="prelude-val">None</span>);
@@ -630,9 +657,12 @@
         };
         <span class="kw">let </span>config = Arc::new(Config::default());
         config.clusters.modify(|clusters| {
-            clusters.insert_default(<span class="macro">vec!</span>[Endpoint::new(
-                endpoint.socket.local_ipv4_addr().unwrap().into(),
-            )])
+            clusters.insert_default(
+                [Endpoint::new(
+                    endpoint.socket.local_ipv4_addr().unwrap().into(),
+                )]
+                .into(),
+            );
         });
         t.run_server(config, proxy, <span class="prelude-val">None</span>);
 
@@ -669,9 +699,12 @@
             .unwrap(),
         );
         config.clusters.modify(|clusters| {
-            clusters.insert_default(<span class="macro">vec!</span>[Endpoint::new(
-                endpoint.socket.local_ipv4_addr().unwrap().into(),
-            )])
+            clusters.insert_default(
+                [Endpoint::new(
+                    endpoint.socket.local_ipv4_addr().unwrap().into(),
+                )]
+                .into(),
+            );
         });
         t.run_server(
             config,
@@ -708,7 +741,7 @@
         <span class="kw">let </span>msg = <span class="string">&quot;hello&quot;</span>;
         <span class="kw">let </span>config = Arc::new(Config::default());
         config.clusters.modify(|clusters| {
-            clusters.insert_default(<span class="macro">vec!</span>[endpoint.socket.local_ipv6_addr().unwrap()])
+            clusters.insert_default([endpoint.socket.local_ipv6_addr().unwrap().into()].into())
         });
 
         <span class="comment">// we&#39;ll test a single DownstreamReceiveWorkerConfig
@@ -746,7 +779,12 @@
 
         <span class="kw">let </span>config = Arc::new(<span class="kw">crate</span>::Config::default());
         config.clusters.modify(|clusters| {
-            clusters.insert_default(<span class="macro">vec!</span>[endpoint.socket.local_ipv4_addr().unwrap()])
+            clusters.insert_default(
+                [<span class="kw">crate</span>::endpoint::Endpoint::from(
+                    endpoint.socket.local_ipv4_addr().unwrap(),
+                )]
+                .into(),
+            )
         });
 
         proxy.run_recv_from(<span class="kw-2">&amp;</span>config, &lt;<span class="kw">_</span>&gt;::default()).unwrap();

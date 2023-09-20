@@ -442,6 +442,9 @@
 <a href="#442" id="442">442</a>
 <a href="#443" id="443">443</a>
 <a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -625,7 +628,6 @@ filters:
             .as_mut()
             .map(|annotations| annotations.remove(token_key).unwrap());
         gameservers.replace(name.as_str(), <span class="kw-2">&amp;</span>pp, <span class="kw-2">&amp;</span>gs).<span class="kw">await</span>.unwrap();
-
         <span class="comment">// now we should send a packet, and not get a response.
         </span><span class="kw">let </span><span class="kw-2">mut </span>failed = <span class="bool-val">false</span>;
         <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">30 </span>{
@@ -640,6 +642,10 @@ filters:
                 failed = <span class="bool-val">true</span>;
                 <span class="kw">break</span>;
             }
+        }
+        <span class="kw">if </span>!failed {
+            debug_pods(<span class="kw-2">&amp;</span>client, <span class="string">&quot;role=proxy&quot;</span>.into()).<span class="kw">await</span>;
+            debug_pods(<span class="kw-2">&amp;</span>client, <span class="string">&quot;role=xds&quot;</span>.into()).<span class="kw">await</span>;
         }
         <span class="macro">assert!</span>(failed, <span class="string">&quot;Packet should have failed&quot;</span>);
     }

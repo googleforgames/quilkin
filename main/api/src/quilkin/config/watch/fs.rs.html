@@ -106,6 +106,7 @@
 <a href="#106" id="106">106</a>
 <a href="#107" id="107">107</a>
 <a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -195,14 +196,15 @@
         tokio::time::sleep(std::time::Duration::from_millis(<span class="number">100</span>)).<span class="kw">await</span>;
 
         source.clusters.modify(|clusters| {
-            clusters
-                .default_cluster_mut()
-                .insert(<span class="kw">crate</span>::endpoint::Endpoint::with_metadata(
+            clusters.insert_default(
+                [<span class="kw">crate</span>::endpoint::Endpoint::with_metadata(
                     (std::net::Ipv4Addr::LOCALHOST, <span class="number">4321</span>).into(),
                     <span class="kw">crate</span>::endpoint::Metadata {
                         tokens: &lt;<span class="kw">_</span>&gt;::from([Vec::from(<span class="kw-2">*</span><span class="string">b&quot;1x7ijy6&quot;</span>)]),
                     },
-                ));
+                )]
+                .into(),
+            );
         });
 
         tokio::time::sleep(std::time::Duration::from_millis(<span class="number">100</span>)).<span class="kw">await</span>;

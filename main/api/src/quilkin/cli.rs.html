@@ -441,12 +441,6 @@
 <a href="#441" id="441">441</a>
 <a href="#442" id="442">442</a>
 <a href="#443" id="443">443</a>
-<a href="#444" id="444">444</a>
-<a href="#445" id="445">445</a>
-<a href="#446" id="446">446</a>
-<a href="#447" id="447">447</a>
-<a href="#448" id="448">448</a>
-<a href="#449" id="449">449</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -717,7 +711,7 @@
 
     <span class="kw">use crate</span>::{
         config::{Filter, Providers},
-        endpoint::{Endpoint, LocalityEndpoints},
+        endpoint::Endpoint,
         filters::{Capture, StaticFilter, TokenRouter},
         test_utils::{create_socket, AddressType, TestHelper},
     };
@@ -758,21 +752,17 @@
 
         <span class="kw">let </span>endpoints_file = tempfile::NamedTempFile::new().unwrap();
         <span class="kw">let </span>config = Config::default();
+        <span class="kw">let </span>server_port = server_socket.local_ipv4_addr().unwrap().port();
         std::fs::write(endpoints_file.path(), {
-            config
-                .clusters
-                .write()
-                .default_cluster_mut()
-                .insert(LocalityEndpoints::from(<span class="macro">vec!</span>[Endpoint::with_metadata(
-                    (
-                        std::net::Ipv4Addr::LOCALHOST,
-                        server_socket.local_ipv4_addr().unwrap().port(),
-                    )
-                        .into(),
+            config.clusters.write().insert_default(
+                [Endpoint::with_metadata(
+                    (std::net::Ipv4Addr::LOCALHOST, server_port).into(),
                     <span class="kw">crate</span>::endpoint::Metadata {
                         tokens: <span class="macro">vec!</span>[<span class="string">&quot;abc&quot;</span>.into()].into_iter().collect(),
                     },
-                )]));
+                )]
+                .into(),
+            );
             serde_yaml::to_string(<span class="kw-2">&amp;</span>config).unwrap()
         })
         .unwrap();
@@ -802,15 +792,17 @@
             quiet: <span class="bool-val">true</span>,
             admin_address: <span class="prelude-val">Some</span>((Ipv4Addr::LOCALHOST, control_plane_admin_port).into()),
             config: &lt;<span class="kw">_</span>&gt;::default(),
-            command: Commands::Manage(Manage {
+            command: Commands::Agent(Agent {
                 relay: <span class="macro">vec!</span>[<span class="string">&quot;http://localhost:7900&quot;</span>.parse().unwrap()],
-                port: <span class="number">7801</span>,
                 region: <span class="prelude-val">None</span>,
                 sub_zone: <span class="prelude-val">None</span>,
                 zone: <span class="prelude-val">None</span>,
-                provider: Providers::File {
+                qcmp_port: <span class="kw">crate</span>::test_utils::available_addr(<span class="kw-2">&amp;</span>AddressType::Random)
+                    .<span class="kw">await
+                    </span>.port(),
+                provider: <span class="prelude-val">Some</span>(Providers::File {
                     path: endpoints_file.path().to_path_buf(),
-                },
+                }),
             }),
             log_format: LogFormats::default(),
         };
@@ -843,21 +835,17 @@
             <span class="kw">let </span>token = random_three_characters();
 
             <span class="macro">tracing::info!</span>(<span class="question-mark">?</span>token, <span class="string">&quot;writing new config&quot;</span>);
+            <span class="kw">let </span>server_port = server_socket.local_ipv4_addr().unwrap().port();
             std::fs::write(endpoints_file.path(), {
-                config
-                    .clusters
-                    .write()
-                    .default_cluster_mut()
-                    .insert(LocalityEndpoints::from(<span class="macro">vec!</span>[Endpoint::with_metadata(
-                        (
-                            std::net::Ipv4Addr::LOCALHOST,
-                            server_socket.local_ipv4_addr().unwrap().port(),
-                        )
-                            .into(),
+                config.clusters.write().insert_default(
+                    [Endpoint::with_metadata(
+                        (std::net::Ipv4Addr::LOCALHOST, server_port).into(),
                         <span class="kw">crate</span>::endpoint::Metadata {
                             tokens: <span class="macro">vec!</span>[token.clone()].into_iter().collect(),
                         },
-                    )]));
+                    )]
+                    .into(),
+                );
                 serde_yaml::to_string(<span class="kw-2">&amp;</span>config).unwrap()
             })
             .unwrap();

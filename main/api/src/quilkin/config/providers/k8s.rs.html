@@ -170,7 +170,7 @@
 <a href="#170" id="170">170</a>
 </pre></div><pre class="rust"><code><span class="kw">pub mod </span>agones;
 
-<span class="kw">use </span>std::sync::Arc;
+<span class="kw">use </span>std::{collections::BTreeSet, sync::Arc};
 
 <span class="kw">use </span>futures::Stream;
 <span class="kw">use </span>k8s_openapi::api::core::v1::ConfigMap;
@@ -178,7 +178,7 @@
 
 <span class="kw">use </span>agones::GameServer;
 
-<span class="kw">use </span><span class="kw">crate</span>::endpoint::{Endpoint, Locality, LocalityEndpoints};
+<span class="kw">use </span><span class="kw">crate</span>::endpoint::{Endpoint, Locality};
 
 <span class="kw">pub fn </span>update_filters_from_configmap(
     client: kube::Client,
@@ -266,8 +266,10 @@
         <span class="kw">for await </span>event <span class="kw">in </span>gameserver_events(client, namespace) {
             <span class="kw">match </span>event<span class="question-mark">? </span>{
                 Event::Applied(server) =&gt; {
+                    <span class="macro">tracing::debug!</span>(<span class="string">&quot;received applied event from k8s&quot;</span>);
                     <span class="kw">if </span>!server.is_allocated() {
                         <span class="kw">yield </span><span class="prelude-val">Ok</span>(());
+                        <span class="macro">tracing::debug!</span>(<span class="string">&quot;skipping unallocated server&quot;</span>);
                         <span class="kw">continue</span>;
                     }
 
@@ -278,24 +280,17 @@
                             <span class="kw">continue</span>;
                         }
                     };
-                    <span class="macro">tracing::trace!</span>(endpoint=%serde_json::to_value(<span class="kw-2">&amp;</span>endpoint).unwrap(), <span class="string">&quot;Adding endpoint&quot;</span>);
-                    <span class="kw">match </span><span class="kw-2">&amp;</span>locality {
-                        <span class="prelude-val">Some</span>(locality) =&gt; config
-                            .clusters
-                            .write()
-                            .default_cluster_mut()
-                            .insert((endpoint, locality.clone())),
-                        <span class="prelude-val">None </span>=&gt; config
-                            .clusters
-                            .write()
-                            .default_cluster_mut()
-                            .insert(endpoint),
-                    };
-                    <span class="macro">tracing::trace!</span>(clusters=%serde_json::to_value(<span class="kw-2">&amp;</span>config.clusters).unwrap(), <span class="string">&quot;current clusters&quot;</span>);
+                    <span class="macro">tracing::debug!</span>(endpoint=%serde_json::to_value(<span class="kw-2">&amp;</span>endpoint).unwrap(), <span class="string">&quot;Adding endpoint&quot;</span>);
+                    config.clusters.write()
+                        .entry(locality.clone())
+                        .or_default()
+                        .value_mut()
+                        .replace(endpoint);
                 }
 
                 Event::Restarted(servers) =&gt; {
-                    <span class="kw">let </span>servers: Vec&lt;<span class="kw">_</span>&gt; = servers
+                    <span class="macro">tracing::debug!</span>(<span class="string">&quot;received restart event from k8s&quot;</span>);
+                    <span class="kw">let </span>servers: BTreeSet&lt;<span class="kw">_</span>&gt; = servers
                         .into_iter()
                         .filter(GameServer::is_allocated)
                         .map(Endpoint::try_from)
@@ -309,12 +304,17 @@
                             }
                         })
                         .collect();
-                    <span class="kw">let </span>endpoints = LocalityEndpoints::from((servers, locality.clone()));
-                    <span class="macro">tracing::trace!</span>(<span class="question-mark">?</span>endpoints, <span class="string">&quot;Restarting with endpoints&quot;</span>);
-                    config.clusters.write().insert_default(endpoints);
+
+                    <span class="macro">tracing::trace!</span>(
+                        endpoints=%serde_json::to_value(servers.clone()).unwrap(),
+                        <span class="string">&quot;Restarting with endpoints&quot;
+                    </span>);
+
+                    config.clusters.write().merge(locality.clone(), servers);
                 }
 
                 Event::Deleted(server) =&gt; {
+                    <span class="macro">tracing::debug!</span>(<span class="string">&quot;received delete event from k8s&quot;</span>);
                     <span class="kw">let </span>found = <span class="kw">if let </span><span class="prelude-val">Some</span>(endpoint) = server.endpoint() {
                         config.clusters.write().remove_endpoint(<span class="kw-2">&amp;</span>endpoint)
                     } <span class="kw">else </span>{
@@ -323,7 +323,7 @@
                         })
                     };
 
-                    <span class="kw">if </span>found.is_none() {
+                    <span class="kw">if </span>!found {
                         <span class="macro">tracing::warn!</span>(
                             endpoint=%serde_json::to_value(server.endpoint()).unwrap(),
                             name=%serde_json::to_value(server.metadata.name).unwrap(),

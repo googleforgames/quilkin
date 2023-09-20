@@ -215,10 +215,8 @@ example works with any configuration provider.</p>
 <pre><code class="language-yaml"># quilkin.yaml
 version: v1alpha1
 clusters:
-  default:
-    localities:
-      - endpoints:
-          - address: 127.0.0.1:8888
+  - endpoints:
+    - address: 127.0.0.1:8888
 </code></pre>
 <p>To start the relay, run the <code>relay</code> command:</p>
 <pre><code>quilkin relay 
@@ -254,10 +252,8 @@ set of data that the proxies can query using xDS discovery requests.</p>
 <pre><code class="language-yaml"># quilkin2.yaml
 version: v1alpha1
 clusters:
-  default:
-    localities:
-      - endpoints:
-          - address: 127.0.0.1:9999
+  - endpoints:
+    - address: 127.0.0.1:9999
 </code></pre>
 <pre><code>quilkin --admin-address http://localhost:8003 \
     manage \

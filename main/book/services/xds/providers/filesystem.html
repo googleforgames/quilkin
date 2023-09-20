@@ -186,14 +186,12 @@ filters:
     config:
       id: hello
 clusters:
-  cluster-a:
-    localities:
-      - endpoints:
-          - address: 123.0.0.1:29
-            metadata:
-              'quilkin.dev':
-                tokens:
-                  - 'MXg3aWp5Ng=='
+  - endpoints:
+     - address: 123.0.0.1:29
+       metadata:
+         'quilkin.dev':
+           tokens:
+             - 'MXg3aWp5Ng=='
 <span class="boring">&quot;;
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);

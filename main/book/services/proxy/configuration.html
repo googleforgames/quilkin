@@ -187,26 +187,24 @@ endpoint configuration to specify two endpoints with <code>token</code> metadata
 version: v1alpha1
 id: my-proxy # An identifier for the proxy instance.
 clusters: # grouping of clusters
-  default:
-    localities: # grouping of endpoints within a cluster
-      - endpoints: # array of potential endpoints to send on traffic to
-          - address: 127.0.0.1:26000
-            metadata: # Metadata associated with the endpoint
-              quilkin.dev:
-                tokens:
-                  - MXg3aWp5Ng== # the connection byte array to route to, encoded as base64 (string value: 1x7ijy6)
-                  - OGdqM3YyaQ== # (string value: 8gj3v2i)
-          - address: 127.0.0.1:26001
-            metadata: # Metadata associated with the endpoint
-              quilkin.dev:
-                tokens:
-                  - bmt1eTcweA== # (string value: nkuy70x)
+  - endpoints: # array of potential endpoints to send on traffic to
+    - address: 127.0.0.1:26000
+      metadata: # Metadata associated with the endpoint
+        quilkin.dev:
+          tokens:
+            - MXg3aWp5Ng== # the connection byte array to route to, encoded as base64 (string value: 1x7ijy6)
+            - OGdqM3YyaQ== # (string value: 8gj3v2i)
+    - address: 127.0.0.1:26001
+      metadata: # Metadata associated with the endpoint
+        quilkin.dev:
+          tokens:
+            - bmt1eTcweA== # (string value: nkuy70x)
 </code></pre>
-<p>This is a great use of a static configuration file, as we only get a singular <code>--to</code> endpoint address via the 
+<p>This is a great use of a static configuration file, as we only get a singular <code>--to</code> endpoint address via the
 command line arguments.</p>
 <p>We can also configure <a href="./filters.html">Filters</a> via the configuration file. See that section for documentation.</p>
 <h2 id="dynamic-configuration"><a class="header" href="#dynamic-configuration">Dynamic Configuration</a></h2>
-<p>If you need to dynamically change either Filters and/or Endpoints at runtime, see the <a href="../xds.html">Control Plane</a> 
+<p>If you need to dynamically change either Filters and/or Endpoints at runtime, see the <a href="../xds.html">Control Plane</a>
 documentation on the configuration API surface, and built in dynamic management providers.</p>
 <h2 id="json-schema"><a class="header" href="#json-schema">Json Schema</a></h2>
 <p>The full <a href="https://json-schema.org/">JSON Schema</a> for the YAML configuration file.</p>
@@ -239,58 +237,33 @@ properties:
     items:
       '$ref': {} # Refer to the Filter documentation for a filter configuration schema.
   clusters:
-    type: object
-    description: |
-      grouping of clusters, each with a key for a name
-    additionalProperties:
-      type: object
-      description: |
-        An individual cluster
-      properties:
-        localities:          
-          type: array
-          description: |
-            grouping of endpoints, per cluster.
-          items:
-            type: object
-            properties:
-              endpoints:
-                type: array
-                description: |
-                  A list of upstream endpoints to forward packets to.
-                items:
-                  type: object
-                  description: |
-                    An upstream endpoint
-                  properties:
-                    address:
-                      type: string
-                      description: |
-                        Socket address of the endpoint. This must be of the ´IP:Port` form e.g `192.168.1.1:7001`
-                      metadata:
-                        type: object
-                        description: |
-                          Arbitrary key value pairs that is associated with the endpoint.
-                          These are visible to Filters when processing packets and can be used to provide more context about endpoints (e.g whether or not to route a packet to an endpoint).
-                          Keys must be of type string otherwise the configuration is rejected.
-                  required:
-                    - address
-  management_servers:
     type: array
     description: |
-      A list of XDS management servers to fetch configuration from.
-      Multiple servers can be provided for redundancy for the proxy to
-      fall back to upon error.
+      grouping of endpoints, per cluster.
     items:
       type: object
-      description: |
-        Configuration for a management server.
-    properties:
-      address:
-        type: string
-        description: |
-          Address of the management server. This must have the `http(s)` scheme prefix.
-          Example: `http://example.com`
+      properties:
+        endpoints:
+          type: array
+          description: |
+            A list of upstream endpoints to forward packets to.
+          items:
+            type: object
+            description: |
+              An upstream endpoint
+            properties:
+              address:
+                type: string
+                description: |
+                  Socket address of the endpoint. This must be of the ´IP:Port` form e.g `192.168.1.1:7001`
+                metadata:
+                  type: object
+                  description: |
+                    Arbitrary key value pairs that is associated with the endpoint.
+                    These are visible to Filters when processing packets and can be used to provide more context about endpoints (e.g whether or not to route a packet to an endpoint).
+                    Keys must be of type string otherwise the configuration is rejected.
+            required:
+              - address
 </code></pre>
 
                     </main>

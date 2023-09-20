@@ -408,12 +408,6 @@
 <a href="#408" id="408">408</a>
 <a href="#409" id="409">409</a>
 <a href="#410" id="410">410</a>
-<a href="#411" id="411">411</a>
-<a href="#412" id="412">412</a>
-<a href="#413" id="413">413</a>
-<a href="#414" id="414">414</a>
-<a href="#415" id="415">415</a>
-<a href="#416" id="416">416</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -438,9 +432,8 @@
 <span class="kw">use </span>tracing_subscriber::EnvFilter;
 
 <span class="kw">use crate</span>::{
-    cluster::Cluster,
     config::Config,
-    endpoint::{Endpoint, EndpointAddress, LocalityEndpoints},
+    endpoint::{Endpoint, EndpointAddress},
     filters::{prelude::<span class="kw-2">*</span>, FilterRegistry},
     metadata::Value,
     utils::net::DualStackLocalSocket,
@@ -760,19 +753,14 @@
 <span class="kw">pub fn </span>config_with_dummy_endpoint() -&gt; Config {
     <span class="kw">let </span>config = Config::default();
 
-    config.clusters.write().insert(Cluster {
-        name: <span class="string">&quot;default&quot;</span>.into(),
-        localities: <span class="macro">vec!</span>[LocalityEndpoints {
-            locality: <span class="prelude-val">None</span>,
-            endpoints: [Endpoint {
-                address: (std::net::Ipv4Addr::LOCALHOST, <span class="number">8080</span>).into(),
-                ..&lt;<span class="kw">_</span>&gt;::default()
-            }]
-            .into(),
+    config.clusters.write().insert(
+        <span class="prelude-val">None</span>,
+        [Endpoint {
+            address: (std::net::Ipv4Addr::LOCALHOST, <span class="number">8080</span>).into(),
+            ..&lt;<span class="kw">_</span>&gt;::default()
         }]
-        .into_iter()
-        .collect(),
-    });
+        .into(),
+    );
 
     config
 }

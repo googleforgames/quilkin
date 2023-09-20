@@ -504,7 +504,6 @@
 <a href="#504" id="504">504</a>
 <a href="#505" id="505">505</a>
 <a href="#506" id="506">506</a>
-<a href="#507" id="507">507</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -625,7 +624,6 @@
                     <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = watcher.changed().<span class="kw">await </span>{
                         <span class="macro">tracing::error!</span>(%error, <span class="string">&quot;error watching changes&quot;</span>);
                     }
-                    this.push_update(ResourceType::Endpoint);
                     this.push_update(ResourceType::Cluster);
                 }
             }
@@ -904,7 +902,7 @@
 
     <span class="attr">#[tokio::test]
     </span><span class="kw">async fn </span>valid_response() {
-        <span class="kw">const </span>RESOURCE: ResourceType = ResourceType::Endpoint;
+        <span class="kw">const </span>RESOURCE: ResourceType = ResourceType::Cluster;
         <span class="kw">const </span>LISTENER_TYPE: ResourceType = ResourceType::Listener;
 
         <span class="kw">let </span><span class="kw-2">mut </span>response = DiscoveryResponse {
