@@ -186,18 +186,6 @@
 <a href="#186" id="186">186</a>
 <a href="#187" id="187">187</a>
 <a href="#188" id="188">188</a>
-<a href="#189" id="189">189</a>
-<a href="#190" id="190">190</a>
-<a href="#191" id="191">191</a>
-<a href="#192" id="192">192</a>
-<a href="#193" id="193">193</a>
-<a href="#194" id="194">194</a>
-<a href="#195" id="195">195</a>
-<a href="#196" id="196">196</a>
-<a href="#197" id="197">197</a>
-<a href="#198" id="198">198</a>
-<a href="#199" id="199">199</a>
-<a href="#200" id="200">200</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span>bytes::Bytes;
@@ -268,19 +256,7 @@
         };
 
         <span class="kw">match </span>mmdb.lookup::&lt;IpNetEntry&gt;(ip) {
-            <span class="prelude-val">Ok</span>(asn) =&gt; {
-                <span class="macro">tracing::info!</span>(
-                    number = asn.r#as,
-                    organization = asn.as_name,
-                    country_code = asn.as_cc,
-                    prefix = asn.prefix,
-                    prefix_entity = asn.prefix_entity,
-                    prefix_name = asn.prefix_name,
-                    <span class="string">&quot;maxmind information&quot;
-                </span>);
-
-                <span class="prelude-val">Some</span>(asn)
-            }
+            <span class="prelude-val">Ok</span>(asn) =&gt; <span class="prelude-val">Some</span>(asn),
             <span class="prelude-val">Err</span>(error) =&gt; {
                 <span class="macro">tracing::warn!</span>(%ip, %error, <span class="string">&quot;ip not found in maxmind database&quot;</span>);
                 <span class="prelude-val">None
