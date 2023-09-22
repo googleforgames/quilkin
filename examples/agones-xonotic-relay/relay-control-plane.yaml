@@ -1,5 +1,5 @@
 #
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 #
 
 #
-# Everything to setup the xDS Agones integrated control plane
+# Everything to setup the relay and agent Agones control plane
 #
 
 ---
@@ -23,7 +23,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: quilkin-xds-filter-config
+  name: quilkin-relay-filter-config
   labels:
     quilkin.dev/configmap: "true"
 data:
@@ -40,7 +40,7 @@ data:
 
 ---
 
-# RBAC Setup for Agones xDS Control Plane
+# RBAC Setup for Agones Relay Control Plane
 
 apiVersion: v1
 kind: ServiceAccount
@@ -113,7 +113,7 @@ spec:
           env:
             - name: RUST_LOG
               value: info
-          image: us-docker.pkg.dev/quilkin/release/quilkin:0.6.0
+          image: us-docker.pkg.dev/quilkin-mark-dev/release/quilkin:0.7.0
           livenessProbe:
             failureThreshold: 3
             httpGet:
@@ -152,12 +152,13 @@ spec:
         - name: quilkin
           args:
             - agent
+            - --relay
             - http://quilkin-relay-agones:7900
             - agones
           env:
             - name: RUST_LOG
               value: info
-          image: us-docker.pkg.dev/quilkin/release/quilkin:0.6.0
+          image: us-docker.pkg.dev/quilkin-mark-dev/release/quilkin:0.7.0
           livenessProbe:
             failureThreshold: 3
             httpGet:
@@ -172,10 +173,12 @@ metadata:
   name: quilkin-relay-agones
 spec:
   ports:
-    - port: 7800
+    - name: ads
+      port: 7800
       protocol: TCP
       targetPort: 7800
-    - port: 7900
+    - name: cpds
+      port: 7900
       protocol: TCP
       targetPort: 7900
   selector:

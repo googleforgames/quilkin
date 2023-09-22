@@ -1,5 +1,5 @@
 #
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 #
 # Pool of Quilkin proxies, tied to the
-# xDS control plane in xds-control-plane.yaml
+# Quilkin relay control plane in relay-control-plane.yaml
 #
 
 ---
@@ -42,7 +42,7 @@ spec:
     spec:
       containers:
         - name: quilkin
-          image: us-docker.pkg.dev/quilkin/release/quilkin:0.6.0
+          image: us-docker.pkg.dev/quilkin-mark-dev/release/quilkin:0.7.0
           args: ["proxy", "--management-server", "http://quilkin-relay-agones:7800"]
           env:
             - name: RUST_LOG

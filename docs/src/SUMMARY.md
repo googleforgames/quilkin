@@ -7,6 +7,7 @@
 - [Netcat](./deployment/quickstarts/netcat.md)
 - [Agones + Xonotic (Sidecar)](./deployment/quickstarts/agones-xonotic-sidecar.md)
 - [Agones + Xonotic (xDS)](./deployment/quickstarts/agones-xonotic-xds.md)
+- [Agones + Xonotic (Relay)](./deployment/quickstarts/agones-xonotic-relay.md)
 
 # Services
 
@@ -41,7 +42,7 @@
 
 - [Relay](./services/relay.md)
     - [Metrics]()
-    - [Providers]()
+    - [Agents](./services/agent.md)
 
 # SDKs
 

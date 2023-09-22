@@ -1,4 +1,4 @@
-# Copyright 2022 Google LLC All Rights Reserved.
+# Copyright 2023 Google LLC All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,16 +21,18 @@ metadata:
   name: xonotic
 spec:
   replicas: 3
+  strategy:
+    type: Recreate
   template:
     spec:
       ports:
-      - name: default
-        containerPort: 26000
+        - name: default
+          containerPort: 26000
       health:
         initialDelaySeconds: 30
         periodSeconds: 60
       template:
         spec:
           containers:
-          - name: xonotic
-            image: gcr.io/agones-images/xonotic-example:0.8
+            - name: xonotic
+              image: us-docker.pkg.dev/agones-images/examples/xonotic-example:1.2
