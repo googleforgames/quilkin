@@ -64,4 +64,4 @@ The following metrics are exposed when Quilkin is running as an [xDS provider](.
   of connected proxies since snapshots for disconnected proxies are only periodically cleared
   from the cache.
 
-[DiscoveryRequest]: https://www.envoyproxy.io/docs/envoy/v1.22.0/api-v3/service/discovery/v3/discovery.proto.html?highlight=discoveryrequest#service-discovery-v3-discoveryrequest
+[DiscoveryRequest]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/discovery/v3/discovery.proto.html#service-discovery-v3-discoveryrequest
