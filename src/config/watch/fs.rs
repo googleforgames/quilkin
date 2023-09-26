@@ -14,7 +14,10 @@
  *  limitations under the License.
  */
 
-use std::sync::Arc;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 
 use notify::Watcher;
 use tracing::Instrument;
@@ -23,6 +26,7 @@ use crate::Config;
 
 pub async fn watch(
     config: Arc<Config>,
+    health_check: Arc<AtomicBool>,
     path: impl Into<std::path::PathBuf>,
     locality: Option<crate::endpoint::Locality>,
 ) -> crate::Result<()> {
@@ -42,6 +46,7 @@ pub async fn watch(
     let buf = tokio::fs::read(&path).await?;
     tracing::info!("applying initial configuration");
     config.update_from_json(serde_yaml::from_slice(&buf)?, locality.clone())?;
+    health_check.store(true, Ordering::SeqCst);
     watcher.watch(&path, notify::RecursiveMode::Recursive)?;
     tracing::info!("watching file");
 
@@ -83,7 +88,7 @@ mod tests {
         tokio::fs::write(&file_path, serde_yaml::to_string(&source).unwrap())
             .await
             .unwrap();
-        let _handle = tokio::spawn(watch(dest.clone(), file_path.clone(), None));
+        let _handle = tokio::spawn(watch(dest.clone(), <_>::default(), file_path.clone(), None));
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
         source.clusters.modify(|clusters| {

@@ -43,7 +43,8 @@ fn run_quilkin(port: u16, endpoint: SocketAddr) {
 
         runtime.block_on(async move {
             let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel::<()>(());
-            proxy.run(config, shutdown_rx).await.unwrap();
+            let admin = quilkin::cli::Admin::Proxy(<_>::default());
+            proxy.run(config, admin, shutdown_rx).await.unwrap();
         });
     });
 }

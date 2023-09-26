@@ -113,6 +113,8 @@ async fn main() -> quilkin::Result<()> {
         )
     });
 
-    proxy.run(config.into(), shutdown_rx).await
+    let admin = quilkin::cli::Admin::Proxy(<_>::default());
+
+    proxy.run(config.into(), admin, shutdown_rx).await
 }
 // ANCHOR_END: run

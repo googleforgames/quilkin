@@ -14,8 +14,12 @@
  * limitations under the License.
  */
 
-use std::sync::Arc;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 
+use super::Admin;
 use crate::config::Config;
 
 define_port!(7600);
@@ -47,6 +51,10 @@ pub struct Agent {
     /// The configuration source for a management server.
     #[clap(subcommand)]
     pub provider: Option<crate::config::Providers>,
+    /// The interval in seconds at which the agent will wait for a discovery
+    /// request from a relay server before restarting the connection.
+    #[clap(long, env = "QUILKIN_IDLE_REQUEST_INTERVAL_SECS", default_value_t = super::admin::IDLE_REQUEST_INTERVAL_SECS)]
+    pub idle_request_interval_secs: u64,
 }
 
 impl Default for Agent {
@@ -58,6 +66,7 @@ impl Default for Agent {
             zone: <_>::default(),
             sub_zone: <_>::default(),
             provider: <_>::default(),
+            idle_request_interval_secs: super::admin::IDLE_REQUEST_INTERVAL_SECS,
         }
     }
 }
@@ -66,6 +75,7 @@ impl Agent {
     pub async fn run(
         &self,
         config: Arc<Config>,
+        mode: Admin,
         mut shutdown_rx: tokio::sync::watch::Receiver<()>,
     ) -> crate::Result<()> {
         let locality = (self.region.is_some() || self.zone.is_some() || self.sub_zone.is_some())
@@ -75,14 +85,21 @@ impl Agent {
                 sub_zone: self.sub_zone.clone().unwrap_or_default(),
             });
 
+        let runtime_config = mode.unwrap_agent();
+
         let _mds_task = if !self.relay.is_empty() {
             let _provider_task = match self.provider.as_ref() {
-                Some(provider) => Some(provider.spawn(config.clone(), locality.clone())),
+                Some(provider) => Some(provider.spawn(
+                    config.clone(),
+                    runtime_config.provider_is_healthy.clone(),
+                    locality.clone(),
+                )),
                 None => return Err(eyre::eyre!("no configuration provider given")),
             };
 
             let task = crate::xds::client::MdsClient::connect(
                 String::clone(&config.id.load()),
+                mode.clone(),
                 self.relay.clone(),
             );
 
@@ -97,5 +114,19 @@ impl Agent {
 
         crate::protocol::spawn(self.qcmp_port).await?;
         shutdown_rx.changed().await.map_err(From::from)
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct RuntimeConfig {
+    pub idle_request_interval_secs: u64,
+    pub provider_is_healthy: Arc<AtomicBool>,
+    pub relay_is_healthy: Arc<AtomicBool>,
+}
+
+impl RuntimeConfig {
+    pub fn is_healthy(&self) -> bool {
+        self.provider_is_healthy.load(Ordering::SeqCst)
+            && self.relay_is_healthy.load(Ordering::SeqCst)
     }
 }

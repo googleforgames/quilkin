@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use std::{collections::HashSet, sync::Arc, time::Duration};
+use std::{collections::HashSet, sync::atomic::Ordering, sync::Arc, time::Duration};
 
 use futures::StreamExt;
 use rand::Rng;
@@ -27,6 +27,7 @@ use tryhard::{
 };
 
 use crate::{
+    cli::Admin,
     config::Config,
     xds::{
         config::core::v3::Node,
@@ -106,16 +107,22 @@ pub struct Client<C: ServiceClient> {
     client: C,
     identifier: Arc<str>,
     management_servers: Vec<Endpoint>,
+    mode: Admin,
 }
 
 impl<C: ServiceClient> Client<C> {
     #[tracing::instrument(skip_all, level = "trace", fields(servers = ?management_servers))]
-    pub async fn connect(identifier: String, management_servers: Vec<Endpoint>) -> Result<Self> {
+    pub async fn connect(
+        identifier: String,
+        mode: Admin,
+        management_servers: Vec<Endpoint>,
+    ) -> Result<Self> {
         let client = Self::connect_with_backoff(&management_servers).await?;
         Ok(Self {
             client,
             identifier: Arc::from(identifier),
             management_servers,
+            mode,
         })
     }
 
@@ -240,6 +247,7 @@ impl AdsStream {
             client,
             identifier,
             management_servers,
+            mode,
         }: &AdsClient,
         config: Arc<Config>,
         idle_request_interval_secs: u64,
@@ -247,6 +255,7 @@ impl AdsStream {
         let mut client = client.clone();
         let identifier = identifier.clone();
         let management_servers = management_servers.clone();
+        let mode = mode.clone();
         Self::connect(
             identifier.clone(),
             move |(mut requests, mut rx), subscribed_resources| async move {
@@ -288,6 +297,7 @@ impl AdsStream {
                         stream,
                         move |resource| config.apply(resource),
                     );
+                    let runtime_config = mode.unwrap_proxy();
 
                     loop {
                         let next_response = tokio::time::timeout(
@@ -297,6 +307,13 @@ impl AdsStream {
 
                         match next_response.await {
                             Ok(Some(Ok(ack))) => {
+                                runtime_config
+                                    .xds_is_healthy
+                                    .read()
+                                    .as_deref()
+                                    .unwrap()
+                                    .store(true, Ordering::SeqCst);
+
                                 tracing::trace!("received ack");
                                 requests.send(ack)?;
                                 continue;
@@ -322,6 +339,13 @@ impl AdsStream {
                             }
                         }
                     }
+
+                    runtime_config
+                        .xds_is_healthy
+                        .read()
+                        .as_deref()
+                        .unwrap()
+                        .store(false, Ordering::SeqCst);
 
                     tracing::info!("Lost connection to xDS, retrying");
                     client = AdsClient::connect_with_backoff(&management_servers).await?;
@@ -358,12 +382,14 @@ impl MdsStream {
             client,
             identifier,
             management_servers,
+            mode,
         }: &MdsClient,
         config: Arc<Config>,
     ) -> Self {
         let mut client = client.clone();
         let identifier = identifier.clone();
         let management_servers = management_servers.clone();
+        let mode = mode.clone();
         Self::connect(
             identifier.clone(),
             move |(requests, mut rx), _| async move {
@@ -390,14 +416,32 @@ impl MdsStream {
 
                     let control_plane = super::server::ControlPlane::from_arc(
                         config.clone(),
-                        super::server::IDLE_REQUEST_INTERVAL_SECS,
+                        mode.idle_request_interval_secs(),
                     );
                     let mut stream = control_plane.stream_aggregated_resources(stream).await?;
-                    while let Some(result) = stream.next().await {
-                        let response = result?;
-                        tracing::debug!(config=%serde_json::to_value(&config).unwrap(), "received discovery response");
-                        requests.send(response)?;
+                    mode.unwrap_agent()
+                        .relay_is_healthy
+                        .store(true, Ordering::SeqCst);
+
+                    loop {
+                        let timeout = tokio::time::timeout(
+                            std::time::Duration::from_secs(mode.idle_request_interval_secs()),
+                            stream.next(),
+                        );
+
+                        match timeout.await {
+                            Ok(Some(result)) => {
+                                let response = result?;
+                                tracing::debug!(config=%serde_json::to_value(&config).unwrap(), "received discovery response");
+                                requests.send(response)?;
+                            }
+                            _ => break,
+                        }
                     }
+
+                    mode.unwrap_agent()
+                        .relay_is_healthy
+                        .store(false, Ordering::SeqCst);
 
                     tracing::warn!("lost connection to relay server, retrying");
                     client = MdsClient::connect_with_backoff(&management_servers)

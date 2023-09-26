@@ -38,8 +38,6 @@ use crate::{
     },
 };
 
-pub(crate) const IDLE_REQUEST_INTERVAL_SECS: u64 = 30;
-
 #[tracing::instrument(skip_all)]
 pub fn spawn(
     port: u16,
@@ -47,7 +45,7 @@ pub fn spawn(
 ) -> impl std::future::Future<Output = crate::Result<()>> {
     let server = AggregatedDiscoveryServiceServer::new(ControlPlane::from_arc(
         config,
-        IDLE_REQUEST_INTERVAL_SECS,
+        crate::cli::admin::IDLE_REQUEST_INTERVAL_SECS,
     ));
     let server = tonic::transport::Server::builder().add_service(server);
     tracing::info!("serving management server on port `{port}`");
@@ -424,7 +422,10 @@ mod tests {
         };
 
         let config = Arc::new(Config::default());
-        let client = ControlPlane::from_arc(config.clone(), IDLE_REQUEST_INTERVAL_SECS);
+        let client = ControlPlane::from_arc(
+            config.clone(),
+            crate::cli::admin::IDLE_REQUEST_INTERVAL_SECS,
+        );
         let (tx, rx) = tokio::sync::mpsc::channel(256);
 
         let mut request = DiscoveryRequest {
