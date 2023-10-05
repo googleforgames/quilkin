@@ -209,15 +209,15 @@ xonotic-sidecar-htc2x-sdp4k   Ready   34.94.107.201   7599   gke-agones-default-
 <code>GameServer</code>, but we'll skip this step for this example.</p>
 <p>Choose one of the listed <code>GameServer</code>s from the previous step, and connect to the IP and port of the Xonotic
 server via the &quot;Multiplayer &gt; Address&quot; field in the Xonotic client in the format of {IP}:{PORT}.</p>
-<p><img src="xonotic-address.png" alt="xonotic-address.png" /></p>
+<p><img src="xonotic-address-v6.png" alt="xonotic-address.png" /></p>
 <p>You should now be playing a game of Xonotic against 4 bots!</p>
 <h2 id="3-check-out-the-metrics"><a class="header" href="#3-check-out-the-metrics">3. Check out the metrics</a></h2>
 <p>Let's take a look at some metrics that Quilkin outputs.</p>
 <p>Grab the name of the GameServer you connected to before, and replace the <code>${gameserver}</code> value below, and run the
 command. This will forward the <a href="../admin.html">admin</a> interface to localhost.</p>
-<pre><code class="language-shell">kubectl port-forward ${gameserver} 9091
+<pre><code class="language-shell">kubectl port-forward ${gameserver} 8000
 </code></pre>
-<p>Then open a browser to <a href="http://localhost:9091/metrics">http://localhost:9091/metrics</a> to see the
+<p>Then open a browser to <a href="http://localhost:9091/metrics">http://localhost:8000/metrics</a> to see the
 <a href="https://prometheus.io/">Prometheus</a> metrics that Quilkin exports.</p>
 <h2 id="5-cleanup"><a class="header" href="#5-cleanup">5. Cleanup</a></h2>
 <p>Run the following to delete the Fleet and the accompanying ConfigMap:</p>
