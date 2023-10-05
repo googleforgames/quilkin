@@ -37,7 +37,7 @@ Usually with Agones you would
 Choose one of the listed `GameServer`s from the previous step, and connect to the IP and port of the Xonotic
 server via the "Multiplayer > Address" field in the Xonotic client in the format of {IP}:{PORT}.
 
-![xonotic-address.png](xonotic-address.png)
+![xonotic-address.png](xonotic-address-v6.png)
 
 You should now be playing a game of Xonotic against 4 bots!
 
@@ -49,10 +49,10 @@ Grab the name of the GameServer you connected to before, and replace the `${game
 command. This will forward the [admin](../admin.md) interface to localhost.
 
 ```shell
-kubectl port-forward ${gameserver} 9091
+kubectl port-forward ${gameserver} 8000
 ```
 
-Then open a browser to [http://localhost:9091/metrics](http://localhost:9091/metrics) to see the
+Then open a browser to [http://localhost:8000/metrics](http://localhost:9091/metrics) to see the
 [Prometheus](https://prometheus.io/) metrics that Quilkin exports.
 
 ## 5. Cleanup

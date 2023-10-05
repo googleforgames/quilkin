@@ -6,8 +6,8 @@
 ## 1. Overview
 
 In this quickstart, we'll be setting up an example [Xonotic](https://xonotic.org/) [Agones](https://agones.dev/)
-Fleet, that will only be accessible through Quilkin, via utilising the [TokenRouter]
-Filter to provide routing and access control to the Allocated `GameServer` instances.
+Fleet, that will only be accessible through Quilkin that is hosted within the same cluster, utilising the 
+[TokenRouter] Filter to provide routing and access control to the Allocated `GameServer` instances.
 
 To do this, we'll take advantage of the Quilkin [Agones xDS Provider](../../services/xds/providers/agones.md) to provide
 an out-of-the-box control plane for integration between Agones and [Quilkin's xDS configuration API](../../services/xds.md) with
@@ -79,17 +79,44 @@ quilkin-proxies-78965c446d-m4rr7        1/1     Running   0          6s
 Let's take this one step further, and check the configuration of the proxies that should have come from the `quilkin
 manage agones` instance.
 
-In another terminal, run:  `kubectl port-forward deployments/quilkin-proxies 8000`, to port forward the
-[admin endpoint](../admin.md) locally, which we can then query.
+In another terminal, run:  `kubectl port-forward deployments/quilkin-proxies 8001:8000`, to port forward the
+[admin endpoint](../admin.md) locally to port 8001, which we can then query.
 
-Go back to your original terminal and run `curl -s http://localhost:8000/config`
+Go back to your original terminal and run `curl -s http://localhost:8001/config` 
 
-> If you have [jq](https://stedolan.github.io/jq/) installed, run `curl -s http://localhost:8000/config | jq` for a
+> If you have [jq](https://stedolan.github.io/jq/) installed, run `curl -s http://localhost:8001/config | jq` for a
 > nicely formatted JSON output.
 
 ```shell
-$ curl -s http://localhost:8000/config
-{"admin":{"address":"0.0.0.0:8000"},"clusters":{},"filters":[{"name":"quilkin.filters.capture.v1alpha1.Capture","config":{"metadataKey":"quilkin.dev/capture","suffix":{"size":3,"remove":true}}},{"name":"quilkin.filters.token_router.v1alpha1.TokenRouter","config":null}],"id":"quilkin-proxies-78965c446d-dqvjg","management_servers":[{"address":"http://quilkin-manage-agones:80"}],"port":7000,"version":"v1alpha1","maxmind_db":null}%
+$ curl -s http://localhost:8001/config | jq
+{
+  "clusters": [
+    {
+      "endpoints": [],
+      "locality": null
+    }
+  ],
+  "filters": [
+    {
+      "name": "quilkin.filters.capture.v1alpha1.Capture",
+      "label": null,
+      "config": {
+        "metadataKey": "quilkin.dev/capture",
+        "suffix": {
+          "size": 3,
+          "remove": true
+        }
+      }
+    },
+    {
+      "name": "quilkin.filters.token_router.v1alpha1.TokenRouter",
+      "label": null,
+      "config": null
+    }
+  ],
+  "id": "quilkin-proxies-7d9bbbccdf-9vd59",
+  "version": "v1alpha1"
+}
 ```
 
 This shows us the current configuration of the proxies coming from the xDS server created via `quilkin manage
@@ -161,7 +188,7 @@ Labels:       agones.dev/fleet=xonotic
               agones.dev/gameserverset=xonotic-h5cfn
 Annotations:  agones.dev/last-allocated: 2022-12-19T22:59:22.099818298Z
               agones.dev/ready-container-id: containerd://7b3d9e9dbda6f2e0381df7669f6117bf3e54171469cfacbce2670605a61ce4b8
-              agones.dev/sdk-version: 1.24.0
+              agones.dev/sdk-version: 1.33.0
               quilkin.dev/tokens: NDU2
 API Version:  agones.dev/v1
 Kind:         GameServer
@@ -173,17 +200,56 @@ our authentication and routing token ("NDU2").
 
 > You should use something more cryptographically random than `456` in your application.
 
-Let's run `curl -s http://localhost:8000/config` again, so we can see what has changed!
+Let's run `curl -s http://localhost:8001/config` again, so we can see what has changed!
 
 ```shell
-$ curl -s http://localhost:8000/config
-{"admin":{"address":"0.0.0.0:8000"},"clusters": [{"locality":null,"endpoints":[{"address":"34.168.170.51:7226","metadata":{"quilkin.dev":{"tokens":["NDU2"]}}}]}],"filters":[{"name":"quilkin.filters.capture.v1alpha1.Capture","config":{"metadataKey":"quilkin.dev/capture","suffix":{"size":3,"remove":true}}},{"name":"quilkin.filters.token_router.v1alpha1.TokenRouter","config":null}],"id":"quilkin-proxies-78965c446d-tfgsj","management_servers":[{"address":"http://quilkin-manage-agones:80"}],"port":7000,"version":"v1alpha1","maxmind_db":null}%
+❯ curl -s http://localhost:8001/config | jq
+{
+  "clusters": [
+    {
+      "endpoints": [
+        {
+          "address": "34.168.170.51:7226",
+          "metadata": {
+            "quilkin.dev": {
+              "tokens": [
+                "NDU2"
+              ]
+            },
+            "name": "xonotic-8ns7b-2lk5d"
+          }
+        }
+      ],
+      "locality": null
+    }
+  ],
+  "filters": [
+    {
+      "name": "quilkin.filters.capture.v1alpha1.Capture",
+      "label": null,
+      "config": {
+        "metadataKey": "quilkin.dev/capture",
+        "suffix": {
+          "size": 3,
+          "remove": true
+        }
+      }
+    },
+    {
+      "name": "quilkin.filters.token_router.v1alpha1.TokenRouter",
+      "label": null,
+      "config": null
+    }
+  ],
+  "id": "quilkin-proxies-7d9bbbccdf-9vd59",
+  "version": "v1alpha1"
+}
 ```
 
 Looking under `clusters` > `endpoints` we can see an address and token that matches up with the
 `GameServer` record we created above!
 
-The xDS process saw that allocated `GameServer`, turned it into a Quilkin `Endpoint` and applied the set routing
+The xDS process saw that allocated `GameServer`, turned it into a Quilkin `Endpoint` and applied the set the routing
 token appropriately -- without you having to write a line of xDS compliant code!
 
 ## Connecting Client Side
@@ -217,18 +283,19 @@ with it in `client-token.yaml`.
 Run this edited configuration locally with your quilkin binary as `quilkin -c ./client-token.yaml proxy`:
 
 ```shell
-$ quilkin -c ./client-token.yaml proxy
-{"timestamp":"2022-10-07T22:10:47.257635Z","level":"INFO","fields":{"message":"Starting Quilkin","version":"0.4.0-dev","commit":"c77260a2526542c564829a2c66935c60f00adcd2"},"target":"quilkin::cli"}
-{"timestamp":"2022-10-07T22:10:47.258273Z","level":"INFO","fields":{"message":"Starting","port":7000,"proxy_id":"markmandel45"},"target":"quilkin::proxy"}
-{"timestamp":"2022-10-07T22:10:47.258321Z","level":"INFO","fields":{"message":"Starting admin endpoint","address":"[::]:9092"},"target":"quilkin::admin"}
-{"timestamp":"2022-10-07T22:10:47.258812Z","level":"INFO","fields":{"message":"Quilkin is ready"},"target":"quilkin::proxy"}
+$ ./quilkin --config ./client-token.yaml proxy
+2023-10-04T20:09:07.320780Z  INFO quilkin::cli: src/cli.rs: Starting Quilkin version="0.7.0-dev" commit="d42db7e14c2e0e758e9a6eb655ccf4184941066c"
+2023-10-04T20:09:07.321711Z  INFO quilkin::admin: src/admin.rs: Starting admin endpoint address=[::]:8000
+2023-10-04T20:09:07.322089Z  INFO quilkin::cli::proxy: src/cli/proxy.rs: Starting port=7777 proxy_id="markmandel45"
+2023-10-04T20:09:07.322576Z  INFO quilkin::cli::proxy: src/cli/proxy.rs: Quilkin is ready
+2023-10-04T20:09:07.322692Z  INFO qcmp_task{v4_addr=0.0.0.0:7600 v6_addr=[::]:7600}: quilkin::protocol: src/protocol.rs: awaiting qcmp packets v4_addr=0.0.0.0:7600 v6_addr=[::]:7600
 ```
 
-Now connect to the local client proxy on "127.0.0.1:7000" via the "Multiplayer > Address" field in the
+Now connect to the local client proxy on "[::1]:7777" via the "Multiplayer > Address" field in the
 Xonotic client, and Quilkin will take care of appending the routing token to all your UDP packets, which the Quilkin
 proxies will route to the Allocated GameServer, and you can play a gamee!
 
-![xonotic-address.png](xonotic-address.png)
+![xonotic-address-v6.png](xonotic-address-v6.png)
 
 ...And you didn't have to change the client or the dedicated game server 🤸
 
