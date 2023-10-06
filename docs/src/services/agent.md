@@ -1,8 +1,8 @@
-# Control Plane Relay
+# Control Plane Agents
 
-| services | ports | Protocol |
-|----------|-------|-----------|
-| QCMP | 7600 | UDP(IPv4 OR IPv6) |
+| services | ports | Protocol          |
+|----------|-------|-------------------|
+| QCMP     | 7600  | UDP(IPv4 OR IPv6) |
 
 > **Note:** This service is currently in active experimentation and development
   so there may be bugs which cause it to be unusable  for production, as always
@@ -11,6 +11,9 @@
 For multi-cluster integration, Quilkin provides a `agent` service, that can be
 deployed to a cluster to act as a beacon for QCMP pings and forward cluster
 configuration information to a `relay` service
+
+Agent configuration and functionality matches that of Control Plane Providers, such as 
+[Filesystem](./xds/providers/filesystem.md) and [Agones](./xds/providers/agones.md). 
 
 To view all options for the `agent` subcommand, run:
 
