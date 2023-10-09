@@ -159,7 +159,7 @@ pub struct RuntimeConfig {
 }
 
 impl RuntimeConfig {
-    pub fn is_healthy(&self) -> bool {
+    pub fn is_ready(&self) -> bool {
         self.provider_is_healthy.load(Ordering::SeqCst)
     }
 }

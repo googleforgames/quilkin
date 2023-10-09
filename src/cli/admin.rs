@@ -113,12 +113,12 @@ impl Admin {
         tokio::spawn(HyperServer::bind(&address).serve(make_svc))
     }
 
-    fn is_healthy(&self, config: &Config) -> bool {
+    fn is_ready(&self, config: &Config) -> bool {
         match &self {
-            Self::Proxy(proxy) => proxy.is_healthy(config),
-            Self::Agent(agent) => agent.is_healthy(),
-            Self::Manage(manage) => manage.is_healthy(),
-            Self::Relay(relay) => relay.is_healthy(),
+            Self::Proxy(proxy) => proxy.is_ready(config),
+            Self::Agent(agent) => agent.is_ready(),
+            Self::Manage(manage) => manage.is_ready(),
+            Self::Relay(relay) => relay.is_ready(),
         }
     }
 
@@ -130,8 +130,8 @@ impl Admin {
     ) -> Response<Body> {
         match (request.method(), request.uri().path()) {
             (&Method::GET, "/metrics") => collect_metrics(),
-            (&Method::GET, "/live" | "/livez") => health.check_healthy(),
-            (&Method::GET, "/ready" | "/readyz") => check_readiness(|| self.is_healthy(&config)),
+            (&Method::GET, "/live" | "/livez") => health.check_liveness(),
+            (&Method::GET, "/ready" | "/readyz") => check_readiness(|| self.is_ready(&config)),
             (&Method::GET, "/config") => match serde_json::to_string(&config) {
                 Ok(body) => Response::builder()
                     .status(StatusCode::OK)
@@ -207,13 +207,13 @@ mod tests {
         assert_eq!(config.clusters.read().endpoints().count(), 0);
 
         let admin = Admin::Proxy(<_>::default());
-        assert!(!admin.is_healthy(&config));
+        assert!(!admin.is_ready(&config));
 
         config
             .clusters
             .write()
             .insert_default([Endpoint::new((std::net::Ipv4Addr::LOCALHOST, 25999).into())].into());
 
-        assert!(admin.is_healthy(&config));
+        assert!(admin.is_ready(&config));
     }
 }

@@ -427,7 +427,7 @@ pub struct RuntimeConfig {
 }
 
 impl RuntimeConfig {
-    pub fn is_healthy(&self, config: &Config) -> bool {
+    pub fn is_ready(&self, config: &Config) -> bool {
         self.xds_is_healthy
             .read()
             .as_ref()
