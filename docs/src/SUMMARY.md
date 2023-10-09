@@ -16,7 +16,7 @@
     - [Filters](./services/proxy/filters.md)
         - [Capture](./services/proxy/filters/capture.md)
         - [Compress](./services/proxy/filters/compress.md)
-        - [Concatenate Bytes](./services/proxy/filters/concatenate_bytes.md)
+        - [Concatenate](./services/proxy/filters/concatenate.md)
         - [Debug](./services/proxy/filters/debug.md)
         - [Drop](./services/proxy/filters/drop.md)
         - [Firewall](./services/proxy/filters/firewall.md)

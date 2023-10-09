@@ -320,14 +320,14 @@ mod tests {
             tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
             let filters = crate::filters::FilterChain::try_from(vec![
-                ConcatenateBytes::as_filter_config(concatenate_bytes::Config {
-                    on_read: concatenate_bytes::Strategy::Append,
+                Concatenate::as_filter_config(concatenate::Config {
+                    on_read: concatenate::Strategy::Append,
                     on_write: <_>::default(),
                     bytes: b1.as_bytes().to_vec(),
                 })
                 .unwrap(),
-                ConcatenateBytes::as_filter_config(concatenate_bytes::Config {
-                    on_read: concatenate_bytes::Strategy::Append,
+                Concatenate::as_filter_config(concatenate::Config {
+                    on_read: concatenate::Strategy::Append,
                     on_write: <_>::default(),
                     bytes: b2.as_bytes().to_vec(),
                 })

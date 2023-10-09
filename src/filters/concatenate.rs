@@ -14,28 +14,28 @@
  * limitations under the License.
  */
 
-crate::include_proto!("quilkin.filters.concatenate_bytes.v1alpha1");
+crate::include_proto!("quilkin.filters.concatenate.v1alpha1");
 
 mod config;
 
 use crate::filters::prelude::*;
 
-use self::quilkin::filters::concatenate_bytes::v1alpha1 as proto;
+use self::quilkin::filters::concatenate::v1alpha1 as proto;
 pub use config::{Config, Strategy};
 
-/// The `ConcatenateBytes` filter's job is to add a byte packet to either the
+/// The `Concatenate` filter's job is to add a byte packet to either the
 /// beginning or end of each UDP packet that passes through. This is commonly
 /// used to provide an auth token to each packet, so they can be
 /// routed appropriately.
-pub struct ConcatenateBytes {
+pub struct Concatenate {
     on_read: Strategy,
     on_write: Strategy,
     bytes: Vec<u8>,
 }
 
-impl ConcatenateBytes {
+impl Concatenate {
     pub fn new(config: Config) -> Self {
-        ConcatenateBytes {
+        Concatenate {
             on_read: config.on_read,
             on_write: config.on_write,
             bytes: config.bytes,
@@ -44,7 +44,7 @@ impl ConcatenateBytes {
 }
 
 #[async_trait::async_trait]
-impl Filter for ConcatenateBytes {
+impl Filter for Concatenate {
     async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         match self.on_read {
             Strategy::Append => {
@@ -74,12 +74,12 @@ impl Filter for ConcatenateBytes {
     }
 }
 
-impl StaticFilter for ConcatenateBytes {
-    const NAME: &'static str = "quilkin.filters.concatenate_bytes.v1alpha1.ConcatenateBytes";
+impl StaticFilter for Concatenate {
+    const NAME: &'static str = "quilkin.filters.concatenate.v1alpha1.Concatenate";
     type Configuration = Config;
-    type BinaryConfiguration = proto::ConcatenateBytes;
+    type BinaryConfiguration = proto::Concatenate;
 
     fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, CreationError> {
-        Ok(ConcatenateBytes::new(Self::ensure_config_exists(config)?))
+        Ok(Concatenate::new(Self::ensure_config_exists(config)?))
     }
 }

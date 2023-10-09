@@ -92,8 +92,8 @@ Quilkin includes several filters out of the box.
 |----------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
 | [Capture]                                          | Capture specific bytes from a packet and store them in [filter dynamic metadata](#filter-dynamic-metadata). |
 | [Compress](./filters/compress.md)                  | Compress and decompress packets data.                                                                       |
-| [ConcatenateBytes](./filters/concatenate_bytes.md) | Add authentication tokens to packets.                                                                       |
-| [Debug](./filters/concatenate_bytes.md)            | Logs every packet.                                                                                          |
+| [Concatenate](./filters/concatenate.md) | Add authentication tokens to packets.                                                                       |
+| [Debug](./filters/debug.md)                        | Logs every packet.                                                                                          |
 | [Drop](./filters/drop.md)                          | Drop all packets                                                                                            |
 | [Firewall](./filters/firewall.md)                  | Allowing/blocking traffic by IP and port.                                                                   |
 | [LoadBalancer](./filters/load_balancer.md)         | Distributes downstream packets among upstream endpoints.                                                    |
