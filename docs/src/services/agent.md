@@ -22,6 +22,9 @@ $ quilkin agent --help
 {{#include ../../../target/quilkin.agent.commands}}
 ```
 
+> Each sub-control planes (`file`, `agones`, etc) matches the `quilkin manage` providers capabilities.
+> Have a look at each of the [Control Plane > Providers](../services/xds.md) documentation for integration details.
+
 ## Quickstart
 The simplest version of the `agent` service is just running `quilkin agent`,
 this will setup just the QCMP service allowing the agent to be pinged for
