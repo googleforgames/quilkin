@@ -551,8 +551,8 @@
 <span class="kw">impl </span>Commands {
     <span class="kw">pub fn </span>admin_mode(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Mode&gt; {
         <span class="kw">match </span><span class="self">self </span>{
-            <span class="self">Self</span>::Proxy(<span class="kw">_</span>) | <span class="self">Self</span>::Agent(<span class="kw">_</span>) =&gt; <span class="prelude-val">Some</span>(Mode::Proxy),
-            <span class="self">Self</span>::Relay(<span class="kw">_</span>) | <span class="self">Self</span>::Manage(<span class="kw">_</span>) =&gt; <span class="prelude-val">Some</span>(Mode::Xds),
+            <span class="self">Self</span>::Proxy(<span class="kw">_</span>) =&gt; <span class="prelude-val">Some</span>(Mode::Proxy),
+            <span class="self">Self</span>::Relay(<span class="kw">_</span>) | <span class="self">Self</span>::Manage(<span class="kw">_</span>) | <span class="self">Self</span>::Agent(<span class="kw">_</span>) =&gt; <span class="prelude-val">Some</span>(Mode::Xds),
             <span class="self">Self</span>::GenerateConfigSchema(<span class="kw">_</span>) | <span class="self">Self</span>::Qcmp(<span class="kw">_</span>) =&gt; <span class="prelude-val">None</span>,
         }
     }
