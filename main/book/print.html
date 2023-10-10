@@ -249,7 +249,7 @@ your local machine through <a href="installation.html#cargo">Cargo</a>.</p>
 <dl>
   <dt><strong>Source / Method</strong></dt>
   <dd>
-<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.7.0-dev-98af104
+<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.7.0-dev-e35702e
 </code></pre>
 </dd>
   <dt><strong>Notes</strong></dt>
@@ -2593,7 +2593,7 @@ generic filter histogram, see help label for more specific info.</p>
 <tr><td>xDS</td><td>7800</td><td>gRPC (IPv4 OR IPv6)</td></tr>
 </tbody></table>
 </div>
-<p>For multi-cluster integration, Quilkin provides a <code>manage</code> service, that can be
+<p>For single-cluster integration, Quilkin provides a <code>manage</code> service, that can be
 used with a number of configuration discovery providers to provide cluster
 configuration multiple <a href="services/./proxy.html"><code>proxy</code>s</a>. With each provider automating the
 complexity of a full xDS management control plane via integrations with popular
@@ -2863,6 +2863,10 @@ Options:
   -h, --help
           Print help
 </code></pre>
+<blockquote>
+<p>Each sub-control planes (<code>file</code>, <code>agones</code>, etc) matches the <code>quilkin manage</code> providers capabilities.
+Have a look at each of the <a href="services/../services/xds.html">Control Plane &gt; Providers</a> documentation for integration details.</p>
+</blockquote>
 <h2 id="quickstart"><a class="header" href="#quickstart">Quickstart</a></h2>
 <p>To get started with the relay service we need to start the relay service, and
 then setup our configuration source. For this we're going to the built-in
@@ -2955,6 +2959,10 @@ Options:
       --sub-zone &lt;SUB_ZONE&gt;    The `sub_zone` in the `zone` in the `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_SUB_ZONE=]
   -h, --help                   Print help
 </code></pre>
+<blockquote>
+<p>Each sub-control planes (<code>file</code>, <code>agones</code>, etc) matches the <code>quilkin manage</code> providers capabilities.
+Have a look at each of the <a href="services/../services/xds.html">Control Plane &gt; Providers</a> documentation for integration details.</p>
+</blockquote>
 <h2 id="quickstart-1"><a class="header" href="#quickstart-1">Quickstart</a></h2>
 <p>The simplest version of the <code>agent</code> service is just running <code>quilkin agent</code>,
 this will setup just the QCMP service allowing the agent to be pinged for

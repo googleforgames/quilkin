@@ -205,6 +205,10 @@ Options:
       --sub-zone &lt;SUB_ZONE&gt;    The `sub_zone` in the `zone` in the `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_SUB_ZONE=]
   -h, --help                   Print help
 </code></pre>
+<blockquote>
+<p>Each sub-control planes (<code>file</code>, <code>agones</code>, etc) matches the <code>quilkin manage</code> providers capabilities.
+Have a look at each of the <a href="../services/xds.html">Control Plane &gt; Providers</a> documentation for integration details.</p>
+</blockquote>
 <h2 id="quickstart"><a class="header" href="#quickstart">Quickstart</a></h2>
 <p>The simplest version of the <code>agent</code> service is just running <code>quilkin agent</code>,
 this will setup just the QCMP service allowing the agent to be pinged for
