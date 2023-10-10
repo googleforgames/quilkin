@@ -99,7 +99,7 @@ clusters:
 # assert_eq!(config.filters.load().len(), 2);
 ```
 
-On the game client side the [ConcatenateBytes](concatenate_bytes.md) filter could also be used to add authentication
+On the game client side the [Concatenate](concatenate.md) filter could also be used to add authentication
 tokens to outgoing packets.
 
 [filter-dynamic-metadata]: ../filters.md#filter-dynamic-metadata
