@@ -106,4 +106,4 @@ substitutions:
 artifacts:
   images:
     - ${_REPOSITORY}quilkin
-# logsBucket: "gs://quilkin-build-logs"
+logsBucket: "gs://quilkin-build-logs"
