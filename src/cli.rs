@@ -108,8 +108,8 @@ pub enum Commands {
 impl Commands {
     pub fn admin_mode(&self) -> Option<Mode> {
         match self {
-            Self::Proxy(_) | Self::Agent(_) => Some(Mode::Proxy),
-            Self::Relay(_) | Self::Manage(_) => Some(Mode::Xds),
+            Self::Proxy(_) => Some(Mode::Proxy),
+            Self::Relay(_) | Self::Manage(_) | Self::Agent(_) => Some(Mode::Xds),
             Self::GenerateConfigSchema(_) | Self::Qcmp(_) => None,
         }
     }
