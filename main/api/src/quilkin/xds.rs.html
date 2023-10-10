@@ -692,14 +692,14 @@
             tokio::time::sleep(std::time::Duration::from_millis(<span class="number">500</span>)).<span class="kw">await</span>;
 
             <span class="kw">let </span>filters = <span class="kw">crate</span>::filters::FilterChain::try_from(<span class="macro">vec!</span>[
-                ConcatenateBytes::as_filter_config(concatenate_bytes::Config {
-                    on_read: concatenate_bytes::Strategy::Append,
+                Concatenate::as_filter_config(concatenate::Config {
+                    on_read: concatenate::Strategy::Append,
                     on_write: &lt;<span class="kw">_</span>&gt;::default(),
                     bytes: b1.as_bytes().to_vec(),
                 })
                 .unwrap(),
-                ConcatenateBytes::as_filter_config(concatenate_bytes::Config {
-                    on_read: concatenate_bytes::Strategy::Append,
+                Concatenate::as_filter_config(concatenate::Config {
+                    on_read: concatenate::Strategy::Append,
                     on_write: &lt;<span class="kw">_</span>&gt;::default(),
                     bytes: b2.as_bytes().to_vec(),
                 })
