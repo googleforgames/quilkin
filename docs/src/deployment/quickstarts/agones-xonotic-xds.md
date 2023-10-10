@@ -269,7 +269,7 @@ quilkin-proxies   LoadBalancer   10.109.0.12   35.246.94.14    7000:30174/UDP   
 We have a [Quilkin config yaml](https://github.com/googleforgames/quilkin/blob/{{GITHUB_REF_NAME}}/examples/agones-xonotic-xds/client-token.yaml)
 file all ready for you, that is configured to append the routing token `456` to each
 packet that passes through it, via the power of a
-[ConcatenateBytes](../../services/proxy/filters/concatenate_bytes.md) Filter.
+[Concatenate](../../services/proxy/filters/concatenate.md) Filter.
 
 Download `client-token.yaml` locally, so you can edit it:
 

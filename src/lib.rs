@@ -54,7 +54,7 @@ mod external_doc_tests {
     #![doc = include_str!("../docs/src/services/proxy/filters.md")]
     #![doc = include_str!("../docs/src/services/proxy/filters/capture.md")]
     #![doc = include_str!("../docs/src/services/proxy/filters/compress.md")]
-    #![doc = include_str!("../docs/src/services/proxy/filters/concatenate_bytes.md")]
+    #![doc = include_str!("../docs/src/services/proxy/filters/concatenate.md")]
     #![doc = include_str!("../docs/src/services/proxy/filters/debug.md")]
     #![doc = include_str!("../docs/src/services/proxy/filters/firewall.md")]
     #![doc = include_str!("../docs/src/services/proxy/filters/load_balancer.md")]
