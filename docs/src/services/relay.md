@@ -25,6 +25,8 @@ To view all options for the `relay` subcommand, run:
 $ quilkin relay --help
 {{#include ../../../target/quilkin.relay.commands}}
 ```
+> Each sub-control planes (`file`, `agones`, etc) matches the `quilkin manage` providers capabilities.
+> Have a look at each of the [Control Plane > Providers](../services/xds.md) documentation for integration details.
 
 ## Quickstart
 To get started with the relay service we need to start the relay service, and
