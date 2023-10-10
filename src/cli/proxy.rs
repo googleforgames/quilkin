@@ -26,7 +26,7 @@ use std::{
 use tonic::transport::Endpoint;
 
 use super::Admin;
-use crate::{proxy::SessionMap, xds::ResourceType, Config, Result};
+use crate::{proxy::SessionPool, xds::ResourceType, Config, Result};
 
 #[cfg(doc)]
 use crate::filters::FilterFactory;
@@ -81,9 +81,6 @@ impl Proxy {
         mode: Admin,
         mut shutdown_rx: tokio::sync::watch::Receiver<()>,
     ) -> crate::Result<()> {
-        const SESSION_TIMEOUT_SECONDS: Duration = Duration::from_secs(60);
-        const SESSION_EXPIRY_POLL_INTERVAL: Duration = Duration::from_secs(60);
-
         let _mmdb_task = self.mmdb.clone().map(|source| {
             tokio::spawn(async move {
                 use crate::config::BACKOFF_INITIAL_DELAY_MILLISECONDS;
@@ -122,8 +119,12 @@ impl Proxy {
         let id = config.id.load();
         tracing::info!(port = self.port, proxy_id = &*id, "Starting");
 
-        let sessions = SessionMap::new(SESSION_TIMEOUT_SECONDS, SESSION_EXPIRY_POLL_INTERVAL);
         let runtime_config = mode.unwrap_proxy();
+        let sessions = SessionPool::new(
+            config.clone(),
+            DualStackLocalSocket::new(self.port)?,
+            shutdown_rx.clone(),
+        );
 
         let _xds_stream = if !self.management_server.is_empty() {
             {
@@ -161,10 +162,10 @@ impl Proxy {
             .await
             .map_err(|error| eyre::eyre!(error))?;
 
-        tracing::info!(sessions=%sessions.len(), "waiting for active sessions to expire");
-        while sessions.is_not_empty() {
+        tracing::info!(sessions=%sessions.sessions().len(), "waiting for active sessions to expire");
+        while sessions.sessions().is_not_empty() {
             tokio::time::sleep(Duration::from_secs(1)).await;
-            tracing::debug!(sessions=%sessions.len(), "sessions still active");
+            tracing::debug!(sessions=%sessions.sessions().len(), "sessions still active");
         }
         tracing::info!("all sessions expired");
 
@@ -176,7 +177,7 @@ impl Proxy {
     /// This function also spawns the set of worker tasks responsible for consuming packets
     /// off the aforementioned queue and processing them through the filter chain and session
     /// pipeline.
-    fn run_recv_from(&self, config: &Arc<Config>, sessions: SessionMap) -> Result<()> {
+    fn run_recv_from(&self, config: &Arc<Config>, sessions: Arc<SessionPool>) -> Result<()> {
         // The number of worker tasks to spawn. Each task gets a dedicated queue to
         // consume packets off.
         let num_workers = num_cpus::get();
@@ -366,8 +367,17 @@ mod tests {
         crate::proxy::DownstreamReceiveWorkerConfig {
             worker_id: 1,
             socket: socket.clone(),
-            config,
-            sessions: <_>::default(),
+            config: config.clone(),
+            sessions: SessionPool::new(
+                config,
+                DualStackLocalSocket::new(
+                    crate::test_utils::available_addr(&AddressType::Random)
+                        .await
+                        .port(),
+                )
+                .unwrap(),
+                tokio::sync::watch::channel(()).1,
+            ),
         }
         .spawn();
 
@@ -405,7 +415,18 @@ mod tests {
             )
         });
 
-        proxy.run_recv_from(&config, <_>::default()).unwrap();
+        let sessions = SessionPool::new(
+            config.clone(),
+            DualStackLocalSocket::new(
+                crate::test_utils::available_addr(&AddressType::Random)
+                    .await
+                    .port(),
+            )
+            .unwrap(),
+            tokio::sync::watch::channel(()).1,
+        );
+
+        proxy.run_recv_from(&config, sessions).unwrap();
 
         let socket = create_socket().await;
         socket.send_to(msg.as_bytes(), &local_addr).await.unwrap();

@@ -16,10 +16,7 @@
 
 use std::collections::HashMap;
 
-use crate::{
-    endpoint::{Endpoint, EndpointAddress},
-    metadata::DynamicMetadata,
-};
+use crate::{endpoint::EndpointAddress, metadata::DynamicMetadata};
 
 #[cfg(doc)]
 use crate::filters::Filter;
@@ -27,8 +24,6 @@ use crate::filters::Filter;
 /// The input arguments to [`Filter::write`].
 #[non_exhaustive]
 pub struct WriteContext {
-    /// The upstream endpoint that we're expecting packets from.
-    pub endpoint: Endpoint,
     /// The source of the received packet.
     pub source: EndpointAddress,
     /// The destination of the received packet.
@@ -41,14 +36,8 @@ pub struct WriteContext {
 
 impl WriteContext {
     /// Creates a new [`WriteContext`]
-    pub fn new(
-        endpoint: Endpoint,
-        source: EndpointAddress,
-        dest: EndpointAddress,
-        contents: Vec<u8>,
-    ) -> Self {
+    pub fn new(source: EndpointAddress, dest: EndpointAddress, contents: Vec<u8>) -> Self {
         Self {
-            endpoint,
             source,
             dest,
             contents,

@@ -418,7 +418,7 @@ mod tests {
             std::fs::write(endpoints_file.path(), {
                 config.clusters.write().insert_default(
                     [Endpoint::with_metadata(
-                        (std::net::Ipv4Addr::LOCALHOST, server_port).into(),
+                        (std::net::Ipv6Addr::LOCALHOST, server_port).into(),
                         crate::endpoint::Metadata {
                             tokens: vec![token.clone()].into_iter().collect(),
                         },

@@ -31,7 +31,7 @@ use quilkin::{
 #[tokio::test]
 async fn token_router() {
     let mut t = TestHelper::default();
-    let echo = t.run_echo_server(&AddressType::Random).await;
+    let echo = t.run_echo_server(&AddressType::Ipv6).await;
 
     let capture_yaml = "
 suffix:

@@ -50,8 +50,12 @@ impl Filter for Debug {
 
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
     async fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
-        info!(id = ?self.config.id, endpoint = ?ctx.endpoint.address, source = ?&ctx.source,
-            dest = ?&ctx.dest, contents = ?String::from_utf8_lossy(&ctx.contents), "Write filter event");
+        info!(
+            id = ?self.config.id,
+            source = ?&ctx.source,
+            dest = ?&ctx.dest,
+            contents = ?String::from_utf8_lossy(&ctx.contents), "Write filter event"
+        );
         Ok(())
     }
 }

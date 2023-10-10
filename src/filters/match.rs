@@ -188,7 +188,6 @@ mod tests {
         // no config, so should make no change.
         filter
             .write(&mut WriteContext::new(
-                endpoint.clone(),
                 endpoint.address,
                 "127.0.0.1:70".parse().unwrap(),
                 contents.clone(),

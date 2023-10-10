@@ -16,10 +16,9 @@
 
 use std::{net::SocketAddr, sync::Arc};
 
-pub use sessions::{Session, SessionKey, SessionMap};
+pub use sessions::{Session, SessionKey, SessionPool};
 
 use crate::{
-    endpoint::{Endpoint, EndpointAddress},
     filters::{Filter, ReadContext},
     utils::net::DualStackLocalSocket,
     Config,
@@ -44,7 +43,7 @@ pub(crate) struct DownstreamReceiveWorkerConfig {
     /// Socket with reused port from which the worker receives packets.
     pub socket: Arc<DualStackLocalSocket>,
     pub config: Arc<Config>,
-    pub sessions: SessionMap,
+    pub sessions: Arc<SessionPool>,
 }
 
 impl DownstreamReceiveWorkerConfig {
@@ -88,7 +87,7 @@ impl DownstreamReceiveWorkerConfig {
                                 }
                                 last_received_at = Some(packet.received_at);
 
-                                Self::spawn_process_task(packet, source, worker_id, &socket, &config, &sessions)
+                                Self::spawn_process_task(packet, source, worker_id, &config, &sessions)
                             }
                             Err(error) => {
                                 tracing::error!(%error, "error receiving packet");
@@ -106,9 +105,8 @@ impl DownstreamReceiveWorkerConfig {
         packet: DownstreamPacket,
         source: std::net::SocketAddr,
         worker_id: usize,
-        socket: &Arc<DualStackLocalSocket>,
         config: &Arc<Config>,
-        sessions: &SessionMap,
+        sessions: &Arc<SessionPool>,
     ) {
         tracing::trace!(
             id = worker_id,
@@ -121,16 +119,13 @@ impl DownstreamReceiveWorkerConfig {
         tokio::spawn({
             let config = config.clone();
             let sessions = sessions.clone();
-            let socket = socket.clone();
 
             async move {
                 let timer = crate::metrics::processing_time(crate::metrics::READ).start_timer();
 
                 let asn_info = packet.asn_info.clone();
                 let asn_info = asn_info.as_ref();
-                match Self::process_downstream_received_packet(packet, config, socket, sessions)
-                    .await
-                {
+                match Self::process_downstream_received_packet(packet, config, sessions).await {
                     Ok(size) => {
                         crate::metrics::packets_total(crate::metrics::READ, asn_info).inc();
                         crate::metrics::bytes_total(crate::metrics::READ, asn_info)
@@ -157,8 +152,7 @@ impl DownstreamReceiveWorkerConfig {
     async fn process_downstream_received_packet(
         packet: DownstreamPacket,
         config: Arc<Config>,
-        downstream_socket: Arc<DualStackLocalSocket>,
-        sessions: SessionMap,
+        sessions: Arc<SessionPool>,
     ) -> Result<usize, PipelineError> {
         let endpoints: Vec<_> = config.clusters.read().endpoints().collect();
         if endpoints.is_empty() {
@@ -171,55 +165,17 @@ impl DownstreamReceiveWorkerConfig {
         let mut bytes_written = 0;
 
         for endpoint in context.endpoints.iter() {
-            bytes_written += Self::session_send_packet(
-                &context.contents,
-                &context.source,
-                endpoint,
-                &downstream_socket,
-                &config,
-                &sessions,
-                packet.asn_info.clone(),
-            )
-            .await?;
+            let session_key = SessionKey {
+                source: packet.source,
+                dest: endpoint.address.to_socket_addr().await?,
+            };
+
+            bytes_written += sessions
+                .send(session_key, packet.asn_info.clone(), &context.contents)
+                .await?;
         }
 
         Ok(bytes_written)
-    }
-
-    /// Send a packet received from `recv_addr` to an endpoint.
-    #[tracing::instrument(level="trace", skip_all, fields(source = %recv_addr, dest = %endpoint.address))]
-    async fn session_send_packet(
-        packet: &[u8],
-        recv_addr: &EndpointAddress,
-        endpoint: &Endpoint,
-        downstream_socket: &Arc<DualStackLocalSocket>,
-        config: &Arc<Config>,
-        sessions: &SessionMap,
-        asn_info: Option<crate::maxmind_db::IpNetEntry>,
-    ) -> Result<usize, PipelineError> {
-        let session_key = SessionKey {
-            source: recv_addr.clone(),
-            dest: endpoint.address.clone(),
-        };
-
-        let send_future = match sessions.get(&session_key) {
-            Some(entry) => entry.send(packet),
-            None => {
-                let session = Session::new(
-                    config.clone(),
-                    session_key.source.clone(),
-                    downstream_socket.clone(),
-                    endpoint.clone(),
-                    asn_info,
-                )?;
-
-                let future = session.send(packet);
-                sessions.insert(session_key, session);
-                future
-            }
-        };
-
-        send_future.await
     }
 }
 
