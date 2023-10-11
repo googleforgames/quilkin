@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+pub(crate) mod admin;
+
 use std::{
     path::{Path, PathBuf},
     sync::Arc,
@@ -23,12 +25,12 @@ use clap::builder::TypedValueParser;
 use clap::crate_version;
 use tokio::{signal, sync::watch};
 
-use crate::{admin::Mode, Config};
+use crate::Config;
 use strum_macros::{Display, EnumString};
 
 pub use self::{
-    agent::Agent, generate_config_schema::GenerateConfigSchema, manage::Manage, proxy::Proxy,
-    qcmp::Qcmp, relay::Relay,
+    admin::Admin, agent::Agent, generate_config_schema::GenerateConfigSchema, manage::Manage,
+    proxy::Proxy, qcmp::Qcmp, relay::Relay,
 };
 
 macro_rules! define_port {
@@ -106,10 +108,21 @@ pub enum Commands {
 }
 
 impl Commands {
-    pub fn admin_mode(&self) -> Option<Mode> {
+    pub fn admin_mode(&self) -> Option<Admin> {
         match self {
-            Self::Proxy(_) => Some(Mode::Proxy),
-            Self::Relay(_) | Self::Manage(_) | Self::Agent(_) => Some(Mode::Xds),
+            Self::Proxy(proxy) => Some(Admin::Proxy(proxy::RuntimeConfig {
+                idle_request_interval_secs: proxy.idle_request_interval_secs,
+                ..<_>::default()
+            })),
+            Self::Agent(agent) => Some(Admin::Agent(agent::RuntimeConfig {
+                idle_request_interval_secs: agent.idle_request_interval_secs,
+                ..<_>::default()
+            })),
+            Self::Relay(relay) => Some(Admin::Relay(relay::RuntimeConfig {
+                idle_request_interval_secs: relay.idle_request_interval_secs,
+                ..<_>::default()
+            })),
+            Self::Manage(_) => Some(Admin::Manage(<_>::default())),
             Self::GenerateConfigSchema(_) | Self::Qcmp(_) => None,
         }
     }
@@ -148,24 +161,24 @@ impl Cli {
             "Starting Quilkin"
         );
 
-        if let Commands::Qcmp(Qcmp::Ping(ping)) = self.command {
-            return ping.run().await;
+        // Non-long running commands (e.g. ones with no administration server)
+        // are executed here.
+        match self.command {
+            Commands::Qcmp(Qcmp::Ping(ping)) => return ping.run().await,
+            Commands::GenerateConfigSchema(generator) => {
+                return generator.generate_config_schema();
+            }
+            _ => {}
         }
 
         tracing::debug!(cli = ?self, "config parameters");
 
         let config = Arc::new(Self::read_config(self.config)?);
-        let _admin_task = self
-            .command
-            .admin_mode()
-            .filter(|_| !self.no_admin)
-            .map(|mode| {
-                tokio::spawn(crate::admin::server(
-                    mode,
-                    config.clone(),
-                    self.admin_address,
-                ))
-            });
+        let mode = self.command.admin_mode().unwrap();
+
+        if !self.no_admin {
+            mode.server(config.clone(), self.admin_address);
+        }
 
         let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
 
@@ -191,37 +204,45 @@ impl Cli {
 
         let fut = tryhard::retry_fn({
             let shutdown_rx = shutdown_rx.clone();
+            let mode = mode.clone();
             move || match self.command.clone() {
                 Commands::Agent(agent) => {
                     let config = config.clone();
                     let shutdown_rx = shutdown_rx.clone();
-                    tokio::spawn(
-                        async move { agent.run(config.clone(), shutdown_rx.clone()).await },
-                    )
+                    let mode = mode.clone();
+                    tokio::spawn(async move {
+                        agent.run(config.clone(), mode, shutdown_rx.clone()).await
+                    })
                 }
                 Commands::Proxy(runner) => {
                     let config = config.clone();
                     let shutdown_rx = shutdown_rx.clone();
-                    tokio::spawn(
-                        async move { runner.run(config.clone(), shutdown_rx.clone()).await },
-                    )
+                    let mode = mode.clone();
+                    tokio::spawn(async move {
+                        runner
+                            .run(config.clone(), mode.clone(), shutdown_rx.clone())
+                            .await
+                    })
                 }
                 Commands::Manage(manager) => {
                     let config = config.clone();
                     let shutdown_rx = shutdown_rx.clone();
+                    let mode = mode.clone();
                     tokio::spawn(async move {
-                        manager.manage(config.clone(), shutdown_rx.clone()).await
+                        manager
+                            .manage(config.clone(), mode, shutdown_rx.clone())
+                            .await
                     })
-                }
-                Commands::GenerateConfigSchema(generator) => {
-                    tokio::spawn(std::future::ready(generator.generate_config_schema()))
                 }
                 Commands::Relay(relay) => {
                     let config = config.clone();
                     let shutdown_rx = shutdown_rx.clone();
-                    tokio::spawn(async move { relay.relay(config, shutdown_rx.clone()).await })
+                    let mode = mode.clone();
+                    tokio::spawn(
+                        async move { relay.relay(config, mode, shutdown_rx.clone()).await },
+                    )
                 }
-                Commands::Qcmp(_) => unreachable!(),
+                Commands::GenerateConfigSchema(_) | Commands::Qcmp(_) => unreachable!(),
             }
         })
         .retries(3)
@@ -354,6 +375,7 @@ mod tests {
                 region: None,
                 sub_zone: None,
                 zone: None,
+                idle_request_interval_secs: admin::IDLE_REQUEST_INTERVAL_SECS,
                 qcmp_port: crate::test_utils::available_addr(&AddressType::Random)
                     .await
                     .port(),

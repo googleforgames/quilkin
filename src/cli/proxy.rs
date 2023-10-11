@@ -14,10 +14,18 @@
  * limitations under the License.
  */
 
-use std::{net::SocketAddr, sync::Arc, time::Duration};
+use std::{
+    net::SocketAddr,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    time::Duration,
+};
 
 use tonic::transport::Endpoint;
 
+use super::Admin;
 use crate::{proxy::SessionMap, xds::ResourceType, Config, Result};
 
 #[cfg(doc)]
@@ -48,7 +56,7 @@ pub struct Proxy {
     pub to: Vec<SocketAddr>,
     /// The interval in seconds at which the relay will send a discovery request
     /// to an management server after receiving no updates.
-    #[clap(long, env = "QUILKIN_IDLE_REQUEST_INTERVAL_SECS", default_value_t = crate::xds::server::IDLE_REQUEST_INTERVAL_SECS)]
+    #[clap(long, env = "QUILKIN_IDLE_REQUEST_INTERVAL_SECS", default_value_t = super::admin::IDLE_REQUEST_INTERVAL_SECS)]
     pub idle_request_interval_secs: u64,
 }
 
@@ -60,7 +68,7 @@ impl Default for Proxy {
             port: PORT,
             qcmp_port: QCMP_PORT,
             to: <_>::default(),
-            idle_request_interval_secs: crate::xds::server::IDLE_REQUEST_INTERVAL_SECS,
+            idle_request_interval_secs: super::admin::IDLE_REQUEST_INTERVAL_SECS,
         }
     }
 }
@@ -70,6 +78,7 @@ impl Proxy {
     pub async fn run(
         &self,
         config: std::sync::Arc<crate::Config>,
+        mode: Admin,
         mut shutdown_rx: tokio::sync::watch::Receiver<()>,
     ) -> crate::Result<()> {
         const SESSION_TIMEOUT_SECONDS: Duration = Duration::from_secs(60);
@@ -114,11 +123,21 @@ impl Proxy {
         tracing::info!(port = self.port, proxy_id = &*id, "Starting");
 
         let sessions = SessionMap::new(SESSION_TIMEOUT_SECONDS, SESSION_EXPIRY_POLL_INTERVAL);
+        let runtime_config = mode.unwrap_proxy();
 
         let _xds_stream = if !self.management_server.is_empty() {
-            let client =
-                crate::xds::AdsClient::connect(String::clone(&id), self.management_server.clone())
-                    .await?;
+            {
+                let mut lock = runtime_config.xds_is_healthy.write();
+                let check: Arc<AtomicBool> = <_>::default();
+                *lock = Some(check.clone());
+            }
+
+            let client = crate::xds::AdsClient::connect(
+                String::clone(&id),
+                mode.clone(),
+                self.management_server.clone(),
+            )
+            .await?;
             let mut stream =
                 client.xds_client_stream(config.clone(), self.idle_request_interval_secs);
 
@@ -397,5 +416,22 @@ mod tests {
                 .expect("should receive a packet")
                 .unwrap()
         );
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct RuntimeConfig {
+    pub idle_request_interval_secs: u64,
+    // RwLock as this check is conditional on the proxy using xDS.
+    pub xds_is_healthy: Arc<parking_lot::RwLock<Option<Arc<AtomicBool>>>>,
+}
+
+impl RuntimeConfig {
+    pub fn is_ready(&self, config: &Config) -> bool {
+        self.xds_is_healthy
+            .read()
+            .as_ref()
+            .map_or(true, |health| health.load(Ordering::SeqCst))
+            && config.clusters.read().endpoints().count() != 0
     }
 }

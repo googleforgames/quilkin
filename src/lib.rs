@@ -16,7 +16,6 @@
 
 #![deny(unused_must_use)]
 
-mod admin;
 mod maxmind_db;
 mod proxy;
 

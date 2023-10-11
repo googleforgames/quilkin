@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
-use std::sync::Arc;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 
 use futures::StreamExt;
 
@@ -36,7 +39,7 @@ pub struct Relay {
     pub xds_port: u16,
     /// The interval in seconds at which the relay will send a discovery request
     /// to an management server after receiving no updates.
-    #[clap(long, env = "QUILKIN_IDLE_REQUEST_INTERVAL_SECS", default_value_t = crate::xds::server::IDLE_REQUEST_INTERVAL_SECS)]
+    #[clap(long, env = "QUILKIN_IDLE_REQUEST_INTERVAL_SECS", default_value_t = super::admin::IDLE_REQUEST_INTERVAL_SECS)]
     pub idle_request_interval_secs: u64,
     #[clap(subcommand)]
     pub providers: Option<Providers>,
@@ -47,7 +50,7 @@ impl Default for Relay {
         Self {
             mds_port: PORT,
             xds_port: super::manage::PORT,
-            idle_request_interval_secs: crate::xds::server::IDLE_REQUEST_INTERVAL_SECS,
+            idle_request_interval_secs: super::admin::IDLE_REQUEST_INTERVAL_SECS,
             providers: None,
         }
     }
@@ -57,6 +60,7 @@ impl Relay {
     pub async fn relay(
         &self,
         config: Arc<Config>,
+        mode: crate::cli::Admin,
         mut shutdown_rx: tokio::sync::watch::Receiver<()>,
     ) -> crate::Result<()> {
         let xds_server = crate::xds::server::spawn(self.xds_port, config.clone());
@@ -65,6 +69,7 @@ impl Relay {
             self.idle_request_interval_secs,
             config.clone(),
         ));
+        let runtime_config = mode.unwrap_relay();
 
         let _provider_task = if let Some(Providers::Agones {
             config_namespace, ..
@@ -72,45 +77,65 @@ impl Relay {
         {
             let config = config.clone();
             let config_namespace = config_namespace.clone();
-            Some(tokio::spawn(Providers::task(move || {
-                let config = config.clone();
-                let config_namespace = config_namespace.clone();
-                async move {
-                    let client = tokio::time::timeout(
-                        std::time::Duration::from_secs(5),
-                        kube::Client::try_default(),
-                    )
-                    .await??;
+            let provider_is_healthy = runtime_config.provider_is_healthy.clone();
+            Some(tokio::spawn(Providers::task(
+                provider_is_healthy.clone(),
+                move || {
+                    let config = config.clone();
+                    let config_namespace = config_namespace.clone();
+                    let provider_is_healthy = provider_is_healthy.clone();
+                    async move {
+                        let client = tokio::time::timeout(
+                            std::time::Duration::from_secs(5),
+                            kube::Client::try_default(),
+                        )
+                        .await??;
 
-                    let configmap_reflector =
-                        crate::config::providers::k8s::update_filters_from_configmap(
-                            client.clone(),
-                            config_namespace,
-                            config.clone(),
-                        );
+                        let configmap_reflector =
+                            crate::config::providers::k8s::update_filters_from_configmap(
+                                client.clone(),
+                                config_namespace,
+                                config.clone(),
+                            );
 
-                    tokio::pin!(configmap_reflector);
+                        tokio::pin!(configmap_reflector);
 
-                    loop {
-                        match configmap_reflector.next().await {
-                            Some(Ok(_)) => (),
-                            Some(Err(error)) => return Err(error),
-                            None => break,
+                        loop {
+                            match configmap_reflector.next().await {
+                                Some(Ok(_)) => {
+                                    provider_is_healthy.store(true, Ordering::SeqCst);
+                                }
+                                Some(Err(error)) => {
+                                    provider_is_healthy.store(false, Ordering::SeqCst);
+                                    return Err(error);
+                                }
+                                None => {
+                                    provider_is_healthy.store(false, Ordering::SeqCst);
+                                    break;
+                                }
+                            }
                         }
-                    }
 
-                    tracing::info!("configmap stream ending");
-                    Ok(())
-                }
-            })))
+                        tracing::info!("configmap stream ending");
+                        Ok(())
+                    }
+                },
+            )))
         } else if let Some(Providers::File { path }) = &self.providers {
             let config = config.clone();
             let path = path.clone();
-            Some(tokio::spawn(Providers::task(move || {
-                let config = config.clone();
-                let path = path.clone();
-                async move { crate::config::watch::fs(config, path, None).await }
-            })))
+            let provider_is_healthy = runtime_config.provider_is_healthy.clone();
+            Some(tokio::spawn(Providers::task(
+                provider_is_healthy.clone(),
+                move || {
+                    let config = config.clone();
+                    let path = path.clone();
+                    let provider_is_healthy = provider_is_healthy.clone();
+                    async move {
+                        crate::config::watch::fs(config, provider_is_healthy, path, None).await
+                    }
+                },
+            )))
         } else {
             None
         };
@@ -124,5 +149,17 @@ impl Relay {
             }
             result = shutdown_rx.changed() => result.map_err(From::from),
         }
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct RuntimeConfig {
+    pub idle_request_interval_secs: u64,
+    pub provider_is_healthy: Arc<AtomicBool>,
+}
+
+impl RuntimeConfig {
+    pub fn is_ready(&self) -> bool {
+        self.provider_is_healthy.load(Ordering::SeqCst)
     }
 }

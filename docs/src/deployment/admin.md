@@ -34,15 +34,36 @@ The admin interface provides the following endpoints:
 This provides a liveness probe endpoint, most commonly used in
 [Kubernetes based systems](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command).
 
-Will return an HTTP status of 200 when all health checks pass.
+Liveness is defined as "hasn't panicked", as long as the process has not
+panicked quilkin is considered live.
 
 ### /ready
 
 This provides a readiness probe endpoint, most commonly used in
 [Kubernetes based systems](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes).
 
-Depending on whether Quilkin is run in Proxy mode i.e. `quilkin proxy`, vs an xDS provider mode, such as `quilkin
-manage agones`, will dictate how readiness is calculated:
+Readiness is service and provider specific, so based on what you're running
+there will be different criteria for a service to be considered ready. Here's
+a list of the criteria for each service an provider.
+
+| Service | Readiness                                                           |
+|---------|---------------------------------------------------------------------|
+| Proxy   | Management server is connected (or always true if config is static)  AND if there is more than one endpoint configured|
+| Manage  | Provider is ready                                                   |
+| Relay   | Provider is ready                                                   |
+| Agent   | Provider is ready AND connected to relay                            |
+
+| Provider | Readiness                                  |
+|----------|--------------------------------------------|
+| Agones   | The service is connected to kube-api       |
+| File     | The service has found and watches the file |
+
+When setting thresholds for your `proxy` probes, you generally want to set a low
+check period (e.g.  `periodSeconds=1`) and a low success threshold
+(e.g. `successThreshold=1`), but a high `failureThreshold`
+(e.g. `failureThreshold=60`) and `terminationGracePeriodSeconds` to allow for
+backoff attempts and existing player sessions to continue without disruption.
+
 
 #### Proxy Mode
 

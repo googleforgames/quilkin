@@ -14,6 +14,13 @@
  * limitations under the License.
  */
 
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
+
+use super::Admin;
+
 use futures::TryFutureExt;
 
 define_port!(7800);
@@ -49,6 +56,7 @@ impl Manage {
     pub async fn manage(
         &self,
         config: std::sync::Arc<crate::Config>,
+        mode: Admin,
         mut shutdown_rx: tokio::sync::watch::Receiver<()>,
     ) -> crate::Result<()> {
         let locality = (self.region.is_some() || self.zone.is_some() || self.sub_zone.is_some())
@@ -64,12 +72,18 @@ impl Manage {
                 .modify(|map| map.update_unlocated_endpoints(locality.clone()));
         }
 
-        let provider_task = self.provider.spawn(config.clone(), locality.clone());
+        let runtime_config = mode.unwrap_manage();
+        let provider_task = self.provider.spawn(
+            config.clone(),
+            runtime_config.provider_is_healthy.clone(),
+            locality.clone(),
+        );
 
         let _relay_stream = if !self.relay.is_empty() {
             tracing::info!("connecting to relay server");
             let client = crate::xds::client::MdsClient::connect(
                 String::clone(&config.id.load()),
+                mode.clone(),
                 self.relay.clone(),
             )
             .await?;
@@ -87,5 +101,16 @@ impl Manage {
             result = provider_task => result?,
             result = shutdown_rx.changed() => result.map_err(From::from),
         }
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct RuntimeConfig {
+    pub provider_is_healthy: Arc<AtomicBool>,
+}
+
+impl RuntimeConfig {
+    pub fn is_ready(&self) -> bool {
+        self.provider_is_healthy.load(Ordering::SeqCst)
     }
 }

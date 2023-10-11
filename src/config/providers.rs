@@ -1,3 +1,7 @@
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 pub mod k8s;
 
 const RETRIES: u32 = 25;
@@ -41,33 +45,47 @@ impl Providers {
     pub fn spawn(
         &self,
         config: std::sync::Arc<crate::Config>,
+        health_check: Arc<AtomicBool>,
         locality: Option<crate::endpoint::Locality>,
     ) -> tokio::task::JoinHandle<crate::Result<()>> {
         match &self {
             Self::Agones {
                 gameservers_namespace,
                 config_namespace,
-            } => tokio::spawn(Self::task({
+            } => tokio::spawn(Self::task(health_check.clone(), {
                 let gameservers_namespace = gameservers_namespace.clone();
                 let config_namespace = config_namespace.clone();
+                let health_check = health_check.clone();
                 move || {
                     crate::config::watch::agones(
                         gameservers_namespace.clone(),
                         config_namespace.clone(),
+                        health_check.clone(),
                         locality.clone(),
                         config.clone(),
                     )
                 }
             })),
-            Self::File { path } => tokio::spawn(Self::task({
+            Self::File { path } => tokio::spawn(Self::task(health_check.clone(), {
                 let path = path.clone();
-                move || crate::config::watch::fs(config.clone(), path.clone(), locality.clone())
+                let health_check = health_check.clone();
+                move || {
+                    crate::config::watch::fs(
+                        config.clone(),
+                        health_check.clone(),
+                        path.clone(),
+                        locality.clone(),
+                    )
+                }
             })),
         }
     }
 
     #[tracing::instrument(level = "trace", skip_all)]
-    pub async fn task<F>(task: impl FnMut() -> F) -> crate::Result<()>
+    pub async fn task<F>(
+        health_check: Arc<AtomicBool>,
+        task: impl FnMut() -> F,
+    ) -> crate::Result<()>
     where
         F: std::future::Future<Output = crate::Result<()>>,
     {
@@ -76,6 +94,7 @@ impl Providers {
             .exponential_backoff(BACKOFF_STEP)
             .max_delay(MAX_DELAY)
             .on_retry(|attempt, _, error: &eyre::Error| {
+                health_check.store(false, Ordering::SeqCst);
                 let error = error.to_string();
                 async move {
                     tracing::warn!(%attempt, %error, "provider task error, retrying");
