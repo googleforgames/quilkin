@@ -99,6 +99,37 @@
 <a href="#99" id="99">99</a>
 <a href="#100" id="100">100</a>
 <a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2023 Google LLC
  *
@@ -115,8 +146,12 @@
  * limitations under the License.
  */
 
-</span><span class="kw">use </span>std::sync::Arc;
+</span><span class="kw">use </span>std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 
+<span class="kw">use </span><span class="kw">super</span>::Admin;
 <span class="kw">use </span><span class="kw">crate</span>::config::Config;
 
 <span class="macro">define_port!</span>(<span class="number">7600</span>);
@@ -148,6 +183,10 @@
     <span class="doccomment">/// The configuration source for a management server.
     </span><span class="attr">#[clap(subcommand)]
     </span><span class="kw">pub </span>provider: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::config::Providers&gt;,
+    <span class="doccomment">/// The interval in seconds at which the agent will wait for a discovery
+    /// request from a relay server before restarting the connection.
+    </span><span class="attr">#[clap(long, env = <span class="string">&quot;QUILKIN_IDLE_REQUEST_INTERVAL_SECS&quot;</span>, default_value_t = <span class="kw">super</span>::admin::IDLE_REQUEST_INTERVAL_SECS)]
+    </span><span class="kw">pub </span>idle_request_interval_secs: u64,
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>Agent {
@@ -159,6 +198,7 @@
             zone: &lt;<span class="kw">_</span>&gt;::default(),
             sub_zone: &lt;<span class="kw">_</span>&gt;::default(),
             provider: &lt;<span class="kw">_</span>&gt;::default(),
+            idle_request_interval_secs: <span class="kw">super</span>::admin::IDLE_REQUEST_INTERVAL_SECS,
         }
     }
 }
@@ -167,6 +207,7 @@
     <span class="kw">pub async fn </span>run(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         config: Arc&lt;Config&gt;,
+        mode: Admin,
         <span class="kw-2">mut </span>shutdown_rx: tokio::sync::watch::Receiver&lt;()&gt;,
     ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
         <span class="kw">let </span>locality = (<span class="self">self</span>.region.is_some() || <span class="self">self</span>.zone.is_some() || <span class="self">self</span>.sub_zone.is_some())
@@ -176,14 +217,21 @@
                 sub_zone: <span class="self">self</span>.sub_zone.clone().unwrap_or_default(),
             });
 
+        <span class="kw">let </span>runtime_config = mode.unwrap_agent();
+
         <span class="kw">let </span>_mds_task = <span class="kw">if </span>!<span class="self">self</span>.relay.is_empty() {
             <span class="kw">let </span>_provider_task = <span class="kw">match </span><span class="self">self</span>.provider.as_ref() {
-                <span class="prelude-val">Some</span>(provider) =&gt; <span class="prelude-val">Some</span>(provider.spawn(config.clone(), locality.clone())),
+                <span class="prelude-val">Some</span>(provider) =&gt; <span class="prelude-val">Some</span>(provider.spawn(
+                    config.clone(),
+                    runtime_config.provider_is_healthy.clone(),
+                    locality.clone(),
+                )),
                 <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;no configuration provider given&quot;</span>)),
             };
 
             <span class="kw">let </span>task = <span class="kw">crate</span>::xds::client::MdsClient::connect(
                 String::clone(<span class="kw-2">&amp;</span>config.id.load()),
+                mode.clone(),
                 <span class="self">self</span>.relay.clone(),
             );
 
@@ -198,6 +246,20 @@
 
         <span class="kw">crate</span>::protocol::spawn(<span class="self">self</span>.qcmp_port).<span class="kw">await</span><span class="question-mark">?</span>;
         shutdown_rx.changed().<span class="kw">await</span>.map_err(From::from)
+    }
+}
+
+<span class="attr">#[derive(Clone, Debug, Default)]
+</span><span class="kw">pub struct </span>RuntimeConfig {
+    <span class="kw">pub </span>idle_request_interval_secs: u64,
+    <span class="kw">pub </span>provider_is_healthy: Arc&lt;AtomicBool&gt;,
+    <span class="kw">pub </span>relay_is_healthy: Arc&lt;AtomicBool&gt;,
+}
+
+<span class="kw">impl </span>RuntimeConfig {
+    <span class="kw">pub fn </span>is_ready(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.provider_is_healthy.load(Ordering::SeqCst)
+            &amp;&amp; <span class="self">self</span>.relay_is_healthy.load(Ordering::SeqCst)
     }
 }
 </code></pre></div></section></main></body></html>

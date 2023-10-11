@@ -370,6 +370,12 @@
 <a href="#370" id="370">370</a>
 <a href="#371" id="371">371</a>
 <a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -570,7 +576,12 @@
             ..&lt;<span class="kw">_</span>&gt;::default()
         };
 
-        tokio::spawn(<span class="kw">async move </span>{ client_proxy.run(client_config, shutdown_rx).<span class="kw">await </span>});
+        <span class="kw">let </span>proxy_admin = <span class="kw">crate</span>::cli::Admin::Proxy(&lt;<span class="kw">_</span>&gt;::default());
+        tokio::spawn(<span class="kw">async move </span>{
+            client_proxy
+                .run(client_config, proxy_admin, shutdown_rx)
+                .<span class="kw">await
+        </span>});
         tokio::time::sleep(std::time::Duration::from_millis(<span class="number">50</span>)).<span class="kw">await</span>;
 
         tokio::time::sleep(std::time::Duration::from_millis(<span class="number">50</span>)).<span class="kw">await</span>;
@@ -668,13 +679,14 @@
         tokio::spawn(server::spawn(<span class="number">23456</span>, config.clone()));
         <span class="kw">let </span>client = Client::connect(
             <span class="string">&quot;test-client&quot;</span>.into(),
+            <span class="kw">crate</span>::cli::Admin::Manage(&lt;<span class="kw">_</span>&gt;::default()),
             <span class="macro">vec!</span>[<span class="string">&quot;http://127.0.0.1:23456&quot;</span>.try_into().unwrap()],
         )
         .<span class="kw">await
         </span>.unwrap();
         <span class="kw">let </span><span class="kw-2">mut </span>stream = client.xds_client_stream(
             config.clone(),
-            <span class="kw">crate</span>::xds::server::IDLE_REQUEST_INTERVAL_SECS,
+            <span class="kw">crate</span>::cli::admin::IDLE_REQUEST_INTERVAL_SECS,
         );
         tokio::time::sleep(std::time::Duration::from_millis(<span class="number">500</span>)).<span class="kw">await</span>;
 

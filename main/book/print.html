@@ -249,7 +249,7 @@ your local machine through <a href="installation.html#cargo">Cargo</a>.</p>
 <dl>
   <dt><strong>Source / Method</strong></dt>
   <dd>
-<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.7.0-dev-5f94d28
+<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.7.0-dev-b7a6c51
 </code></pre>
 </dd>
   <dt><strong>Notes</strong></dt>
@@ -2209,7 +2209,9 @@ async fn main() -&gt; quilkin::Result&lt;()&gt; {
         )
     });
 
-    proxy.run(config.into(), shutdown_rx).await
+    let admin = quilkin::cli::Admin::Proxy(&lt;_&gt;::default());
+
+    proxy.run(config.into(), admin, shutdown_rx).await
 }</code></pre>
 <p>Now, let's try out the proxy. The following configuration starts our extended
 version of the proxy at port 7777 and forwards all packets to an upstream server
@@ -2952,12 +2954,20 @@ Commands:
   help    Print this message or the help of the given subcommand(s)
 
 Options:
-  -q, --qcmp-port &lt;QCMP_PORT&gt;  Port for QCMP service [env: QCMP_PORT=] [default: 7600]
-  -r, --relay &lt;RELAY&gt;          One or more `quilkin relay` endpoints to push configuration changes to [env: QUILKIN_MANAGEMENT_SERVER=]
-      --region &lt;REGION&gt;        The `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_REGION=]
-      --zone &lt;ZONE&gt;            The `zone` in the `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_ZONE=]
-      --sub-zone &lt;SUB_ZONE&gt;    The `sub_zone` in the `zone` in the `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_SUB_ZONE=]
-  -h, --help                   Print help
+  -q, --qcmp-port &lt;QCMP_PORT&gt;
+          Port for QCMP service [env: QCMP_PORT=] [default: 7600]
+  -r, --relay &lt;RELAY&gt;
+          One or more `quilkin relay` endpoints to push configuration changes to [env: QUILKIN_MANAGEMENT_SERVER=]
+      --region &lt;REGION&gt;
+          The `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_REGION=]
+      --zone &lt;ZONE&gt;
+          The `zone` in the `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_ZONE=]
+      --sub-zone &lt;SUB_ZONE&gt;
+          The `sub_zone` in the `zone` in the `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_SUB_ZONE=]
+      --idle-request-interval-secs &lt;IDLE_REQUEST_INTERVAL_SECS&gt;
+          The interval in seconds at which the agent will wait for a discovery request from a relay server before restarting the connection [env: QUILKIN_IDLE_REQUEST_INTERVAL_SECS=] [default: 30]
+  -h, --help
+          Print help
 </code></pre>
 <blockquote>
 <p>Each sub-control planes (<code>file</code>, <code>agones</code>, etc) matches the <code>quilkin manage</code> providers capabilities.
@@ -3019,11 +3029,30 @@ environment.</p>
 <h3 id="live"><a class="header" href="#live">/live</a></h3>
 <p>This provides a liveness probe endpoint, most commonly used in
 <a href="https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command">Kubernetes based systems</a>.</p>
-<p>Will return an HTTP status of 200 when all health checks pass.</p>
+<p>Liveness is defined as &quot;hasn't panicked&quot;, as long as the process has not
+panicked quilkin is considered live.</p>
 <h3 id="ready"><a class="header" href="#ready">/ready</a></h3>
 <p>This provides a readiness probe endpoint, most commonly used in
 <a href="https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes">Kubernetes based systems</a>.</p>
-<p>Depending on whether Quilkin is run in Proxy mode i.e. <code>quilkin proxy</code>, vs an xDS provider mode, such as <code>quilkin manage agones</code>, will dictate how readiness is calculated:</p>
+<p>Readiness is service and provider specific, so based on what you're running
+there will be different criteria for a service to be considered ready. Here's
+a list of the criteria for each service an provider.</p>
+<div class="table-wrapper"><table><thead><tr><th>Service</th><th>Readiness</th></tr></thead><tbody>
+<tr><td>Proxy</td><td>Management server is connected (or always true if config is static)  AND if there is more than one endpoint configured</td></tr>
+<tr><td>Manage</td><td>Provider is ready</td></tr>
+<tr><td>Relay</td><td>Provider is ready</td></tr>
+<tr><td>Agent</td><td>Provider is ready AND connected to relay</td></tr>
+</tbody></table>
+</div><div class="table-wrapper"><table><thead><tr><th>Provider</th><th>Readiness</th></tr></thead><tbody>
+<tr><td>Agones</td><td>The service is connected to kube-api</td></tr>
+<tr><td>File</td><td>The service has found and watches the file</td></tr>
+</tbody></table>
+</div>
+<p>When setting thresholds for your <code>proxy</code> probes, you generally want to set a low
+check period (e.g.  <code>periodSeconds=1</code>) and a low success threshold
+(e.g. <code>successThreshold=1</code>), but a high <code>failureThreshold</code>
+(e.g. <code>failureThreshold=60</code>) and <code>terminationGracePeriodSeconds</code> to allow for
+backoff attempts and existing player sessions to continue without disruption.</p>
 <h4 id="proxy-mode-1"><a class="header" href="#proxy-mode-1">Proxy Mode</a></h4>
 <p>Will return an HTTP status of 200 when there is at least one endpoint to send data to. This is primarily to ensure
 that new proxies that have yet to get configuration information from an <a href="deployment/../services/xds.html">xDS server</a> aren't send data

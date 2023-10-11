@@ -267,7 +267,9 @@ async fn main() -&gt; quilkin::Result&lt;()&gt; {
         )
     });
 
-    proxy.run(config.into(), shutdown_rx).await
+    let admin = quilkin::cli::Admin::Proxy(&lt;_&gt;::default());
+
+    proxy.run(config.into(), admin, shutdown_rx).await
 }</code></pre>
 <p>Now, let's try out the proxy. The following configuration starts our extended
 version of the proxy at port 7777 and forwards all packets to an upstream server

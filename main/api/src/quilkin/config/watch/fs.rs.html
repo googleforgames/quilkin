@@ -107,6 +107,11 @@
 <a href="#107" id="107">107</a>
 <a href="#108" id="108">108</a>
 <a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -123,7 +128,10 @@
  *  limitations under the License.
  */
 
-</span><span class="kw">use </span>std::sync::Arc;
+</span><span class="kw">use </span>std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 
 <span class="kw">use </span>notify::Watcher;
 <span class="kw">use </span>tracing::Instrument;
@@ -132,6 +140,7 @@
 
 <span class="kw">pub async fn </span>watch(
     config: Arc&lt;Config&gt;,
+    health_check: Arc&lt;AtomicBool&gt;,
     path: <span class="kw">impl </span>Into&lt;std::path::PathBuf&gt;,
     locality: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::endpoint::Locality&gt;,
 ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
@@ -151,6 +160,7 @@
     <span class="kw">let </span>buf = tokio::fs::read(<span class="kw-2">&amp;</span>path).<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="macro">tracing::info!</span>(<span class="string">&quot;applying initial configuration&quot;</span>);
     config.update_from_json(serde_yaml::from_slice(<span class="kw-2">&amp;</span>buf)<span class="question-mark">?</span>, locality.clone())<span class="question-mark">?</span>;
+    health_check.store(<span class="bool-val">true</span>, Ordering::SeqCst);
     watcher.watch(<span class="kw-2">&amp;</span>path, notify::RecursiveMode::Recursive)<span class="question-mark">?</span>;
     <span class="macro">tracing::info!</span>(<span class="string">&quot;watching file&quot;</span>);
 
@@ -192,7 +202,7 @@
         tokio::fs::write(<span class="kw-2">&amp;</span>file_path, serde_yaml::to_string(<span class="kw-2">&amp;</span>source).unwrap())
             .<span class="kw">await
             </span>.unwrap();
-        <span class="kw">let </span>_handle = tokio::spawn(watch(dest.clone(), file_path.clone(), <span class="prelude-val">None</span>));
+        <span class="kw">let </span>_handle = tokio::spawn(watch(dest.clone(), &lt;<span class="kw">_</span>&gt;::default(), file_path.clone(), <span class="prelude-val">None</span>));
         tokio::time::sleep(std::time::Duration::from_millis(<span class="number">100</span>)).<span class="kw">await</span>;
 
         source.clusters.modify(|clusters| {

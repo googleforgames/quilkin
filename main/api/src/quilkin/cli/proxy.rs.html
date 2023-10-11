@@ -399,6 +399,42 @@
 <a href="#399" id="399">399</a>
 <a href="#400" id="400">400</a>
 <a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -415,10 +451,18 @@
  * limitations under the License.
  */
 
-</span><span class="kw">use </span>std::{net::SocketAddr, sync::Arc, time::Duration};
+</span><span class="kw">use </span>std::{
+    net::SocketAddr,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    time::Duration,
+};
 
 <span class="kw">use </span>tonic::transport::Endpoint;
 
+<span class="kw">use </span><span class="kw">super</span>::Admin;
 <span class="kw">use crate</span>::{proxy::SessionMap, xds::ResourceType, Config, <span class="prelude-ty">Result</span>};
 
 <span class="attr">#[cfg(doc)]
@@ -449,7 +493,7 @@
     </span><span class="kw">pub </span>to: Vec&lt;SocketAddr&gt;,
     <span class="doccomment">/// The interval in seconds at which the relay will send a discovery request
     /// to an management server after receiving no updates.
-    </span><span class="attr">#[clap(long, env = <span class="string">&quot;QUILKIN_IDLE_REQUEST_INTERVAL_SECS&quot;</span>, default_value_t = <span class="kw">crate</span>::xds::server::IDLE_REQUEST_INTERVAL_SECS)]
+    </span><span class="attr">#[clap(long, env = <span class="string">&quot;QUILKIN_IDLE_REQUEST_INTERVAL_SECS&quot;</span>, default_value_t = <span class="kw">super</span>::admin::IDLE_REQUEST_INTERVAL_SECS)]
     </span><span class="kw">pub </span>idle_request_interval_secs: u64,
 }
 
@@ -461,7 +505,7 @@
             port: PORT,
             qcmp_port: QCMP_PORT,
             to: &lt;<span class="kw">_</span>&gt;::default(),
-            idle_request_interval_secs: <span class="kw">crate</span>::xds::server::IDLE_REQUEST_INTERVAL_SECS,
+            idle_request_interval_secs: <span class="kw">super</span>::admin::IDLE_REQUEST_INTERVAL_SECS,
         }
     }
 }
@@ -471,6 +515,7 @@
     </span><span class="kw">pub async fn </span>run(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         config: std::sync::Arc&lt;<span class="kw">crate</span>::Config&gt;,
+        mode: Admin,
         <span class="kw-2">mut </span>shutdown_rx: tokio::sync::watch::Receiver&lt;()&gt;,
     ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
         <span class="kw">const </span>SESSION_TIMEOUT_SECONDS: Duration = Duration::from_secs(<span class="number">60</span>);
@@ -515,11 +560,21 @@
         <span class="macro">tracing::info!</span>(port = <span class="self">self</span>.port, proxy_id = <span class="kw-2">&amp;*</span>id, <span class="string">&quot;Starting&quot;</span>);
 
         <span class="kw">let </span>sessions = SessionMap::new(SESSION_TIMEOUT_SECONDS, SESSION_EXPIRY_POLL_INTERVAL);
+        <span class="kw">let </span>runtime_config = mode.unwrap_proxy();
 
         <span class="kw">let </span>_xds_stream = <span class="kw">if </span>!<span class="self">self</span>.management_server.is_empty() {
-            <span class="kw">let </span>client =
-                <span class="kw">crate</span>::xds::AdsClient::connect(String::clone(<span class="kw-2">&amp;</span>id), <span class="self">self</span>.management_server.clone())
-                    .<span class="kw">await</span><span class="question-mark">?</span>;
+            {
+                <span class="kw">let </span><span class="kw-2">mut </span>lock = runtime_config.xds_is_healthy.write();
+                <span class="kw">let </span>check: Arc&lt;AtomicBool&gt; = &lt;<span class="kw">_</span>&gt;::default();
+                <span class="kw-2">*</span>lock = <span class="prelude-val">Some</span>(check.clone());
+            }
+
+            <span class="kw">let </span>client = <span class="kw">crate</span>::xds::AdsClient::connect(
+                String::clone(<span class="kw-2">&amp;</span>id),
+                mode.clone(),
+                <span class="self">self</span>.management_server.clone(),
+            )
+            .<span class="kw">await</span><span class="question-mark">?</span>;
             <span class="kw">let </span><span class="kw-2">mut </span>stream =
                 client.xds_client_stream(config.clone(), <span class="self">self</span>.idle_request_interval_secs);
 
@@ -799,5 +854,22 @@
                 .unwrap()
         );
     }
+}
+
+<span class="attr">#[derive(Clone, Debug, Default)]
+</span><span class="kw">pub struct </span>RuntimeConfig {
+    <span class="kw">pub </span>idle_request_interval_secs: u64,
+    <span class="comment">// RwLock as this check is conditional on the proxy using xDS.
+    </span><span class="kw">pub </span>xds_is_healthy: Arc&lt;parking_lot::RwLock&lt;<span class="prelude-ty">Option</span>&lt;Arc&lt;AtomicBool&gt;&gt;&gt;&gt;,
+}
+
+<span class="kw">impl </span>RuntimeConfig {
+    <span class="kw">pub fn </span>is_ready(<span class="kw-2">&amp;</span><span class="self">self</span>, config: <span class="kw-2">&amp;</span>Config) -&gt; bool {
+        <span class="self">self</span>.xds_is_healthy
+            .read()
+            .as_ref()
+            .map_or(<span class="bool-val">true</span>, |health| health.load(Ordering::SeqCst))
+            &amp;&amp; config.clusters.read().endpoints().count() != <span class="number">0
+    </span>}
 }
 </code></pre></div></section></main></body></html>

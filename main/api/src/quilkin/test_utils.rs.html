@@ -405,9 +405,6 @@
 <a href="#405" id="405">405</a>
 <a href="#406" id="406">406</a>
 <a href="#407" id="407">407</a>
-<a href="#408" id="408">408</a>
-<a href="#409" id="409">409</a>
-<a href="#410" id="410">410</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -683,17 +680,14 @@
     ) {
         <span class="kw">let </span>(shutdown_tx, shutdown_rx) = watch::channel::&lt;()&gt;(());
         <span class="self">self</span>.server_shutdown_tx.push(<span class="prelude-val">Some</span>(shutdown_tx));
+        <span class="kw">let </span>mode = <span class="kw">crate</span>::cli::Admin::Proxy(&lt;<span class="kw">_</span>&gt;::default());
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(address) = with_admin {
-            tokio::spawn(<span class="kw">crate</span>::admin::server(
-                <span class="kw">crate</span>::admin::Mode::Proxy,
-                config.clone(),
-                address,
-            ));
+            mode.server(config.clone(), address);
         }
 
         tokio::spawn(<span class="kw">async move </span>{
-            server.run(config, shutdown_rx).<span class="kw">await</span>.unwrap();
+            server.run(config, mode, shutdown_rx).<span class="kw">await</span>.unwrap();
         });
     }
 

@@ -53,6 +53,14 @@
 <a href="#53" id="53">53</a>
 <a href="#54" id="54">54</a>
 <a href="#55" id="55">55</a>
+<a href="#56" id="56">56</a>
+<a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -70,13 +78,17 @@
  */
 
 </span><span class="kw">use </span>futures::TryStreamExt;
-<span class="kw">use </span>std::sync::Arc;
+<span class="kw">use </span>std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 
 <span class="kw">use crate</span>::{endpoint::Locality, Config};
 
 <span class="kw">pub async fn </span>watch(
     gameservers_namespace: <span class="kw">impl </span>AsRef&lt;str&gt;,
     config_namespace: <span class="kw">impl </span>AsRef&lt;str&gt;,
+    health_check: Arc&lt;AtomicBool&gt;,
     locality: <span class="prelude-ty">Option</span>&lt;Locality&gt;,
     config: Arc&lt;Config&gt;,
 ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
@@ -100,12 +112,16 @@
     <span class="macro">tokio::pin!</span>(gameserver_reflector);
 
     <span class="kw">loop </span>{
-        <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw">_</span>) = <span class="macro">tokio::select! </span>{
-            result = configmap_reflector.try_next() =&gt; result<span class="question-mark">?</span>,
-            result = gameserver_reflector.try_next() =&gt; result<span class="question-mark">?</span>,
-        } <span class="kw">else </span>{
-            <span class="kw">break </span><span class="prelude-val">Ok</span>(());
+        <span class="kw">let </span>result = <span class="macro">tokio::select! </span>{
+            result = configmap_reflector.try_next() =&gt; result,
+            result = gameserver_reflector.try_next() =&gt; result,
         };
+
+        <span class="kw">match </span>result {
+            <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="kw">_</span>)) =&gt; health_check.store(<span class="bool-val">true</span>, Ordering::SeqCst),
+            <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; <span class="kw">break </span><span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;kubernetes watch stream terminated&quot;</span>)),
+            <span class="prelude-val">Err</span>(error) =&gt; <span class="kw">break </span><span class="prelude-val">Err</span>(error),
+        }
     }
 }
 </code></pre></div></section></main></body></html>

@@ -84,7 +84,30 @@
 <a href="#84" id="84">84</a>
 <a href="#85" id="85">85</a>
 <a href="#86" id="86">86</a>
-</pre></div><pre class="rust"><code><span class="kw">pub mod </span>k8s;
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+</pre></div><pre class="rust"><code><span class="kw">use </span>std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
+<span class="kw">pub mod </span>k8s;
 
 <span class="kw">const </span>RETRIES: u32 = <span class="number">25</span>;
 <span class="kw">const </span>BACKOFF_STEP: std::time::Duration = std::time::Duration::from_millis(<span class="number">250</span>);
@@ -127,33 +150,47 @@
     </span><span class="kw">pub fn </span>spawn(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         config: std::sync::Arc&lt;<span class="kw">crate</span>::Config&gt;,
+        health_check: Arc&lt;AtomicBool&gt;,
         locality: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::endpoint::Locality&gt;,
     ) -&gt; tokio::task::JoinHandle&lt;<span class="kw">crate</span>::Result&lt;()&gt;&gt; {
         <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self </span>{
             <span class="self">Self</span>::Agones {
                 gameservers_namespace,
                 config_namespace,
-            } =&gt; tokio::spawn(<span class="self">Self</span>::task({
+            } =&gt; tokio::spawn(<span class="self">Self</span>::task(health_check.clone(), {
                 <span class="kw">let </span>gameservers_namespace = gameservers_namespace.clone();
                 <span class="kw">let </span>config_namespace = config_namespace.clone();
+                <span class="kw">let </span>health_check = health_check.clone();
                 <span class="kw">move </span>|| {
                     <span class="kw">crate</span>::config::watch::agones(
                         gameservers_namespace.clone(),
                         config_namespace.clone(),
+                        health_check.clone(),
                         locality.clone(),
                         config.clone(),
                     )
                 }
             })),
-            <span class="self">Self</span>::File { path } =&gt; tokio::spawn(<span class="self">Self</span>::task({
+            <span class="self">Self</span>::File { path } =&gt; tokio::spawn(<span class="self">Self</span>::task(health_check.clone(), {
                 <span class="kw">let </span>path = path.clone();
-                <span class="kw">move </span>|| <span class="kw">crate</span>::config::watch::fs(config.clone(), path.clone(), locality.clone())
+                <span class="kw">let </span>health_check = health_check.clone();
+                <span class="kw">move </span>|| {
+                    <span class="kw">crate</span>::config::watch::fs(
+                        config.clone(),
+                        health_check.clone(),
+                        path.clone(),
+                        locality.clone(),
+                    )
+                }
             })),
         }
     }
 
     <span class="attr">#[tracing::instrument(level = <span class="string">&quot;trace&quot;</span>, skip_all)]
-    </span><span class="kw">pub async fn </span>task&lt;F&gt;(task: <span class="kw">impl </span>FnMut() -&gt; F) -&gt; <span class="kw">crate</span>::Result&lt;()&gt;
+    </span><span class="kw">pub async fn </span>task&lt;F&gt;(
+        health_check: Arc&lt;AtomicBool&gt;,
+        task: <span class="kw">impl </span>FnMut() -&gt; F,
+    ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt;
     <span class="kw">where
         </span>F: std::future::Future&lt;Output = <span class="kw">crate</span>::Result&lt;()&gt;&gt;,
     {
@@ -162,6 +199,7 @@
             .exponential_backoff(BACKOFF_STEP)
             .max_delay(MAX_DELAY)
             .on_retry(|attempt, <span class="kw">_</span>, error: <span class="kw-2">&amp;</span>eyre::Error| {
+                health_check.store(<span class="bool-val">false</span>, Ordering::SeqCst);
                 <span class="kw">let </span>error = error.to_string();
                 <span class="kw">async move </span>{
                     <span class="macro">tracing::warn!</span>(%attempt, %error, <span class="string">&quot;provider task error, retrying&quot;</span>);

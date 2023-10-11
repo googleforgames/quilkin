@@ -504,6 +504,7 @@
 <a href="#504" id="504">504</a>
 <a href="#505" id="505">505</a>
 <a href="#506" id="506">506</a>
+<a href="#507" id="507">507</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -544,8 +545,6 @@
     },
 };
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>IDLE_REQUEST_INTERVAL_SECS: u64 = <span class="number">30</span>;
-
 <span class="attr">#[tracing::instrument(skip_all)]
 </span><span class="kw">pub fn </span>spawn(
     port: u16,
@@ -553,7 +552,7 @@
 ) -&gt; <span class="kw">impl </span>std::future::Future&lt;Output = <span class="kw">crate</span>::Result&lt;()&gt;&gt; {
     <span class="kw">let </span>server = AggregatedDiscoveryServiceServer::new(ControlPlane::from_arc(
         config,
-        IDLE_REQUEST_INTERVAL_SECS,
+        <span class="kw">crate</span>::cli::admin::IDLE_REQUEST_INTERVAL_SECS,
     ));
     <span class="kw">let </span>server = tonic::transport::Server::builder().add_service(server);
     <span class="macro">tracing::info!</span>(<span class="string">&quot;serving management server on port `{port}`&quot;</span>);
@@ -930,7 +929,10 @@
         };
 
         <span class="kw">let </span>config = Arc::new(Config::default());
-        <span class="kw">let </span>client = ControlPlane::from_arc(config.clone(), IDLE_REQUEST_INTERVAL_SECS);
+        <span class="kw">let </span>client = ControlPlane::from_arc(
+            config.clone(),
+            <span class="kw">crate</span>::cli::admin::IDLE_REQUEST_INTERVAL_SECS,
+        );
         <span class="kw">let </span>(tx, rx) = tokio::sync::mpsc::channel(<span class="number">256</span>);
 
         <span class="kw">let </span><span class="kw-2">mut </span>request = DiscoveryRequest {

@@ -198,12 +198,20 @@ Commands:
   help    Print this message or the help of the given subcommand(s)
 
 Options:
-  -q, --qcmp-port &lt;QCMP_PORT&gt;  Port for QCMP service [env: QCMP_PORT=] [default: 7600]
-  -r, --relay &lt;RELAY&gt;          One or more `quilkin relay` endpoints to push configuration changes to [env: QUILKIN_MANAGEMENT_SERVER=]
-      --region &lt;REGION&gt;        The `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_REGION=]
-      --zone &lt;ZONE&gt;            The `zone` in the `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_ZONE=]
-      --sub-zone &lt;SUB_ZONE&gt;    The `sub_zone` in the `zone` in the `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_SUB_ZONE=]
-  -h, --help                   Print help
+  -q, --qcmp-port &lt;QCMP_PORT&gt;
+          Port for QCMP service [env: QCMP_PORT=] [default: 7600]
+  -r, --relay &lt;RELAY&gt;
+          One or more `quilkin relay` endpoints to push configuration changes to [env: QUILKIN_MANAGEMENT_SERVER=]
+      --region &lt;REGION&gt;
+          The `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_REGION=]
+      --zone &lt;ZONE&gt;
+          The `zone` in the `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_ZONE=]
+      --sub-zone &lt;SUB_ZONE&gt;
+          The `sub_zone` in the `zone` in the `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_SUB_ZONE=]
+      --idle-request-interval-secs &lt;IDLE_REQUEST_INTERVAL_SECS&gt;
+          The interval in seconds at which the agent will wait for a discovery request from a relay server before restarting the connection [env: QUILKIN_IDLE_REQUEST_INTERVAL_SECS=] [default: 30]
+  -h, --help
+          Print help
 </code></pre>
 <blockquote>
 <p>Each sub-control planes (<code>file</code>, <code>agones</code>, etc) matches the <code>quilkin manage</code> providers capabilities.

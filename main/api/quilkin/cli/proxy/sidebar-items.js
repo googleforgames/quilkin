@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["PORT"],"fn":["default_port"],"struct":["Proxy"]};
+window.SIDEBAR_ITEMS = {"constant":["PORT"],"fn":["default_port"],"struct":["Proxy","RuntimeConfig"]};

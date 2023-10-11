@@ -201,11 +201,30 @@ environment.</p>
 <h3 id="live"><a class="header" href="#live">/live</a></h3>
 <p>This provides a liveness probe endpoint, most commonly used in
 <a href="https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-command">Kubernetes based systems</a>.</p>
-<p>Will return an HTTP status of 200 when all health checks pass.</p>
+<p>Liveness is defined as &quot;hasn't panicked&quot;, as long as the process has not
+panicked quilkin is considered live.</p>
 <h3 id="ready"><a class="header" href="#ready">/ready</a></h3>
 <p>This provides a readiness probe endpoint, most commonly used in
 <a href="https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes">Kubernetes based systems</a>.</p>
-<p>Depending on whether Quilkin is run in Proxy mode i.e. <code>quilkin proxy</code>, vs an xDS provider mode, such as <code>quilkin manage agones</code>, will dictate how readiness is calculated:</p>
+<p>Readiness is service and provider specific, so based on what you're running
+there will be different criteria for a service to be considered ready. Here's
+a list of the criteria for each service an provider.</p>
+<div class="table-wrapper"><table><thead><tr><th>Service</th><th>Readiness</th></tr></thead><tbody>
+<tr><td>Proxy</td><td>Management server is connected (or always true if config is static)  AND if there is more than one endpoint configured</td></tr>
+<tr><td>Manage</td><td>Provider is ready</td></tr>
+<tr><td>Relay</td><td>Provider is ready</td></tr>
+<tr><td>Agent</td><td>Provider is ready AND connected to relay</td></tr>
+</tbody></table>
+</div><div class="table-wrapper"><table><thead><tr><th>Provider</th><th>Readiness</th></tr></thead><tbody>
+<tr><td>Agones</td><td>The service is connected to kube-api</td></tr>
+<tr><td>File</td><td>The service has found and watches the file</td></tr>
+</tbody></table>
+</div>
+<p>When setting thresholds for your <code>proxy</code> probes, you generally want to set a low
+check period (e.g.  <code>periodSeconds=1</code>) and a low success threshold
+(e.g. <code>successThreshold=1</code>), but a high <code>failureThreshold</code>
+(e.g. <code>failureThreshold=60</code>) and <code>terminationGracePeriodSeconds</code> to allow for
+backoff attempts and existing player sessions to continue without disruption.</p>
 <h4 id="proxy-mode"><a class="header" href="#proxy-mode">Proxy Mode</a></h4>
 <p>Will return an HTTP status of 200 when there is at least one endpoint to send data to. This is primarily to ensure
 that new proxies that have yet to get configuration information from an <a href="../services/xds.html">xDS server</a> aren't send data
