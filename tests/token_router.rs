@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-use std::net::{Ipv4Addr, SocketAddr};
+use std::net::{Ipv6Addr, SocketAddr};
 
 use tokio::time::{timeout, Duration};
 
