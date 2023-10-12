@@ -82,7 +82,7 @@ quilkin.dev:
     // valid packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
 
-    let local_addr = SocketAddr::from((Ipv4Addr::LOCALHOST, server_port));
+    let local_addr = SocketAddr::from((Ipv6Addr::LOCALHOST, server_port));
     let msg = b"helloabc";
     socket.send_to(msg, &local_addr).await.unwrap();
 
