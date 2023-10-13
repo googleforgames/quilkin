@@ -51,7 +51,7 @@ on_write:
 
     assert_eq!(
         "hello",
-        timeout(Duration::from_secs(5), rx.recv())
+        timeout(Duration::from_millis(500), rx.recv())
             .await
             .expect("should have received a packet")
             .unwrap()
@@ -81,7 +81,7 @@ on_write:
 
     assert_eq!(
         "hello",
-        timeout(Duration::from_secs(5), rx.recv())
+        timeout(Duration::from_millis(500), rx.recv())
             .await
             .expect("should have received a packet")
             .unwrap()
@@ -109,7 +109,7 @@ on_write:
 ";
     let mut rx = test(&mut t, port, yaml, &address_type).await;
 
-    let result = timeout(Duration::from_secs(3), rx.recv()).await;
+    let result = timeout(Duration::from_millis(500), rx.recv()).await;
     assert!(result.is_err(), "should not have received a packet");
 }
 
@@ -134,7 +134,7 @@ on_write:
 ";
     let mut rx = test(&mut t, port, yaml, &address_type).await;
 
-    let result = timeout(Duration::from_secs(3), rx.recv()).await;
+    let result = timeout(Duration::from_millis(500), rx.recv()).await;
     assert!(result.is_err(), "should not have received a packet");
 }
 
@@ -159,7 +159,7 @@ on_write:
 ";
     let mut rx = test(&mut t, port, yaml, &address_type).await;
 
-    let result = timeout(Duration::from_secs(3), rx.recv()).await;
+    let result = timeout(Duration::from_millis(500), rx.recv()).await;
     assert!(result.is_err(), "should not have received a packet");
 }
 
@@ -184,7 +184,7 @@ on_write:
 ";
     let mut rx = test(&mut t, port, yaml, &address_type).await;
 
-    let result = timeout(Duration::from_secs(3), rx.recv()).await;
+    let result = timeout(Duration::from_millis(500), rx.recv()).await;
     assert!(result.is_err(), "should not have received a packet");
 }
 

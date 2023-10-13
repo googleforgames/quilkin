@@ -54,6 +54,7 @@ period: 1
         .unwrap(),
     );
     t.run_server(server_config, server_proxy, None);
+    tokio::time::sleep(Duration::from_millis(50)).await;
 
     let msg = "hello";
     let (mut rx, socket) = t.open_socket_and_recv_multiple_packets().await;

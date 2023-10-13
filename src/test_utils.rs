@@ -239,7 +239,8 @@ impl TestHelper {
     {
         let socket = create_socket().await;
         // sometimes give ipv6, sometimes ipv4.
-        let addr = get_address(address_type, &socket);
+        let mut addr = get_address(address_type, &socket);
+        crate::test_utils::map_addr_to_localhost(&mut addr);
         let mut shutdown = self.get_shutdown_subscriber().await;
         let local_addr = addr;
         tokio::spawn(async move {

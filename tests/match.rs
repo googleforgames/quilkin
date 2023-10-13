@@ -95,7 +95,7 @@ on_read:
 
     assert_eq!(
         "helloxyz",
-        timeout(Duration::from_secs(5), recv_chan.recv())
+        timeout(Duration::from_millis(500), recv_chan.recv())
             .await
             .expect("should have received a packet")
             .unwrap()
@@ -107,7 +107,7 @@ on_read:
 
     assert_eq!(
         "helloabc",
-        timeout(Duration::from_secs(5), recv_chan.recv())
+        timeout(Duration::from_millis(500), recv_chan.recv())
             .await
             .expect("should have received a packet")
             .unwrap()
@@ -119,7 +119,7 @@ on_read:
 
     assert_eq!(
         "hellodef",
-        timeout(Duration::from_secs(5), recv_chan.recv())
+        timeout(Duration::from_millis(500), recv_chan.recv())
             .await
             .expect("should have received a packet")
             .unwrap()
@@ -131,7 +131,7 @@ on_read:
 
     assert_eq!(
         "hellodef",
-        timeout(Duration::from_secs(5), recv_chan.recv())
+        timeout(Duration::from_millis(500), recv_chan.recv())
             .await
             .expect("should have received a packet")
             .unwrap()

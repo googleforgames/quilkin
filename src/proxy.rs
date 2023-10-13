@@ -70,7 +70,8 @@ impl DownstreamReceiveWorkerConfig {
                 tokio::select! {
                     result = socket.recv_from(&mut buf) => {
                         match result {
-                            Ok((size, source)) => {
+                            Ok((size, mut source)) => {
+                                crate::utils::net::to_canonical(&mut source);
                                 let packet = DownstreamPacket {
                                     received_at: chrono::Utc::now().timestamp_nanos_opt().unwrap(),
                                     asn_info: crate::maxmind_db::MaxmindDb::lookup(source.ip()),

@@ -29,7 +29,8 @@ async fn client_and_server() {
     let echo = t.run_echo_server(&AddressType::Random).await;
 
     // create server configuration as
-    let server_addr = available_addr(&AddressType::Random).await;
+    let mut server_addr = available_addr(&AddressType::Random).await;
+    quilkin::test_utils::map_addr_to_localhost(&mut server_addr);
     let yaml = "
 on_read: DECOMPRESS
 on_write: COMPRESS
@@ -84,7 +85,7 @@ on_write: DECOMPRESS
     let (mut rx, tx) = t.open_socket_and_recv_multiple_packets().await;
 
     tx.send_to(b"hello", &client_addr).await.unwrap();
-    let expected = timeout(Duration::from_secs(5), rx.recv())
+    let expected = timeout(Duration::from_millis(500), rx.recv())
         .await
         .expect("should have received a packet")
         .unwrap();

@@ -117,10 +117,10 @@ impl SessionPool {
                             },
                             Ok((size, mut recv_addr)) => {
                                 let received_at = chrono::Utc::now().timestamp_nanos_opt().unwrap();
+                                crate::utils::net::to_canonical(&mut recv_addr);
                                 tracing::trace!(%recv_addr, %size, "received packet");
                                 let (downstream_addr, asn_info): (SocketAddr, Option<IpNetEntry>) = {
                                     let storage = pool.storage.read();
-                                    to_canonical(&mut recv_addr);
                                     let Some(downstream_addr) = storage.destination_to_sources.get(&(recv_addr, port)) else {
                                         tracing::warn!(address=%recv_addr, "received traffic from a server that has no downstream");
                                         continue;
@@ -315,11 +315,10 @@ impl SessionPool {
     /// Sends packet data to the appropiate session based on its `key`.
     pub async fn send(
         self: &Arc<Self>,
-        mut key: SessionKey,
+        key: SessionKey,
         asn_info: Option<IpNetEntry>,
         packet: &[u8],
     ) -> Result<usize, super::PipelineError> {
-        to_canonical(&mut key.source);
         self.get(key, asn_info)
             .await?
             .send(packet)
@@ -482,21 +481,6 @@ impl Loggable for Error {
             }
         }
     }
-}
-
-fn to_canonical(addr: &mut SocketAddr) {
-    let ip = match addr.ip() {
-        std::net::IpAddr::V6(ip) => {
-            if let Some(mapped) = ip.to_ipv4_mapped() {
-                std::net::IpAddr::V4(mapped)
-            } else {
-                std::net::IpAddr::V6(ip)
-            }
-        }
-        addr => addr,
-    };
-
-    addr.set_ip(ip);
 }
 
 #[cfg(test)]

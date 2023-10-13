@@ -44,7 +44,7 @@ on_read: COMPRESS
 on_write: DECOMPRESS
 ";
 
-    let echo = t
+    let mut echo = t
         .run_echo_server_with_tap(&AddressType::Random, move |_, bytes, _| {
             assert!(
                 from_utf8(bytes).is_err(),
@@ -53,6 +53,7 @@ on_write: DECOMPRESS
         })
         .await;
 
+    quilkin::test_utils::map_to_localhost(&mut echo).await;
     let server_port = 12346;
     let server_proxy = quilkin::cli::Proxy {
         port: server_port,
@@ -94,7 +95,7 @@ on_write: DECOMPRESS
 
     assert_eq!(
         "helloxyzabc",
-        timeout(Duration::from_secs(5), recv_chan.recv())
+        timeout(Duration::from_millis(500), recv_chan.recv())
             .await
             .expect("should have received a packet")
             .unwrap()
