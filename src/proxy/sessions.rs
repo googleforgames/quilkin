@@ -658,20 +658,12 @@ mod tests {
         let mut t = TestHelper::default();
         let dest = t.run_echo_server(&AddressType::Ipv6).await;
         let mut dest = dest.to_socket_addr().await.unwrap();
+        crate::test_utils::map_addr_to_localhost(&mut dest);
         let source = available_addr(&AddressType::Ipv6).await;
         let socket = tokio::net::UdpSocket::bind(source).await.unwrap();
         let mut source = socket.local_addr().unwrap();
+        crate::test_utils::map_addr_to_localhost(&mut source);
         let (pool, _sender) = new_pool(None).await;
-
-        match &mut dest {
-            std::net::SocketAddr::V4(addr) => addr.set_ip(std::net::Ipv4Addr::LOCALHOST),
-            std::net::SocketAddr::V6(addr) => addr.set_ip(std::net::Ipv6Addr::LOCALHOST),
-        };
-
-        match &mut source {
-            std::net::SocketAddr::V4(addr) => addr.set_ip(std::net::Ipv4Addr::LOCALHOST),
-            std::net::SocketAddr::V6(addr) => addr.set_ip(std::net::Ipv6Addr::LOCALHOST),
-        };
 
         let key: SessionKey = (source, dest).into();
         let msg = b"helloworld";

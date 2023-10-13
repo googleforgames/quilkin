@@ -269,7 +269,8 @@ mod tests {
         let mut t = TestHelper::default();
 
         let endpoint = t.open_socket_and_recv_single_packet().await;
-        let local_addr = available_addr(&AddressType::Random).await;
+        let mut local_addr = available_addr(&AddressType::Ipv6).await;
+        crate::test_utils::map_addr_to_localhost(&mut local_addr);
         let proxy = crate::cli::Proxy {
             port: local_addr.port(),
             ..<_>::default()
@@ -278,14 +279,16 @@ mod tests {
         config.clusters.modify(|clusters| {
             clusters.insert_default(
                 [Endpoint::new(
-                    endpoint.socket.local_ipv4_addr().unwrap().into(),
+                    endpoint.socket.local_ipv6_addr().unwrap().into(),
                 )]
                 .into(),
             );
         });
         t.run_server(config, proxy, None);
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
         let msg = "hello";
+        tracing::debug!(%local_addr, "sending packet");
         endpoint
             .socket
             .send_to(msg.as_bytes(), &local_addr)

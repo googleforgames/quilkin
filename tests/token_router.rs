@@ -30,8 +30,10 @@ use quilkin::{
 /// since they work in concert together.
 #[tokio::test]
 async fn token_router() {
+    quilkin::test_utils::enable_log("quilkin=trace");
     let mut t = TestHelper::default();
-    let echo = t.run_echo_server(&AddressType::Ipv6).await;
+    let mut echo = t.run_echo_server(&AddressType::Ipv6).await;
+    quilkin::test_utils::map_to_localhost(&mut echo).await;
 
     let capture_yaml = "
 suffix:

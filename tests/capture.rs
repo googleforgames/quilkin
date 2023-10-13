@@ -31,7 +31,8 @@ use quilkin::{
 #[tokio::test]
 async fn token_router() {
     let mut t = TestHelper::default();
-    let echo = t.run_echo_server(&AddressType::Random).await;
+    let mut echo = t.run_echo_server(&AddressType::Random).await;
+    quilkin::test_utils::map_to_localhost(&mut echo).await;
     let server_port = 12348;
     let server_proxy = quilkin::cli::Proxy {
         port: server_port,

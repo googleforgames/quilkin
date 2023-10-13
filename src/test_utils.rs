@@ -333,13 +333,15 @@ where
 
 pub async fn map_to_localhost(address: &mut EndpointAddress) {
     let mut socket_addr = address.to_socket_addr().await.unwrap();
+    map_addr_to_localhost(&mut socket_addr);
+    *address = socket_addr.into();
+}
 
-    match &mut socket_addr {
+pub fn map_addr_to_localhost(address: &mut SocketAddr) {
+    match address {
         SocketAddr::V4(addr) => addr.set_ip(std::net::Ipv4Addr::LOCALHOST),
         SocketAddr::V6(addr) => addr.set_ip(std::net::Ipv6Addr::LOCALHOST),
     }
-
-    *address = socket_addr.into();
 }
 
 /// Opens a new socket bound to an ephemeral port
