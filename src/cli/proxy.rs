@@ -120,11 +120,8 @@ impl Proxy {
         tracing::info!(port = self.port, proxy_id = &*id, "Starting");
 
         let runtime_config = mode.unwrap_proxy();
-        let sessions = SessionPool::new(
-            config.clone(),
-            DualStackLocalSocket::new(self.port)?,
-            shutdown_rx.clone(),
-        );
+        let shared_socket = Arc::new(DualStackLocalSocket::new(self.port)?);
+        let sessions = SessionPool::new(config.clone(), shared_socket.clone(), shutdown_rx.clone());
 
         let _xds_stream = if !self.management_server.is_empty() {
             {
@@ -153,7 +150,7 @@ impl Proxy {
             None
         };
 
-        self.run_recv_from(&config, sessions.clone())?;
+        self.run_recv_from(&config, &sessions, shared_socket)?;
         crate::protocol::spawn(self.qcmp_port).await?;
         tracing::info!("Quilkin is ready");
 
@@ -177,18 +174,29 @@ impl Proxy {
     /// This function also spawns the set of worker tasks responsible for consuming packets
     /// off the aforementioned queue and processing them through the filter chain and session
     /// pipeline.
-    fn run_recv_from(&self, config: &Arc<Config>, sessions: Arc<SessionPool>) -> Result<()> {
+    fn run_recv_from(
+        &self,
+        config: &Arc<Config>,
+        sessions: &Arc<SessionPool>,
+        shared_socket: Arc<DualStackLocalSocket>,
+    ) -> Result<()> {
         // The number of worker tasks to spawn. Each task gets a dedicated queue to
         // consume packets off.
         let num_workers = num_cpus::get();
 
         // Contains config for each worker task.
         let mut workers = Vec::with_capacity(num_workers);
-        for worker_id in 0..num_workers {
-            let socket = Arc::new(DualStackLocalSocket::new(self.port)?);
+        workers.push(crate::proxy::DownstreamReceiveWorkerConfig {
+            worker_id: 0,
+            socket: shared_socket,
+            config: config.clone(),
+            sessions: sessions.clone(),
+        });
+
+        for worker_id in 1..num_workers {
             workers.push(crate::proxy::DownstreamReceiveWorkerConfig {
                 worker_id,
-                socket: socket.clone(),
+                socket: Arc::new(DualStackLocalSocket::new(self.port)?),
                 config: config.clone(),
                 sessions: sessions.clone(),
             })
@@ -242,6 +250,7 @@ mod tests {
 
         t.run_server(config, proxy, None);
 
+        tracing::trace!(%local_addr, "sending hello");
         let msg = "hello";
         endpoint1
             .socket
@@ -250,14 +259,14 @@ mod tests {
             .unwrap();
         assert_eq!(
             msg,
-            timeout(Duration::from_secs(1), endpoint1.packet_rx)
+            timeout(Duration::from_millis(100), endpoint1.packet_rx)
                 .await
                 .expect("should get a packet")
                 .unwrap()
         );
         assert_eq!(
             msg,
-            timeout(Duration::from_secs(1), endpoint2.packet_rx)
+            timeout(Duration::from_millis(100), endpoint2.packet_rx)
                 .await
                 .expect("should get a packet")
                 .unwrap()
@@ -373,12 +382,14 @@ mod tests {
             config: config.clone(),
             sessions: SessionPool::new(
                 config,
-                DualStackLocalSocket::new(
-                    crate::test_utils::available_addr(&AddressType::Random)
-                        .await
-                        .port(),
-                )
-                .unwrap(),
+                Arc::new(
+                    DualStackLocalSocket::new(
+                        crate::test_utils::available_addr(&AddressType::Random)
+                            .await
+                            .port(),
+                    )
+                    .unwrap(),
+                ),
                 tokio::sync::watch::channel(()).1,
             ),
         }
@@ -418,18 +429,23 @@ mod tests {
             )
         });
 
-        let sessions = SessionPool::new(
-            config.clone(),
+        let shared_socket = Arc::new(
             DualStackLocalSocket::new(
                 crate::test_utils::available_addr(&AddressType::Random)
                     .await
                     .port(),
             )
             .unwrap(),
+        );
+        let sessions = SessionPool::new(
+            config.clone(),
+            shared_socket.clone(),
             tokio::sync::watch::channel(()).1,
         );
 
-        proxy.run_recv_from(&config, sessions).unwrap();
+        proxy
+            .run_recv_from(&config, &sessions, shared_socket)
+            .unwrap();
 
         let socket = create_socket().await;
         socket.send_to(msg.as_bytes(), &local_addr).await.unwrap();

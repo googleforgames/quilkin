@@ -223,4 +223,3 @@ pub fn to_canonical(addr: &mut SocketAddr) {
 
     addr.set_ip(ip);
 }
-

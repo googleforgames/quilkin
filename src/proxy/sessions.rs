@@ -17,12 +17,14 @@
 use std::{
     collections::{HashMap, HashSet},
     net::SocketAddr,
-    pin::Pin,
     sync::Arc,
     time::Duration,
 };
 
-use tokio::{sync::watch, time::Instant};
+use tokio::{
+    sync::{watch, RwLock},
+    time::Instant,
+};
 
 use crate::{
     config::Config,
@@ -30,8 +32,6 @@ use crate::{
     maxmind_db::IpNetEntry,
     utils::{net::DualStackLocalSocket, Loggable},
 };
-
-use parking_lot::RwLock;
 
 use dashmap::DashMap;
 
@@ -52,7 +52,7 @@ type SessionRef<'pool> =
 #[derive(Debug)]
 pub struct SessionPool {
     ports_to_sockets: DashMap<u16, Arc<DualStackLocalSocket>>,
-    storage: RwLock<SocketStorage>,
+    storage: Arc<RwLock<SocketStorage>>,
     session_map: SessionMap,
     downstream_socket: Arc<DualStackLocalSocket>,
     shutdown_rx: watch::Receiver<()>,
@@ -74,7 +74,7 @@ impl SessionPool {
     /// to release their sockets back to the parent.
     pub fn new(
         config: Arc<Config>,
-        downstream_socket: DualStackLocalSocket,
+        downstream_socket: Arc<DualStackLocalSocket>,
         shutdown_rx: watch::Receiver<()>,
     ) -> Arc<Self> {
         const SESSION_TIMEOUT_SECONDS: Duration = Duration::from_secs(60);
@@ -82,7 +82,7 @@ impl SessionPool {
 
         Arc::new(Self {
             config,
-            downstream_socket: Arc::new(downstream_socket),
+            downstream_socket,
             shutdown_rx,
             ports_to_sockets: <_>::default(),
             storage: <_>::default(),
@@ -120,7 +120,7 @@ impl SessionPool {
                                 crate::utils::net::to_canonical(&mut recv_addr);
                                 tracing::trace!(%recv_addr, %size, "received packet");
                                 let (downstream_addr, asn_info): (SocketAddr, Option<IpNetEntry>) = {
-                                    let storage = pool.storage.read();
+                                    let storage = pool.storage.read().await;
                                     let Some(downstream_addr) = storage.destination_to_sources.get(&(recv_addr, port)) else {
                                         tracing::warn!(address=%recv_addr, "received traffic from a server that has no downstream");
                                         continue;
@@ -170,54 +170,39 @@ impl SessionPool {
         });
 
         self.create_session_from_existing_socket(key, socket, port, asn_info)
+            .await
     }
 
     /// Returns a reference to an existing session mapped to `key`, otherwise
     /// creates a new session either from a fresh socket, or if there are sockets
     /// allocated that are not reserved by an existing destination, using the
     /// existing socket.
-    // This uses dynamic dispatch because we're using `parking_lot`, and we
-    // to prove that we're not holding a lock across an await point. We're
-    // using `parking_lot` because there's no async drop, so we can't lock
-    // on drop currently.
-    pub fn get<'pool>(
+    pub async fn get<'pool>(
         self: &'pool Arc<Self>,
         key @ SessionKey { dest, .. }: SessionKey,
         asn_info: Option<IpNetEntry>,
-    ) -> Pin<
-        Box<
-            dyn std::future::Future<Output = Result<SessionRef<'pool>, super::PipelineError>>
-                + Send
-                + 'pool,
-        >,
-    > {
+    ) -> Result<SessionRef<'pool>, super::PipelineError> {
         // If we already have a session for the key pairing, return that session.
         if let Some(entry) = self.session_map.get(&key) {
-            return Box::pin(std::future::ready(Ok(entry)));
+            return Ok(entry);
         }
 
         // If there's a socket_set available, it means there are sockets
         // allocated to the address that we want to avoid.
-        let storage = self.storage.read();
+        let storage = self.storage.read().await;
         let Some(socket_set) = storage.destination_to_sockets.get(&dest) else {
             drop(storage);
             return if self.ports_to_sockets.is_empty() {
                 // Initial case where we have no allocated or reserved sockets.
-                Box::pin(self.create_new_session_from_new_socket(key, asn_info))
+                self.create_new_session_from_new_socket(key, asn_info).await
             } else {
                 // Where we have no allocated sockets for a destination, assign
                 // the first available one.
                 let entry = self.ports_to_sockets.iter().next().unwrap();
                 let port = *entry.key();
 
-                Box::pin(std::future::ready(
-                    self.create_session_from_existing_socket(
-                        key,
-                        entry.value().clone(),
-                        port,
-                        asn_info,
-                    ),
-                ))
+                self.create_session_from_existing_socket(key, entry.value().clone(), port, asn_info)
+                    .await
             };
         };
 
@@ -229,33 +214,33 @@ impl SessionPool {
             drop(storage);
             self.storage
                 .write()
+                .await
                 .destination_to_sockets
                 .get_mut(&dest)
                 .unwrap()
                 .insert(*entry.key());
-            Box::pin(std::future::ready(
-                self.create_session_from_existing_socket(
-                    key,
-                    entry.value().clone(),
-                    *entry.key(),
-                    asn_info,
-                ),
-            ))
+            self.create_session_from_existing_socket(
+                key,
+                entry.value().clone(),
+                *entry.key(),
+                asn_info,
+            )
+            .await
         } else {
             drop(storage);
-            Box::pin(self.create_new_session_from_new_socket(key, asn_info))
+            self.create_new_session_from_new_socket(key, asn_info).await
         }
     }
 
     /// Using an existing socket, reserves the socket for a new session.
-    fn create_session_from_existing_socket<'session>(
+    async fn create_session_from_existing_socket<'session>(
         self: &'session Arc<Self>,
         key: SessionKey,
         upstream_socket: Arc<DualStackLocalSocket>,
         socket_port: u16,
         asn_info: Option<IpNetEntry>,
     ) -> Result<SessionRef<'session>, super::PipelineError> {
-        let mut storage = self.storage.write();
+        let mut storage = self.storage.write().await;
         storage
             .destination_to_sockets
             .entry(key.dest)
@@ -276,12 +261,15 @@ impl SessionPool {
                 .insert(key.source, asn_info.clone());
         }
 
-        self.session_map.insert(
-            key,
-            Session::new(key, upstream_socket, socket_port, self.clone(), asn_info)?,
-        );
-
-        Ok(self.session_map.get(&key).unwrap())
+        drop(storage);
+        let session = Session::new(key, upstream_socket, socket_port, self.clone(), asn_info)?;
+        Ok(match self.session_map.entry(key) {
+            crate::ttl_map::Entry::Occupied(mut entry) => {
+                entry.insert(session);
+                entry.into_ref()
+            }
+            crate::ttl_map::Entry::Vacant(v) => v.insert(session).downgrade(),
+        })
     }
 
     /// process_recv_packet processes a packet that is received by this session.
@@ -328,8 +316,8 @@ impl SessionPool {
 
     /// Returns whether the pool contains any sockets allocated to a destination.
     #[cfg(test)]
-    fn has_no_allocated_sockets(&self) -> bool {
-        let storage = self.storage.read();
+    async fn has_no_allocated_sockets(&self) -> bool {
+        let storage = self.storage.read().await;
         let is_empty = storage.destination_to_sockets.is_empty();
         // These should always be the same.
         debug_assert!(!(is_empty ^ storage.sockets_to_destination.is_empty()));
@@ -338,21 +326,24 @@ impl SessionPool {
 
     /// Forces removal of session to make testing quicker.
     #[cfg(test)]
-    fn drop_session(&self, key: SessionKey, session: SessionRef) -> bool {
+    async fn drop_session(&self, key: SessionKey, session: SessionRef<'_>) -> bool {
         drop(session);
-        self.session_map.remove(key)
+        let is_removed = self.session_map.remove(key);
+        // Sleep because there's no async drop.
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        is_removed
     }
 
     /// Handles the logic of releasing a socket back into the pool.
-    fn release_socket(
-        &self,
+    async fn release_socket(
+        self: Arc<Self>,
         SessionKey {
             ref source,
             ref dest,
         }: SessionKey,
         port: u16,
     ) {
-        let mut storage = self.storage.write();
+        let mut storage = self.storage.write().await;
         let socket_set = storage.destination_to_sockets.get_mut(dest).unwrap();
 
         assert!(socket_set.remove(&port));
@@ -403,8 +394,6 @@ impl Session {
         pool: Arc<SessionPool>,
         asn_info: Option<IpNetEntry>,
     ) -> Result<Self, super::PipelineError> {
-        tracing::debug!(source = %key.source, dest = %key.dest, "Session created");
-
         let s = Self {
             key,
             socket,
@@ -428,24 +417,30 @@ impl Session {
 
         self::metrics::total_sessions().inc();
         s.active_session_metric().inc();
+        tracing::debug!(source = %key.source, dest = %key.dest, "Session created");
         Ok(s)
     }
 
     pub async fn send(&self, packet: &[u8]) -> std::io::Result<usize> {
+        tracing::trace!(dest=%self.key.dest, "sending packet upstream");
         self.socket.send_to(packet, self.key.dest).await
     }
 
     fn active_session_metric(&self) -> prometheus::IntGauge {
         metrics::active_sessions(self.asn_info.as_ref())
     }
+
+    fn async_drop(&mut self) -> impl std::future::Future<Output = ()> {
+        self.active_session_metric().dec();
+        metrics::duration_secs().observe(self.created_at.elapsed().as_secs() as f64);
+        tracing::debug!(source = %self.key.source, dest_address = %self.key.dest, "Session closed");
+        SessionPool::release_socket(self.pool.clone(), self.key, self.socket_port)
+    }
 }
 
 impl Drop for Session {
     fn drop(&mut self) {
-        self.active_session_metric().dec();
-        metrics::duration_secs().observe(self.created_at.elapsed().as_secs() as f64);
-        tracing::debug!(source = %self.key.source, dest_address = %self.key.dest, "Session closed");
-        self.pool.release_socket(self.key, self.socket_port);
+        tokio::spawn(self.async_drop());
     }
 }
 
@@ -494,12 +489,14 @@ mod tests {
         (
             SessionPool::new(
                 Arc::new(config.into().unwrap_or_default()),
-                DualStackLocalSocket::new(
-                    crate::test_utils::available_addr(&AddressType::Random)
-                        .await
-                        .port(),
-                )
-                .unwrap(),
+                Arc::new(
+                    DualStackLocalSocket::new(
+                        crate::test_utils::available_addr(&AddressType::Random)
+                            .await
+                            .port(),
+                    )
+                    .unwrap(),
+                ),
                 rx,
             ),
             tx,
@@ -517,9 +514,9 @@ mod tests {
 
         let session = pool.get(key, None).await.unwrap();
 
-        assert!(pool.drop_session(key, session));
+        assert!(pool.drop_session(key, session).await);
 
-        assert!(pool.has_no_allocated_sockets());
+        assert!(pool.has_no_allocated_sockets().await);
     }
 
     #[tokio::test]
@@ -539,11 +536,11 @@ mod tests {
         let session1 = pool.get(key1, None).await.unwrap();
         let session2 = pool.get(key2, None).await.unwrap();
 
-        assert!(pool.drop_session(key1, session1));
-        assert!(!pool.has_no_allocated_sockets());
-        assert!(pool.drop_session(key2, session2));
+        assert!(pool.drop_session(key1, session1).await);
+        assert!(!pool.has_no_allocated_sockets().await);
+        assert!(pool.drop_session(key2, session2).await);
 
-        assert!(pool.has_no_allocated_sockets());
+        assert!(pool.has_no_allocated_sockets().await);
         drop(pool);
     }
 

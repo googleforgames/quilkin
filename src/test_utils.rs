@@ -250,6 +250,7 @@ impl TestHelper {
                     recvd = socket.recv_from(&mut buf) => {
                         let (size, sender) = recvd.unwrap();
                         let packet = &buf[..size];
+                        tracing::trace!(%sender, %size, "echo server received and returning packet");
                         tap(sender, packet, local_addr);
                         socket.send_to(packet, sender).await.unwrap();
                     },
