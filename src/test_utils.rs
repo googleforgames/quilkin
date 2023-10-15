@@ -273,17 +273,14 @@ impl TestHelper {
     ) {
         let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
         self.server_shutdown_tx.push(Some(shutdown_tx));
+        let mode = crate::cli::Admin::Proxy(<_>::default());
 
         if let Some(address) = with_admin {
-            tokio::spawn(crate::admin::server(
-                crate::admin::Mode::Proxy,
-                config.clone(),
-                address,
-            ));
+            mode.server(config.clone(), address);
         }
 
         tokio::spawn(async move {
-            server.run(config, shutdown_rx).await.unwrap();
+            server.run(config, mode, shutdown_rx).await.unwrap();
         });
     }
 

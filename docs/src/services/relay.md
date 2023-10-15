@@ -1,9 +1,9 @@
 # Control Plane Relay
 
-| services | ports | Protocol |
-|----------|-------|-----------|
-| ADS | 7800 | gRPC(IPv4) |
-| CPDS | 7900 | gRPC(IPv4) |
+| services | ports | Protocol           |
+|----------|-------|--------------------|
+| ADS      | 7800  | gRPC(IPv4 OR IPv6) |
+| CPDS     | 7900  | gRPC(IPv4 OR IPv6) |
 
 > **Note:** This service is currently in active experimentation and development
   so there may be bugs which cause it to be unusable  for production, as always
@@ -25,6 +25,8 @@ To view all options for the `relay` subcommand, run:
 $ quilkin relay --help
 {{#include ../../../target/quilkin.relay.commands}}
 ```
+> Each sub-control planes (`file`, `agones`, etc) matches the `quilkin manage` providers capabilities.
+> Have a look at each of the [Control Plane > Providers](../services/xds.md) documentation for integration details.
 
 ## Quickstart
 To get started with the relay service we need to start the relay service, and

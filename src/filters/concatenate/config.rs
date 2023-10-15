@@ -31,7 +31,7 @@ pub enum Strategy {
     DoNothing,
 }
 
-impl From<Strategy> for proto::concatenate_bytes::Strategy {
+impl From<Strategy> for proto::concatenate::Strategy {
     fn from(strategy: Strategy) -> Self {
         match strategy {
             Strategy::Append => Self::Append,
@@ -41,25 +41,25 @@ impl From<Strategy> for proto::concatenate_bytes::Strategy {
     }
 }
 
-impl From<proto::concatenate_bytes::Strategy> for Strategy {
-    fn from(strategy: proto::concatenate_bytes::Strategy) -> Self {
+impl From<proto::concatenate::Strategy> for Strategy {
+    fn from(strategy: proto::concatenate::Strategy) -> Self {
         match strategy {
-            proto::concatenate_bytes::Strategy::Append => Self::Append,
-            proto::concatenate_bytes::Strategy::Prepend => Self::Prepend,
-            proto::concatenate_bytes::Strategy::DoNothing => Self::DoNothing,
+            proto::concatenate::Strategy::Append => Self::Append,
+            proto::concatenate::Strategy::Prepend => Self::Prepend,
+            proto::concatenate::Strategy::DoNothing => Self::DoNothing,
         }
     }
 }
 
-impl From<Strategy> for proto::concatenate_bytes::StrategyValue {
+impl From<Strategy> for proto::concatenate::StrategyValue {
     fn from(strategy: Strategy) -> Self {
         Self {
-            value: proto::concatenate_bytes::Strategy::from(strategy) as i32,
+            value: proto::concatenate::Strategy::from(strategy) as i32,
         }
     }
 }
 
-/// Config represents a `ConcatenateBytes` filter configuration.
+/// Config represents a `Concatenate` filter configuration.
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, JsonSchema)]
 #[non_exhaustive]
 pub struct Config {
@@ -77,7 +77,7 @@ pub struct Config {
     pub bytes: Vec<u8>,
 }
 
-impl From<Config> for proto::ConcatenateBytes {
+impl From<Config> for proto::Concatenate {
     fn from(config: Config) -> Self {
         Self {
             on_read: Some(config.on_read.into()),
@@ -87,8 +87,8 @@ impl From<Config> for proto::ConcatenateBytes {
     }
 }
 
-impl From<proto::ConcatenateBytes> for Config {
-    fn from(p: proto::ConcatenateBytes) -> Self {
+impl From<proto::Concatenate> for Config {
+    fn from(p: proto::Concatenate) -> Self {
         let on_read = p
             .on_read
             .map(|p| p.value())

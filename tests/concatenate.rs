@@ -21,12 +21,12 @@ use tokio::time::{timeout, Duration};
 use quilkin::{
     config::Filter,
     endpoint::Endpoint,
-    filters::{ConcatenateBytes, StaticFilter},
+    filters::{Concatenate, StaticFilter},
     test_utils::{AddressType, TestHelper},
 };
 
 #[tokio::test]
-async fn concatenate_bytes() {
+async fn concatenate() {
     let mut t = TestHelper::default();
     let yaml = "
 on_read: APPEND
@@ -45,7 +45,7 @@ bytes: YWJj #abc
         .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
     server_config.filters.store(
         quilkin::filters::FilterChain::try_from(vec![Filter {
-            name: ConcatenateBytes::factory().name().into(),
+            name: Concatenate::factory().name().into(),
             label: None,
             config: serde_yaml::from_str(yaml).unwrap(),
         }])

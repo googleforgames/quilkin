@@ -15,13 +15,17 @@
  */
 
 use futures::TryStreamExt;
-use std::sync::Arc;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 
 use crate::{endpoint::Locality, Config};
 
 pub async fn watch(
     gameservers_namespace: impl AsRef<str>,
     config_namespace: impl AsRef<str>,
+    health_check: Arc<AtomicBool>,
     locality: Option<Locality>,
     config: Arc<Config>,
 ) -> crate::Result<()> {
@@ -45,11 +49,15 @@ pub async fn watch(
     tokio::pin!(gameserver_reflector);
 
     loop {
-        let Some(_) = tokio::select! {
-            result = configmap_reflector.try_next() => result?,
-            result = gameserver_reflector.try_next() => result?,
-        } else {
-            break Ok(());
+        let result = tokio::select! {
+            result = configmap_reflector.try_next() => result,
+            result = gameserver_reflector.try_next() => result,
         };
+
+        match result {
+            Ok(Some(_)) => health_check.store(true, Ordering::SeqCst),
+            Ok(None) => break Err(eyre::eyre!("kubernetes watch stream terminated")),
+            Err(error) => break Err(error),
+        }
     }
 }

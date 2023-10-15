@@ -44,7 +44,7 @@ impl Health {
     }
 
     /// returns a HTTP 200 response if the proxy is healthy.
-    pub fn check_healthy(&self) -> Response<Body> {
+    pub fn check_liveness(&self) -> Response<Body> {
         if self.healthy.load(Relaxed) {
             return Response::new("ok".into());
         };
@@ -65,14 +65,14 @@ mod tests {
     fn panic_hook() {
         let health = Health::new();
 
-        let response = health.check_healthy();
+        let response = health.check_liveness();
         assert_eq!(response.status(), StatusCode::OK);
 
         let _ = std::panic::catch_unwind(|| {
             panic!("oh no!");
         });
 
-        let response = health.check_healthy();
+        let response = health.check_liveness();
         assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
     }
 }

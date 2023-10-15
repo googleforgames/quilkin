@@ -68,19 +68,7 @@ impl MaxmindDb {
         };
 
         match mmdb.lookup::<IpNetEntry>(ip) {
-            Ok(asn) => {
-                tracing::info!(
-                    number = asn.r#as,
-                    organization = asn.as_name,
-                    country_code = asn.as_cc,
-                    prefix = asn.prefix,
-                    prefix_entity = asn.prefix_entity,
-                    prefix_name = asn.prefix_name,
-                    "maxmind information"
-                );
-
-                Some(asn)
-            }
+            Ok(asn) => Some(asn),
             Err(error) => {
                 tracing::warn!(%ip, %error, "ip not found in maxmind database");
                 None

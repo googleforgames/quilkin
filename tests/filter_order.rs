@@ -21,7 +21,7 @@ use tokio::time::{timeout, Duration};
 use quilkin::{
     config::Filter,
     endpoint::Endpoint,
-    filters::{Compress, ConcatenateBytes, StaticFilter},
+    filters::{Compress, Concatenate, StaticFilter},
     test_utils::{AddressType, TestHelper},
 };
 
@@ -65,12 +65,12 @@ on_write: DECOMPRESS
     server_config.filters.store(
         quilkin::filters::FilterChain::try_from(vec![
             Filter {
-                name: ConcatenateBytes::factory().name().into(),
+                name: Concatenate::factory().name().into(),
                 label: None,
                 config: serde_yaml::from_str(yaml_concat_read).unwrap(),
             },
             Filter {
-                name: ConcatenateBytes::factory().name().into(),
+                name: Concatenate::factory().name().into(),
                 label: None,
                 config: serde_yaml::from_str(yaml_concat_write).unwrap(),
             },

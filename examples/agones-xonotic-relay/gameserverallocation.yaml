@@ -1,4 +1,4 @@
-# Copyright 2021 Google LLC
+# Copyright 2023 Google LLC All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-[toolchain]
-channel = "1.73.0"
-components = ["rustfmt", "clippy"]
+apiVersion: "allocation.agones.dev/v1"
+kind: GameServerAllocation
+spec:
+  selectors:
+    - matchLabels:
+        agones.dev/fleet: xonotic
+  metadata:
+    annotations:
+      quilkin.dev/tokens: NDU2 # 456

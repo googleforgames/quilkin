@@ -27,7 +27,7 @@ mod write;
 
 pub mod capture;
 pub mod compress;
-pub mod concatenate_bytes;
+pub mod concatenate;
 pub mod debug;
 pub mod drop;
 pub mod firewall;
@@ -53,7 +53,7 @@ pub mod prelude {
 pub use self::{
     capture::Capture,
     compress::Compress,
-    concatenate_bytes::ConcatenateBytes,
+    concatenate::Concatenate,
     debug::Debug,
     drop::Drop,
     error::{ConvertProtoConfigError, CreationError, FilterError},

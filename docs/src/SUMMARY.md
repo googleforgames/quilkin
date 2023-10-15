@@ -7,6 +7,7 @@
 - [Netcat](./deployment/quickstarts/netcat.md)
 - [Agones + Xonotic (Sidecar)](./deployment/quickstarts/agones-xonotic-sidecar.md)
 - [Agones + Xonotic (xDS)](./deployment/quickstarts/agones-xonotic-xds.md)
+- [Agones + Xonotic (Relay)](./deployment/quickstarts/agones-xonotic-relay.md)
 
 # Services
 
@@ -15,7 +16,7 @@
     - [Filters](./services/proxy/filters.md)
         - [Capture](./services/proxy/filters/capture.md)
         - [Compress](./services/proxy/filters/compress.md)
-        - [Concatenate Bytes](./services/proxy/filters/concatenate_bytes.md)
+        - [Concatenate](./services/proxy/filters/concatenate.md)
         - [Debug](./services/proxy/filters/debug.md)
         - [Drop](./services/proxy/filters/drop.md)
         - [Firewall](./services/proxy/filters/firewall.md)
@@ -41,7 +42,7 @@
 
 - [Relay](./services/relay.md)
     - [Metrics]()
-    - [Providers]()
+    - [Agents](./services/agent.md)
 
 # SDKs
 

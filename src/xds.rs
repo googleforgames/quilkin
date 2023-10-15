@@ -198,7 +198,12 @@ mod tests {
             ..<_>::default()
         };
 
-        tokio::spawn(async move { client_proxy.run(client_config, shutdown_rx).await });
+        let proxy_admin = crate::cli::Admin::Proxy(<_>::default());
+        tokio::spawn(async move {
+            client_proxy
+                .run(client_config, proxy_admin, shutdown_rx)
+                .await
+        });
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
@@ -296,13 +301,14 @@ mod tests {
         tokio::spawn(server::spawn(23456, config.clone()));
         let client = Client::connect(
             "test-client".into(),
+            crate::cli::Admin::Manage(<_>::default()),
             vec!["http://127.0.0.1:23456".try_into().unwrap()],
         )
         .await
         .unwrap();
         let mut stream = client.xds_client_stream(
             config.clone(),
-            crate::xds::server::IDLE_REQUEST_INTERVAL_SECS,
+            crate::cli::admin::IDLE_REQUEST_INTERVAL_SECS,
         );
         tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
@@ -320,14 +326,14 @@ mod tests {
             tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
             let filters = crate::filters::FilterChain::try_from(vec![
-                ConcatenateBytes::as_filter_config(concatenate_bytes::Config {
-                    on_read: concatenate_bytes::Strategy::Append,
+                Concatenate::as_filter_config(concatenate::Config {
+                    on_read: concatenate::Strategy::Append,
                     on_write: <_>::default(),
                     bytes: b1.as_bytes().to_vec(),
                 })
                 .unwrap(),
-                ConcatenateBytes::as_filter_config(concatenate_bytes::Config {
-                    on_read: concatenate_bytes::Strategy::Append,
+                Concatenate::as_filter_config(concatenate::Config {
+                    on_read: concatenate::Strategy::Append,
                     on_write: <_>::default(),
                     bytes: b2.as_bytes().to_vec(),
                 })

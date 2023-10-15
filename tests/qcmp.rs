@@ -50,9 +50,10 @@ async fn agent_ping() {
     };
     let server_config = std::sync::Arc::new(quilkin::Config::default());
     let (_tx, rx) = tokio::sync::watch::channel(());
+    let admin = quilkin::cli::Admin::Agent(<_>::default());
     tokio::spawn(async move {
         agent
-            .run(server_config, rx)
+            .run(server_config, admin, rx)
             .await
             .expect("Agent should run")
     });

@@ -1,4 +1,5 @@
-# Copyright 2021 Google LLC
+#
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,7 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-[toolchain]
-channel = "1.73.0"
-components = ["rustfmt", "clippy"]
+version: v1alpha1
+filters:
+  - name: quilkin.filters.concatenate.v1alpha1.Concatenate
+    config:
+      on_read: APPEND
+      on_write: DO_NOTHING
+      bytes: NDU2 # 456
+clusters:
+  - endpoints:
+    - address: ${LOADBALANCER_IP}:7777
