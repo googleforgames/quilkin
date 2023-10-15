@@ -34,8 +34,6 @@ pub struct Endpoint {
     pub address: EndpointAddress,
     #[serde(default)]
     pub metadata: EndpointMetadata,
-    #[serde(skip, default)]
-    pub sessions: std::sync::Arc<std::sync::atomic::AtomicUsize>,
 }
 
 impl Endpoint {
@@ -62,7 +60,6 @@ impl Default for Endpoint {
         Self {
             address: EndpointAddress::UNSPECIFIED,
             metadata: <_>::default(),
-            sessions: <_>::default(),
         }
     }
 }
@@ -99,7 +96,6 @@ impl TryFrom<crate::cluster::proto::Endpoint> for Endpoint {
 
         Ok(Self {
             address: (host, endpoint.port as u16).into(),
-            sessions: <_>::default(),
             metadata: endpoint
                 .metadata
                 .map(TryFrom::try_from)

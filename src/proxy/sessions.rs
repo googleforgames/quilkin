@@ -278,9 +278,6 @@ impl Drop for Session {
     fn drop(&mut self) {
         self.active_session_metric().dec();
         metrics::duration_secs().observe(self.created_at.elapsed().as_secs() as f64);
-        self.dest
-            .sessions
-            .fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
 
         if let Err(error) = self.shutdown_tx.send(()) {
             tracing::warn!(%error, "Error sending session shutdown signal");
