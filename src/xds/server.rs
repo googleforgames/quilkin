@@ -518,11 +518,11 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
         tracing::info!(%identifier, "new control plane discovery stream");
         let config = self.config.clone();
         let idle_request_interval_secs = self.idle_request_interval_secs;
-        let stream = super::client::AdsStream::connect(
+        let stream = super::client::AdsDeltaStream::connect(
             Arc::from(&*identifier),
             move |(mut requests, _rx), _subscribed_resources| async move {
                 tracing::info!(%identifier, "sending initial discovery request");
-                crate::xds::client::MdsStream::discovery_request_without_cache(
+                crate::xds::client::MdsStream::delta_discovery_request_without_cache(
                     &identifier,
                     &mut requests,
                     crate::xds::ResourceType::Cluster,
@@ -547,7 +547,7 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
                         requests.send(ack?)?;
                     } else {
                         tracing::info!("exceeded idle interval, sending request");
-                        crate::xds::client::MdsStream::discovery_request_without_cache(
+                        crate::xds::client::MdsStream::delta_discovery_request_without_cache(
                             &identifier,
                             &mut requests,
                             crate::xds::ResourceType::Cluster,

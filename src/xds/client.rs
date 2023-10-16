@@ -47,8 +47,10 @@ type SubscribedResources = Arc<Mutex<HashSet<(ResourceType, Vec<String>)>>>;
 
 pub type AdsClient = Client<AdsGrpcClient>;
 pub type AdsStream = BidirectionalStream<AdsGrpcClient>;
+pub type AdsDeltaStream = BidirectionalDeltaStream<AdsGrpcClient>;
 pub type MdsClient = Client<MdsGrpcClient>;
 pub type MdsStream = BidirectionalStream<MdsGrpcClient>;
+pub type MdsDeltaStream = BidirectionalDeltaStream<MdsGrpcClient>;
 
 #[tonic::async_trait]
 pub trait ServiceClient: Clone + Sized + Send + 'static {
@@ -653,8 +655,8 @@ pub struct BidirectionalDeltaStream<C: ServiceClient> {
     subscribed_resources: SubscribedResources,
 }
 
-impl BidirectionalStream {
-    pub fn delta_connect<F>(
+impl<C: ServiceClient> BidirectionalDeltaStream<C> {
+    pub fn connect<F>(
         identifier: Arc<str>,
         response_task: impl FnOnce(
             (
@@ -686,6 +688,9 @@ impl BidirectionalStream {
         }
     }
 
+    pub(crate) fn requests(&self) -> broadcast::Sender<C::DeltaRequest> {
+        self.requests.clone()
+    }
 }
 
 pub fn handle_delta_discovery_responses(
