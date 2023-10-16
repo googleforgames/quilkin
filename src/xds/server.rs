@@ -349,10 +349,10 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
                     );
 
                     if let Ok(Some(ack)) = next_response.await {
-                        tracing::info!("sending ack request");
+                        tracing::debug!("sending ack request");
                         requests.send(ack?)?;
                     } else {
-                        tracing::info!("exceeded idle interval, sending request");
+                        tracing::debug!("exceeded idle interval, sending request");
                         crate::xds::client::MdsStream::discovery_request_without_cache(
                             &identifier,
                             &mut requests,
