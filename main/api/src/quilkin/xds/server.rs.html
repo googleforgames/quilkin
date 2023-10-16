@@ -856,10 +856,10 @@
                     );
 
                     <span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(ack)) = next_response.<span class="kw">await </span>{
-                        <span class="macro">tracing::info!</span>(<span class="string">&quot;sending ack request&quot;</span>);
+                        <span class="macro">tracing::debug!</span>(<span class="string">&quot;sending ack request&quot;</span>);
                         requests.send(ack<span class="question-mark">?</span>)<span class="question-mark">?</span>;
                     } <span class="kw">else </span>{
-                        <span class="macro">tracing::info!</span>(<span class="string">&quot;exceeded idle interval, sending request&quot;</span>);
+                        <span class="macro">tracing::debug!</span>(<span class="string">&quot;exceeded idle interval, sending request&quot;</span>);
                         <span class="kw">crate</span>::xds::client::MdsStream::discovery_request_without_cache(
                             <span class="kw-2">&amp;</span>identifier,
                             <span class="kw-2">&amp;mut </span>requests,
