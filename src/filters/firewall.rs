@@ -166,23 +166,13 @@ mod tests {
             }],
         };
 
-        let endpoint = Endpoint::new((Ipv4Addr::LOCALHOST, 80).into());
         let local_addr: crate::endpoint::EndpointAddress = (Ipv4Addr::LOCALHOST, 8081).into();
 
-        let mut ctx = WriteContext::new(
-            endpoint.clone(),
-            ([192, 168, 75, 20], 80).into(),
-            local_addr.clone(),
-            vec![],
-        );
+        let mut ctx =
+            WriteContext::new(([192, 168, 75, 20], 80).into(), local_addr.clone(), vec![]);
         assert!(firewall.write(&mut ctx).await.is_ok());
 
-        let mut ctx = WriteContext::new(
-            endpoint,
-            ([192, 168, 77, 20], 80).into(),
-            local_addr,
-            vec![],
-        );
+        let mut ctx = WriteContext::new(([192, 168, 77, 20], 80).into(), local_addr, vec![]);
         assert!(firewall.write(&mut ctx).await.is_err());
     }
 }

@@ -196,7 +196,6 @@ mod tests {
 
         // write decompress
         let mut write_context = WriteContext::new(
-            Endpoint::new("127.0.0.1:80".parse().unwrap()),
             "127.0.0.1:8080".parse().unwrap(),
             "127.0.0.1:8081".parse().unwrap(),
             read_context.contents.clone(),
@@ -223,7 +222,6 @@ mod tests {
 
         assert!(compression
             .write(&mut WriteContext::new(
-                Endpoint::new("127.0.0.1:80".parse().unwrap()),
                 "127.0.0.1:8080".parse().unwrap(),
                 "127.0.0.1:8081".parse().unwrap(),
                 b"hello".to_vec(),
@@ -270,7 +268,6 @@ mod tests {
         assert_eq!(b"hello", &*read_context.contents);
 
         let mut write_context = WriteContext::new(
-            Endpoint::new("127.0.0.1:80".parse().unwrap()),
             "127.0.0.1:8080".parse().unwrap(),
             "127.0.0.1:8081".parse().unwrap(),
             b"hello".to_vec(),
@@ -329,7 +326,6 @@ mod tests {
         let expected = contents_fixture();
         // write compress
         let mut write_context = WriteContext::new(
-            Endpoint::new("127.0.0.1:80".parse().unwrap()),
             "127.0.0.1:8080".parse().unwrap(),
             "127.0.0.1:8081".parse().unwrap(),
             expected.clone(),

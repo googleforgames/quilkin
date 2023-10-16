@@ -73,6 +73,15 @@ impl<V> Value<V> {
     }
 }
 
+impl<V: std::fmt::Debug> std::fmt::Debug for Value<V> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Value")
+            .field("value", &self.value)
+            .field("expires_at", &self.expires_at)
+            .finish()
+    }
+}
+
 impl<V> std::ops::Deref for Value<V> {
     type Target = V;
 
@@ -87,6 +96,18 @@ struct Map<K, V> {
     ttl: Duration,
     clock: Clock,
     shutdown_tx: Option<Sender<()>>,
+}
+
+impl<K: std::fmt::Debug + std::hash::Hash + std::cmp::Eq, V: std::fmt::Debug> std::fmt::Debug
+    for Map<K, V>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Map")
+            .field("inner", &self.inner)
+            .field("ttl", &self.ttl)
+            .field("shutdown_tx", &self.shutdown_tx)
+            .finish()
+    }
 }
 
 impl<K, V> Drop for Map<K, V> {
@@ -211,6 +232,11 @@ where
             .map(|value| value.value)
     }
 
+    /// Removes a key-value pair from the map.
+    pub fn remove(&self, key: K) -> bool {
+        self.0.inner.remove(&key).is_some()
+    }
+
     /// Returns an entry for in-place updates of the specified key-value pair.
     /// Note: This acquires a write lock on the map's shard that corresponds
     /// to the entry.
@@ -228,6 +254,14 @@ where
                 clock: self.0.clock.clone(),
             }),
         }
+    }
+}
+
+impl<K: std::fmt::Debug + std::hash::Hash + std::cmp::Eq, V: std::fmt::Debug> std::fmt::Debug
+    for TtlMap<K, V>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TtlMap").field("inner", &self.0).finish()
     }
 }
 
@@ -274,6 +308,19 @@ impl<'a, K, V> OccupiedEntry<'a, K, Value<V>>
 where
     K: Eq + Hash,
 {
+    /// Returns a reference to the entry's value.
+    /// The value will be reset to expire at the configured TTL after the time of retrieval.
+    pub fn into_ref(self) -> Ref<'a, K, Value<V>> {
+        match self.inner {
+            DashMapEntry::Occupied(entry) => {
+                let value = entry.into_ref();
+                value.value().update_expiration(self.ttl);
+                value.downgrade()
+            }
+            _ => unreachable!("BUG: entry type should be occupied"),
+        }
+    }
+
     /// Returns a reference to the entry's value.
     /// The value will be reset to expire at the configured TTL after the time of retrieval.
     pub fn get(&self) -> &Value<V> {

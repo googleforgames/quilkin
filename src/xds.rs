@@ -157,8 +157,9 @@ mod tests {
         let mut helper = crate::test_utils::TestHelper::default();
         let token = "mytoken";
         let address = {
-            let mut addr = Endpoint::new(helper.run_echo_server(&AddressType::Random).await);
+            let mut addr = Endpoint::new(helper.run_echo_server(&AddressType::Ipv6).await);
             addr.metadata.known.tokens.insert(token.into());
+            crate::test_utils::map_to_localhost(&mut addr.address).await;
             addr
         };
         let clusters = crate::cluster::ClusterMap::default();
@@ -275,10 +276,7 @@ mod tests {
 
         client
             .socket
-            .send_to(
-                &packet,
-                (std::net::Ipv4Addr::UNSPECIFIED, client_addr.port()),
-            )
+            .send_to(&packet, (std::net::Ipv6Addr::LOCALHOST, client_addr.port()))
             .await
             .unwrap();
         let response = tokio::time::timeout(std::time::Duration::from_secs(1), client.packet_rx)
@@ -315,7 +313,7 @@ mod tests {
         // Each time, we create a new upstream endpoint and send a cluster update for it.
         let concat_bytes = vec![("b", "c,"), ("d", "e")];
         for (b1, b2) in concat_bytes.into_iter() {
-            let socket = std::net::UdpSocket::bind((std::net::Ipv4Addr::UNSPECIFIED, 0)).unwrap();
+            let socket = std::net::UdpSocket::bind((std::net::Ipv6Addr::LOCALHOST, 0)).unwrap();
             let local_addr: crate::endpoint::EndpointAddress = socket.local_addr().unwrap().into();
 
             config.clusters.modify(|clusters| {

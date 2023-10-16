@@ -418,7 +418,7 @@ mod tests {
             std::fs::write(endpoints_file.path(), {
                 config.clusters.write().insert_default(
                     [Endpoint::with_metadata(
-                        (std::net::Ipv4Addr::LOCALHOST, server_port).into(),
+                        (std::net::Ipv6Addr::LOCALHOST, server_port).into(),
                         crate::endpoint::Metadata {
                             tokens: vec![token.clone()].into_iter().collect(),
                         },
@@ -436,7 +436,7 @@ mod tests {
 
             assert_eq!(
                 "hello",
-                timeout(Duration::from_secs(5), rx.recv())
+                timeout(Duration::from_millis(500), rx.recv())
                     .await
                     .expect("should have received a packet")
                     .unwrap()
@@ -449,7 +449,7 @@ mod tests {
             let msg = b"hello\xFF\xFF\xFF";
             socket.send_to(msg, &proxy_address).await.unwrap();
 
-            let result = timeout(Duration::from_secs(3), rx.recv()).await;
+            let result = timeout(Duration::from_millis(500), rx.recv()).await;
             assert!(result.is_err(), "should not have received a packet");
             tracing::info!(?token, "didn't receive bad packet");
         }

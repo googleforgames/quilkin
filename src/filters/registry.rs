@@ -113,7 +113,7 @@ mod tests {
             .await
             .is_ok());
         assert!(filter
-            .write(&mut WriteContext::new(endpoint, addr.clone(), addr, vec![],))
+            .write(&mut WriteContext::new(addr.clone(), addr, vec![],))
             .await
             .is_ok());
     }

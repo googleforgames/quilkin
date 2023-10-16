@@ -32,7 +32,8 @@ async fn metrics_server() {
         .port();
 
     // create server configuration
-    let server_addr = quilkin::test_utils::available_addr(&AddressType::Random).await;
+    let mut server_addr = quilkin::test_utils::available_addr(&AddressType::Random).await;
+    quilkin::test_utils::map_addr_to_localhost(&mut server_addr);
     let server_proxy = quilkin::cli::Proxy {
         port: server_addr.port(),
         ..<_>::default()
@@ -44,7 +45,7 @@ async fn metrics_server() {
     t.run_server(
         server_config,
         server_proxy,
-        Some(Some((std::net::Ipv6Addr::UNSPECIFIED, metrics_port).into())),
+        Some(Some((std::net::Ipv4Addr::UNSPECIFIED, metrics_port).into())),
     );
 
     // create a local client

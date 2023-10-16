@@ -22,14 +22,12 @@ use std::{
 use socket2::{Protocol, Socket, Type};
 use tokio::{net::ToSocketAddrs, net::UdpSocket};
 
-use crate::Result;
-
 /// returns a UdpSocket with address and port reuse, on Ipv6Addr::UNSPECIFIED
-fn socket_with_reuse(port: u16) -> Result<UdpSocket> {
+fn socket_with_reuse(port: u16) -> std::io::Result<UdpSocket> {
     socket_with_reuse_and_address((Ipv6Addr::UNSPECIFIED, port).into())
 }
 
-fn socket_with_reuse_and_address(addr: SocketAddr) -> Result<UdpSocket> {
+fn socket_with_reuse_and_address(addr: SocketAddr) -> std::io::Result<UdpSocket> {
     let domain = match addr {
         SocketAddr::V4(_) => socket2::Domain::IPV4,
         SocketAddr::V6(_) => socket2::Domain::IPV6,
@@ -43,7 +41,7 @@ fn socket_with_reuse_and_address(addr: SocketAddr) -> Result<UdpSocket> {
         sock.set_only_v6(false)?;
     }
     sock.bind(&addr.into())?;
-    UdpSocket::from_std(sock.into()).map_err(|error| eyre::eyre!(error))
+    UdpSocket::from_std(sock.into())
 }
 
 #[cfg(not(target_family = "windows"))]
@@ -60,19 +58,26 @@ fn enable_reuse(sock: &Socket) -> io::Result<()> {
 
 /// An ipv6 socket that can accept and send data from either a local ipv4 address or ipv6 address
 /// with port reuse enabled and only_v6 set to false.
+#[derive(Debug)]
 pub struct DualStackLocalSocket {
     socket: UdpSocket,
 }
 
 impl DualStackLocalSocket {
-    pub fn new(port: u16) -> Result<DualStackLocalSocket> {
+    pub fn new(port: u16) -> std::io::Result<DualStackLocalSocket> {
         Ok(Self {
             socket: socket_with_reuse(port)?,
         })
     }
 
+    pub fn bind_local(port: u16) -> std::io::Result<DualStackLocalSocket> {
+        Ok(Self {
+            socket: socket_with_reuse_and_address((Ipv6Addr::LOCALHOST, port).into())?,
+        })
+    }
+
     /// Primarily used for testing of ipv4 vs ipv6 addresses.
-    pub(crate) fn new_with_address(addr: SocketAddr) -> Result<DualStackLocalSocket> {
+    pub(crate) fn new_with_address(addr: SocketAddr) -> std::io::Result<DualStackLocalSocket> {
         Ok(Self {
             socket: socket_with_reuse_and_address(addr)?,
         })
@@ -199,4 +204,22 @@ mod tests {
                 .unwrap()
         );
     }
+}
+
+/// Converts a a socket address to its canonical version.
+/// This is just a copy of the method available in std but that is currently
+/// nightly only.
+pub fn to_canonical(addr: &mut SocketAddr) {
+    let ip = match addr.ip() {
+        std::net::IpAddr::V6(ip) => {
+            if let Some(mapped) = ip.to_ipv4_mapped() {
+                std::net::IpAddr::V4(mapped)
+            } else {
+                std::net::IpAddr::V6(ip)
+            }
+        }
+        addr => addr,
+    };
+
+    addr.set_ip(ip);
 }

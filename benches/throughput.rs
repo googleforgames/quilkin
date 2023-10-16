@@ -56,6 +56,9 @@ static THROUGHPUT_SERVER_INIT: Lazy<()> = Lazy::new(|| {
 static FEEDBACK_LOOP: Lazy<()> = Lazy::new(|| {
     std::thread::spawn(|| {
         let socket = UdpSocket::bind(FEEDBACK_LOOP_ADDR).unwrap();
+        socket
+            .set_read_timeout(Some(std::time::Duration::from_millis(500)))
+            .unwrap();
 
         loop {
             let mut packet = [0; MESSAGE_SIZE];
@@ -74,6 +77,9 @@ fn throughput_benchmark(c: &mut Criterion) {
     // Sleep to give the servers some time to warm-up.
     std::thread::sleep(std::time::Duration::from_millis(500));
     let socket = UdpSocket::bind(BENCH_LOOP_ADDR).unwrap();
+    socket
+        .set_read_timeout(Some(std::time::Duration::from_millis(500)))
+        .unwrap();
     let mut packet = [0; MESSAGE_SIZE];
 
     let mut group = c.benchmark_group("throughput");
@@ -125,6 +131,9 @@ fn write_feedback(addr: SocketAddr) -> mpsc::Sender<Vec<u8>> {
     let (write_tx, write_rx) = mpsc::channel::<Vec<u8>>();
     std::thread::spawn(move || {
         let socket = UdpSocket::bind(addr).unwrap();
+        socket
+            .set_read_timeout(Some(std::time::Duration::from_millis(500)))
+            .unwrap();
         let mut packet = [0; MESSAGE_SIZE];
         let (_, source) = socket.recv_from(&mut packet).unwrap();
         while let Ok(packet) = write_rx.recv() {
@@ -142,6 +151,9 @@ fn readwrite_benchmark(c: &mut Criterion) {
     let (read_tx, read_rx) = mpsc::channel::<Vec<u8>>();
     std::thread::spawn(move || {
         let socket = UdpSocket::bind(READ_LOOP_ADDR).unwrap();
+        socket
+            .set_read_timeout(Some(std::time::Duration::from_millis(500)))
+            .unwrap();
         let mut packet = [0; MESSAGE_SIZE];
         loop {
             let (length, _) = socket.recv_from(&mut packet).unwrap();
@@ -164,9 +176,12 @@ fn readwrite_benchmark(c: &mut Criterion) {
     Lazy::force(&WRITE_SERVER_INIT);
 
     // Sleep to give the servers some time to warm-up.
-    std::thread::sleep(std::time::Duration::from_millis(500));
+    std::thread::sleep(std::time::Duration::from_millis(150));
 
     let socket = UdpSocket::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
+    socket
+        .set_read_timeout(Some(std::time::Duration::from_millis(500)))
+        .unwrap();
 
     // prime the direct write connection
     socket.send_to(PACKETS[0], direct_write_addr).unwrap();
