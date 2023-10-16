@@ -52,6 +52,8 @@ a list of the criteria for each service an provider.
 | Manage  | Provider is ready                                                   |
 | Relay   | Provider is ready                                                   |
 | Agent   | Provider is ready AND connected to relay                            |
+   
+<br/>
 
 | Provider | Readiness                                  |
 |----------|--------------------------------------------|
