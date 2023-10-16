@@ -48,9 +48,18 @@ spec:
             - name: RUST_LOG
               value: info #,quilkin=trace
           livenessProbe:
+            periodSeconds: 5
             failureThreshold: 3
             httpGet:
               path: /live
+              port: 8000
+              scheme: HTTP
+          readinessProbe:
+            periodSeconds: 1
+            failureThreshold: 900
+            successThreshold: 1
+            httpGet:
+              path: /ready
               port: 8000
               scheme: HTTP
           ports:
