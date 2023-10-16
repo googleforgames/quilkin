@@ -106,7 +106,7 @@ async fn main() -> quilkin::Result<()> {
     ));
     config.clusters.modify(|map| {
         map.insert_default(
-            [quilkin::endpoint::Endpoint::new(
+            [quilkin::net::endpoint::Endpoint::new(
                 (std::net::Ipv4Addr::LOCALHOST, 4321).into(),
             )]
             .into(),

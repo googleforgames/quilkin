@@ -5,7 +5,7 @@ use std::time;
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use once_cell::sync::Lazy;
-use quilkin::test_utils::AddressType;
+use quilkin::test::AddressType;
 
 const MESSAGE_SIZE: usize = 0xffff;
 const DEFAULT_MESSAGE: [u8; 0xffff] = [0xff; 0xffff];
@@ -30,13 +30,13 @@ fn run_quilkin(port: u16, endpoint: SocketAddr) {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         let config = Arc::new(quilkin::Config::default());
         config.clusters.modify(|clusters| {
-            clusters.insert_default([quilkin::endpoint::Endpoint::new(endpoint.into())].into())
+            clusters.insert_default([quilkin::net::endpoint::Endpoint::new(endpoint.into())].into())
         });
 
         let proxy = quilkin::cli::Proxy {
             port,
             qcmp_port: runtime
-                .block_on(quilkin::test_utils::available_addr(&AddressType::Random))
+                .block_on(quilkin::test::available_addr(&AddressType::Random))
                 .port(),
             ..<_>::default()
         };

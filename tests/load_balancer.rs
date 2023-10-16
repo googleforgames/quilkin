@@ -21,9 +21,9 @@ use tokio::time::timeout;
 
 use quilkin::{
     config::Filter,
-    endpoint::Endpoint,
     filters::{LoadBalancer, StaticFilter},
-    test_utils::{AddressType, TestHelper},
+    net::endpoint::Endpoint,
+    test::{AddressType, TestHelper},
 };
 
 #[tokio::test]

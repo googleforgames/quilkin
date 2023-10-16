@@ -14,12 +14,8 @@
  * limitations under the License.
  */
 
-use slog::Logger;
+//! Implementations and utility methods for various codecs used in Quilkin.
 
-pub(crate) use filter_chain::Error as FilterChainError;
-
-pub(crate) mod filter_manager;
-mod filter_registry;
-pub mod filters;
-
-mod filter_chain;
+pub mod base64;
+pub mod prost;
+pub mod qcmp;

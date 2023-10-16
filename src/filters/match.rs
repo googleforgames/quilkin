@@ -17,7 +17,10 @@
 mod config;
 mod metrics;
 
-use crate::{filters::prelude::*, metadata, xds as envoy};
+use crate::{
+    filters::prelude::*,
+    net::{endpoint::metadata, xds as envoy},
+};
 
 use self::{metrics::Metrics, quilkin::filters::matches::v1alpha1 as proto};
 
@@ -164,12 +167,15 @@ impl StaticFilter for Match {
 mod tests {
     use super::*;
 
-    use crate::{endpoint::Endpoint, filters::*};
+    use crate::{
+        filters::*,
+        net::endpoint::{metadata, Endpoint},
+    };
 
     #[tokio::test]
     async fn metrics() {
         let metrics = Metrics::new();
-        let key = crate::metadata::Key::from_static("myapp.com/token");
+        let key = metadata::Key::from_static("myapp.com/token");
         let config = Config {
             on_read: Some(DirectionalConfig {
                 metadata_key: key,

@@ -20,10 +20,9 @@ use tokio::time::{timeout, Duration};
 
 use quilkin::{
     config::Filter,
-    endpoint::Endpoint,
     filters::{Capture, StaticFilter, TokenRouter},
-    metadata::MetadataView,
-    test_utils::{AddressType, TestHelper},
+    net::endpoint::{metadata::MetadataView, Endpoint},
+    test::{AddressType, TestHelper},
 };
 
 /// This test covers both token_router and capture filters,
@@ -32,7 +31,7 @@ use quilkin::{
 async fn token_router() {
     let mut t = TestHelper::default();
     let mut echo = t.run_echo_server(&AddressType::Ipv6).await;
-    quilkin::test_utils::map_to_localhost(&mut echo).await;
+    quilkin::test::map_to_localhost(&mut echo).await;
 
     let capture_yaml = "
 suffix:

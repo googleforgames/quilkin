@@ -20,7 +20,7 @@ use prometheus::{
     IntGaugeVec, Opts, Registry, DEFAULT_BUCKETS,
 };
 
-use crate::maxmind_db::IpNetEntry;
+use crate::net::maxmind_db::IpNetEntry;
 
 pub use prometheus::Result;
 

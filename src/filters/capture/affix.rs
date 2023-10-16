@@ -1,4 +1,4 @@
-use crate::metadata::Value;
+use crate::net::endpoint::metadata::Value;
 
 /// Returns whether the capture size is bigger than the packet size.
 fn is_valid_size(contents: &[u8], size: u32) -> bool {

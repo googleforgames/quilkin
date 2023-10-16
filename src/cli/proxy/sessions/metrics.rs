@@ -26,7 +26,7 @@ const PREFIX_ENTITY_LABEL: &str = "prefix_entity";
 const PREFIX_NAME_LABEL: &str = "prefix_name";
 use crate::metrics::{ASN_LABEL, PREFIX_LABEL};
 
-pub(crate) fn active_sessions(asn: Option<&crate::maxmind_db::IpNetEntry>) -> IntGauge {
+pub(crate) fn active_sessions(asn: Option<&crate::net::maxmind_db::IpNetEntry>) -> IntGauge {
     static ACTIVE_SESSIONS: Lazy<IntGaugeVec> = Lazy::new(|| {
         prometheus::register_int_gauge_vec_with_registry! {
             Opts::new("active", "number of sessions currently active").subsystem(SUBSYSTEM),

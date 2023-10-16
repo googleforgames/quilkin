@@ -16,10 +16,7 @@
 
 #[cfg(doc)]
 use crate::filters::Filter;
-use crate::{
-    endpoint::{Endpoint, EndpointAddress},
-    metadata::DynamicMetadata,
-};
+use crate::net::endpoint::{metadata::DynamicMetadata, Endpoint, EndpointAddress};
 
 /// The input arguments to [`Filter::read`].
 #[non_exhaustive]

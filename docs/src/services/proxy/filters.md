@@ -128,4 +128,4 @@ required: [ 'name' ]
 [TokenRouter]: ./filters/token_router.md
 [Debug]: ./filters/debug.md
 [LocalRateLimit]: ./filters/local_rate_limit.md
-[`quilkin::metadata::Value`]: ../../../api/quilkin/metadata/enum.Value.html
+[`quilkin::metadata::Value`]: ../../../api/quilkin/net/endpoint/metadata/enum.Value.html

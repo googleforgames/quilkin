@@ -42,7 +42,7 @@ mod tests {
 
     use quilkin::{
         config::providers::k8s::agones::{Fleet, GameServer},
-        test_utils::TestHelper,
+        test::TestHelper,
     };
 
     use crate::{

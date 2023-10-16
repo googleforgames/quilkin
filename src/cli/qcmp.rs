@@ -15,7 +15,7 @@
  */
 use std::net::SocketAddr;
 
-use crate::protocol::Protocol;
+use crate::codec::qcmp::Protocol;
 
 #[derive(Clone, Debug, clap::Subcommand)]
 pub enum Qcmp {

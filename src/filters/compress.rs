@@ -136,7 +136,7 @@ impl StaticFilter for Compress {
 
 #[cfg(test)]
 mod tests {
-    use crate::{endpoint::Endpoint, filters::compress::compressor::Snappy};
+    use crate::{filters::compress::compressor::Snappy, net::endpoint::Endpoint};
 
     use super::*;
 

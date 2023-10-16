@@ -71,7 +71,7 @@ impl TryFrom<proto::Match> for Config {
 pub struct DirectionalConfig {
     /// The key for the metadata to compare against.
     #[serde(rename = "metadataKey")]
-    pub metadata_key: crate::metadata::Key,
+    pub metadata_key: crate::net::endpoint::metadata::Key,
     /// List of filters to compare and potentially run if any match.
     pub branches: Vec<Branch>,
     /// The behaviour for when none of the `branches` match.
@@ -122,7 +122,7 @@ impl TryFrom<proto::r#match::Config> for DirectionalConfig {
 #[derive(Debug, Deserialize, Serialize, Eq, PartialEq, schemars::JsonSchema)]
 pub struct Branch {
     /// The value to compare against the dynamic metadata.
-    pub value: crate::metadata::Value,
+    pub value: crate::net::endpoint::metadata::Value,
     /// The filter to run on successful matches.
     #[serde(flatten)]
     pub filter: Filter,
@@ -168,7 +168,7 @@ impl Default for Fallthrough {
     }
 }
 
-impl TryFrom<Fallthrough> for crate::xds::config::listener::v3::Filter {
+impl TryFrom<Fallthrough> for crate::net::xds::config::listener::v3::Filter {
     type Error = crate::filters::CreationError;
     fn try_from(fallthrough: Fallthrough) -> Result<Self, Self::Error> {
         fallthrough.0.try_into()

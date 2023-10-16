@@ -61,7 +61,7 @@ mod tests {
     use std::{collections::HashSet, net::Ipv4Addr};
 
     use super::*;
-    use crate::endpoint::{Endpoint, EndpointAddress};
+    use crate::net::endpoint::{Endpoint, EndpointAddress};
 
     async fn get_response_addresses(
         filter: &dyn Filter,

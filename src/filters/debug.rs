@@ -93,7 +93,7 @@ impl TryFrom<proto::Debug> for Config {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_utils::{assert_filter_read_no_change, assert_write_no_change};
+    use crate::test::{assert_filter_read_no_change, assert_write_no_change};
     use tracing_test::traced_test;
 
     use super::*;

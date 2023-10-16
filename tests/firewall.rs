@@ -23,9 +23,9 @@ use tokio::{
 
 use quilkin::{
     config::Filter,
-    endpoint::Endpoint,
     filters::{Firewall, StaticFilter},
-    test_utils::{available_addr, AddressType, TestHelper},
+    net::endpoint::Endpoint,
+    test::{available_addr, AddressType, TestHelper},
 };
 
 #[tokio::test]

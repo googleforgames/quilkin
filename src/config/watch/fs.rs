@@ -28,7 +28,7 @@ pub async fn watch(
     config: Arc<Config>,
     health_check: Arc<AtomicBool>,
     path: impl Into<std::path::PathBuf>,
-    locality: Option<crate::endpoint::Locality>,
+    locality: Option<crate::net::endpoint::Locality>,
 ) -> crate::Result<()> {
     let path = path.into();
     let span = tracing::info_span!("config_provider", path = %path.display());
@@ -93,9 +93,9 @@ mod tests {
 
         source.clusters.modify(|clusters| {
             clusters.insert_default(
-                [crate::endpoint::Endpoint::with_metadata(
+                [crate::net::endpoint::Endpoint::with_metadata(
                     (std::net::Ipv4Addr::LOCALHOST, 4321).into(),
-                    crate::endpoint::Metadata {
+                    crate::net::endpoint::Metadata {
                         tokens: <_>::from([Vec::from(*b"1x7ijy6")]),
                     },
                 )]

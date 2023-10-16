@@ -19,7 +19,7 @@
 use nom::bytes::complete;
 use tracing::Instrument;
 
-use crate::utils::net::DualStackLocalSocket;
+use crate::net::DualStackLocalSocket;
 
 // Magic number to distinguish control packets from regular traffic.
 const MAGIC_NUMBER: &[u8] = b"QLKN";

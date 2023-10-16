@@ -8,7 +8,7 @@ use kube::runtime::watcher::Event;
 
 use agones::GameServer;
 
-use crate::endpoint::{Endpoint, Locality};
+use crate::net::endpoint::{Endpoint, Locality};
 
 pub fn update_filters_from_configmap(
     client: kube::Client,

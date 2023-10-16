@@ -23,10 +23,10 @@ use tracing_subscriber::EnvFilter;
 
 use crate::{
     config::Config,
-    endpoint::{Endpoint, EndpointAddress},
     filters::{prelude::*, FilterRegistry},
-    metadata::Value,
-    utils::net::DualStackLocalSocket,
+    net::endpoint::metadata::Value,
+    net::endpoint::{Endpoint, EndpointAddress},
+    net::DualStackLocalSocket,
 };
 
 static LOG_ONCE: Once = Once::new();
@@ -240,7 +240,7 @@ impl TestHelper {
         let socket = create_socket().await;
         // sometimes give ipv6, sometimes ipv4.
         let mut addr = get_address(address_type, &socket);
-        crate::test_utils::map_addr_to_localhost(&mut addr);
+        crate::test::map_addr_to_localhost(&mut addr);
         let mut shutdown = self.get_shutdown_subscriber().await;
         let local_addr = addr;
         tokio::spawn(async move {
@@ -398,7 +398,7 @@ mod tests {
 
     use tokio::time::timeout;
 
-    use crate::test_utils::{AddressType, TestHelper};
+    use crate::test::{AddressType, TestHelper};
 
     #[tokio::test]
     async fn test_echo_server() {

@@ -46,7 +46,7 @@ impl Providers {
         &self,
         config: std::sync::Arc<crate::Config>,
         health_check: Arc<AtomicBool>,
-        locality: Option<crate::endpoint::Locality>,
+        locality: Option<crate::net::endpoint::Locality>,
     ) -> tokio::task::JoinHandle<crate::Result<()>> {
         match &self {
             Self::Agones {

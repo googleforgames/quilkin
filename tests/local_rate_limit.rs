@@ -20,9 +20,9 @@ use tokio::time::timeout;
 
 use quilkin::{
     config::Filter,
-    endpoint::Endpoint,
     filters::{LocalRateLimit, StaticFilter},
-    test_utils::{available_addr, AddressType, TestHelper},
+    net::endpoint::Endpoint,
+    test::{available_addr, AddressType, TestHelper},
 };
 
 #[tokio::test]
@@ -36,7 +36,7 @@ period: 1
     let echo = t.run_echo_server(&AddressType::Random).await;
 
     let mut server_addr = available_addr(&AddressType::Random).await;
-    quilkin::test_utils::map_addr_to_localhost(&mut server_addr);
+    quilkin::test::map_addr_to_localhost(&mut server_addr);
     let server_proxy = quilkin::cli::Proxy {
         port: server_addr.port(),
         ..<_>::default()

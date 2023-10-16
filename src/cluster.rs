@@ -20,7 +20,7 @@ use dashmap::DashMap;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-use crate::endpoint::{Endpoint, Locality};
+use crate::net::endpoint::{Endpoint, Locality};
 
 const SUBSYSTEM: &str = "cluster";
 

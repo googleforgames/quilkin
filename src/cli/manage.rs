@@ -60,7 +60,7 @@ impl Manage {
         mut shutdown_rx: tokio::sync::watch::Receiver<()>,
     ) -> crate::Result<()> {
         let locality = (self.region.is_some() || self.zone.is_some() || self.sub_zone.is_some())
-            .then(|| crate::endpoint::Locality {
+            .then(|| crate::net::endpoint::Locality {
                 region: self.region.clone().unwrap_or_default(),
                 zone: self.zone.clone().unwrap_or_default(),
                 sub_zone: self.sub_zone.clone().unwrap_or_default(),
@@ -81,7 +81,7 @@ impl Manage {
 
         let _relay_stream = if !self.relay.is_empty() {
             tracing::info!("connecting to relay server");
-            let client = crate::xds::client::MdsClient::connect(
+            let client = crate::net::xds::client::MdsClient::connect(
                 String::clone(&config.id.load()),
                 mode.clone(),
                 self.relay.clone(),
@@ -92,7 +92,7 @@ impl Manage {
             None
         };
 
-        let server_task = tokio::spawn(crate::xds::server::spawn(self.port, config))
+        let server_task = tokio::spawn(crate::net::xds::server::spawn(self.port, config))
             .map_err(From::from)
             .and_then(std::future::ready);
 

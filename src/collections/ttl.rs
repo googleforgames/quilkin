@@ -472,7 +472,7 @@ impl Clock {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::endpoint::EndpointAddress;
+    use crate::net::endpoint::EndpointAddress;
     use std::net::Ipv4Addr;
 
     use tokio::time;

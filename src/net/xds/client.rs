@@ -29,7 +29,7 @@ use tryhard::{
 use crate::{
     cli::Admin,
     config::Config,
-    xds::{
+    net::xds::{
         config::core::v3::Node,
         relay::aggregated_control_plane_discovery_service_client::AggregatedControlPlaneDiscoveryServiceClient,
         service::discovery::v3::{
@@ -396,7 +396,7 @@ impl MdsStream {
                 tracing::trace!("starting relay client stream task");
                 loop {
                     let initial_response = DiscoveryResponse {
-                        control_plane: Some(crate::xds::config::core::v3::ControlPlane {
+                        control_plane: Some(crate::net::xds::config::core::v3::ControlPlane {
                             identifier: (&*identifier).into(),
                         }),
                         ..<_>::default()
@@ -585,7 +585,7 @@ pub fn handle_discovery_responses(
             let mut request = DiscoveryRequest::try_from(response)?;
             if let Err(error) = result {
                 super::metrics::nacks(&control_plane_identifier, &request.type_url).inc();
-                request.error_detail = Some(crate::xds::google::rpc::Status {
+                request.error_detail = Some(crate::net::xds::google::rpc::Status {
                     code: 3,
                     message: error.to_string(),
                     ..<_>::default()

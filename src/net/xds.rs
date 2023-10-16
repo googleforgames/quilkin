@@ -99,7 +99,7 @@ mod xds {
                             resource_names: response
                                 .resources
                                 .into_iter()
-                                .map(crate::xds::Resource::try_from)
+                                .map(crate::net::xds::Resource::try_from)
                                 .map(|result| result.map(|resource| resource.name().to_owned()))
                                 .collect::<Result<Vec<_>, _>>()?,
                             type_url: response.type_url,
@@ -149,17 +149,17 @@ mod tests {
 
     use std::sync::Arc;
 
-    use crate::test_utils::AddressType;
-    use crate::{config::Config, endpoint::Endpoint, filters::*};
+    use crate::test::AddressType;
+    use crate::{config::Config, filters::*, net::endpoint::Endpoint};
 
     #[tokio::test]
     async fn token_routing() {
-        let mut helper = crate::test_utils::TestHelper::default();
+        let mut helper = crate::test::TestHelper::default();
         let token = "mytoken";
         let address = {
             let mut addr = Endpoint::new(helper.run_echo_server(&AddressType::Ipv6).await);
             addr.metadata.known.tokens.insert(token.into());
-            crate::test_utils::map_to_localhost(&mut addr.address).await;
+            crate::test::map_to_localhost(&mut addr.address).await;
             addr
         };
         let clusters = crate::cluster::ClusterMap::default();
@@ -168,7 +168,7 @@ mod tests {
         clusters.insert_default([address].into());
         tracing::debug!(?clusters);
 
-        let xds_port = crate::test_utils::available_addr(&AddressType::Random)
+        let xds_port = crate::test::available_addr(&AddressType::Random)
             .await
             .port();
         let xds_config: Arc<crate::Config> = serde_json::from_value(serde_json::json!({
@@ -179,7 +179,7 @@ mod tests {
         .map(Arc::new)
         .unwrap();
 
-        let client_addr = crate::test_utils::available_addr(&AddressType::Random).await;
+        let client_addr = crate::test::available_addr(&AddressType::Random).await;
         let client_config = serde_json::from_value(serde_json::json!({
             "version": "v1alpha1",
             "id": "test-proxy",
@@ -314,7 +314,8 @@ mod tests {
         let concat_bytes = vec![("b", "c,"), ("d", "e")];
         for (b1, b2) in concat_bytes.into_iter() {
             let socket = std::net::UdpSocket::bind((std::net::Ipv6Addr::LOCALHOST, 0)).unwrap();
-            let local_addr: crate::endpoint::EndpointAddress = socket.local_addr().unwrap().into();
+            let local_addr: crate::net::endpoint::EndpointAddress =
+                socket.local_addr().unwrap().into();
 
             config.clusters.modify(|clusters| {
                 let mut cluster = clusters.default_entry();
