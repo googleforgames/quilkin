@@ -111,11 +111,7 @@ pub fn update_endpoints_from_gameservers(
                         }
                     };
                     tracing::debug!(endpoint=%serde_json::to_value(&endpoint).unwrap(), "Adding endpoint");
-                    config.clusters.write()
-                        .entry(locality.clone())
-                        .or_default()
-                        .value_mut()
-                        .replace(endpoint);
+                    config.clusters.update(locality.clone(), [endpoint].into());
                 }
 
                 Event::Restarted(servers) => {
@@ -140,17 +136,25 @@ pub fn update_endpoints_from_gameservers(
                         "Restarting with endpoints"
                     );
 
-                    config.clusters.write().merge(locality.clone(), servers);
+                    config.clusters.update(locality.clone(), servers);
                 }
 
                 Event::Deleted(server) => {
                     tracing::debug!("received delete event from k8s");
                     let found = if let Some(endpoint) = server.endpoint() {
-                        config.clusters.write().remove_endpoint(&endpoint)
+                        config.clusters.delete_value([endpoint].into());
+                        true
                     } else {
-                        config.clusters.write().remove_endpoint_if(|endpoint| {
+                        let result = config.clusters.read().find_endpoint(|endpoint| {
                             endpoint.metadata.unknown.get("name") == server.metadata.name.clone().map(From::from).as_ref()
-                        })
+                        });
+
+                        if let Some(endpoint) = result {
+                            config.clusters.delete_value([endpoint].into());
+                            true
+                        } else {
+                            false
+                        }
                     };
 
                     if !found {

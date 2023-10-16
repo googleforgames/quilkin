@@ -340,7 +340,7 @@ pub async fn create_socket() -> DualStackLocalSocket {
 pub fn config_with_dummy_endpoint() -> Config {
     let config = Config::default();
 
-    config.clusters.write().insert(
+    config.clusters.update(
         None,
         [Endpoint {
             address: (std::net::Ipv4Addr::LOCALHOST, 8080).into(),

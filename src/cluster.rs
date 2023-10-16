@@ -109,6 +109,10 @@ impl ClusterMap {
         self.insert(None, endpoints);
     }
 
+    pub fn remove(&self, key: &Option<Locality>) -> Option<(Option<Locality>, BTreeSet<Endpoint>)> {
+        self.0.remove(key)
+    }
+
     pub fn remove_endpoint(&self, needle: &Endpoint) -> bool {
         self.remove_endpoint_if(|endpoint| endpoint.address == needle.address)
     }
@@ -122,6 +126,18 @@ impl ClusterMap {
         }
 
         false
+    }
+
+    pub fn find_endpoint(&self, closure: impl Fn(&Endpoint) -> bool) -> Option<Endpoint> {
+        for mut entry in self.0.iter_mut() {
+            let set = entry.value_mut();
+            if let Some(endpoint) = set.iter().find(|endpoint| (closure)(endpoint)).cloned() {
+                set.remove(&endpoint);
+                return Some(endpoint);
+            }
+        }
+
+        None
     }
 
     pub fn iter(&self) -> dashmap::iter::Iter<Option<Locality>, BTreeSet<Endpoint>> {
@@ -340,6 +356,27 @@ impl From<&'_ Endpoint> for proto::Endpoint {
         }
     }
 }
+
+impl crate::config::watch::Reconcile for ClusterMap {
+    type Key = Option<Locality>;
+    type Value = BTreeSet<Endpoint>;
+
+    fn update(&self, key: &Self::Key, value: Self::Value) -> u64 {
+        todo!()
+    }
+
+    fn remove_single_value(&self, value: Self::Value) -> Self::Value {
+        for endpoint in &value {
+            self.remove_endpoint(&endpoint);
+        }
+        value
+    }
+
+    fn remove_key(&self, key: &Self::Key) {
+        self.remove(key);
+    }
+}
+
 
 #[cfg(test)]
 mod tests {

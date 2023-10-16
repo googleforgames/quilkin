@@ -66,12 +66,6 @@ impl Manage {
                 sub_zone: self.sub_zone.clone().unwrap_or_default(),
             });
 
-        if let Some(locality) = &locality {
-            config
-                .clusters
-                .modify(|map| map.update_unlocated_endpoints(locality.clone()));
-        }
-
         let runtime_config = mode.unwrap_manage();
         let provider_task = self.provider.spawn(
             config.clone(),

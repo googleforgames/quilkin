@@ -101,16 +101,7 @@ impl Proxy {
         });
 
         if !self.to.is_empty() {
-            config.clusters.modify(|clusters| {
-                clusters.insert(
-                    None,
-                    self.to
-                        .iter()
-                        .cloned()
-                        .map(crate::endpoint::Endpoint::from)
-                        .collect(),
-                );
-            });
+            config.clusters.update(None, self.to.iter().cloned().map(crate::endpoint::Endpoint::from).collect());
         }
 
         if config.clusters.read().endpoints().count() == 0 && self.management_server.is_empty() {

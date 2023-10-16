@@ -16,7 +16,7 @@
 
 //! Quilkin configuration.
 
-use std::sync::Arc;
+use std::{collections::{BTreeMap, BTreeSet}, sync::Arc};
 
 use base64_serde::base64_serde_type;
 use schemars::JsonSchema;
@@ -24,10 +24,11 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    cluster::ClusterMap,
+    cluster::{EndpointWithLocality, ClusterMap},
+    endpoint::{Endpoint, Locality},
     filters::prelude::*,
     xds::{
-        config::listener::v3::Listener, service::discovery::v3::DiscoveryResponse, Resource,
+        config::listener::v3::Listener, service::discovery::v3::{DiscoveryResponse, DeltaDiscoveryResponse, Resource as DeltaResource}, Resource,
         ResourceType,
     },
 };
@@ -90,16 +91,15 @@ impl Config {
 
         if let Some(value) = map.get("clusters").cloned() {
             tracing::debug!(%value, "replacing clusters");
-            let value: ClusterMap = serde_json::from_value(value)?;
-            self.clusters.modify(|clusters| {
-                for cluster in value.iter() {
-                    clusters.merge(cluster.key().clone(), cluster.value().clone());
-                }
+            let vec: Vec<EndpointWithLocality> = serde_json::from_value(value)?;
+            let mut set: BTreeMap<Option<Locality>, BTreeSet<Endpoint>> = vec.into_iter().map(|le| (le.locality, le.endpoints)).collect();
+            if let Some(endpoints) = set.remove(&None) {
+                set.insert(locality, endpoints);
+            }
 
-                if let Some(locality) = locality {
-                    clusters.update_unlocated_endpoints(locality);
-                }
-            });
+            for (locality, endpoints) in set {
+                self.clusters.update(locality, endpoints);
+            }
         }
 
         self.apply_metrics();
@@ -153,6 +153,65 @@ impl Config {
         })
     }
 
+    pub fn delta_discovery_request(
+        &self,
+        _node_id: &str,
+        resource_type: ResourceType,
+        names: &[String],
+        resource_versions: &std::collections::HashMap<String, String>,
+    ) -> Result<DeltaDiscoveryResponse, eyre::Error> {
+        let mut resources = Vec::new();
+        match resource_type {
+            ResourceType::Listener => {
+                resources.push(DeltaResource {
+                    resource: Some(resource_type.encode_to_any(&Listener {
+                        filter_chains: vec![(&*self.filters.load()).try_into()?],
+                        ..<_>::default()
+                    })?),
+                    version: todo!(),
+                    ..DeltaResource::default()
+                });
+            }
+            ResourceType::Cluster => {
+                if names.is_empty() {
+                    for cluster in self.clusters.read().iter() {
+                        resources.push(DeltaResource {
+                            resource: Some(resource_type.encode_to_any(
+                                &crate::cluster::proto::Cluster::try_from((
+                                        cluster.key(),
+                                        cluster.value(),
+                                ))?,
+                            )?),
+                            version: todo!(),
+                            ..DeltaResource::default()
+                        });
+                    }
+                } else {
+                    for locality in names.iter().filter_map(|name| name.parse().ok()) {
+                        if let Some(cluster) = self.clusters.read().get(&Some(locality)) {
+                            resources.push(DeltaResource {
+                                resource: Some(resource_type.encode_to_any(
+                                    &crate::cluster::proto::Cluster::try_from((
+                                            cluster.key(),
+                                            cluster.value(),
+                                    ))?,
+                                )?),
+                                version: todo!(),
+                                ..DeltaResource::default()
+                            });
+                        }
+                    }
+                };
+            }
+        };
+
+        Ok(DeltaDiscoveryResponse {
+            resources,
+            type_url: resource_type.type_url().into(),
+            ..<_>::default()
+        })
+    }
+
     #[tracing::instrument(skip_all, fields(response = response.type_url()))]
     pub fn apply(&self, response: &Resource) -> crate::Result<()> {
         tracing::trace!(resource=?response, "applying resource");
@@ -170,7 +229,7 @@ impl Config {
                 self.filters.store(Arc::new(chain.try_into()?));
             }
             Resource::Cluster(cluster) => {
-                self.clusters.write().merge(
+                self.clusters.update(
                     cluster.locality.clone().map(From::from),
                     cluster
                         .endpoints

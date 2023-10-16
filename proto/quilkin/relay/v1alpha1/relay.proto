@@ -37,4 +37,8 @@ service AggregatedControlPlaneDiscoveryService {
   rpc StreamAggregatedResources(stream envoy.service.discovery.v3.DiscoveryResponse)
       returns (stream envoy.service.discovery.v3.DiscoveryRequest) {
   }
+  // Same as `StreamAggregatedResources` but for delta xDS.
+  rpc DeltaAggregatedResources(stream envoy.service.discovery.v3.DeltaDiscoveryResponse)
+      returns (stream envoy.service.discovery.v3.DeltaDiscoveryRequest) {
+  }
 }

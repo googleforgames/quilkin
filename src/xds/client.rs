@@ -34,7 +34,7 @@ use crate::{
         relay::aggregated_control_plane_discovery_service_client::AggregatedControlPlaneDiscoveryServiceClient,
         service::discovery::v3::{
             aggregated_discovery_service_client::AggregatedDiscoveryServiceClient,
-            DiscoveryRequest, DiscoveryResponse,
+            DiscoveryRequest, DiscoveryResponse, DeltaDiscoveryRequest, DeltaDiscoveryResponse,
         },
         Resource, ResourceType,
     },
@@ -54,6 +54,8 @@ pub type MdsStream = BidirectionalStream<MdsGrpcClient>;
 pub trait ServiceClient: Clone + Sized + Send + 'static {
     type Request: Clone + Send + Sync + Sized + 'static + std::fmt::Debug;
     type Response: Clone + Send + Sync + Sized + 'static + std::fmt::Debug;
+    type DeltaRequest: Clone + Send + Sync + Sized + 'static + std::fmt::Debug;
+    type DeltaResponse: Clone + Send + Sync + Sized + 'static + std::fmt::Debug;
 
     async fn connect(endpoint: tonic::transport::Endpoint)
         -> Result<Self, tonic::transport::Error>;
@@ -61,12 +63,19 @@ pub trait ServiceClient: Clone + Sized + Send + 'static {
         &mut self,
         stream: S,
     ) -> tonic::Result<tonic::Response<tonic::Streaming<Self::Response>>>;
+
+    async fn stream_delta_requests<S: tonic::IntoStreamingRequest<Message = Self::DeltaRequest> + Send>(
+        &mut self,
+        stream: S,
+    ) -> tonic::Result<tonic::Response<tonic::Streaming<Self::DeltaResponse>>>;
 }
 
 #[tonic::async_trait]
 impl ServiceClient for AdsGrpcClient {
     type Request = DiscoveryRequest;
     type Response = DiscoveryResponse;
+    type DeltaRequest = DeltaDiscoveryRequest;
+    type DeltaResponse = DeltaDiscoveryResponse;
 
     async fn connect(
         endpoint: tonic::transport::Endpoint,
@@ -80,12 +89,21 @@ impl ServiceClient for AdsGrpcClient {
     ) -> tonic::Result<tonic::Response<tonic::Streaming<Self::Response>>> {
         self.stream_aggregated_resources(stream).await
     }
+
+    async fn stream_delta_requests<S: tonic::IntoStreamingRequest<Message = Self::DeltaRequest> + Send>(
+        &mut self,
+        stream: S,
+    ) -> tonic::Result<tonic::Response<tonic::Streaming<Self::DeltaResponse>>> {
+        self.delta_aggregated_resources(stream).await
+    }
 }
 
 #[tonic::async_trait]
 impl ServiceClient for MdsGrpcClient {
     type Request = DiscoveryResponse;
     type Response = DiscoveryRequest;
+    type DeltaRequest = DeltaDiscoveryResponse;
+    type DeltaResponse = DeltaDiscoveryRequest;
 
     async fn connect(
         endpoint: tonic::transport::Endpoint,
@@ -98,6 +116,13 @@ impl ServiceClient for MdsGrpcClient {
         stream: S,
     ) -> tonic::Result<tonic::Response<tonic::Streaming<Self::Response>>> {
         self.stream_aggregated_resources(stream).await
+    }
+
+    async fn stream_delta_requests<S: tonic::IntoStreamingRequest<Message = Self::DeltaRequest> + Send>(
+        &mut self,
+        stream: S,
+    ) -> tonic::Result<tonic::Response<tonic::Streaming<Self::DeltaResponse>>> {
+        self.delta_aggregated_resources(stream).await
     }
 }
 
@@ -523,6 +548,27 @@ impl<C: ServiceClient> BidirectionalStream<C> {
         tracing::trace!(r#type=%resource_type, ?names, "sending discovery request");
         requests.send(request).map_err(From::from).map(drop)
     }
+
+    pub(crate) fn delta_discovery_request_without_cache(
+        identifier: &str,
+        requests: &mut broadcast::Sender<DeltaDiscoveryRequest>,
+        resource_type: ResourceType,
+        names: &[String],
+    ) -> Result<()> {
+        let request = DeltaDiscoveryRequest {
+            node: Some(Node {
+                id: identifier.into(),
+                user_agent_name: "quilkin".into(),
+                ..Node::default()
+            }),
+            resource_names_subscribe: names.to_vec(),
+            type_url: resource_type.type_url().into(),
+            ..DeltaDiscoveryRequest::default()
+        };
+
+        tracing::trace!(r#type=%resource_type, ?names, "sending delta discovery request");
+        requests.send(request).map_err(From::from).map(drop)
+    }
 }
 
 impl<C: ServiceClient> Drop for BidirectionalStream<C> {
@@ -597,4 +643,105 @@ pub fn handle_discovery_responses(
             yield request;
         }
     })
+}
+
+/// An active xDS gRPC management stream.
+pub struct BidirectionalDeltaStream<C: ServiceClient> {
+    identifier: Arc<str>,
+    requests: broadcast::Sender<C::DeltaRequest>,
+    handle_discovery_response: tokio::task::JoinHandle<Result<()>>,
+    subscribed_resources: SubscribedResources,
+}
+
+impl BidirectionalStream {
+    pub fn delta_connect<F>(
+        identifier: Arc<str>,
+        response_task: impl FnOnce(
+            (
+                broadcast::Sender<C::DeltaRequest>,
+                broadcast::Receiver<C::DeltaRequest>,
+            ),
+            SubscribedResources,
+        ) -> F,
+    ) -> Self
+    where
+        F: std::future::Future<Output = crate::Result<()>> + Send + 'static,
+    {
+        let (requests, rx) = broadcast::channel::<C::DeltaRequest>(12);
+        let subscribed_resources: SubscribedResources = <_>::default();
+
+        tracing::trace!("spawning stream background task");
+        let handle_discovery_response = tokio::spawn({
+            let requests = requests.clone();
+            let subscribed_resources = subscribed_resources.clone();
+            (response_task)((requests, rx), subscribed_resources)
+                .instrument(tracing::trace_span!("handle_discovery_response"))
+        });
+
+        Self {
+            identifier,
+            requests,
+            handle_discovery_response,
+            subscribed_resources,
+        }
+    }
+
+}
+
+pub fn handle_delta_discovery_responses(
+    identifier: String,
+    stream: impl futures::Stream<Item = tonic::Result<DeltaDiscoveryResponse>> + 'static + Send,
+    on_new_resource: impl Fn(&Resource) -> crate::Result<()> + Send + Sync + 'static,
+) -> std::pin::Pin<Box<dyn futures::Stream<Item = Result<DeltaDiscoveryRequest>> + Send>> {
+    todo!()
+    /*
+    Box::pin(async_stream::try_stream! {
+        let _stream_metrics = super::metrics::StreamConnectionMetrics::new(identifier.clone());
+        tracing::debug!("awaiting response");
+        for await response in stream
+        {
+            let response = match response {
+                Ok(response) => response,
+                Err(error) => {
+                    tracing::warn!(%error, "Error from xDS server");
+                    break;
+                }
+            };
+
+            let control_plane_identifier = response.control_plane.as_ref().map(|cp| cp.identifier.clone()).unwrap_or_default();
+
+            super::metrics::discovery_responses(&control_plane_identifier, &response.type_url).inc();
+            tracing::debug!(
+                r#type = &*response.type_url,
+                nonce = &*response.nonce,
+                "received response"
+            );
+
+            let result = response
+                .resources
+                .iter()
+                .cloned()
+                .map(Resource::try_from)
+                .try_for_each(|resource| {
+                    let resource = resource?;
+                    tracing::debug!("applying resource");
+                    (on_new_resource)(&resource)
+                });
+
+            let mut request = DeltaDiscoveryRequest::try_from(response)?;
+            if let Err(error) = result {
+                super::metrics::nacks(&control_plane_identifier, &request.type_url).inc();
+                request.error_detail = Some(crate::xds::google::rpc::Status {
+                    code: 3,
+                    message: error.to_string(),
+                    ..<_>::default()
+                });
+            } else {
+                super::metrics::acks(&control_plane_identifier, &request.type_url).inc();
+            }
+
+            yield request;
+        }
+    })
+    */
 }

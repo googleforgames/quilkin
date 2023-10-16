@@ -174,6 +174,33 @@ impl ControlPlane {
         Ok(response)
     }
 
+    pub(crate) fn delta_discovery_response(
+        &self,
+        id: &str,
+        resource_type: ResourceType,
+        names: &[String],
+        resource_versions: &std::collections::HashMap<String, String>,
+    ) -> Result<DeltaDiscoveryResponse, tonic::Status> {
+        let mut response = self
+            .config
+            .delta_discovery_request(id, resource_type, names, resource_versions)
+            .map_err(|error| tonic::Status::internal(error.to_string()))?;
+
+        let nonce = uuid::Uuid::new_v4();
+        response.control_plane = Some(crate::xds::config::core::v3::ControlPlane {
+            identifier: (*self.config.id.load()).clone(),
+        });
+        response.nonce = nonce.to_string();
+
+        tracing::trace!(
+            r#type = &*response.type_url,
+            nonce = &*response.nonce,
+            "delta discovery response"
+        );
+
+        Ok(response)
+    }
+
     pub async fn stream_aggregated_resources<S>(
         &self,
         mut streaming: S,
@@ -266,6 +293,99 @@ impl ControlPlane {
             tracing::info!("terminating stream");
         }.instrument(tracing::info_span!("xds_stream", %node.id, %resource_type))))
     }
+
+    pub async fn delta_aggregated_resources<S>(
+        &self,
+        mut streaming: S,
+    ) -> Result<impl Stream<Item = Result<DeltaDiscoveryResponse, tonic::Status>> + Send, tonic::Status>
+    where
+        S: Stream<Item = Result<DeltaDiscoveryRequest, tonic::Status>>
+            + Send
+            + std::marker::Unpin
+            + 'static,
+    {
+        tracing::trace!("starting delta stream");
+        let message = streaming.next().await.ok_or_else(|| {
+            tracing::error!("No message found");
+            tonic::Status::invalid_argument("No message found")
+        })??;
+
+        if message.node.is_none() {
+            tracing::error!("Node identifier was not found");
+            return Err(tonic::Status::invalid_argument("Node identifier required"));
+        }
+
+        let node = message.node.clone().unwrap();
+        let resource_type: ResourceType = message.type_url.parse()?;
+        let mut rx = self.watchers[resource_type].receiver.clone();
+        let mut pending_acks = cached::TimedSizedCache::with_size_and_lifespan(50, 1);
+        let this = Self::clone(self);
+        let id = node.id.clone();
+
+        tracing::trace!(id = %node.id, %resource_type, "initial request");
+        metrics::discovery_requests(&id, resource_type.type_url()).inc();
+        let response = this.delta_discovery_response(&id, resource_type, &message.resource_names_subscribe, &message.initial_resource_versions)?;
+        pending_acks.cache_set(response.nonce.clone(), ());
+
+        Ok(Box::pin(async_stream::try_stream! {
+            yield response;
+
+            loop {
+                tokio::select! {
+                    _ = rx.changed() => {
+                        tracing::trace!("sending new discovery response");
+                        yield this.delta_discovery_response(&id, resource_type, &message.resource_names_subscribe, &message.initial_resource_versions).map(|response| {
+                            pending_acks.cache_set(response.nonce.clone(), ());
+                            response
+                        })?;
+                    }
+                    new_message = streaming.next() => {
+                        let new_message = match new_message.transpose() {
+                            Ok(Some(value)) => value,
+                            Ok(None) => break,
+                            Err(error) => {
+                                tracing::error!(%error, "error receiving message");
+                                continue;
+                            }
+                        };
+
+                        tracing::trace!("new message");
+                        let id = new_message.node.as_ref().map(|node| &*node.id).unwrap_or(&*id);
+                        let resource_type = match new_message.type_url.parse::<ResourceType>() {
+                            Ok(value) => value,
+                            Err(error) => {
+                                tracing::error!(%error, url=%new_message.type_url, "unknown resource type");
+                                continue;
+                            }
+                        };
+
+                        metrics::discovery_requests(id, resource_type.type_url()).inc();
+
+                        if let Some(error) = &new_message.error_detail {
+                            metrics::nacks(id, resource_type.type_url()).inc();
+                            tracing::error!(nonce = %new_message.response_nonce, ?error, "NACK");
+                            // Currently just resend previous discovery response.
+                        } else if uuid::Uuid::parse_str(&new_message.response_nonce).is_ok() {
+                            if pending_acks.cache_get(&new_message.response_nonce).is_some() {
+                                tracing::debug!(nonce = %new_message.response_nonce, "ACK");
+                                continue
+                            } else {
+                                tracing::trace!(nonce = %new_message.response_nonce, "Unknown nonce: could not be found in cache");
+                                continue
+                            }
+                        }
+
+                        yield this.delta_discovery_response(id, resource_type, &new_message.resource_names_subscribe, &new_message.initial_resource_versions).map(|response| {
+                            pending_acks.cache_set(response.nonce.clone(), ());
+                            response
+                        }).unwrap();
+                    }
+                }
+            }
+
+            tracing::info!("terminating stream");
+        }.instrument(tracing::info_span!("xds_stream", %node.id, %resource_type))))
+    }
 }
 
 #[tonic::async_trait]
@@ -301,6 +421,8 @@ impl AggregatedDiscoveryService for ControlPlane {
 impl AggregatedControlPlaneDiscoveryService for ControlPlane {
     type StreamAggregatedResourcesStream =
         std::pin::Pin<Box<dyn Stream<Item = Result<DiscoveryRequest, tonic::Status>> + Send>>;
+    type DeltaAggregatedResourcesStream =
+        std::pin::Pin<Box<dyn Stream<Item = Result<DeltaDiscoveryRequest, tonic::Status>> + Send>>;
 
     #[tracing::instrument(skip_all)]
     async fn stream_aggregated_resources(
@@ -337,6 +459,78 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
                 .map_err(|error| tonic::Status::internal(error.to_string()))?;
 
                 let mut response_handler = super::client::handle_discovery_responses(
+                    identifier.clone(),
+                    responses,
+                    move |resource| config.apply(resource),
+                );
+
+                loop {
+                    let next_response = tokio::time::timeout(
+                        std::time::Duration::from_secs(idle_request_interval_secs),
+                        response_handler.next(),
+                    );
+
+                    if let Ok(Some(ack)) = next_response.await {
+                        tracing::info!("sending ack request");
+                        requests.send(ack?)?;
+                    } else {
+                        tracing::info!("exceeded idle interval, sending request");
+                        crate::xds::client::MdsStream::discovery_request_without_cache(
+                            &identifier,
+                            &mut requests,
+                            crate::xds::ResourceType::Cluster,
+                            &[],
+                        )
+                        .map_err(|error| tonic::Status::internal(error.to_string()))?;
+                    }
+                }
+            },
+        );
+
+        Ok(tonic::Response::new(Box::pin(async_stream::stream! {
+            for await request in tokio_stream::wrappers::BroadcastStream::new(stream.requests().subscribe())
+                .map_err(|error| tonic::Status::internal(error.to_string()))
+            {
+                yield request;
+            }
+        })))
+    }
+
+    #[tracing::instrument(skip_all)]
+    async fn delta_aggregated_resources(
+        &self,
+        responses: tonic::Request<tonic::Streaming<DeltaDiscoveryResponse>>,
+    ) -> Result<tonic::Response<Self::DeltaAggregatedResourcesStream>, tonic::Status> {
+        tracing::info!("control plane discovery stream attempt");
+        let mut responses = responses.into_inner();
+        let Some(identifier) = responses
+            .next()
+            .await
+            .ok_or_else(|| tonic::Status::cancelled("received empty first response"))??
+            .control_plane
+            .map(|cp| cp.identifier)
+        else {
+            return Err(tonic::Status::invalid_argument(
+                "DiscoveryResponse.control_plane.identifier is required in the first message",
+            ));
+        };
+
+        tracing::info!(%identifier, "new control plane discovery stream");
+        let config = self.config.clone();
+        let idle_request_interval_secs = self.idle_request_interval_secs;
+        let stream = super::client::AdsStream::connect(
+            Arc::from(&*identifier),
+            move |(mut requests, _rx), _subscribed_resources| async move {
+                tracing::info!(%identifier, "sending initial discovery request");
+                crate::xds::client::MdsStream::discovery_request_without_cache(
+                    &identifier,
+                    &mut requests,
+                    crate::xds::ResourceType::Cluster,
+                    &[],
+                )
+                .map_err(|error| tonic::Status::internal(error.to_string()))?;
+
+                let mut response_handler = super::client::handle_delta_discovery_responses(
                     identifier.clone(),
                     responses,
                     move |resource| config.apply(resource),
