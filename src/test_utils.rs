@@ -182,7 +182,7 @@ impl TestHelper {
         &mut self,
     ) -> (mpsc::Receiver<String>, Arc<DualStackLocalSocket>) {
         let socket = Arc::new(
-            DualStackLocalSocket::new_with_address((Ipv4Addr::UNSPECIFIED, 0).into()).unwrap(),
+            DualStackLocalSocket::new_with_address((Ipv4Addr::LOCALHOST, 0).into()).unwrap(),
         );
         let packet_rx = self.recv_multiple_packets(&socket).await;
         (packet_rx, socket)
@@ -239,7 +239,8 @@ impl TestHelper {
     {
         let socket = create_socket().await;
         // sometimes give ipv6, sometimes ipv4.
-        let addr = get_address(address_type, &socket);
+        let mut addr = get_address(address_type, &socket);
+        crate::test_utils::map_addr_to_localhost(&mut addr);
         let mut shutdown = self.get_shutdown_subscriber().await;
         let local_addr = addr;
         tokio::spawn(async move {
@@ -249,6 +250,7 @@ impl TestHelper {
                     recvd = socket.recv_from(&mut buf) => {
                         let (size, sender) = recvd.unwrap();
                         let packet = &buf[..size];
+                        tracing::trace!(%sender, %size, "echo server received and returning packet");
                         tap(sender, packet, local_addr);
                         socket.send_to(packet, sender).await.unwrap();
                     },
@@ -322,7 +324,6 @@ where
     let endpoint = "127.0.0.1:90".parse::<Endpoint>().unwrap();
     let contents = "hello".to_string().into_bytes();
     let mut context = WriteContext::new(
-        endpoint.clone(),
         endpoint.address,
         "127.0.0.1:70".parse().unwrap(),
         contents.clone(),
@@ -330,6 +331,19 @@ where
 
     filter.write(&mut context).await.unwrap();
     assert_eq!(contents, &*context.contents);
+}
+
+pub async fn map_to_localhost(address: &mut EndpointAddress) {
+    let mut socket_addr = address.to_socket_addr().await.unwrap();
+    map_addr_to_localhost(&mut socket_addr);
+    *address = socket_addr.into();
+}
+
+pub fn map_addr_to_localhost(address: &mut SocketAddr) {
+    match address {
+        SocketAddr::V4(addr) => addr.set_ip(std::net::Ipv4Addr::LOCALHOST),
+        SocketAddr::V6(addr) => addr.set_ip(std::net::Ipv6Addr::LOCALHOST),
+    }
 }
 
 /// Opens a new socket bound to an ephemeral port
@@ -359,6 +373,7 @@ pub fn ep(id: u8) -> Endpoint {
     }
 }
 
+#[track_caller]
 pub fn new_test_config() -> crate::Config {
     crate::Config {
         filters: crate::config::Slot::new(

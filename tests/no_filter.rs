@@ -53,19 +53,19 @@ async fn echo() {
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
 
     socket.send_to(b"hello", &local_addr).await.unwrap();
-    let value = timeout(Duration::from_secs(5), recv_chan.recv())
+    let value = timeout(Duration::from_millis(500), recv_chan.recv())
         .await
         .unwrap()
         .unwrap();
     assert_eq!("hello", value);
-    let value = timeout(Duration::from_secs(5), recv_chan.recv())
+    let value = timeout(Duration::from_millis(500), recv_chan.recv())
         .await
         .unwrap()
         .unwrap();
     assert_eq!("hello", value);
 
     // should only be two returned items
-    assert!(timeout(Duration::from_secs(2), recv_chan.recv())
+    assert!(timeout(Duration::from_millis(500), recv_chan.recv())
         .await
         .is_err());
 }

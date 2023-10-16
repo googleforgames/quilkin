@@ -26,7 +26,7 @@ use std::{
 use tonic::transport::Endpoint;
 
 use super::Admin;
-use crate::{proxy::SessionMap, xds::ResourceType, Config, Result};
+use crate::{proxy::SessionPool, xds::ResourceType, Config, Result};
 
 #[cfg(doc)]
 use crate::filters::FilterFactory;
@@ -81,9 +81,6 @@ impl Proxy {
         mode: Admin,
         mut shutdown_rx: tokio::sync::watch::Receiver<()>,
     ) -> crate::Result<()> {
-        const SESSION_TIMEOUT_SECONDS: Duration = Duration::from_secs(60);
-        const SESSION_EXPIRY_POLL_INTERVAL: Duration = Duration::from_secs(60);
-
         let _mmdb_task = self.mmdb.clone().map(|source| {
             tokio::spawn(async move {
                 use crate::config::BACKOFF_INITIAL_DELAY_MILLISECONDS;
@@ -122,8 +119,9 @@ impl Proxy {
         let id = config.id.load();
         tracing::info!(port = self.port, proxy_id = &*id, "Starting");
 
-        let sessions = SessionMap::new(SESSION_TIMEOUT_SECONDS, SESSION_EXPIRY_POLL_INTERVAL);
         let runtime_config = mode.unwrap_proxy();
+        let shared_socket = Arc::new(DualStackLocalSocket::new(self.port)?);
+        let sessions = SessionPool::new(config.clone(), shared_socket.clone(), shutdown_rx.clone());
 
         let _xds_stream = if !self.management_server.is_empty() {
             {
@@ -152,7 +150,7 @@ impl Proxy {
             None
         };
 
-        self.run_recv_from(&config, sessions.clone())?;
+        self.run_recv_from(&config, &sessions, shared_socket)?;
         crate::protocol::spawn(self.qcmp_port).await?;
         tracing::info!("Quilkin is ready");
 
@@ -161,10 +159,10 @@ impl Proxy {
             .await
             .map_err(|error| eyre::eyre!(error))?;
 
-        tracing::info!(sessions=%sessions.len(), "waiting for active sessions to expire");
-        while sessions.is_not_empty() {
+        tracing::info!(sessions=%sessions.sessions().len(), "waiting for active sessions to expire");
+        while sessions.sessions().is_not_empty() {
             tokio::time::sleep(Duration::from_secs(1)).await;
-            tracing::debug!(sessions=%sessions.len(), "sessions still active");
+            tracing::debug!(sessions=%sessions.sessions().len(), "sessions still active");
         }
         tracing::info!("all sessions expired");
 
@@ -176,18 +174,29 @@ impl Proxy {
     /// This function also spawns the set of worker tasks responsible for consuming packets
     /// off the aforementioned queue and processing them through the filter chain and session
     /// pipeline.
-    fn run_recv_from(&self, config: &Arc<Config>, sessions: SessionMap) -> Result<()> {
+    fn run_recv_from(
+        &self,
+        config: &Arc<Config>,
+        sessions: &Arc<SessionPool>,
+        shared_socket: Arc<DualStackLocalSocket>,
+    ) -> Result<()> {
         // The number of worker tasks to spawn. Each task gets a dedicated queue to
         // consume packets off.
         let num_workers = num_cpus::get();
 
         // Contains config for each worker task.
         let mut workers = Vec::with_capacity(num_workers);
-        for worker_id in 0..num_workers {
-            let socket = Arc::new(DualStackLocalSocket::new(self.port)?);
+        workers.push(crate::proxy::DownstreamReceiveWorkerConfig {
+            worker_id: 0,
+            socket: shared_socket,
+            config: config.clone(),
+            sessions: sessions.clone(),
+        });
+
+        for worker_id in 1..num_workers {
             workers.push(crate::proxy::DownstreamReceiveWorkerConfig {
                 worker_id,
-                socket: socket.clone(),
+                socket: Arc::new(DualStackLocalSocket::new(self.port)?),
                 config: config.clone(),
                 sessions: sessions.clone(),
             })
@@ -241,6 +250,7 @@ mod tests {
 
         t.run_server(config, proxy, None);
 
+        tracing::trace!(%local_addr, "sending hello");
         let msg = "hello";
         endpoint1
             .socket
@@ -249,14 +259,14 @@ mod tests {
             .unwrap();
         assert_eq!(
             msg,
-            timeout(Duration::from_secs(1), endpoint1.packet_rx)
+            timeout(Duration::from_millis(100), endpoint1.packet_rx)
                 .await
                 .expect("should get a packet")
                 .unwrap()
         );
         assert_eq!(
             msg,
-            timeout(Duration::from_secs(1), endpoint2.packet_rx)
+            timeout(Duration::from_millis(100), endpoint2.packet_rx)
                 .await
                 .expect("should get a packet")
                 .unwrap()
@@ -268,7 +278,8 @@ mod tests {
         let mut t = TestHelper::default();
 
         let endpoint = t.open_socket_and_recv_single_packet().await;
-        let local_addr = available_addr(&AddressType::Random).await;
+        let mut local_addr = available_addr(&AddressType::Ipv6).await;
+        crate::test_utils::map_addr_to_localhost(&mut local_addr);
         let proxy = crate::cli::Proxy {
             port: local_addr.port(),
             ..<_>::default()
@@ -277,14 +288,16 @@ mod tests {
         config.clusters.modify(|clusters| {
             clusters.insert_default(
                 [Endpoint::new(
-                    endpoint.socket.local_ipv4_addr().unwrap().into(),
+                    endpoint.socket.local_ipv6_addr().unwrap().into(),
                 )]
                 .into(),
             );
         });
         t.run_server(config, proxy, None);
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
         let msg = "hello";
+        tracing::debug!(%local_addr, "sending packet");
         endpoint
             .socket
             .send_to(msg.as_bytes(), &local_addr)
@@ -366,8 +379,19 @@ mod tests {
         crate::proxy::DownstreamReceiveWorkerConfig {
             worker_id: 1,
             socket: socket.clone(),
-            config,
-            sessions: <_>::default(),
+            config: config.clone(),
+            sessions: SessionPool::new(
+                config,
+                Arc::new(
+                    DualStackLocalSocket::new(
+                        crate::test_utils::available_addr(&AddressType::Random)
+                            .await
+                            .port(),
+                    )
+                    .unwrap(),
+                ),
+                tokio::sync::watch::channel(()).1,
+            ),
         }
         .spawn();
 
@@ -405,7 +429,23 @@ mod tests {
             )
         });
 
-        proxy.run_recv_from(&config, <_>::default()).unwrap();
+        let shared_socket = Arc::new(
+            DualStackLocalSocket::new(
+                crate::test_utils::available_addr(&AddressType::Random)
+                    .await
+                    .port(),
+            )
+            .unwrap(),
+        );
+        let sessions = SessionPool::new(
+            config.clone(),
+            shared_socket.clone(),
+            tokio::sync::watch::channel(()).1,
+        );
+
+        proxy
+            .run_recv_from(&config, &sessions, shared_socket)
+            .unwrap();
 
         let socket = create_socket().await;
         socket.send_to(msg.as_bytes(), &local_addr).await.unwrap();

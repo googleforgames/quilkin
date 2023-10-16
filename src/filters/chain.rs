@@ -369,7 +369,6 @@ mod tests {
         );
 
         let mut context = WriteContext::new(
-            endpoints_fixture[0].clone(),
             endpoints_fixture[0].address.clone(),
             "127.0.0.1:70".parse().unwrap(),
             b"hello".to_vec(),
@@ -417,7 +416,6 @@ mod tests {
         );
 
         let mut context = WriteContext::new(
-            endpoints_fixture[0].clone(),
             endpoints_fixture[0].address.clone(),
             "127.0.0.1:70".parse().unwrap(),
             b"hello".to_vec(),

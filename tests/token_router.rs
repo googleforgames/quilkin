@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-use std::net::{Ipv4Addr, SocketAddr};
+use std::net::{Ipv6Addr, SocketAddr};
 
 use tokio::time::{timeout, Duration};
 
@@ -31,7 +31,8 @@ use quilkin::{
 #[tokio::test]
 async fn token_router() {
     let mut t = TestHelper::default();
-    let echo = t.run_echo_server(&AddressType::Random).await;
+    let mut echo = t.run_echo_server(&AddressType::Ipv6).await;
+    quilkin::test_utils::map_to_localhost(&mut echo).await;
 
     let capture_yaml = "
 suffix:
@@ -82,13 +83,13 @@ quilkin.dev:
     // valid packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
 
-    let local_addr = SocketAddr::from((Ipv4Addr::LOCALHOST, server_port));
+    let local_addr = SocketAddr::from((Ipv6Addr::LOCALHOST, server_port));
     let msg = b"helloabc";
     socket.send_to(msg, &local_addr).await.unwrap();
 
     assert_eq!(
         "hello",
-        timeout(Duration::from_secs(5), recv_chan.recv())
+        timeout(Duration::from_millis(500), recv_chan.recv())
             .await
             .expect("should have received a packet")
             .unwrap()
@@ -98,6 +99,6 @@ quilkin.dev:
     let msg = b"helloxyz";
     socket.send_to(msg, &local_addr).await.unwrap();
 
-    let result = timeout(Duration::from_secs(3), recv_chan.recv()).await;
+    let result = timeout(Duration::from_millis(500), recv_chan.recv()).await;
     assert!(result.is_err(), "should not have received a packet");
 }
