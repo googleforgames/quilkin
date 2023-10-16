@@ -374,8 +374,6 @@
 <a href="#374" id="374">374</a>
 <a href="#375" id="375">375</a>
 <a href="#376" id="376">376</a>
-<a href="#377" id="377">377</a>
-<a href="#378" id="378">378</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -535,8 +533,9 @@
         <span class="kw">let </span><span class="kw-2">mut </span>helper = <span class="kw">crate</span>::test_utils::TestHelper::default();
         <span class="kw">let </span>token = <span class="string">&quot;mytoken&quot;</span>;
         <span class="kw">let </span>address = {
-            <span class="kw">let </span><span class="kw-2">mut </span>addr = Endpoint::new(helper.run_echo_server(<span class="kw-2">&amp;</span>AddressType::Random).<span class="kw">await</span>);
+            <span class="kw">let </span><span class="kw-2">mut </span>addr = Endpoint::new(helper.run_echo_server(<span class="kw-2">&amp;</span>AddressType::Ipv6).<span class="kw">await</span>);
             addr.metadata.known.tokens.insert(token.into());
+            <span class="kw">crate</span>::test_utils::map_to_localhost(<span class="kw-2">&amp;mut </span>addr.address).<span class="kw">await</span>;
             addr
         };
         <span class="kw">let </span>clusters = <span class="kw">crate</span>::cluster::ClusterMap::default();
@@ -653,10 +652,7 @@
 
         client
             .socket
-            .send_to(
-                <span class="kw-2">&amp;</span>packet,
-                (std::net::Ipv4Addr::UNSPECIFIED, client_addr.port()),
-            )
+            .send_to(<span class="kw-2">&amp;</span>packet, (std::net::Ipv6Addr::LOCALHOST, client_addr.port()))
             .<span class="kw">await
             </span>.unwrap();
         <span class="kw">let </span>response = tokio::time::timeout(std::time::Duration::from_secs(<span class="number">1</span>), client.packet_rx)
@@ -693,7 +689,7 @@
         <span class="comment">// Each time, we create a new upstream endpoint and send a cluster update for it.
         </span><span class="kw">let </span>concat_bytes = <span class="macro">vec!</span>[(<span class="string">&quot;b&quot;</span>, <span class="string">&quot;c,&quot;</span>), (<span class="string">&quot;d&quot;</span>, <span class="string">&quot;e&quot;</span>)];
         <span class="kw">for </span>(b1, b2) <span class="kw">in </span>concat_bytes.into_iter() {
-            <span class="kw">let </span>socket = std::net::UdpSocket::bind((std::net::Ipv4Addr::UNSPECIFIED, <span class="number">0</span>)).unwrap();
+            <span class="kw">let </span>socket = std::net::UdpSocket::bind((std::net::Ipv6Addr::LOCALHOST, <span class="number">0</span>)).unwrap();
             <span class="kw">let </span>local_addr: <span class="kw">crate</span>::endpoint::EndpointAddress = socket.local_addr().unwrap().into();
 
             config.clusters.modify(|clusters| {

@@ -747,6 +747,53 @@
 <a href="#747" id="747">747</a>
 <a href="#748" id="748">748</a>
 <a href="#749" id="749">749</a>
+<a href="#750" id="750">750</a>
+<a href="#751" id="751">751</a>
+<a href="#752" id="752">752</a>
+<a href="#753" id="753">753</a>
+<a href="#754" id="754">754</a>
+<a href="#755" id="755">755</a>
+<a href="#756" id="756">756</a>
+<a href="#757" id="757">757</a>
+<a href="#758" id="758">758</a>
+<a href="#759" id="759">759</a>
+<a href="#760" id="760">760</a>
+<a href="#761" id="761">761</a>
+<a href="#762" id="762">762</a>
+<a href="#763" id="763">763</a>
+<a href="#764" id="764">764</a>
+<a href="#765" id="765">765</a>
+<a href="#766" id="766">766</a>
+<a href="#767" id="767">767</a>
+<a href="#768" id="768">768</a>
+<a href="#769" id="769">769</a>
+<a href="#770" id="770">770</a>
+<a href="#771" id="771">771</a>
+<a href="#772" id="772">772</a>
+<a href="#773" id="773">773</a>
+<a href="#774" id="774">774</a>
+<a href="#775" id="775">775</a>
+<a href="#776" id="776">776</a>
+<a href="#777" id="777">777</a>
+<a href="#778" id="778">778</a>
+<a href="#779" id="779">779</a>
+<a href="#780" id="780">780</a>
+<a href="#781" id="781">781</a>
+<a href="#782" id="782">782</a>
+<a href="#783" id="783">783</a>
+<a href="#784" id="784">784</a>
+<a href="#785" id="785">785</a>
+<a href="#786" id="786">786</a>
+<a href="#787" id="787">787</a>
+<a href="#788" id="788">788</a>
+<a href="#789" id="789">789</a>
+<a href="#790" id="790">790</a>
+<a href="#791" id="791">791</a>
+<a href="#792" id="792">792</a>
+<a href="#793" id="793">793</a>
+<a href="#794" id="794">794</a>
+<a href="#795" id="795">795</a>
+<a href="#796" id="796">796</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -822,6 +869,15 @@
     }
 }
 
+<span class="kw">impl</span>&lt;V: std::fmt::Debug&gt; std::fmt::Debug <span class="kw">for </span>Value&lt;V&gt; {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
+        f.debug_struct(<span class="string">&quot;Value&quot;</span>)
+            .field(<span class="string">&quot;value&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.value)
+            .field(<span class="string">&quot;expires_at&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.expires_at)
+            .finish()
+    }
+}
+
 <span class="kw">impl</span>&lt;V&gt; std::ops::Deref <span class="kw">for </span>Value&lt;V&gt; {
     <span class="kw">type </span>Target = V;
 
@@ -836,6 +892,18 @@
     ttl: Duration,
     clock: Clock,
     shutdown_tx: <span class="prelude-ty">Option</span>&lt;Sender&lt;()&gt;&gt;,
+}
+
+<span class="kw">impl</span>&lt;K: std::fmt::Debug + std::hash::Hash + std::cmp::Eq, V: std::fmt::Debug&gt; std::fmt::Debug
+    <span class="kw">for </span>Map&lt;K, V&gt;
+{
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
+        f.debug_struct(<span class="string">&quot;Map&quot;</span>)
+            .field(<span class="string">&quot;inner&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.inner)
+            .field(<span class="string">&quot;ttl&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.ttl)
+            .field(<span class="string">&quot;shutdown_tx&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.shutdown_tx)
+            .finish()
+    }
 }
 
 <span class="kw">impl</span>&lt;K, V&gt; Drop <span class="kw">for </span>Map&lt;K, V&gt; {
@@ -960,6 +1028,11 @@
             .map(|value| value.value)
     }
 
+    <span class="doccomment">/// Removes a key-value pair from the map.
+    </span><span class="kw">pub fn </span>remove(<span class="kw-2">&amp;</span><span class="self">self</span>, key: K) -&gt; bool {
+        <span class="self">self</span>.<span class="number">0</span>.inner.remove(<span class="kw-2">&amp;</span>key).is_some()
+    }
+
     <span class="doccomment">/// Returns an entry for in-place updates of the specified key-value pair.
     /// Note: This acquires a write lock on the map&#39;s shard that corresponds
     /// to the entry.
@@ -977,6 +1050,14 @@
                 clock: <span class="self">self</span>.<span class="number">0</span>.clock.clone(),
             }),
         }
+    }
+}
+
+<span class="kw">impl</span>&lt;K: std::fmt::Debug + std::hash::Hash + std::cmp::Eq, V: std::fmt::Debug&gt; std::fmt::Debug
+    <span class="kw">for </span>TtlMap&lt;K, V&gt;
+{
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
+        f.debug_struct(<span class="string">&quot;TtlMap&quot;</span>).field(<span class="string">&quot;inner&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>).finish()
     }
 }
 
@@ -1023,6 +1104,19 @@
 <span class="kw">where
     </span>K: Eq + Hash,
 {
+    <span class="doccomment">/// Returns a reference to the entry&#39;s value.
+    /// The value will be reset to expire at the configured TTL after the time of retrieval.
+    </span><span class="kw">pub fn </span>into_ref(<span class="self">self</span>) -&gt; Ref&lt;<span class="lifetime">&#39;a</span>, K, Value&lt;V&gt;&gt; {
+        <span class="kw">match </span><span class="self">self</span>.inner {
+            DashMapEntry::Occupied(entry) =&gt; {
+                <span class="kw">let </span>value = entry.into_ref();
+                value.value().update_expiration(<span class="self">self</span>.ttl);
+                value.downgrade()
+            }
+            <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(<span class="string">&quot;BUG: entry type should be occupied&quot;</span>),
+        }
+    }
+
     <span class="doccomment">/// Returns a reference to the entry&#39;s value.
     /// The value will be reset to expire at the configured TTL after the time of retrieval.
     </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Value&lt;V&gt; {

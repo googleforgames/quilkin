@@ -233,7 +233,7 @@
             .<span class="kw">await
             </span>.is_ok());
         <span class="macro">assert!</span>(filter
-            .write(<span class="kw-2">&amp;mut </span>WriteContext::new(endpoint, addr.clone(), addr, <span class="macro">vec!</span>[],))
+            .write(<span class="kw-2">&amp;mut </span>WriteContext::new(addr.clone(), addr, <span class="macro">vec!</span>[],))
             .<span class="kw">await
             </span>.is_ok());
     }

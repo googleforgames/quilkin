@@ -200,6 +200,29 @@
 <a href="#200" id="200">200</a>
 <a href="#201" id="201">201</a>
 <a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -224,14 +247,12 @@
 <span class="kw">use </span>socket2::{Protocol, Socket, Type};
 <span class="kw">use </span>tokio::{net::ToSocketAddrs, net::UdpSocket};
 
-<span class="kw">use </span><span class="kw">crate</span>::Result;
-
 <span class="doccomment">/// returns a UdpSocket with address and port reuse, on Ipv6Addr::UNSPECIFIED
-</span><span class="kw">fn </span>socket_with_reuse(port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;UdpSocket&gt; {
+</span><span class="kw">fn </span>socket_with_reuse(port: u16) -&gt; std::io::Result&lt;UdpSocket&gt; {
     socket_with_reuse_and_address((Ipv6Addr::UNSPECIFIED, port).into())
 }
 
-<span class="kw">fn </span>socket_with_reuse_and_address(addr: SocketAddr) -&gt; <span class="prelude-ty">Result</span>&lt;UdpSocket&gt; {
+<span class="kw">fn </span>socket_with_reuse_and_address(addr: SocketAddr) -&gt; std::io::Result&lt;UdpSocket&gt; {
     <span class="kw">let </span>domain = <span class="kw">match </span>addr {
         SocketAddr::V4(<span class="kw">_</span>) =&gt; socket2::Domain::IPV4,
         SocketAddr::V6(<span class="kw">_</span>) =&gt; socket2::Domain::IPV6,
@@ -245,7 +266,7 @@
         </span>sock.set_only_v6(<span class="bool-val">false</span>)<span class="question-mark">?</span>;
     }
     sock.bind(<span class="kw-2">&amp;</span>addr.into())<span class="question-mark">?</span>;
-    UdpSocket::from_std(sock.into()).map_err(|error| <span class="macro">eyre::eyre!</span>(error))
+    UdpSocket::from_std(sock.into())
 }
 
 <span class="attr">#[cfg(not(target_family = <span class="string">&quot;windows&quot;</span>))]
@@ -262,19 +283,26 @@
 
 <span class="doccomment">/// An ipv6 socket that can accept and send data from either a local ipv4 address or ipv6 address
 /// with port reuse enabled and only_v6 set to false.
+</span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>DualStackLocalSocket {
     socket: UdpSocket,
 }
 
 <span class="kw">impl </span>DualStackLocalSocket {
-    <span class="kw">pub fn </span>new(port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;DualStackLocalSocket&gt; {
+    <span class="kw">pub fn </span>new(port: u16) -&gt; std::io::Result&lt;DualStackLocalSocket&gt; {
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             socket: socket_with_reuse(port)<span class="question-mark">?</span>,
         })
     }
 
+    <span class="kw">pub fn </span>bind_local(port: u16) -&gt; std::io::Result&lt;DualStackLocalSocket&gt; {
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            socket: socket_with_reuse_and_address((Ipv6Addr::LOCALHOST, port).into())<span class="question-mark">?</span>,
+        })
+    }
+
     <span class="doccomment">/// Primarily used for testing of ipv4 vs ipv6 addresses.
-    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new_with_address(addr: SocketAddr) -&gt; <span class="prelude-ty">Result</span>&lt;DualStackLocalSocket&gt; {
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new_with_address(addr: SocketAddr) -&gt; std::io::Result&lt;DualStackLocalSocket&gt; {
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             socket: socket_with_reuse_and_address(addr)<span class="question-mark">?</span>,
         })
@@ -401,5 +429,23 @@
                 .unwrap()
         );
     }
+}
+
+<span class="doccomment">/// Converts a a socket address to its canonical version.
+/// This is just a copy of the method available in std but that is currently
+/// nightly only.
+</span><span class="kw">pub fn </span>to_canonical(addr: <span class="kw-2">&amp;mut </span>SocketAddr) {
+    <span class="kw">let </span>ip = <span class="kw">match </span>addr.ip() {
+        std::net::IpAddr::V6(ip) =&gt; {
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(mapped) = ip.to_ipv4_mapped() {
+                std::net::IpAddr::V4(mapped)
+            } <span class="kw">else </span>{
+                std::net::IpAddr::V6(ip)
+            }
+        }
+        addr =&gt; addr,
+    };
+
+    addr.set_ip(ip);
 }
 </code></pre></div></section></main></body></html>

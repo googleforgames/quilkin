@@ -883,7 +883,7 @@
             std::fs::write(endpoints_file.path(), {
                 config.clusters.write().insert_default(
                     [Endpoint::with_metadata(
-                        (std::net::Ipv4Addr::LOCALHOST, server_port).into(),
+                        (std::net::Ipv6Addr::LOCALHOST, server_port).into(),
                         <span class="kw">crate</span>::endpoint::Metadata {
                             tokens: <span class="macro">vec!</span>[token.clone()].into_iter().collect(),
                         },
@@ -901,7 +901,7 @@
 
             <span class="macro">assert_eq!</span>(
                 <span class="string">&quot;hello&quot;</span>,
-                timeout(Duration::from_secs(<span class="number">5</span>), rx.recv())
+                timeout(Duration::from_millis(<span class="number">500</span>), rx.recv())
                     .<span class="kw">await
                     </span>.expect(<span class="string">&quot;should have received a packet&quot;</span>)
                     .unwrap()
@@ -914,7 +914,7 @@
             </span><span class="kw">let </span>msg = <span class="string">b&quot;hello\xFF\xFF\xFF&quot;</span>;
             socket.send_to(msg, <span class="kw-2">&amp;</span>proxy_address).<span class="kw">await</span>.unwrap();
 
-            <span class="kw">let </span>result = timeout(Duration::from_secs(<span class="number">3</span>), rx.recv()).<span class="kw">await</span>;
+            <span class="kw">let </span>result = timeout(Duration::from_millis(<span class="number">500</span>), rx.recv()).<span class="kw">await</span>;
             <span class="macro">assert!</span>(result.is_err(), <span class="string">&quot;should not have received a packet&quot;</span>);
             <span class="macro">tracing::info!</span>(<span class="question-mark">?</span>token, <span class="string">&quot;didn&#39;t receive bad packet&quot;</span>);
         }

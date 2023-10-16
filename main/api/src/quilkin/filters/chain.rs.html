@@ -473,8 +473,6 @@
 <a href="#473" id="473">473</a>
 <a href="#474" id="474">474</a>
 <a href="#475" id="475">475</a>
-<a href="#476" id="476">476</a>
-<a href="#477" id="477">477</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -846,7 +844,6 @@
         );
 
         <span class="kw">let </span><span class="kw-2">mut </span>context = WriteContext::new(
-            endpoints_fixture[<span class="number">0</span>].clone(),
             endpoints_fixture[<span class="number">0</span>].address.clone(),
             <span class="string">&quot;127.0.0.1:70&quot;</span>.parse().unwrap(),
             <span class="string">b&quot;hello&quot;</span>.to_vec(),
@@ -894,7 +891,6 @@
         );
 
         <span class="kw">let </span><span class="kw-2">mut </span>context = WriteContext::new(
-            endpoints_fixture[<span class="number">0</span>].clone(),
             endpoints_fixture[<span class="number">0</span>].address.clone(),
             <span class="string">&quot;127.0.0.1:70&quot;</span>.parse().unwrap(),
             <span class="string">b&quot;hello&quot;</span>.to_vec(),
