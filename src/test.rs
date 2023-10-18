@@ -26,8 +26,8 @@ use crate::{
     filters::{prelude::*, FilterRegistry},
     net::endpoint::metadata::Value,
     net::endpoint::{Endpoint, EndpointAddress},
-    net::DualStackLocalSocket,
-    ShutdownKind, ShutdownRx, ShutdownTx,
+    net::DualStackEpollSocket as DualStackLocalSocket,
+    ShutdownRx, ShutdownTx,
 };
 
 static LOG_ONCE: Once = Once::new();
@@ -285,6 +285,11 @@ impl TestHelper {
         tokio::spawn(async move {
             server.run(config, mode, shutdown_rx).await.unwrap();
         });
+        // With the introduction of io-uring with each worker having its own
+        // thread, we sleep here to give it time to initialisation.
+        // TODO: Provide better ready signalling to tests when we're ready to
+        // receive packets.
+        std::thread::sleep(std::time::Duration::from_millis(100));
     }
 
     /// Returns a receiver subscribed to the helper's shutdown event.

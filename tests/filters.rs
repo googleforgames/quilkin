@@ -57,6 +57,7 @@ async fn test_filter() {
         .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
 
     t.run_server(server_config, server_proxy, None);
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
     // create a local client
     let client_port = 12347;
@@ -85,6 +86,7 @@ async fn test_filter() {
 
     // Run client proxy.
     t.run_server(client_config, client_proxy, None);
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
     // let's send the packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
@@ -147,6 +149,7 @@ async fn debug_filter() {
     );
 
     t.run_server(server_config, server_proxy, None);
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
     // create a local client
     let client_port = 12248;
@@ -173,6 +176,7 @@ async fn debug_filter() {
         .unwrap(),
     );
     t.run_server(client_config, client_proxy, None);
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
     // let's send the packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;

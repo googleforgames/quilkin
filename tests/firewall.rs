@@ -203,8 +203,8 @@ async fn test(
     };
 
     let client_addr = match address_type {
-        AddressType::Ipv4 => socket.local_ipv4_addr().unwrap(),
-        AddressType::Ipv6 => socket.local_ipv6_addr().unwrap(),
+        AddressType::Ipv4 => socket.local_addr().unwrap(),
+        AddressType::Ipv6 => socket.local_addr().unwrap(),
         AddressType::Random => unreachable!(),
     };
 
@@ -233,6 +233,7 @@ async fn test(
         .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
 
     t.run_server(server_config, server_proxy, None);
+    tokio::time::sleep(std::time::Duration::from_millis(250)).await;
 
     let local_addr: SocketAddr = match address_type {
         AddressType::Ipv4 => (std::net::Ipv4Addr::LOCALHOST, server_port).into(),

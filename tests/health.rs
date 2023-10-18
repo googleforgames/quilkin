@@ -40,6 +40,7 @@ async fn health_server() {
         server_proxy,
         Some(Some((std::net::Ipv6Addr::UNSPECIFIED, 9093).into())),
     );
+    tokio::time::sleep(std::time::Duration::from_millis(250)).await;
 
     let client = Client::new();
     let resp = client

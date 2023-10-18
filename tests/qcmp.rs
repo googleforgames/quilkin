@@ -61,6 +61,7 @@ async fn agent_ping() {
 }
 
 async fn ping(port: u16) {
+    tokio::time::sleep(std::time::Duration::from_millis(250)).await;
     let socket = tokio::net::UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0))
         .await
         .unwrap();

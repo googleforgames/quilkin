@@ -59,6 +59,7 @@ async fn metrics_server() {
         .clusters
         .modify(|clusters| clusters.insert_default([Endpoint::new(server_addr.into())].into()));
     t.run_server(client_config, client_proxy, None);
+    tokio::time::sleep(std::time::Duration::from_millis(250)).await;
 
     // let's send the packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
@@ -85,6 +86,8 @@ async fn metrics_server() {
         .unwrap();
 
     let response = String::from_utf8(resp.to_vec()).unwrap();
-    let regex = regex::Regex::new(r#"quilkin_packets_total\{.*event="read".*\} 2"#).unwrap();
-    assert!(regex.is_match(&response));
+    let read_regex = regex::Regex::new(r#"quilkin_packets_total\{.*event="read".*\} 2"#).unwrap();
+    let write_regex = regex::Regex::new(r#"quilkin_packets_total\{.*event="write".*\} 2"#).unwrap();
+    assert!(read_regex.is_match(&response));
+    assert!(write_regex.is_match(&response));
 }

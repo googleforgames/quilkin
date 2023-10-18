@@ -78,14 +78,17 @@ quilkin.dev:
     );
 
     t.run_server(server_config, server_proxy, None);
+    tokio::time::sleep(std::time::Duration::from_millis(250)).await;
 
     // valid packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
 
     let local_addr = SocketAddr::from((Ipv6Addr::LOCALHOST, server_port));
     let msg = b"helloabc";
+    tracing::trace!(%local_addr, "sending echo packet");
     socket.send_to(msg, &local_addr).await.unwrap();
 
+    tracing::trace!("awaiting echo packet");
     assert_eq!(
         "hello",
         timeout(Duration::from_millis(500), recv_chan.recv())

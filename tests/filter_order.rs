@@ -86,6 +86,7 @@ on_write: DECOMPRESS
     );
 
     t.run_server(server_config, server_proxy, None);
+    tokio::time::sleep(std::time::Duration::from_millis(250)).await;
 
     // let's send the packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;

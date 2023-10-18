@@ -53,6 +53,7 @@ bytes: YWJj #abc
         .unwrap(),
     );
     t.run_server(server_config, server_proxy, None);
+    tokio::time::sleep(std::time::Duration::from_millis(250)).await;
 
     // let's send the packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
@@ -62,7 +63,7 @@ bytes: YWJj #abc
 
     assert_eq!(
         "helloabc",
-        timeout(Duration::from_secs(5), recv_chan.recv())
+        timeout(Duration::from_millis(250), recv_chan.recv())
             .await
             .expect("should have received a packet")
             .unwrap()
