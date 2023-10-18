@@ -127,8 +127,9 @@ impl Proxy {
         tracing::info!(port = self.port, proxy_id = &*id, "Starting");
 
         let runtime_config = mode.unwrap_proxy();
-        let shared_socket = Arc::new(DualStackLocalSocket::new(self.port)?);
-        let sessions = SessionPool::new(config.clone(), shared_socket.clone(), shutdown_rx.clone());
+        
+        let (upstream_sender, upstream_receiver) = async_channel::unbounded();
+        let sessions = SessionPool::new(config.clone(), upstream_sender, shutdown_rx.clone());
 
         let _xds_stream = if !self.management_server.is_empty() {
             {
@@ -157,7 +158,7 @@ impl Proxy {
             None
         };
 
-        self.run_recv_from(&config, &sessions, shared_socket)?;
+        self.run_recv_from(&config, &sessions, upstream_receiver)?;
         crate::codec::qcmp::spawn(self.qcmp_port).await?;
         tracing::info!("Quilkin is ready");
 
@@ -185,7 +186,7 @@ impl Proxy {
         &self,
         config: &Arc<Config>,
         sessions: &Arc<SessionPool>,
-        shared_socket: Arc<DualStackLocalSocket>,
+        upstream_receiver: async_channel::Receiver<Vec<u8>>,
     ) -> Result<()> {
         // The number of worker tasks to spawn. Each task gets a dedicated queue to
         // consume packets off.
@@ -195,7 +196,8 @@ impl Proxy {
         let mut workers = Vec::with_capacity(num_workers);
         workers.push(DownstreamReceiveWorkerConfig {
             worker_id: 0,
-            socket: shared_socket,
+            upstream_receiver: upstream_receiver.clone(),
+            port: self.port,
             config: config.clone(),
             sessions: sessions.clone(),
         });
@@ -203,7 +205,8 @@ impl Proxy {
         for worker_id in 1..num_workers {
             workers.push(DownstreamReceiveWorkerConfig {
                 worker_id,
-                socket: Arc::new(DualStackLocalSocket::new(self.port)?),
+                upstream_receiver: upstream_receiver.clone(),
+                port: self.port,
                 config: config.clone(),
                 sessions: sessions.clone(),
             })

@@ -22,7 +22,7 @@ use std::{
 };
 
 use tokio::{
-    sync::{watch, RwLock},
+    sync::{watch, mpsc, RwLock},
     time::Instant,
 };
 
@@ -44,10 +44,10 @@ pub type SessionMap = crate::collections::ttl::TtlMap<SessionKey, Session>;
 /// send back to the original client.
 #[derive(Debug)]
 pub struct SessionPool {
-    ports_to_sockets: RwLock<HashMap<u16, Arc<DualStackLocalSocket>>>,
+    ports_to_sockets: RwLock<HashMap<u16, mpsc::Sender<Vec<u8>>>>,
     storage: Arc<RwLock<SocketStorage>>,
     session_map: SessionMap,
-    downstream_socket: Arc<DualStackLocalSocket>,
+    downstream_sender: Arc<async_channel::Sender<(Vec<u8>, SocketAddr)>>,
     shutdown_rx: watch::Receiver<()>,
     config: Arc<Config>,
 }
@@ -88,25 +88,28 @@ impl SessionPool {
         self: &'pool Arc<Self>,
         key: SessionKey,
         asn_info: Option<IpNetEntry>,
-    ) -> Result<Arc<DualStackLocalSocket>, super::PipelineError> {
+    ) -> Result<mpsc::Sender<Vec<u8>>, super::PipelineError> {
         tracing::trace!(source=%key.source, dest=%key.dest, "creating new socket for session");
-        let socket = DualStackLocalSocket::new(0).map(Arc::new)?;
-        let port = socket.local_ipv4_addr().unwrap().port();
+        let raw_socket = crate::net::raw_socket_with_reuse(0)?;
+        let port = raw_socket.local_addr()?.as_unix().unwrap().port();
+        let (tx, rx) = mpsc::unbounded_channel();
         self.ports_to_sockets
             .write()
             .await
-            .insert(port, socket.clone());
+            .insert(port, tx);
 
-        let upstream_socket = socket.clone();
+        let downstream_sender = self.downstream_sender.clone();
         let pool = self.clone();
-        tokio::spawn(async move {
+
+        crate::net::uring_spawn(async move {
             let mut buf: Vec<u8> = vec![0; 65535];
             let mut last_received_at = None;
             let mut shutdown_rx = pool.shutdown_rx.clone();
+            let socket = DualStackLocalSocket::from_raw(raw_socket);
 
             loop {
                 tokio::select! {
-                    received = upstream_socket.recv_from(&mut buf) => {
+                    received = socket.recv_from(&mut buf) => {
                         match received {
                             Err(error) => {
                                 tracing::trace!(%error, "error receiving packet");
@@ -115,7 +118,6 @@ impl SessionPool {
                             Ok((size, mut recv_addr)) => {
                                 let received_at = chrono::Utc::now().timestamp_nanos_opt().unwrap();
                                 crate::net::to_canonical(&mut recv_addr);
-                                tracing::trace!(%recv_addr, %size, "received packet");
                                 let (downstream_addr, asn_info): (SocketAddr, Option<IpNetEntry>) = {
                                     let storage = pool.storage.read().await;
                                     let Some(downstream_addr) = storage.destination_to_sources.get(&(recv_addr, port)) else {
@@ -143,7 +145,7 @@ impl SessionPool {
                                     recv_addr,
                                     downstream_addr,
                                     &buf[..size],
-                                ).await;
+                                    ).await;
                                 timer.stop_and_record();
                                 if let Err(error) = result {
                                     error.log();
@@ -152,21 +154,21 @@ impl SessionPool {
                                         crate::metrics::WRITE,
                                         &label,
                                         asn_info
-                                    ).inc();
+                                        ).inc();
                                     crate::metrics::errors_total(crate::metrics::WRITE, &label, asn_info).inc();
                                 }
                             }
-                        };
+                        }
                     }
                     _ = shutdown_rx.changed() => {
                         tracing::debug!("Closing upstream socket loop");
                         return;
                     }
-                };
+                }
             }
         });
 
-        self.create_session_from_existing_socket(key, socket, port, asn_info)
+        self.create_session_from_existing_socket(key, tx, port, asn_info)
             .await
     }
 
@@ -183,7 +185,7 @@ impl SessionPool {
         // If we already have a session for the key pairing, return that session.
         if let Some(entry) = self.session_map.get(&key) {
             tracing::trace!("returning existing session");
-            return Ok(entry.socket.clone());
+            return Ok(entry.upstream_sender.clone());
         }
 
         // If there's a socket_set available, it means there are sockets
@@ -198,7 +200,7 @@ impl SessionPool {
             } else {
                 // Where we have no allocated sockets for a destination, assign
                 // the first available one.
-                let (port, socket) = self
+                let (port, sender) = self
                     .ports_to_sockets
                     .read()
                     .await
@@ -207,7 +209,7 @@ impl SessionPool {
                     .map(|(port, socket)| (*port, socket.clone()))
                     .unwrap();
 
-                self.create_session_from_existing_socket(key, socket, port, asn_info)
+                self.create_session_from_existing_socket(key, sender, port, asn_info)
                     .await
             };
         };
@@ -241,7 +243,7 @@ impl SessionPool {
     async fn create_session_from_existing_socket<'session>(
         self: &'session Arc<Self>,
         key: SessionKey,
-        upstream_socket: Arc<DualStackLocalSocket>,
+        upstream_sender: mpsc::Sender<Vec<u8>>,
         socket_port: u16,
         asn_info: Option<IpNetEntry>,
     ) -> Result<Arc<DualStackLocalSocket>, super::PipelineError> {
@@ -270,7 +272,7 @@ impl SessionPool {
         drop(storage);
         let session = Session::new(
             key,
-            upstream_socket.clone(),
+            upstream_sender.clone(),
             socket_port,
             self.clone(),
             asn_info,
@@ -278,13 +280,13 @@ impl SessionPool {
         tracing::trace!("inserting session into map");
         self.session_map.insert(key, session);
         tracing::trace!("session inserted");
-        Ok(upstream_socket)
+        Ok(upstream_sender)
     }
 
     /// process_recv_packet processes a packet that is received by this session.
     async fn process_recv_packet(
         config: Arc<crate::Config>,
-        downstream_socket: &Arc<DualStackLocalSocket>,
+        downstream_sender: async_channel::Sender<(Vec<u8>, SocketAddr)>,
         source: SocketAddr,
         dest: SocketAddr,
         packet: &[u8],
@@ -298,10 +300,7 @@ impl SessionPool {
 
         let packet = context.contents.as_ref();
         tracing::trace!(%source, %dest, contents = %crate::codec::base64::encode(packet), "sending packet downstream");
-        downstream_socket
-            .send_to(packet, &dest)
-            .await
-            .map_err(Error::SendTo)
+        downstream_sender.send((packet, &dest));
     }
 
     /// Returns a map of active sessions.
@@ -314,13 +313,13 @@ impl SessionPool {
         self: &Arc<Self>,
         key: SessionKey,
         asn_info: Option<IpNetEntry>,
-        packet: &[u8],
-    ) -> Result<usize, super::PipelineError> {
+        packet: Vec<u8>,
+    ) -> Result<(), super::PipelineError> {
         self.get(key, asn_info)
             .await?
             .send_to(packet, key.dest)
             .await
-            .map_err(From::from)
+            .map_err(|_| super::PipelineError::ChannelClosed)
     }
 
     /// Returns whether the pool contains any sockets allocated to a destination.
@@ -389,7 +388,7 @@ pub struct Session {
     /// The socket port of the session.
     socket_port: u16,
     /// The socket of the session.
-    socket: Arc<DualStackLocalSocket>,
+    upstream_sender: async_channel::Sender<(Vec<u8>, SocketAddr)>,
     /// The GeoIP information of the source.
     asn_info: Option<IpNetEntry>,
     /// The socket pool of the session.

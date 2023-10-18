@@ -24,16 +24,26 @@ use std::{
 };
 
 use socket2::{Protocol, Socket, Type};
-use tokio::{net::ToSocketAddrs, net::UdpSocket};
+use tokio::net::ToSocketAddrs;
+use tokio_uring::net::UdpSocket;
 
 pub use endpoint::{Endpoint, EndpointAddress};
 
 /// returns a UdpSocket with address and port reuse, on Ipv6Addr::UNSPECIFIED
 fn socket_with_reuse(port: u16) -> std::io::Result<UdpSocket> {
-    socket_with_reuse_and_address((Ipv6Addr::UNSPECIFIED, port).into())
+    raw_socket_with_reuse(port).and_then(UdpSocket::from_std)
+}
+
+/// returns a UdpSocket with address and port reuse, on Ipv6Addr::UNSPECIFIED
+pub(crate) fn raw_socket_with_reuse(port: u16) -> std::io::Result<Socket> {
+    raw_socket_with_reuse_and_address((Ipv6Addr::UNSPECIFIED, port).into())
 }
 
 fn socket_with_reuse_and_address(addr: SocketAddr) -> std::io::Result<UdpSocket> {
+    raw_socket_with_reuse_and_address(addr).and_then(UdpSocket::from_std)
+}
+
+fn raw_socket_with_reuse_and_address(addr: SocketAddr) -> std::io::Result<Socket> {
     let domain = match addr {
         SocketAddr::V4(_) => socket2::Domain::IPV4,
         SocketAddr::V6(_) => socket2::Domain::IPV6,
@@ -47,7 +57,7 @@ fn socket_with_reuse_and_address(addr: SocketAddr) -> std::io::Result<UdpSocket>
         sock.set_only_v6(false)?;
     }
     sock.bind(&addr.into())?;
-    UdpSocket::from_std(sock.into())
+    sock
 }
 
 #[cfg(not(target_family = "windows"))]
@@ -70,6 +80,13 @@ pub struct DualStackLocalSocket {
 }
 
 impl DualStackLocalSocket {
+    pub fn from_raw(socket: socket2::Socket) -> Self {
+        Self { socket: UdpSocket::from_std(socket) }
+    }
+    pub fn from_tokio(socket: UdpSocket) -> Self {
+        Self { socket }
+    }
+
     pub fn new(port: u16) -> std::io::Result<DualStackLocalSocket> {
         Ok(Self {
             socket: socket_with_reuse(port)?,
@@ -89,7 +106,7 @@ impl DualStackLocalSocket {
         })
     }
 
-    pub async fn recv_from(&self, buf: &mut [u8]) -> io::Result<(usize, SocketAddr)> {
+    pub async fn recv_from(&self, buf: Vec<u8>) -> Result<((usize, SocketAddr) Vec<u8>), (io::Error, Vec<u8>)> {
         self.socket.recv_from(buf).await
     }
 
@@ -112,8 +129,21 @@ impl DualStackLocalSocket {
         }
     }
 
-    pub async fn send_to<A: ToSocketAddrs>(&self, buf: &[u8], target: A) -> io::Result<usize> {
+    pub async fn send_to(&self, buf: Vec<u8>, target: SocketAddr) -> Result<(usize, Vec<u8>), (std::io::Error, Vec<u8>)> {
         self.socket.send_to(buf, target).await
+    }
+}
+
+/// On linux spawns a io-uring 
+pub fn uring_spawn(future: impl std::future::Future<Output = ()> + Send) {
+    cfg_if::cfg_if! {
+        if #[cfg(target_os = "linux")] {
+            std::thread::spawn(move || {
+                tokio_uring::start(future);
+            });
+        } else {
+            tokio::spawn(future);
+        }
     }
 }
 
