@@ -87,30 +87,38 @@ impl Admin {
         &self,
         config: Arc<Config>,
         address: Option<std::net::SocketAddr>,
-    ) -> tokio::task::JoinHandle<Result<(), hyper::Error>> {
+    ) -> std::thread::JoinHandle<Result<(), hyper::Error>> {
         let address = address.unwrap_or_else(|| (std::net::Ipv6Addr::UNSPECIFIED, PORT).into());
         let health = Health::new();
         tracing::info!(address = %address, "Starting admin endpoint");
 
         let mode = self.clone();
-        let make_svc = make_service_fn(move |_conn| {
-            let config = config.clone();
-            let health = health.clone();
-            let mode = mode.clone();
-            async move {
-                let config = config.clone();
-                let health = health.clone();
-                let mode = mode.clone();
-                Ok::<_, Infallible>(service_fn(move |req| {
+        std::thread::spawn(move || {
+            let runtime = tokio::runtime::Builder::new_current_thread()
+                .enable_io()
+                .build()
+                .expect("couldn't create tokio runtime in thread");
+            runtime.block_on(async move {
+                let make_svc = make_service_fn(move |_conn| {
                     let config = config.clone();
                     let health = health.clone();
                     let mode = mode.clone();
-                    async move { Ok::<_, Infallible>(mode.handle_request(req, config, health)) }
-                }))
-            }
-        });
+                    async move {
+                        let config = config.clone();
+                        let health = health.clone();
+                        let mode = mode.clone();
+                        Ok::<_, Infallible>(service_fn(move |req| {
+                            let config = config.clone();
+                            let health = health.clone();
+                            let mode = mode.clone();
+                            async move { Ok::<_, Infallible>(mode.handle_request(req, config, health)) }
+                        }))
+                    }
+                });
 
-        tokio::spawn(HyperServer::bind(&address).serve(make_svc))
+                HyperServer::bind(&address).serve(make_svc).await
+            })
+        })
     }
 
     fn is_ready(&self, config: &Config) -> bool {
