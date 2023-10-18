@@ -34,6 +34,7 @@ use crate::{
 pub(crate) mod metrics;
 
 pub type SessionMap = crate::collections::ttl::TtlMap<SessionKey, Session>;
+type UpstreamSender = mpsc::UnboundedSender<(Vec<u8>, SocketAddr)>;
 
 /// A data structure that is responsible for holding sessions, and pooling
 /// sockets between them. This means that we only provide new unique sockets
@@ -44,7 +45,7 @@ pub type SessionMap = crate::collections::ttl::TtlMap<SessionKey, Session>;
 /// send back to the original client.
 #[derive(Debug)]
 pub struct SessionPool {
-    ports_to_sockets: RwLock<HashMap<u16, mpsc::Sender<Vec<u8>>>>,
+    ports_to_sockets: RwLock<HashMap<u16, UpstreamSender>>,
     storage: Arc<RwLock<SocketStorage>>,
     session_map: SessionMap,
     downstream_sender: Arc<async_channel::Sender<(Vec<u8>, SocketAddr)>>,
@@ -67,7 +68,7 @@ impl SessionPool {
     /// to release their sockets back to the parent.
     pub fn new(
         config: Arc<Config>,
-        downstream_socket: Arc<DualStackLocalSocket>,
+        downstream_socket: async_channel::Sender<(Vec<u8>, SocketAddr)>,
         shutdown_rx: watch::Receiver<()>,
     ) -> Arc<Self> {
         const SESSION_TIMEOUT_SECONDS: Duration = Duration::from_secs(60);
@@ -88,10 +89,10 @@ impl SessionPool {
         self: &'pool Arc<Self>,
         key: SessionKey,
         asn_info: Option<IpNetEntry>,
-    ) -> Result<mpsc::Sender<Vec<u8>>, super::PipelineError> {
+    ) -> Result<UpstreamSender, super::PipelineError> {
         tracing::trace!(source=%key.source, dest=%key.dest, "creating new socket for session");
         let raw_socket = crate::net::raw_socket_with_reuse(0)?;
-        let port = raw_socket.local_addr()?.as_unix().unwrap().port();
+        let port = raw_socket.local_addr()?.as_socket().unwrap().port();
         let (tx, rx) = mpsc::unbounded_channel();
         self.ports_to_sockets
             .write()
@@ -109,7 +110,7 @@ impl SessionPool {
 
             loop {
                 tokio::select! {
-                    received = socket.recv_from(&mut buf) => {
+                    received = socket.recv_from(buf) => {
                         match received {
                             Err(error) => {
                                 tracing::trace!(%error, "error receiving packet");
@@ -180,7 +181,7 @@ impl SessionPool {
         self: &'pool Arc<Self>,
         key @ SessionKey { dest, .. }: SessionKey,
         asn_info: Option<IpNetEntry>,
-    ) -> Result<Arc<DualStackLocalSocket>, super::PipelineError> {
+    ) -> Result<UpstreamSender, super::PipelineError> {
         tracing::trace!(source=%key.source, dest=%key.dest, "SessionPool::get");
         // If we already have a session for the key pairing, return that session.
         if let Some(entry) = self.session_map.get(&key) {
@@ -243,10 +244,10 @@ impl SessionPool {
     async fn create_session_from_existing_socket<'session>(
         self: &'session Arc<Self>,
         key: SessionKey,
-        upstream_sender: mpsc::Sender<Vec<u8>>,
+        upstream_sender: UpstreamSender,
         socket_port: u16,
         asn_info: Option<IpNetEntry>,
-    ) -> Result<Arc<DualStackLocalSocket>, super::PipelineError> {
+    ) -> Result<UpstreamSender, super::PipelineError> {
         tracing::trace!(source=%key.source, dest=%key.dest, "reusing socket for session");
         let mut storage = self.storage.write().await;
         storage
@@ -317,8 +318,7 @@ impl SessionPool {
     ) -> Result<(), super::PipelineError> {
         self.get(key, asn_info)
             .await?
-            .send_to(packet, key.dest)
-            .await
+            .send((packet, key.dest))
             .map_err(|_| super::PipelineError::ChannelClosed)
     }
 
@@ -388,7 +388,7 @@ pub struct Session {
     /// The socket port of the session.
     socket_port: u16,
     /// The socket of the session.
-    upstream_sender: async_channel::Sender<(Vec<u8>, SocketAddr)>,
+    upstream_sender: UpstreamSender,
     /// The GeoIP information of the source.
     asn_info: Option<IpNetEntry>,
     /// The socket pool of the session.

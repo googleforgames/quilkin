@@ -106,7 +106,7 @@ impl DualStackLocalSocket {
         })
     }
 
-    pub async fn recv_from(&self, buf: Vec<u8>) -> Result<((usize, SocketAddr) Vec<u8>), (io::Error, Vec<u8>)> {
+    pub async fn recv_from(&self, buf: Vec<u8>) -> (io::Result<(usize, SocketAddr)>, Vec<u8>)  {
         self.socket.recv_from(buf).await
     }
 
@@ -129,13 +129,13 @@ impl DualStackLocalSocket {
         }
     }
 
-    pub async fn send_to(&self, buf: Vec<u8>, target: SocketAddr) -> Result<(usize, Vec<u8>), (std::io::Error, Vec<u8>)> {
+    pub async fn send_to(&self, buf: Vec<u8>, target: SocketAddr) -> (io::Result<usize>, Vec<u8>) {
         self.socket.send_to(buf, target).await
     }
 }
 
 /// On linux spawns a io-uring 
-pub fn uring_spawn(future: impl std::future::Future<Output = ()> + Send) {
+pub fn uring_spawn(future: impl std::future::Future<Output = ()>) {
     cfg_if::cfg_if! {
         if #[cfg(target_os = "linux")] {
             std::thread::spawn(move || {

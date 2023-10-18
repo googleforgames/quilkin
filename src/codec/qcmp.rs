@@ -46,7 +46,8 @@ pub async fn spawn(port: u16) -> crate::Result<()> {
             tracing::info!(%v4_addr, %v6_addr, "awaiting qcmp packets");
 
             let new_input_buf = match socket.recv_from(input_buf).await {
-                Ok((size, new_input_buf, source)) => {
+                (Ok((size, source)), new_input_buf) => {
+                    input_buf = new_input_buf;
                     let received_at = chrono::Utc::now().timestamp_nanos_opt().unwrap();
                     let command = match Protocol::parse(&input_buf[..size]) {
                         Ok(Some(command)) => command,
@@ -72,9 +73,9 @@ pub async fn spawn(port: u16) -> crate::Result<()> {
                     Protocol::ping_reply(nonce, client_timestamp, received_at)
                         .encode_into_buffer(&mut output_buf);
 
-                    let new_output_buf = match socket.send_to(output_buf, source).await {
-                        Ok((_, buf)) => buf,
-                        Err((error, buf)) => {
+                    let mut new_output_buf = match socket.send_to(output_buf, source).await {
+                        (Ok(_), buf) => buf,
+                        (Err(error), buf) => {
                             tracing::warn!(%error, "error responding to ping");
                             buf
                         }
@@ -82,15 +83,12 @@ pub async fn spawn(port: u16) -> crate::Result<()> {
 
                     new_output_buf.clear();
                     output_buf = new_output_buf;
-                    new_input_buf
                 }
-                Err((error, new_input_buf)) => {
+                (Err(error), new_input_buf) => {
                     tracing::warn!(%error, "error receiving packet");
-                    new_input_buf
+                    input_buf = new_input_buf
                 }
             };
-
-            input_buf = new_input_buf;
         }
     });
 

@@ -186,7 +186,7 @@ impl Proxy {
         &self,
         config: &Arc<Config>,
         sessions: &Arc<SessionPool>,
-        upstream_receiver: async_channel::Receiver<Vec<u8>>,
+        upstream_receiver: async_channel::Receiver<(Vec<u8>, SocketAddr)>,
     ) -> Result<()> {
         // The number of worker tasks to spawn. Each task gets a dedicated queue to
         // consume packets off.
@@ -384,8 +384,8 @@ impl DownstreamReceiveWorkerConfig {
                 dest: endpoint.address.to_socket_addr().await?,
             };
 
-            bytes_written += sessions
-                .send(session_key, packet.asn_info.clone(), &context.contents)
+            sessions
+                .send(session_key, packet.asn_info.clone(), context.contents.clone())
                 .await?;
         }
 
@@ -403,6 +403,8 @@ pub enum PipelineError {
     Qcmp(#[from] crate::codec::qcmp::Error),
     #[error("OS level error: {0}")]
     Io(#[from] std::io::Error),
+    #[error("Channel closed")]
+    ChannelClosed,
 }
 
 #[cfg(test)]
