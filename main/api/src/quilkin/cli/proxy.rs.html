@@ -644,10 +644,6 @@
 <a href="#644" id="644">644</a>
 <a href="#645" id="645">645</a>
 <a href="#646" id="646">646</a>
-<a href="#647" id="647">647</a>
-<a href="#648" id="648">648</a>
-<a href="#649" id="649">649</a>
-<a href="#650" id="650">650</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -1120,18 +1116,17 @@
         <span class="kw">let </span>endpoint = t.open_socket_and_recv_single_packet().<span class="kw">await</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>local_addr = available_addr(<span class="kw-2">&amp;</span>AddressType::Ipv6).<span class="kw">await</span>;
         <span class="kw">crate</span>::test::map_addr_to_localhost(<span class="kw-2">&amp;mut </span>local_addr);
+        <span class="kw">let </span><span class="kw-2">mut </span>dest = endpoint.socket.local_ipv6_addr().unwrap();
+        <span class="kw">crate</span>::test::map_addr_to_localhost(<span class="kw-2">&amp;mut </span>dest);
+
         <span class="kw">let </span>proxy = <span class="kw">crate</span>::cli::Proxy {
             port: local_addr.port(),
             ..&lt;<span class="kw">_</span>&gt;::default()
         };
+
         <span class="kw">let </span>config = Arc::new(Config::default());
         config.clusters.modify(|clusters| {
-            clusters.insert_default(
-                [Endpoint::new(
-                    endpoint.socket.local_ipv6_addr().unwrap().into(),
-                )]
-                .into(),
-            );
+            clusters.insert_default([Endpoint::new(dest.into())].into());
         });
         t.run_server(config, proxy, <span class="prelude-val">None</span>);
         tokio::time::sleep(std::time::Duration::from_millis(<span class="number">100</span>)).<span class="kw">await</span>;
@@ -1159,6 +1154,8 @@
         load_test_filters();
         <span class="kw">let </span>endpoint = t.open_socket_and_recv_single_packet().<span class="kw">await</span>;
         <span class="kw">let </span>local_addr = available_addr(<span class="kw-2">&amp;</span>AddressType::Random).<span class="kw">await</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>dest = endpoint.socket.local_ipv4_addr().unwrap();
+        <span class="kw">crate</span>::test::map_addr_to_localhost(<span class="kw-2">&amp;mut </span>dest);
         <span class="kw">let </span>config = Arc::new(Config::default());
         config.filters.store(
             <span class="kw">crate</span>::filters::FilterChain::try_from(<span class="macro">vec!</span>[config::Filter {
@@ -1170,12 +1167,7 @@
             .unwrap(),
         );
         config.clusters.modify(|clusters| {
-            clusters.insert_default(
-                [Endpoint::new(
-                    endpoint.socket.local_ipv4_addr().unwrap().into(),
-                )]
-                .into(),
-            );
+            clusters.insert_default([Endpoint::new(dest.into())].into());
         });
         t.run_server(
             config,

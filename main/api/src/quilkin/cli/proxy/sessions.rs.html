@@ -676,6 +676,13 @@
 <a href="#676" id="676">676</a>
 <a href="#677" id="677">677</a>
 <a href="#678" id="678">678</a>
+<a href="#679" id="679">679</a>
+<a href="#680" id="680">680</a>
+<a href="#681" id="681">681</a>
+<a href="#682" id="682">682</a>
+<a href="#683" id="683">683</a>
+<a href="#684" id="684">684</a>
+<a href="#685" id="685">685</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -1031,29 +1038,36 @@
     ) {
         <span class="macro">tracing::trace!</span>(<span class="string">&quot;releasing socket&quot;</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>storage = <span class="self">self</span>.storage.write().<span class="kw">await</span>;
-        <span class="kw">let </span>socket_set = storage.destination_to_sockets.get_mut(dest).unwrap();
+        <span class="kw">let </span><span class="prelude-val">Some</span>(socket_set) = storage.destination_to_sockets.get_mut(dest) <span class="kw">else </span>{
+            <span class="kw">return</span>;
+        };
 
-        <span class="macro">assert!</span>(socket_set.remove(<span class="kw-2">&amp;</span>port));
+        socket_set.remove(<span class="kw-2">&amp;</span>port);
 
         <span class="kw">if </span>socket_set.is_empty() {
-            storage.destination_to_sockets.remove(dest).unwrap();
+            storage.destination_to_sockets.remove(dest);
         }
 
-        <span class="kw">let </span>dest_set = storage.sockets_to_destination.get_mut(<span class="kw-2">&amp;</span>port).unwrap();
+        <span class="kw">let </span><span class="prelude-val">Some</span>(dest_set) = storage.sockets_to_destination.get_mut(<span class="kw-2">&amp;</span>port) <span class="kw">else </span>{
+            <span class="kw">return</span>;
+        };
 
-        <span class="macro">assert!</span>(dest_set.remove(dest));
+        dest_set.remove(dest);
 
         <span class="kw">if </span>dest_set.is_empty() {
-            storage.sockets_to_destination.remove(<span class="kw-2">&amp;</span>port).unwrap();
+            storage.sockets_to_destination.remove(<span class="kw-2">&amp;</span>port);
         }
 
         <span class="comment">// Not asserted because the source might not have GeoIP info.
         </span>storage.sources_to_asn_info.remove(source);
-        <span class="macro">assert!</span>(storage
-            .destination_to_sources
-            .remove(<span class="kw-2">&amp;</span>(<span class="kw-2">*</span>dest, port))
-            .is_some());
+        storage.destination_to_sources.remove(<span class="kw-2">&amp;</span>(<span class="kw-2">*</span>dest, port));
         <span class="macro">tracing::trace!</span>(<span class="string">&quot;socket released&quot;</span>);
+    }
+}
+
+<span class="kw">impl </span>Drop <span class="kw">for </span>SessionPool {
+    <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        drop(std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.session_map));
     }
 }
 

@@ -373,8 +373,6 @@
 <a href="#373" id="373">373</a>
 <a href="#374" id="374">374</a>
 <a href="#375" id="375">375</a>
-<a href="#376" id="376">376</a>
-<a href="#377" id="377">377</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -567,7 +565,6 @@
         <span class="comment">// Test that the client can handle the manager dropping out.
         </span><span class="kw">let </span>handle = tokio::spawn(server::spawn(xds_port, xds_config.clone()));
 
-        tokio::time::sleep(std::time::Duration::from_millis(<span class="number">50</span>)).<span class="kw">await</span>;
         <span class="kw">let </span>(_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(());
         tokio::spawn(server::spawn(xds_port, xds_config.clone()));
         <span class="kw">let </span>client_proxy = <span class="kw">crate</span>::cli::Proxy {
@@ -584,7 +581,6 @@
         </span>});
         tokio::time::sleep(std::time::Duration::from_millis(<span class="number">50</span>)).<span class="kw">await</span>;
 
-        tokio::time::sleep(std::time::Duration::from_millis(<span class="number">50</span>)).<span class="kw">await</span>;
         handle.abort();
         tokio::time::sleep(std::time::Duration::from_millis(<span class="number">50</span>)).<span class="kw">await</span>;
         tokio::spawn(server::spawn(xds_port, xds_config.clone()));
@@ -656,10 +652,11 @@
             .send_to(<span class="kw-2">&amp;</span>packet, (std::net::Ipv6Addr::LOCALHOST, client_addr.port()))
             .<span class="kw">await
             </span>.unwrap();
-        <span class="kw">let </span>response = tokio::time::timeout(std::time::Duration::from_secs(<span class="number">1</span>), client.packet_rx)
-            .<span class="kw">await
-            </span>.unwrap()
-            .unwrap();
+        <span class="kw">let </span>response =
+            tokio::time::timeout(std::time::Duration::from_millis(<span class="number">100</span>), client.packet_rx)
+                .<span class="kw">await
+                </span>.unwrap()
+                .unwrap();
 
         <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">&quot;{}{}&quot;</span>, fixture, token), response);
     }
@@ -685,7 +682,7 @@
             config.clone(),
             <span class="kw">crate</span>::cli::admin::IDLE_REQUEST_INTERVAL_SECS,
         );
-        tokio::time::sleep(std::time::Duration::from_millis(<span class="number">500</span>)).<span class="kw">await</span>;
+        tokio::time::sleep(std::time::Duration::from_millis(<span class="number">50</span>)).<span class="kw">await</span>;
 
         <span class="comment">// Each time, we create a new upstream endpoint and send a cluster update for it.
         </span><span class="kw">let </span>concat_bytes = <span class="macro">vec!</span>[(<span class="string">&quot;b&quot;</span>, <span class="string">&quot;c,&quot;</span>), (<span class="string">&quot;d&quot;</span>, <span class="string">&quot;e&quot;</span>)];
@@ -699,7 +696,6 @@
                 cluster.clear();
                 cluster.insert(Endpoint::new(local_addr.clone()));
             });
-            tokio::time::sleep(std::time::Duration::from_millis(<span class="number">500</span>)).<span class="kw">await</span>;
 
             <span class="kw">let </span>filters = <span class="kw">crate</span>::filters::FilterChain::try_from(<span class="macro">vec!</span>[
                 Concatenate::as_filter_config(concatenate::Config {
@@ -723,7 +719,7 @@
                 .discovery_request(ResourceType::Cluster, <span class="kw-2">&amp;</span>[])
                 .<span class="kw">await
                 </span>.unwrap();
-            tokio::time::sleep(std::time::Duration::from_millis(<span class="number">500</span>)).<span class="kw">await</span>;
+            tokio::time::sleep(std::time::Duration::from_millis(<span class="number">50</span>)).<span class="kw">await</span>;
             <span class="macro">assert_eq!</span>(
                 local_addr,
                 config
@@ -741,7 +737,7 @@
                 .discovery_request(ResourceType::Listener, <span class="kw-2">&amp;</span>[])
                 .<span class="kw">await
                 </span>.unwrap();
-            tokio::time::sleep(std::time::Duration::from_millis(<span class="number">100</span>)).<span class="kw">await</span>;
+            tokio::time::sleep(std::time::Duration::from_millis(<span class="number">50</span>)).<span class="kw">await</span>;
             <span class="kw">let </span>changed_filters = config.filters.load();
 
             <span class="macro">assert_eq!</span>(changed_filters.len(), <span class="number">2</span>);
