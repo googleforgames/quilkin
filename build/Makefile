@@ -55,6 +55,7 @@ gcloud_mount_args := -v $(build_path)/.config/gcloud:/root/.config/gcloud
 
 cargo_build_x86_64_linux := build --release --target x86_64-unknown-linux-gnu
 cargo_build_x86_64_apple := build --release --target x86_64-apple-darwin
+cargo_build_aarch64-apple := build --release --target aarch64-apple-darwin
 cargo_build_x86_64_windows := build --release --target x86_64-pc-windows-gnu
 
 #   _____                    _
@@ -144,11 +145,12 @@ else
 		--entrypoint=cargo $(BUILD_IMAGE_TAG) $(cargo_build_x86_64_windows)
 endif
 
-# Build binary for x86_64-apple-darwin
+# Build binary for x86_64-apple-darwin and aarch64-apple-darwin
 # Use BUILD_LOCAL=1 to build through local cargo rather than through the build container.
 build-macos-binary:
 ifdef BUILD_LOCAL
 	cargo $(cargo_build_x86_64_apple)
+	cargo $(cargo_build_aarch64-apple)
 else
 	docker run --rm -v $(project_path):/workspace -w /workspace \
 		-v $(CARGO_HOME)/registry:/root/.cargo/registry \
@@ -156,7 +158,8 @@ else
 		-e "CC=o64-clang" -e "CXX=o64-clang++" \
 		-e "PROTOC=/opt/protoc/bin/protoc" \
 		joseluisq/rust-linux-darwin-builder:$(rust_toolchain) \
-			sh -c "/workspace/build/darwin-builder/setup.sh && cargo $(cargo_build_x86_64_apple) --no-default-features"
+			sh -c "/workspace/build/darwin-builder/setup.sh && cargo $(cargo_build_x86_64_apple) --no-default-features && \
+			CC=oa64-clang CXX=oa64-clang++ LIBZ_SYS_STATIC=1 cargo $(cargo_build_aarch64-apple) --no-default-features"
 endif
 
 # Build container image.
