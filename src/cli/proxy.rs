@@ -261,11 +261,23 @@ pub struct RuntimeConfig {
 
 impl RuntimeConfig {
     pub fn is_ready(&self, config: &Config) -> bool {
-        self.xds_is_healthy
+        let xds_is_healthy = self
+            .xds_is_healthy
             .read()
             .as_ref()
-            .map_or(true, |health| health.load(Ordering::SeqCst))
-            && config.clusters.read().endpoints().count() != 0
+            .map_or(true, |health| health.load(Ordering::SeqCst));
+
+        if !xds_is_healthy {
+            tracing::warn!("xds is not healthy");
+        }
+
+        let has_endpoints = config.clusters.read().endpoints().count() != 0;
+
+        if !has_endpoints {
+            tracing::warn!("no endpoints available currently");
+        }
+
+        xds_is_healthy && has_endpoints
     }
 }
 
