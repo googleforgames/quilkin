@@ -27,7 +27,7 @@ pub use self::{address::EndpointAddress, locality::Locality, metadata::DynamicMe
 pub type EndpointMetadata = metadata::MetadataView<Metadata>;
 
 /// A destination endpoint with any associated metadata.
-#[derive(Debug, Deserialize, Serialize, PartialEq, Clone, Eq, schemars::JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, Clone, schemars::JsonSchema)]
 #[non_exhaustive]
 #[serde(deny_unknown_fields)]
 pub struct Endpoint {
@@ -105,6 +105,14 @@ impl TryFrom<crate::cluster::proto::Endpoint> for Endpoint {
         })
     }
 }
+
+impl PartialEq for Endpoint {
+    fn eq(&self, other: &Self) -> bool {
+        self.address.eq(&other.address) && self.metadata.eq(&other.metadata)
+    }
+}
+
+impl Eq for Endpoint {}
 
 impl std::cmp::PartialEq<EndpointAddress> for Endpoint {
     fn eq(&self, rhs: &EndpointAddress) -> bool {
