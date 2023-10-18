@@ -157,7 +157,7 @@ impl Cli {
 
         tracing::info!(
             version = crate_version!(),
-            commit = crate::metadata::build::GIT_COMMIT_HASH,
+            commit = crate::net::endpoint::metadata::build::GIT_COMMIT_HASH,
             "Starting Quilkin"
         );
 
@@ -289,9 +289,9 @@ mod tests {
 
     use crate::{
         config::{Filter, Providers},
-        endpoint::Endpoint,
         filters::{Capture, StaticFilter, TokenRouter},
-        test_utils::{create_socket, AddressType, TestHelper},
+        net::endpoint::Endpoint,
+        test::{create_socket, AddressType, TestHelper},
     };
 
     #[tokio::test]
@@ -335,7 +335,7 @@ mod tests {
             config.clusters.write().insert_default(
                 [Endpoint::with_metadata(
                     (std::net::Ipv4Addr::LOCALHOST, server_port).into(),
-                    crate::endpoint::Metadata {
+                    crate::net::endpoint::Metadata {
                         tokens: vec!["abc".into()].into_iter().collect(),
                     },
                 )]
@@ -345,7 +345,7 @@ mod tests {
         })
         .unwrap();
 
-        let relay_admin_port = crate::test_utils::available_addr(&AddressType::Random)
+        let relay_admin_port = crate::test::available_addr(&AddressType::Random)
             .await
             .port();
         let relay = Cli {
@@ -362,7 +362,7 @@ mod tests {
             log_format: LogFormats::default(),
         };
 
-        let control_plane_admin_port = crate::test_utils::available_addr(&AddressType::Random)
+        let control_plane_admin_port = crate::test::available_addr(&AddressType::Random)
             .await
             .port();
         let control_plane = Cli {
@@ -376,7 +376,7 @@ mod tests {
                 sub_zone: None,
                 zone: None,
                 idle_request_interval_secs: admin::IDLE_REQUEST_INTERVAL_SECS,
-                qcmp_port: crate::test_utils::available_addr(&AddressType::Random)
+                qcmp_port: crate::test::available_addr(&AddressType::Random)
                     .await
                     .port(),
                 provider: Some(Providers::File {
@@ -386,7 +386,7 @@ mod tests {
             log_format: LogFormats::default(),
         };
 
-        let proxy_admin_port = crate::test_utils::available_addr(&AddressType::Random)
+        let proxy_admin_port = crate::test::available_addr(&AddressType::Random)
             .await
             .port();
         let proxy = Cli {
@@ -419,7 +419,7 @@ mod tests {
                 config.clusters.write().insert_default(
                     [Endpoint::with_metadata(
                         (std::net::Ipv6Addr::LOCALHOST, server_port).into(),
-                        crate::endpoint::Metadata {
+                        crate::net::endpoint::Metadata {
                             tokens: vec![token.clone()].into_iter().collect(),
                         },
                     )]

@@ -23,7 +23,7 @@ use tracing_futures::Instrument;
 
 use crate::{
     config::Config,
-    xds::{
+    net::xds::{
         metrics,
         relay::aggregated_control_plane_discovery_service_server::{
             AggregatedControlPlaneDiscoveryService, AggregatedControlPlaneDiscoveryServiceServer,
@@ -74,7 +74,7 @@ pub(crate) fn control_plane_discovery_server(
 pub struct ControlPlane {
     config: Arc<Config>,
     idle_request_interval_secs: u64,
-    watchers: Arc<crate::xds::resource::ResourceMap<Watchers>>,
+    watchers: Arc<crate::net::xds::resource::ResourceMap<Watchers>>,
 }
 
 struct Watchers {
@@ -95,11 +95,6 @@ impl Default for Watchers {
 }
 
 impl ControlPlane {
-    /// Creates a new server for managing [`Config`].
-    pub fn new(config: Config, idle_request_interval_secs: u64) -> Self {
-        Self::from_arc(Arc::new(config), idle_request_interval_secs)
-    }
-
     pub fn from_arc(config: Arc<Config>, idle_request_interval_secs: u64) -> Self {
         let this = Self {
             config,
@@ -159,7 +154,7 @@ impl ControlPlane {
             .version
             .load(std::sync::atomic::Ordering::Relaxed)
             .to_string();
-        response.control_plane = Some(crate::xds::config::core::v3::ControlPlane {
+        response.control_plane = Some(crate::net::xds::config::core::v3::ControlPlane {
             identifier: (*self.config.id.load()).clone(),
         });
         response.nonce = nonce.to_string();
@@ -328,10 +323,10 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
             Arc::from(&*identifier),
             move |(mut requests, _rx), _subscribed_resources| async move {
                 tracing::info!(%identifier, "sending initial discovery request");
-                crate::xds::client::MdsStream::discovery_request_without_cache(
+                crate::net::xds::client::MdsStream::discovery_request_without_cache(
                     &identifier,
                     &mut requests,
-                    crate::xds::ResourceType::Cluster,
+                    crate::net::xds::ResourceType::Cluster,
                     &[],
                 )
                 .map_err(|error| tonic::Status::internal(error.to_string()))?;
@@ -353,10 +348,10 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
                         requests.send(ack?)?;
                     } else {
                         tracing::debug!("exceeded idle interval, sending request");
-                        crate::xds::client::MdsStream::discovery_request_without_cache(
+                        crate::net::xds::client::MdsStream::discovery_request_without_cache(
                             &identifier,
                             &mut requests,
-                            crate::xds::ResourceType::Cluster,
+                            crate::net::xds::ResourceType::Cluster,
                             &[],
                         )
                         .map_err(|error| tonic::Status::internal(error.to_string()))?;
@@ -381,7 +376,7 @@ mod tests {
     use tokio::time::timeout;
 
     use super::*;
-    use crate::xds::{
+    use crate::net::xds::{
         config::{
             core::v3::Node,
             listener::v3::{FilterChain, Listener},
@@ -408,7 +403,7 @@ mod tests {
             version_info: String::new(),
             resources: vec![prost_types::Any {
                 type_url: LISTENER_TYPE.type_url().into(),
-                value: crate::prost::encode(&Listener {
+                value: crate::codec::prost::encode(&Listener {
                     filter_chains: vec![FilterChain {
                         filters: vec![],
                         ..<_>::default()

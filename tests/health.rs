@@ -17,7 +17,7 @@ use std::panic;
 
 use hyper::{Client, Uri};
 
-use quilkin::{endpoint::Endpoint, test_utils::TestHelper};
+use quilkin::{net::endpoint::Endpoint, test::TestHelper};
 
 const LIVE_ADDRESS: &str = "http://localhost:9093/live";
 

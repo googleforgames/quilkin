@@ -77,7 +77,7 @@ impl std::fmt::Display for Value {
             Self::Bool(value) => value.fmt(f),
             Self::Number(value) => value.fmt(f),
             Self::String(value) => value.fmt(f),
-            Self::Bytes(value) => crate::utils::base64_encode(value).fmt(f),
+            Self::Bytes(value) => crate::codec::base64::encode(value).fmt(f),
             Self::List(values) => {
                 write!(f, "[")?;
                 let mut first = true;
@@ -246,14 +246,14 @@ impl<T: Into<prost_types::Struct> + Default> From<MetadataView<T>> for prost_typ
         let mut prost_struct = prost_types::Struct::default();
         prost_struct.fields.insert(
             String::from("quilkin.dev"),
-            crate::prost::value_from_struct(metadata.known.into()),
+            crate::codec::prost::value_from_struct(metadata.known.into()),
         );
 
         prost_struct.fields.extend(
             metadata
                 .unknown
                 .into_iter()
-                .map(|(k, v)| (k, crate::prost::from_json(v))),
+                .map(|(k, v)| (k, crate::codec::prost::from_json(v))),
         );
 
         prost_struct
@@ -267,14 +267,14 @@ impl<T: Into<prost_types::Struct> + Default + Clone> From<&'_ MetadataView<T>>
         let mut prost_struct = prost_types::Struct::default();
         prost_struct.fields.insert(
             String::from("quilkin.dev"),
-            crate::prost::value_from_struct(metadata.known.clone().into()),
+            crate::codec::prost::value_from_struct(metadata.known.clone().into()),
         );
 
         prost_struct.fields.extend(
             metadata
                 .unknown
                 .iter()
-                .map(|(k, v)| (k.clone(), crate::prost::from_json(v.clone()))),
+                .map(|(k, v)| (k.clone(), crate::codec::prost::from_json(v.clone()))),
         );
 
         prost_struct
@@ -305,7 +305,7 @@ where
 
         Ok(Self {
             known,
-            unknown: crate::prost::mapping_from_kind(value).unwrap_or_default(),
+            unknown: crate::codec::prost::mapping_from_kind(value).unwrap_or_default(),
         })
     }
 }

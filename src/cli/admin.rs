@@ -193,7 +193,7 @@ fn collect_metrics() -> Response<Body> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::endpoint::Endpoint;
+    use crate::net::endpoint::Endpoint;
 
     #[tokio::test]
     async fn collect_metrics() {

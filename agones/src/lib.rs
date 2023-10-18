@@ -676,7 +676,7 @@ pub fn gameserver_address(gs: &GameServer) -> String {
 
 // Output the events and logs for each pod that matches this label selector.
 // Useful for determining why something is failing in CI without having to run a cluster.
-// Requires quilkin::test_utils::enable_log("agones=debug"); to enable debug logging within
+// Requires quilkin::test::enable_log("agones=debug"); to enable debug logging within
 // the test
 pub async fn debug_pods(client: &Client, labels: String) {
     debug!(labels, "🪓 Debug output for Selector");

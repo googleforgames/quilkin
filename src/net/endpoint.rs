@@ -18,12 +18,13 @@
 
 pub(crate) mod address;
 mod locality;
+pub mod metadata;
 
 use serde::{Deserialize, Serialize};
 
-pub use self::{address::EndpointAddress, locality::Locality};
+pub use self::{address::EndpointAddress, locality::Locality, metadata::DynamicMetadata};
 
-pub type EndpointMetadata = crate::metadata::MetadataView<Metadata>;
+pub type EndpointMetadata = metadata::MetadataView<Metadata>;
 
 /// A destination endpoint with any associated metadata.
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone, Eq, schemars::JsonSchema)]
@@ -148,7 +149,7 @@ pub struct Metadata {
     pub tokens: base64_set::Set,
 }
 
-impl From<Metadata> for crate::metadata::MetadataView<Metadata> {
+impl From<Metadata> for crate::net::endpoint::metadata::MetadataView<Metadata> {
     fn from(metadata: Metadata) -> Self {
         Self {
             known: metadata,
@@ -165,7 +166,7 @@ impl From<Metadata> for prost_types::Struct {
                     values: metadata
                         .tokens
                         .into_iter()
-                        .map(crate::utils::base64_encode)
+                        .map(crate::codec::base64::encode)
                         .map(prost_types::value::Kind::StringValue)
                         .map(|k| prost_types::Value { kind: Some(k) })
                         .collect(),
@@ -186,33 +187,32 @@ impl std::convert::TryFrom<prost_types::Struct> for Metadata {
         use prost_types::value::Kind;
         const TOKENS: &str = "tokens";
 
-        let tokens = if let Some(kind) = value.fields.remove(TOKENS).and_then(|v| v.kind) {
-            match kind {
-                Kind::ListValue(list) => list
-                    .values
-                    .into_iter()
-                    .filter_map(|v| v.kind)
-                    .map(|kind| {
-                        if let Kind::StringValue(string) = kind {
-                            crate::utils::base64_decode(string)
-                                .map_err(MetadataError::InvalidBase64)
-                        } else {
-                            Err(MetadataError::InvalidType {
-                                key: "quilkin.dev.tokens",
-                                expected: "base64 string",
-                            })
-                        }
-                    })
-                    .collect::<Result<_, _>>()?,
-                Kind::StringValue(string) => {
-                    <_>::from([crate::utils::base64_decode(string)
-                        .map_err(MetadataError::InvalidBase64)?])
+        let tokens =
+            if let Some(kind) = value.fields.remove(TOKENS).and_then(|v| v.kind) {
+                match kind {
+                    Kind::ListValue(list) => list
+                        .values
+                        .into_iter()
+                        .filter_map(|v| v.kind)
+                        .map(|kind| {
+                            if let Kind::StringValue(string) = kind {
+                                crate::codec::base64::decode(string)
+                                    .map_err(MetadataError::InvalidBase64)
+                            } else {
+                                Err(MetadataError::InvalidType {
+                                    key: "quilkin.dev.tokens",
+                                    expected: "base64 string",
+                                })
+                            }
+                        })
+                        .collect::<Result<_, _>>()?,
+                    Kind::StringValue(string) => <_>::from([crate::codec::base64::decode(string)
+                        .map_err(MetadataError::InvalidBase64)?]),
+                    _ => return Err(MetadataError::MissingKey(TOKENS)),
                 }
-                _ => return Err(MetadataError::MissingKey(TOKENS)),
-            }
-        } else {
-            <_>::default()
-        };
+            } else {
+                <_>::default()
+            };
 
         Ok(Self { tokens })
     }
@@ -246,7 +246,7 @@ mod base64_set {
     {
         serde::Serialize::serialize(
             &set.iter()
-                .map(crate::utils::base64_encode)
+                .map(crate::codec::base64::encode)
                 .collect::<Vec<_>>(),
             ser,
         )
@@ -265,7 +265,7 @@ mod base64_set {
             ))
         } else {
             set.into_iter()
-                .map(|string| crate::utils::base64_decode(string).map_err(D::Error::custom))
+                .map(|string| crate::codec::base64::decode(string).map_err(D::Error::custom))
                 .collect()
         }
     }
@@ -284,7 +284,7 @@ mod tests {
         assert_eq!(
             serde_json::to_value(EndpointMetadata::from(metadata)).unwrap(),
             serde_json::json!({
-                crate::metadata::KEY: {
+                crate::net::endpoint::metadata::KEY: {
                     "tokens": ["TWFu"],
                 }
             })

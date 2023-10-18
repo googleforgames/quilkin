@@ -20,7 +20,7 @@ mod regex;
 
 crate::include_proto!("quilkin.filters.capture.v1alpha1");
 
-use crate::{filters::prelude::*, metadata};
+use crate::{filters::prelude::*, net::endpoint::metadata};
 
 use self::quilkin::filters::capture::v1alpha1 as proto;
 
@@ -91,8 +91,9 @@ struct NoValueCaptured;
 #[cfg(test)]
 mod tests {
     use crate::{
-        endpoint::Endpoint, filters::metadata::CAPTURED_BYTES, metadata::Value,
-        test_utils::assert_write_no_change,
+        filters::metadata::CAPTURED_BYTES,
+        net::endpoint::{metadata::Value, Endpoint},
+        test::assert_write_no_change,
     };
 
     use super::*;

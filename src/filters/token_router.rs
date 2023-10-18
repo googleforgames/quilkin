@@ -22,7 +22,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     filters::{metadata::CAPTURED_BYTES, prelude::*},
-    metadata,
+    net::endpoint::metadata,
 };
 
 use self::quilkin::filters::token_router::v1alpha1 as proto;
@@ -56,7 +56,7 @@ impl Filter for TokenRouter {
             Some(metadata::Value::Bytes(token)) => {
                 ctx.endpoints.retain(|endpoint| {
                     if endpoint.metadata.known.tokens.contains(&**token) {
-                        tracing::trace!(%endpoint.address, token = &*crate::utils::base64_encode(token), "Endpoint matched");
+                        tracing::trace!(%endpoint.address, token = &*crate::codec::base64::encode(token), "Endpoint matched");
                         true
                     } else {
                         false
@@ -66,7 +66,7 @@ impl Filter for TokenRouter {
                 if ctx.endpoints.is_empty() {
                     Err(FilterError::new(Error::NoEndpointMatch(
                         self.config.metadata_key,
-                        crate::utils::base64_encode(token),
+                        crate::codec::base64::encode(token),
                     )))
                 } else {
                     Ok(())
@@ -86,11 +86,11 @@ impl Filter for TokenRouter {
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("no routing token found for `{0}`")]
-    NoTokenFound(crate::metadata::Key),
+    NoTokenFound(metadata::Key),
     #[error("key `{0}` was found but wasn't bytes, found {1:?}")]
-    InvalidType(crate::metadata::Key, crate::metadata::Value),
+    InvalidType(metadata::Key, metadata::Value),
     #[error("no endpoint matched token `{1}` from `{0}`")]
-    NoEndpointMatch(crate::metadata::Key, String),
+    NoEndpointMatch(metadata::Key, String),
 }
 
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, schemars::JsonSchema)]
@@ -138,9 +138,8 @@ impl TryFrom<proto::TokenRouter> for Config {
 #[cfg(test)]
 mod tests {
     use crate::{
-        endpoint::{Endpoint, Metadata},
-        metadata::Value,
-        test_utils::assert_write_no_change,
+        net::endpoint::{metadata::Value, Endpoint, Metadata},
+        test::assert_write_no_change,
     };
 
     use super::*;

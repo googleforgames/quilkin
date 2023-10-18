@@ -140,7 +140,7 @@ where
 
         Ok(prost_types::Any {
             type_url: self.name().into(),
-            value: crate::prost::encode::<F::BinaryConfiguration>(&config.try_into()?)?,
+            value: crate::codec::prost::encode::<F::BinaryConfiguration>(&config.try_into()?)?,
         })
     }
 

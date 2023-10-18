@@ -20,9 +20,9 @@ use tokio::time::{timeout, Duration};
 
 use quilkin::{
     config::Filter,
-    endpoint::Endpoint,
     filters::{Compress, Concatenate, StaticFilter},
-    test_utils::{AddressType, TestHelper},
+    net::endpoint::Endpoint,
+    test::{AddressType, TestHelper},
 };
 
 #[tokio::test]
@@ -53,7 +53,7 @@ on_write: DECOMPRESS
         })
         .await;
 
-    quilkin::test_utils::map_to_localhost(&mut echo).await;
+    quilkin::test::map_to_localhost(&mut echo).await;
     let server_port = 12346;
     let server_proxy = quilkin::cli::Proxy {
         port: server_port,

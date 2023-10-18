@@ -1,4 +1,4 @@
-use crate::metadata::Value;
+use crate::net::endpoint::metadata::Value;
 
 /// Capture from the start of the packet.
 #[derive(serde::Serialize, serde::Deserialize, Debug, schemars::JsonSchema)]

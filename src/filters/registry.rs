@@ -64,11 +64,11 @@ impl FilterRegistry {
 mod tests {
     use std::net::Ipv4Addr;
 
-    use crate::test_utils::load_test_filters;
+    use crate::test::load_test_filters;
 
     use super::*;
-    use crate::endpoint::{Endpoint, EndpointAddress};
     use crate::filters::{Filter, FilterError, FilterRegistry, ReadContext, WriteContext};
+    use crate::net::endpoint::{Endpoint, EndpointAddress};
 
     struct TestFilter {}
 

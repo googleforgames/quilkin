@@ -18,9 +18,9 @@ use tokio::time::{timeout, Duration};
 
 use quilkin::{
     config::Filter,
-    endpoint::Endpoint,
     filters::{Compress, StaticFilter},
-    test_utils::{available_addr, AddressType, TestHelper},
+    net::endpoint::Endpoint,
+    test::{available_addr, AddressType, TestHelper},
 };
 
 #[tokio::test]
@@ -30,7 +30,7 @@ async fn client_and_server() {
 
     // create server configuration as
     let mut server_addr = available_addr(&AddressType::Random).await;
-    quilkin::test_utils::map_addr_to_localhost(&mut server_addr);
+    quilkin::test::map_addr_to_localhost(&mut server_addr);
     let yaml = "
 on_read: DECOMPRESS
 on_write: COMPRESS

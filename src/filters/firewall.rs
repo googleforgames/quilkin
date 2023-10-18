@@ -118,8 +118,8 @@ pub struct PacketDenied;
 mod tests {
     use std::net::Ipv4Addr;
 
-    use crate::endpoint::Endpoint;
     use crate::filters::firewall::config::PortRange;
+    use crate::net::endpoint::Endpoint;
     use tracing_test::traced_test;
 
     use super::*;
@@ -166,7 +166,7 @@ mod tests {
             }],
         };
 
-        let local_addr: crate::endpoint::EndpointAddress = (Ipv4Addr::LOCALHOST, 8081).into();
+        let local_addr: crate::net::endpoint::EndpointAddress = (Ipv4Addr::LOCALHOST, 8081).into();
 
         let mut ctx =
             WriteContext::new(([192, 168, 75, 20], 80).into(), local_addr.clone(), vec![]);

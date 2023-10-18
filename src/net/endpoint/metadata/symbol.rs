@@ -151,7 +151,7 @@ impl Symbol {
         match self.resolve(metadata) {
             Some(Value::Number(value)) => Some(Vec::from(value.to_be_bytes()).into()),
             Some(Value::Bytes(bytes)) => Some(bytes.clone()),
-            Some(Value::String(string)) => Some(crate::utils::base64_decode(string).ok()?.into()),
+            Some(Value::String(string)) => Some(crate::codec::base64::decode(string).ok()?.into()),
             _ => None,
         }
     }

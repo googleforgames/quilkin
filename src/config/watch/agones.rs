@@ -20,7 +20,7 @@ use std::sync::{
     Arc,
 };
 
-use crate::{endpoint::Locality, Config};
+use crate::{net::endpoint::Locality, Config};
 
 pub async fn watch(
     gameservers_namespace: impl AsRef<str>,

@@ -16,7 +16,7 @@
 
 use std::collections::HashMap;
 
-use crate::{endpoint::EndpointAddress, metadata::DynamicMetadata};
+use crate::net::endpoint::{DynamicMetadata, EndpointAddress};
 
 #[cfg(doc)]
 use crate::filters::Filter;

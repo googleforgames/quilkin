@@ -22,9 +22,9 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    endpoint::EndpointAddress,
+    collections::ttl::{Entry, TtlMap},
     filters::prelude::*,
-    ttl_map::{Entry, TtlMap},
+    net::endpoint::EndpointAddress,
 };
 
 crate::include_proto!("quilkin.filters.local_rate_limit.v1alpha1");
@@ -207,7 +207,7 @@ mod tests {
     use tokio::time;
 
     use super::*;
-    use crate::{config::ConfigType, test_utils::assert_write_no_change};
+    use crate::{config::ConfigType, test::assert_write_no_change};
 
     fn rate_limiter(config: Config) -> LocalRateLimit {
         LocalRateLimit::new(config).unwrap()
@@ -222,7 +222,7 @@ mod tests {
 
     /// Send a packet to the filter and assert whether or not it was processed.
     async fn read(r: &LocalRateLimit, address: &EndpointAddress, should_succeed: bool) {
-        let endpoints = vec![crate::endpoint::Endpoint::new(
+        let endpoints = vec![crate::net::endpoint::Endpoint::new(
             (Ipv4Addr::LOCALHOST, 8089).into(),
         )];
 

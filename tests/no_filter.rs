@@ -18,8 +18,8 @@ use tokio::time::timeout;
 use tokio::time::Duration;
 
 use quilkin::{
-    endpoint::Endpoint,
-    test_utils::{available_addr, AddressType, TestHelper},
+    net::endpoint::Endpoint,
+    test::{available_addr, AddressType, TestHelper},
 };
 
 #[tokio::test]

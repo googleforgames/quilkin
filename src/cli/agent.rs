@@ -79,7 +79,7 @@ impl Agent {
         mut shutdown_rx: tokio::sync::watch::Receiver<()>,
     ) -> crate::Result<()> {
         let locality = (self.region.is_some() || self.zone.is_some() || self.sub_zone.is_some())
-            .then(|| crate::endpoint::Locality {
+            .then(|| crate::net::endpoint::Locality {
                 region: self.region.clone().unwrap_or_default(),
                 zone: self.zone.clone().unwrap_or_default(),
                 sub_zone: self.sub_zone.clone().unwrap_or_default(),
@@ -97,7 +97,7 @@ impl Agent {
                 None => return Err(eyre::eyre!("no configuration provider given")),
             };
 
-            let task = crate::xds::client::MdsClient::connect(
+            let task = crate::net::xds::client::MdsClient::connect(
                 String::clone(&config.id.load()),
                 mode.clone(),
                 self.relay.clone(),
@@ -112,7 +112,7 @@ impl Agent {
             None
         };
 
-        crate::protocol::spawn(self.qcmp_port).await?;
+        crate::codec::qcmp::spawn(self.qcmp_port).await?;
         shutdown_rx.changed().await.map_err(From::from)
     }
 }

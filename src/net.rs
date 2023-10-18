@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+pub mod endpoint;
+pub(crate) mod maxmind_db;
+pub(crate) mod xds;
+
 use std::{
     io,
     net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
@@ -21,6 +25,8 @@ use std::{
 
 use socket2::{Protocol, Socket, Type};
 use tokio::{net::ToSocketAddrs, net::UdpSocket};
+
+pub use endpoint::{Endpoint, EndpointAddress};
 
 /// returns a UdpSocket with address and port reuse, on Ipv6Addr::UNSPECIFIED
 fn socket_with_reuse(port: u16) -> std::io::Result<UdpSocket> {
@@ -120,8 +126,8 @@ mod tests {
 
     use tokio::time::timeout;
 
-    use crate::endpoint::address::AddressKind;
-    use crate::test_utils::{available_addr, AddressType, TestHelper};
+    use crate::net::endpoint::address::AddressKind;
+    use crate::test::{available_addr, AddressType, TestHelper};
 
     #[tokio::test]
     async fn dual_stack_socket_reusable() {

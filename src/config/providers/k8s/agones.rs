@@ -25,7 +25,7 @@ use kube::{core::Resource, CustomResource};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::endpoint::Endpoint;
+use crate::net::endpoint::Endpoint;
 
 const QUILKIN_TOKEN_LABEL: &str = "quilkin.dev/tokens";
 
@@ -60,8 +60,8 @@ impl GameServer {
 
             Endpoint::with_metadata(
                 (status.address.clone(), port).into(),
-                crate::metadata::MetadataView::with_unknown(
-                    crate::endpoint::Metadata { tokens },
+                crate::net::endpoint::metadata::MetadataView::with_unknown(
+                    crate::net::endpoint::Metadata { tokens },
                     extra_metadata,
                 ),
             )
@@ -76,7 +76,7 @@ impl GameServer {
                     value
                         .split(',')
                         .map(String::from)
-                        .map(crate::utils::base64_decode)
+                        .map(crate::codec::base64::decode)
                         .filter_map(Result::ok)
                         .collect()
                 })

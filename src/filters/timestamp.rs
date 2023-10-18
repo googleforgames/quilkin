@@ -18,7 +18,11 @@ use std::sync::Arc;
 
 use chrono::prelude::*;
 
-use crate::{filters::prelude::*, metadata::Value, metrics::Direction};
+use crate::{
+    filters::prelude::*,
+    metrics::Direction,
+    net::endpoint::metadata::{self, Value},
+};
 
 crate::include_proto!("quilkin.filters.timestamp.v1alpha1");
 use self::quilkin::filters::timestamp::v1alpha1 as proto;
@@ -33,7 +37,7 @@ pub struct Timestamp {
 impl Timestamp {
     /// Observes the duration since a timestamp stored in `metadata` and now,
     /// if present.
-    pub fn observe(&self, metadata: &crate::metadata::DynamicMetadata, direction: Direction) {
+    pub fn observe(&self, metadata: &metadata::DynamicMetadata, direction: Direction) {
         let value = metadata
             .get(&self.config.metadata_key)
             .and_then(|item| match item {
@@ -125,7 +129,7 @@ impl StaticFilter for Timestamp {
 pub struct Config {
     /// The metadata key to read the UTC UNIX Timestamp from.
     #[serde(rename = "metadataKey")]
-    pub metadata_key: crate::metadata::Key,
+    pub metadata_key: metadata::Key,
 }
 
 impl Config {

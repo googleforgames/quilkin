@@ -16,25 +16,18 @@
 
 #![deny(unused_must_use)]
 
-mod maxmind_db;
-mod proxy;
-
+pub(crate) mod collections;
 pub(crate) mod metrics;
-pub(crate) mod prost;
-pub(crate) mod ttl_map;
-pub(crate) mod utils;
 
 pub mod cli;
 pub mod cluster;
+pub mod codec;
 pub mod config;
-pub mod endpoint;
 pub mod filters;
-pub mod metadata;
-pub mod protocol;
-pub mod xds;
+pub mod net;
 
 #[doc(hidden)]
-pub mod test_utils;
+pub mod test;
 
 pub type Result<T, E = eyre::Error> = std::result::Result<T, E>;
 
@@ -46,7 +39,13 @@ pub use self::{
 
 pub use quilkin_macros::include_proto;
 
-pub(crate) use self::maxmind_db::MaxmindDb;
+pub(crate) use self::net::maxmind_db::MaxmindDb;
+
+/// A type which can be logged, usually error types.
+pub(crate) trait Loggable {
+    /// Output a log.
+    fn log(&self);
+}
 
 #[cfg(doctest)]
 mod external_doc_tests {

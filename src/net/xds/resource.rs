@@ -16,7 +16,7 @@
 
 use prost::Message;
 
-use crate::xds::config::listener::v3::Listener;
+use crate::net::xds::config::listener::v3::Listener;
 
 pub type ResourceMap<V> = enum_map::EnumMap<ResourceType, V>;
 
@@ -49,7 +49,7 @@ impl Resource {
             Self::Cluster(cluster) => cluster
                 .locality
                 .clone()
-                .map(|locality| crate::endpoint::Locality::from(locality).to_string())
+                .map(|locality| crate::net::endpoint::Locality::from(locality).to_string())
                 .unwrap_or_default(),
             Self::Listener(listener) => listener.name.to_string(),
         }
@@ -102,7 +102,7 @@ impl ResourceType {
     ) -> Result<prost_types::Any, prost::EncodeError> {
         Ok(prost_types::Any {
             type_url: self.type_url().into(),
-            value: crate::prost::encode(message)?,
+            value: crate::codec::prost::encode(message)?,
         })
     }
 }

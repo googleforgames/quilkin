@@ -22,9 +22,9 @@ use tokio::time::timeout;
 
 use quilkin::{
     config::Filter,
-    endpoint::Endpoint,
     filters::{Debug, StaticFilter},
-    test_utils::{load_test_filters, AddressType, TestHelper},
+    net::endpoint::Endpoint,
+    test::{load_test_filters, AddressType, TestHelper},
 };
 
 #[tokio::test]

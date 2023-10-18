@@ -27,15 +27,13 @@ use tokio::{
 };
 
 use crate::{
-    config::Config,
-    filters::Filter,
-    maxmind_db::IpNetEntry,
-    utils::{net::DualStackLocalSocket, Loggable},
+    config::Config, filters::Filter, net::maxmind_db::IpNetEntry, net::DualStackLocalSocket,
+    Loggable,
 };
 
 pub(crate) mod metrics;
 
-pub type SessionMap = crate::ttl_map::TtlMap<SessionKey, Session>;
+pub type SessionMap = crate::collections::ttl::TtlMap<SessionKey, Session>;
 
 /// A data structure that is responsible for holding sessions, and pooling
 /// sockets between them. This means that we only provide new unique sockets
@@ -116,7 +114,7 @@ impl SessionPool {
                             },
                             Ok((size, mut recv_addr)) => {
                                 let received_at = chrono::Utc::now().timestamp_nanos_opt().unwrap();
-                                crate::utils::net::to_canonical(&mut recv_addr);
+                                crate::net::to_canonical(&mut recv_addr);
                                 tracing::trace!(%recv_addr, %size, "received packet");
                                 let (downstream_addr, asn_info): (SocketAddr, Option<IpNetEntry>) = {
                                     let storage = pool.storage.read().await;
@@ -291,7 +289,7 @@ impl SessionPool {
         dest: SocketAddr,
         packet: &[u8],
     ) -> Result<usize, Error> {
-        tracing::trace!(%source, %dest, contents = %crate::utils::base64_encode(packet), "received packet from upstream");
+        tracing::trace!(%source, %dest, contents = %crate::codec::base64::encode(packet), "received packet from upstream");
 
         let mut context =
             crate::filters::WriteContext::new(source.into(), dest.into(), packet.to_vec());
@@ -299,7 +297,7 @@ impl SessionPool {
         config.filters.load().write(&mut context).await?;
 
         let packet = context.contents.as_ref();
-        tracing::trace!(%source, %dest, contents = %crate::utils::base64_encode(packet), "sending packet downstream");
+        tracing::trace!(%source, %dest, contents = %crate::codec::base64::encode(packet), "sending packet downstream");
         downstream_socket
             .send_to(packet, &dest)
             .await
@@ -488,7 +486,7 @@ impl Loggable for Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::{available_addr, AddressType, TestHelper};
+    use crate::test::{available_addr, AddressType, TestHelper};
     use std::sync::Arc;
 
     async fn new_pool(config: impl Into<Option<Config>>) -> (Arc<SessionPool>, watch::Sender<()>) {
@@ -498,7 +496,7 @@ mod tests {
                 Arc::new(config.into().unwrap_or_default()),
                 Arc::new(
                     DualStackLocalSocket::new(
-                        crate::test_utils::available_addr(&AddressType::Random)
+                        crate::test::available_addr(&AddressType::Random)
                             .await
                             .port(),
                     )
@@ -654,11 +652,11 @@ mod tests {
         let mut t = TestHelper::default();
         let dest = t.run_echo_server(&AddressType::Ipv6).await;
         let mut dest = dest.to_socket_addr().await.unwrap();
-        crate::test_utils::map_addr_to_localhost(&mut dest);
+        crate::test::map_addr_to_localhost(&mut dest);
         let source = available_addr(&AddressType::Ipv6).await;
         let socket = tokio::net::UdpSocket::bind(source).await.unwrap();
         let mut source = socket.local_addr().unwrap();
-        crate::test_utils::map_addr_to_localhost(&mut source);
+        crate::test::map_addr_to_localhost(&mut source);
         let (pool, _sender) = new_pool(None).await;
 
         let key: SessionKey = (source, dest).into();

@@ -26,7 +26,7 @@ use uuid::Uuid;
 use crate::{
     cluster::ClusterMap,
     filters::prelude::*,
-    xds::{
+    net::xds::{
         config::listener::v3::Listener, service::discovery::v3::DiscoveryResponse, Resource,
         ResourceType,
     },
@@ -73,7 +73,7 @@ impl Config {
     fn update_from_json(
         &self,
         map: serde_json::Map<String, serde_json::Value>,
-        locality: Option<crate::endpoint::Locality>,
+        locality: Option<crate::net::endpoint::Locality>,
     ) -> Result<(), eyre::Error> {
         macro_rules! replace_if_present {
             ($($field:ident),+) => {
@@ -176,7 +176,7 @@ impl Config {
                         .endpoints
                         .iter()
                         .cloned()
-                        .map(crate::endpoint::Endpoint::try_from)
+                        .map(crate::net::endpoint::Endpoint::try_from)
                         .collect::<Result<_, _>>()?,
                 );
             }
@@ -236,11 +236,13 @@ pub struct Filter {
     pub config: Option<serde_json::Value>,
 }
 
-impl TryFrom<crate::xds::config::listener::v3::Filter> for Filter {
+impl TryFrom<crate::net::xds::config::listener::v3::Filter> for Filter {
     type Error = CreationError;
 
-    fn try_from(filter: crate::xds::config::listener::v3::Filter) -> Result<Self, Self::Error> {
-        use crate::xds::config::listener::v3::filter::ConfigType;
+    fn try_from(
+        filter: crate::net::xds::config::listener::v3::Filter,
+    ) -> Result<Self, Self::Error> {
+        use crate::net::xds::config::listener::v3::filter::ConfigType;
 
         let config = if let Some(config_type) = filter.config_type {
             let config = match config_type {
@@ -270,11 +272,11 @@ impl TryFrom<crate::xds::config::listener::v3::Filter> for Filter {
     }
 }
 
-impl TryFrom<Filter> for crate::xds::config::listener::v3::Filter {
+impl TryFrom<Filter> for crate::net::xds::config::listener::v3::Filter {
     type Error = CreationError;
 
     fn try_from(filter: Filter) -> Result<Self, Self::Error> {
-        use crate::xds::config::listener::v3::filter::ConfigType;
+        use crate::net::xds::config::listener::v3::filter::ConfigType;
 
         let config = if let Some(config) = filter.config {
             Some(
@@ -309,7 +311,7 @@ mod tests {
 
     use serde_json::json;
 
-    use crate::endpoint::{Endpoint, Metadata};
+    use crate::net::endpoint::{Endpoint, Metadata};
 
     use super::*;
 

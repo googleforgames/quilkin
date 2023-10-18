@@ -190,7 +190,7 @@ impl TryFrom<&[FilterConfig]> for FilterChain {
     }
 }
 
-impl TryFrom<FilterChain> for crate::xds::config::listener::v3::FilterChain {
+impl TryFrom<FilterChain> for crate::net::xds::config::listener::v3::FilterChain {
     type Error = CreationError;
 
     fn try_from(chain: FilterChain) -> Result<Self, Self::Error> {
@@ -198,7 +198,7 @@ impl TryFrom<FilterChain> for crate::xds::config::listener::v3::FilterChain {
     }
 }
 
-impl TryFrom<&'_ FilterChain> for crate::xds::config::listener::v3::FilterChain {
+impl TryFrom<&'_ FilterChain> for crate::net::xds::config::listener::v3::FilterChain {
     type Error = CreationError;
 
     fn try_from(chain: &FilterChain) -> Result<Self, Self::Error> {
@@ -309,9 +309,9 @@ impl Filter for FilterChain {
 mod tests {
     use crate::{
         config,
-        endpoint::Endpoint,
         filters::Debug,
-        test_utils::{new_test_config, TestFilter},
+        net::endpoint::Endpoint,
+        test::{new_test_config, TestFilter},
     };
 
     use super::*;
@@ -349,7 +349,7 @@ mod tests {
 
     #[tokio::test]
     async fn chain_single_test_filter() {
-        crate::test_utils::load_test_filters();
+        crate::test::load_test_filters();
         let config = new_test_config();
         let endpoints_fixture = endpoints();
         let mut context = ReadContext::new(

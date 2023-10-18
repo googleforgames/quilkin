@@ -19,14 +19,14 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use tokio::time::Duration;
 
 use quilkin::{
-    protocol::Protocol,
-    test_utils::{AddressType, TestHelper},
+    codec::qcmp::Protocol,
+    test::{AddressType, TestHelper},
 };
 
 #[tokio::test]
 async fn proxy_ping() {
     let mut t = TestHelper::default();
-    let server_port = quilkin::test_utils::available_addr(&AddressType::Random)
+    let server_port = quilkin::test::available_addr(&AddressType::Random)
         .await
         .port();
     let server_proxy = quilkin::cli::Proxy {
@@ -41,7 +41,7 @@ async fn proxy_ping() {
 
 #[tokio::test]
 async fn agent_ping() {
-    let qcmp_port = quilkin::test_utils::available_addr(&AddressType::Random)
+    let qcmp_port = quilkin::test::available_addr(&AddressType::Random)
         .await
         .port();
     let agent = quilkin::cli::Agent {
