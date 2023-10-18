@@ -310,19 +310,6 @@ where
 {
     /// Returns a reference to the entry's value.
     /// The value will be reset to expire at the configured TTL after the time of retrieval.
-    pub fn into_ref(self) -> Ref<'a, K, Value<V>> {
-        match self.inner {
-            DashMapEntry::Occupied(entry) => {
-                let value = entry.into_ref();
-                value.value().update_expiration(self.ttl);
-                value.downgrade()
-            }
-            _ => unreachable!("BUG: entry type should be occupied"),
-        }
-    }
-
-    /// Returns a reference to the entry's value.
-    /// The value will be reset to expire at the configured TTL after the time of retrieval.
     pub fn get(&self) -> &Value<V> {
         match &self.inner {
             DashMapEntry::Occupied(entry) => {

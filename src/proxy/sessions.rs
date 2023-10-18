@@ -33,14 +33,9 @@ use crate::{
     utils::{net::DualStackLocalSocket, Loggable},
 };
 
-use dashmap::DashMap;
-
 pub(crate) mod metrics;
 
 pub type SessionMap = crate::ttl_map::TtlMap<SessionKey, Session>;
-
-type SessionRef<'pool> =
-    dashmap::mapref::one::Ref<'pool, SessionKey, crate::ttl_map::Value<Session>>;
 
 /// A data structure that is responsible for holding sessions, and pooling
 /// sockets between them. This means that we only provide new unique sockets
@@ -51,7 +46,7 @@ type SessionRef<'pool> =
 /// send back to the original client.
 #[derive(Debug)]
 pub struct SessionPool {
-    ports_to_sockets: DashMap<u16, Arc<DualStackLocalSocket>>,
+    ports_to_sockets: RwLock<HashMap<u16, Arc<DualStackLocalSocket>>>,
     storage: Arc<RwLock<SocketStorage>>,
     session_map: SessionMap,
     downstream_socket: Arc<DualStackLocalSocket>,
@@ -95,10 +90,14 @@ impl SessionPool {
         self: &'pool Arc<Self>,
         key: SessionKey,
         asn_info: Option<IpNetEntry>,
-    ) -> Result<SessionRef<'pool>, super::PipelineError> {
+    ) -> Result<Arc<DualStackLocalSocket>, super::PipelineError> {
+        tracing::trace!(source=%key.source, dest=%key.dest, "creating new socket for session");
         let socket = DualStackLocalSocket::new(0).map(Arc::new)?;
         let port = socket.local_ipv4_addr().unwrap().port();
-        self.ports_to_sockets.insert(port, socket.clone());
+        self.ports_to_sockets
+            .write()
+            .await
+            .insert(port, socket.clone());
 
         let upstream_socket = socket.clone();
         let pool = self.clone();
@@ -181,10 +180,12 @@ impl SessionPool {
         self: &'pool Arc<Self>,
         key @ SessionKey { dest, .. }: SessionKey,
         asn_info: Option<IpNetEntry>,
-    ) -> Result<SessionRef<'pool>, super::PipelineError> {
+    ) -> Result<Arc<DualStackLocalSocket>, super::PipelineError> {
+        tracing::trace!(source=%key.source, dest=%key.dest, "SessionPool::get");
         // If we already have a session for the key pairing, return that session.
         if let Some(entry) = self.session_map.get(&key) {
-            return Ok(entry);
+            tracing::trace!("returning existing session");
+            return Ok(entry.socket.clone());
         }
 
         // If there's a socket_set available, it means there are sockets
@@ -192,25 +193,36 @@ impl SessionPool {
         let storage = self.storage.read().await;
         let Some(socket_set) = storage.destination_to_sockets.get(&dest) else {
             drop(storage);
-            return if self.ports_to_sockets.is_empty() {
+            let no_sockets = self.ports_to_sockets.read().await.is_empty();
+            return if no_sockets {
                 // Initial case where we have no allocated or reserved sockets.
                 self.create_new_session_from_new_socket(key, asn_info).await
             } else {
                 // Where we have no allocated sockets for a destination, assign
                 // the first available one.
-                let entry = self.ports_to_sockets.iter().next().unwrap();
-                let port = *entry.key();
+                let (port, socket) = self
+                    .ports_to_sockets
+                    .read()
+                    .await
+                    .iter()
+                    .next()
+                    .map(|(port, socket)| (*port, socket.clone()))
+                    .unwrap();
 
-                self.create_session_from_existing_socket(key, entry.value().clone(), port, asn_info)
+                self.create_session_from_existing_socket(key, socket, port, asn_info)
                     .await
             };
         };
 
-        if let Some(entry) = self
+        let available_socket = self
             .ports_to_sockets
+            .read()
+            .await
             .iter()
-            .find(|entry| !socket_set.contains(entry.key()))
-        {
+            .find(|(port, _)| !socket_set.contains(port))
+            .map(|(port, socket)| (*port, socket.clone()));
+
+        if let Some((port, socket)) = available_socket {
             drop(storage);
             self.storage
                 .write()
@@ -218,14 +230,9 @@ impl SessionPool {
                 .destination_to_sockets
                 .get_mut(&dest)
                 .unwrap()
-                .insert(*entry.key());
-            self.create_session_from_existing_socket(
-                key,
-                entry.value().clone(),
-                *entry.key(),
-                asn_info,
-            )
-            .await
+                .insert(port);
+            self.create_session_from_existing_socket(key, socket, port, asn_info)
+                .await
         } else {
             drop(storage);
             self.create_new_session_from_new_socket(key, asn_info).await
@@ -239,7 +246,8 @@ impl SessionPool {
         upstream_socket: Arc<DualStackLocalSocket>,
         socket_port: u16,
         asn_info: Option<IpNetEntry>,
-    ) -> Result<SessionRef<'session>, super::PipelineError> {
+    ) -> Result<Arc<DualStackLocalSocket>, super::PipelineError> {
+        tracing::trace!(source=%key.source, dest=%key.dest, "reusing socket for session");
         let mut storage = self.storage.write().await;
         storage
             .destination_to_sockets
@@ -262,14 +270,17 @@ impl SessionPool {
         }
 
         drop(storage);
-        let session = Session::new(key, upstream_socket, socket_port, self.clone(), asn_info)?;
-        Ok(match self.session_map.entry(key) {
-            crate::ttl_map::Entry::Occupied(mut entry) => {
-                entry.insert(session);
-                entry.into_ref()
-            }
-            crate::ttl_map::Entry::Vacant(v) => v.insert(session).downgrade(),
-        })
+        let session = Session::new(
+            key,
+            upstream_socket.clone(),
+            socket_port,
+            self.clone(),
+            asn_info,
+        )?;
+        tracing::trace!("inserting session into map");
+        self.session_map.insert(key, session);
+        tracing::trace!("session inserted");
+        Ok(upstream_socket)
     }
 
     /// process_recv_packet processes a packet that is received by this session.
@@ -309,7 +320,7 @@ impl SessionPool {
     ) -> Result<usize, super::PipelineError> {
         self.get(key, asn_info)
             .await?
-            .send(packet)
+            .send_to(packet, key.dest)
             .await
             .map_err(From::from)
     }
@@ -326,8 +337,7 @@ impl SessionPool {
 
     /// Forces removal of session to make testing quicker.
     #[cfg(test)]
-    async fn drop_session(&self, key: SessionKey, session: SessionRef<'_>) -> bool {
-        drop(session);
+    async fn drop_session(&self, key: SessionKey) -> bool {
         let is_removed = self.session_map.remove(key);
         // Sleep because there's no async drop.
         tokio::time::sleep(Duration::from_millis(100)).await;
@@ -343,6 +353,7 @@ impl SessionPool {
         }: SessionKey,
         port: u16,
     ) {
+        tracing::trace!("releasing socket");
         let mut storage = self.storage.write().await;
         let socket_set = storage.destination_to_sockets.get_mut(dest).unwrap();
 
@@ -366,6 +377,7 @@ impl SessionPool {
             .destination_to_sources
             .remove(&(*dest, port))
             .is_some());
+        tracing::trace!("socket released");
     }
 }
 
@@ -419,11 +431,6 @@ impl Session {
         s.active_session_metric().inc();
         tracing::debug!(source = %key.source, dest = %key.dest, "Session created");
         Ok(s)
-    }
-
-    pub async fn send(&self, packet: &[u8]) -> std::io::Result<usize> {
-        tracing::trace!(dest=%self.key.dest, "sending packet upstream");
-        self.socket.send_to(packet, self.key.dest).await
     }
 
     fn active_session_metric(&self) -> prometheus::IntGauge {
@@ -512,9 +519,9 @@ mod tests {
         )
             .into();
 
-        let session = pool.get(key, None).await.unwrap();
+        let _session = pool.get(key, None).await.unwrap();
 
-        assert!(pool.drop_session(key, session).await);
+        assert!(pool.drop_session(key).await);
 
         assert!(pool.has_no_allocated_sockets().await);
     }
@@ -533,12 +540,12 @@ mod tests {
         )
             .into();
 
-        let session1 = pool.get(key1, None).await.unwrap();
-        let session2 = pool.get(key2, None).await.unwrap();
+        let _session1 = pool.get(key1, None).await.unwrap();
+        let _session2 = pool.get(key2, None).await.unwrap();
 
-        assert!(pool.drop_session(key1, session1).await);
+        assert!(pool.drop_session(key1).await);
         assert!(!pool.has_no_allocated_sockets().await);
-        assert!(pool.drop_session(key2, session2).await);
+        assert!(pool.drop_session(key2).await);
 
         assert!(pool.has_no_allocated_sockets().await);
         drop(pool);
@@ -558,10 +565,15 @@ mod tests {
         )
             .into();
 
-        let socket1 = pool.get(key1, None).await.unwrap();
-        let socket2 = pool.get(key2, None).await.unwrap();
+        let _socket1 = pool.get(key1, None).await.unwrap();
+        let _socket2 = pool.get(key2, None).await.unwrap();
+        assert_ne!(
+            pool.session_map.get(&key1).unwrap().socket_port,
+            pool.session_map.get(&key2).unwrap().socket_port
+        );
 
-        assert_ne!(socket1.socket_port, socket2.socket_port);
+        assert!(pool.drop_session(key1).await);
+        assert!(pool.drop_session(key2).await);
     }
 
     #[tokio::test]
@@ -578,10 +590,13 @@ mod tests {
         )
             .into();
 
-        let socket1 = pool.get(key1, None).await.unwrap();
-        let socket2 = pool.get(key2, None).await.unwrap();
+        let _socket1 = pool.get(key1, None).await.unwrap();
+        let _socket2 = pool.get(key2, None).await.unwrap();
 
-        assert_eq!(socket1.socket_port, socket2.socket_port);
+        assert_eq!(
+            pool.session_map.get(&key1).unwrap().socket_port,
+            pool.session_map.get(&key2).unwrap().socket_port
+        );
     }
 
     #[tokio::test]
