@@ -38,11 +38,9 @@ pub async fn spawn(port: u16) -> crate::Result<()> {
         let mut input_buf = vec![0; 1 << 16];
         let mut output_buf = Vec::new();
         let socket = DualStackLocalSocket::new(port).unwrap();
-        let v4_addr = socket.local_ipv4_addr().unwrap();
-        let v6_addr = socket.local_ipv6_addr().unwrap();
 
-        loop {
-            tracing::info!(%v4_addr, %v6_addr, "awaiting qcmp packets");
+            loop {
+                tracing::debug!("awaiting qcmp packets");
 
             match socket.recv_from(input_buf).await {
                 (Ok((size, source)), new_input_buf) => {
