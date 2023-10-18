@@ -366,9 +366,9 @@ mod tests {
 
         tokio::spawn(relay.drive());
         tokio::spawn(control_plane.drive());
-        tokio::time::sleep(Duration::from_millis(500)).await;
+        tokio::time::sleep(Duration::from_millis(50)).await;
         tokio::spawn(proxy.drive());
-        tokio::time::sleep(Duration::from_millis(500)).await;
+        tokio::time::sleep(Duration::from_millis(50)).await;
         let socket = create_socket().await;
         let config = Config::default();
         let proxy_address: SocketAddr = (std::net::Ipv4Addr::LOCALHOST, 7777).into();
@@ -399,7 +399,7 @@ mod tests {
 
             assert_eq!(
                 "hello",
-                timeout(Duration::from_millis(500), rx.recv())
+                timeout(Duration::from_millis(100), rx.recv())
                     .await
                     .expect("should have received a packet")
                     .unwrap()
@@ -412,7 +412,7 @@ mod tests {
             let msg = b"hello\xFF\xFF\xFF";
             socket.send_to(msg, &proxy_address).await.unwrap();
 
-            let result = timeout(Duration::from_millis(500), rx.recv()).await;
+            let result = timeout(Duration::from_millis(50), rx.recv()).await;
             assert!(result.is_err(), "should not have received a packet");
             tracing::info!(?token, "didn't receive bad packet");
         }

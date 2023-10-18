@@ -470,18 +470,17 @@ mod tests {
         let endpoint = t.open_socket_and_recv_single_packet().await;
         let mut local_addr = available_addr(&AddressType::Ipv6).await;
         crate::test::map_addr_to_localhost(&mut local_addr);
+        let mut dest = endpoint.socket.local_ipv6_addr().unwrap();
+        crate::test::map_addr_to_localhost(&mut dest);
+
         let proxy = crate::cli::Proxy {
             port: local_addr.port(),
             ..<_>::default()
         };
+
         let config = Arc::new(Config::default());
         config.clusters.modify(|clusters| {
-            clusters.insert_default(
-                [Endpoint::new(
-                    endpoint.socket.local_ipv6_addr().unwrap().into(),
-                )]
-                .into(),
-            );
+            clusters.insert_default([Endpoint::new(dest.into())].into());
         });
         t.run_server(config, proxy, None);
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
@@ -509,6 +508,8 @@ mod tests {
         load_test_filters();
         let endpoint = t.open_socket_and_recv_single_packet().await;
         let local_addr = available_addr(&AddressType::Random).await;
+        let mut dest = endpoint.socket.local_ipv4_addr().unwrap();
+        crate::test::map_addr_to_localhost(&mut dest);
         let config = Arc::new(Config::default());
         config.filters.store(
             crate::filters::FilterChain::try_from(vec![config::Filter {
@@ -520,12 +521,7 @@ mod tests {
             .unwrap(),
         );
         config.clusters.modify(|clusters| {
-            clusters.insert_default(
-                [Endpoint::new(
-                    endpoint.socket.local_ipv4_addr().unwrap().into(),
-                )]
-                .into(),
-            );
+            clusters.insert_default([Endpoint::new(dest.into())].into());
         });
         t.run_server(
             config,
