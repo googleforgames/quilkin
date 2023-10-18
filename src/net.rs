@@ -24,16 +24,34 @@ use std::{
 };
 
 use socket2::{Protocol, Socket, Type};
-use tokio::{net::ToSocketAddrs, net::UdpSocket};
+use tokio_uring::net::UdpSocket;
 
 pub use endpoint::{Endpoint, EndpointAddress};
 
 /// returns a UdpSocket with address and port reuse, on Ipv6Addr::UNSPECIFIED
-fn socket_with_reuse(port: u16) -> std::io::Result<UdpSocket> {
-    socket_with_reuse_and_address((Ipv6Addr::UNSPECIFIED, port).into())
+pub(crate) fn raw_socket_with_reuse(port: u16) -> std::io::Result<Socket> {
+    raw_socket_with_reuse_and_address((Ipv6Addr::UNSPECIFIED, port).into())
 }
 
 fn socket_with_reuse_and_address(addr: SocketAddr) -> std::io::Result<UdpSocket> {
+    raw_socket_with_reuse_and_address(addr)
+        .map(From::from)
+        .map(UdpSocket::from_std)
+}
+
+fn epoll_socket_with_reuse(port: u16) -> std::io::Result<tokio::net::UdpSocket> {
+    raw_socket_with_reuse_and_address((Ipv6Addr::UNSPECIFIED, port).into())
+        .map(From::from)
+        .and_then(tokio::net::UdpSocket::from_std)
+}
+
+fn epoll_socket_with_reuse_and_address(addr: SocketAddr) -> std::io::Result<tokio::net::UdpSocket> {
+    raw_socket_with_reuse_and_address(addr)
+        .map(From::from)
+        .and_then(tokio::net::UdpSocket::from_std)
+}
+
+fn raw_socket_with_reuse_and_address(addr: SocketAddr) -> std::io::Result<Socket> {
     let domain = match addr {
         SocketAddr::V4(_) => socket2::Domain::IPV4,
         SocketAddr::V6(_) => socket2::Domain::IPV6,
@@ -47,7 +65,7 @@ fn socket_with_reuse_and_address(addr: SocketAddr) -> std::io::Result<UdpSocket>
         sock.set_only_v6(false)?;
     }
     sock.bind(&addr.into())?;
-    UdpSocket::from_std(sock.into())
+    Ok(sock)
 }
 
 #[cfg(not(target_family = "windows"))]
@@ -64,33 +82,87 @@ fn enable_reuse(sock: &Socket) -> io::Result<()> {
 
 /// An ipv6 socket that can accept and send data from either a local ipv4 address or ipv6 address
 /// with port reuse enabled and only_v6 set to false.
-#[derive(Debug)]
 pub struct DualStackLocalSocket {
     socket: UdpSocket,
+    local_addr: SocketAddr,
 }
 
 impl DualStackLocalSocket {
-    pub fn new(port: u16) -> std::io::Result<DualStackLocalSocket> {
-        Ok(Self {
-            socket: socket_with_reuse(port)?,
+    pub fn from_raw(socket: socket2::Socket) -> Self {
+        let socket: std::net::UdpSocket = socket.into();
+        let local_addr = socket.local_addr().unwrap();
+        let socket = UdpSocket::from_std(socket);
+        Self { socket, local_addr }
+    }
+
+    pub fn new(port: u16) -> std::io::Result<Self> {
+        raw_socket_with_reuse(port).map(Self::from_raw)
+    }
+
+    pub fn bind_local(port: u16) -> std::io::Result<Self> {
+        let local_addr = (Ipv6Addr::LOCALHOST, port).into();
+        let socket = socket_with_reuse_and_address(local_addr)?;
+        Ok(Self { socket, local_addr })
+    }
+
+    pub async fn recv_from(&self, buf: Vec<u8>) -> (io::Result<(usize, SocketAddr)>, Vec<u8>) {
+        self.socket.recv_from(buf).await
+    }
+
+    pub fn local_ipv4_addr(&self) -> io::Result<SocketAddr> {
+        Ok(match self.local_addr {
+            SocketAddr::V4(_) => self.local_addr,
+            SocketAddr::V6(_) => (Ipv4Addr::UNSPECIFIED, self.local_addr.port()).into(),
         })
     }
 
-    pub fn bind_local(port: u16) -> std::io::Result<DualStackLocalSocket> {
+    pub fn local_ipv6_addr(&self) -> io::Result<SocketAddr> {
+        Ok(match self.local_addr {
+            SocketAddr::V4(v4addr) => SocketAddr::new(
+                IpAddr::V6(v4addr.ip().to_ipv6_mapped()),
+                self.local_addr.port(),
+            ),
+            SocketAddr::V6(_) => self.local_addr,
+        })
+    }
+
+    pub async fn send_to(&self, buf: Vec<u8>, target: SocketAddr) -> (io::Result<usize>, Vec<u8>) {
+        self.socket.send_to(buf, target).await
+    }
+}
+
+/// The same as DualStackSocket but uses epoll instead of uring.
+#[derive(Debug)]
+pub struct DualStackEpollSocket {
+    socket: tokio::net::UdpSocket,
+}
+
+impl DualStackEpollSocket {
+    pub fn new(port: u16) -> std::io::Result<Self> {
         Ok(Self {
-            socket: socket_with_reuse_and_address((Ipv6Addr::LOCALHOST, port).into())?,
+            socket: epoll_socket_with_reuse(port)?,
+        })
+    }
+
+    pub fn bind_local(port: u16) -> std::io::Result<Self> {
+        Ok(Self {
+            socket: epoll_socket_with_reuse_and_address((Ipv6Addr::LOCALHOST, port).into())?,
         })
     }
 
     /// Primarily used for testing of ipv4 vs ipv6 addresses.
-    pub(crate) fn new_with_address(addr: SocketAddr) -> std::io::Result<DualStackLocalSocket> {
+    pub(crate) fn new_with_address(addr: SocketAddr) -> std::io::Result<Self> {
         Ok(Self {
-            socket: socket_with_reuse_and_address(addr)?,
+            socket: epoll_socket_with_reuse_and_address(addr)?,
         })
     }
 
     pub async fn recv_from(&self, buf: &mut [u8]) -> io::Result<(usize, SocketAddr)> {
         self.socket.recv_from(buf).await
+    }
+
+    pub fn local_addr(&self) -> io::Result<SocketAddr> {
+        self.socket.local_addr()
     }
 
     pub fn local_ipv4_addr(&self) -> io::Result<SocketAddr> {
@@ -112,9 +184,28 @@ impl DualStackLocalSocket {
         }
     }
 
-    pub async fn send_to<A: ToSocketAddrs>(&self, buf: &[u8], target: A) -> io::Result<usize> {
+    pub async fn send_to<A: tokio::net::ToSocketAddrs>(
+        &self,
+        buf: &[u8],
+        target: A,
+    ) -> io::Result<usize> {
         self.socket.send_to(buf, target).await
     }
+}
+
+/// On linux spawns a io-uring, everywhere else spawns a regular tokio task.
+macro_rules! uring_spawn {
+    ($future:expr) => {
+        cfg_if::cfg_if! {
+            if #[cfg(target_os = "linux")] {
+                std::thread::spawn(move || {
+                    tokio_uring::start($future);
+                });
+            } else {
+                tokio::spawn($future);
+            }
+        }
+    };
 }
 
 #[cfg(test)]
@@ -132,7 +223,7 @@ mod tests {
     #[tokio::test]
     async fn dual_stack_socket_reusable() {
         let expected = available_addr(&AddressType::Random).await;
-        let socket = super::DualStackLocalSocket::new(expected.port()).unwrap();
+        let socket = super::DualStackEpollSocket::new(expected.port()).unwrap();
         let addr = socket.local_ipv4_addr().unwrap();
 
         match expected {
@@ -144,7 +235,7 @@ mod tests {
         assert_eq!(expected.port(), socket.local_ipv6_addr().unwrap().port());
 
         // should be able to do it a second time, since we are reusing the address.
-        let socket = super::DualStackLocalSocket::new(expected.port()).unwrap();
+        let socket = super::DualStackEpollSocket::new(expected.port()).unwrap();
 
         match expected {
             SocketAddr::V4(_) => assert_eq!(expected, socket.local_ipv4_addr().unwrap()),

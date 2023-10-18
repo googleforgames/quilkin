@@ -203,8 +203,8 @@ async fn test(
     };
 
     let client_addr = match address_type {
-        AddressType::Ipv4 => socket.local_ipv4_addr().unwrap(),
-        AddressType::Ipv6 => socket.local_ipv6_addr().unwrap(),
+        AddressType::Ipv4 => socket.local_addr().unwrap(),
+        AddressType::Ipv6 => socket.local_addr().unwrap(),
         AddressType::Random => unreachable!(),
     };
 

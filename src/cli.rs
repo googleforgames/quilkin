@@ -330,7 +330,7 @@ mod tests {
 
         let endpoints_file = tempfile::NamedTempFile::new().unwrap();
         let config = Config::default();
-        let server_port = server_socket.local_ipv4_addr().unwrap().port();
+        let server_port = server_socket.local_addr().unwrap().port();
         std::fs::write(endpoints_file.path(), {
             config.clusters.write().insert_default(
                 [Endpoint::with_metadata(
@@ -410,11 +410,11 @@ mod tests {
         let config = Config::default();
         let proxy_address: SocketAddr = (std::net::Ipv4Addr::LOCALHOST, 7777).into();
 
+        let server_port = server_socket.local_addr().unwrap().port();
         for _ in 0..5 {
             let token = random_three_characters();
 
             tracing::info!(?token, "writing new config");
-            let server_port = server_socket.local_ipv4_addr().unwrap().port();
             std::fs::write(endpoints_file.path(), {
                 config.clusters.write().insert_default(
                     [Endpoint::with_metadata(

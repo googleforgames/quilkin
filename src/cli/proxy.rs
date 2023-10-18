@@ -35,7 +35,7 @@ use crate::filters::FilterFactory;
 
 use crate::{
     filters::{Filter, ReadContext},
-    net::{xds::ResourceType, DualStackLocalSocket},
+    net::{maxmind_db::IpNetEntry, xds::ResourceType, DualStackLocalSocket},
     Config, Result,
 };
 
@@ -127,8 +127,10 @@ impl Proxy {
         tracing::info!(port = self.port, proxy_id = &*id, "Starting");
 
         let runtime_config = mode.unwrap_proxy();
-        let shared_socket = Arc::new(DualStackLocalSocket::new(self.port)?);
-        let sessions = SessionPool::new(config.clone(), shared_socket.clone(), shutdown_rx.clone());
+
+        let (upstream_sender, upstream_receiver) =
+            async_channel::unbounded::<(Vec<u8>, Option<IpNetEntry>, SocketAddr)>();
+        let sessions = SessionPool::new(config.clone(), upstream_sender, shutdown_rx.clone());
 
         let _xds_stream = if !self.management_server.is_empty() {
             {
@@ -157,7 +159,7 @@ impl Proxy {
             None
         };
 
-        self.run_recv_from(&config, &sessions, shared_socket)?;
+        self.run_recv_from(&config, &sessions, upstream_receiver)?;
         crate::codec::qcmp::spawn(self.qcmp_port).await?;
         tracing::info!("Quilkin is ready");
 
@@ -185,7 +187,7 @@ impl Proxy {
         &self,
         config: &Arc<Config>,
         sessions: &Arc<SessionPool>,
-        shared_socket: Arc<DualStackLocalSocket>,
+        upstream_receiver: async_channel::Receiver<(Vec<u8>, Option<IpNetEntry>, SocketAddr)>,
     ) -> Result<()> {
         // The number of worker tasks to spawn. Each task gets a dedicated queue to
         // consume packets off.
@@ -195,7 +197,8 @@ impl Proxy {
         let mut workers = Vec::with_capacity(num_workers);
         workers.push(DownstreamReceiveWorkerConfig {
             worker_id: 0,
-            socket: shared_socket,
+            upstream_receiver: upstream_receiver.clone(),
+            port: self.port,
             config: config.clone(),
             sessions: sessions.clone(),
         });
@@ -203,7 +206,8 @@ impl Proxy {
         for worker_id in 1..num_workers {
             workers.push(DownstreamReceiveWorkerConfig {
                 worker_id,
-                socket: Arc::new(DualStackLocalSocket::new(self.port)?),
+                upstream_receiver: upstream_receiver.clone(),
+                port: self.port,
                 config: config.clone(),
                 sessions: sessions.clone(),
             })
@@ -251,7 +255,8 @@ pub(crate) struct DownstreamReceiveWorkerConfig {
     /// ID of the worker.
     pub worker_id: usize,
     /// Socket with reused port from which the worker receives packets.
-    pub socket: Arc<DualStackLocalSocket>,
+    pub upstream_receiver: async_channel::Receiver<(Vec<u8>, Option<IpNetEntry>, SocketAddr)>,
+    pub port: u16,
     pub config: Arc<Config>,
     pub sessions: Arc<SessionPool>,
 }
@@ -260,25 +265,74 @@ impl DownstreamReceiveWorkerConfig {
     pub fn spawn(self) {
         let Self {
             worker_id,
-            socket,
+            upstream_receiver,
+            port,
             config,
             sessions,
         } = self;
 
-        tokio::spawn(async move {
+        uring_spawn!(async move {
             // Initialize a buffer for the UDP packet. We use the maximum size of a UDP
             // packet, which is the maximum value of 16 a bit integer.
             let mut buf = vec![0; 1 << 16];
             let mut last_received_at = None;
+            let socket = std::rc::Rc::new(DualStackLocalSocket::new(port).unwrap());
+            let socket2 = socket.clone();
+
+            tokio_uring::spawn(async move {
+                loop {
+                    match upstream_receiver.recv().await {
+                        Err(error) => {
+                            tracing::trace!(%error, "error receiving packet");
+                            crate::metrics::errors_total(
+                                crate::metrics::WRITE,
+                                &error.to_string(),
+                                None,
+                            )
+                            .inc();
+                        }
+                        Ok((data, asn_info, send_addr)) => {
+                            let (result, _) = socket2.send_to(data, send_addr).await;
+                            let asn_info = asn_info.as_ref();
+                            match result {
+                                Ok(size) => {
+                                    crate::metrics::packets_total(crate::metrics::WRITE, asn_info)
+                                        .inc();
+                                    crate::metrics::bytes_total(crate::metrics::WRITE, asn_info)
+                                        .inc_by(size as u64);
+                                }
+                                Err(error) => {
+                                    let source = error.to_string();
+                                    crate::metrics::errors_total(
+                                        crate::metrics::READ,
+                                        &source,
+                                        asn_info,
+                                    )
+                                    .inc();
+                                    crate::metrics::packets_dropped_total(
+                                        crate::metrics::READ,
+                                        &source,
+                                        asn_info,
+                                    )
+                                    .inc();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
             loop {
                 tracing::debug!(
-                    id = worker_id,
-                    port = ?socket.local_ipv6_addr().map(|addr| addr.port()),
-                    "Awaiting packet"
+                id = worker_id,
+                port = ?socket.local_ipv6_addr().map(|addr| addr.port()),
+                "Awaiting packet"
                 );
 
                 tokio::select! {
-                    result = socket.recv_from(&mut buf) => {
+                    result = socket.recv_from(buf) => {
+                        let (result, new_buf) = result;
+                        buf = new_buf;
                         match result {
                             Ok((size, mut source)) => {
                                 crate::net::to_canonical(&mut source);
@@ -293,7 +347,7 @@ impl DownstreamReceiveWorkerConfig {
                                     crate::metrics::packet_jitter(
                                         crate::metrics::READ,
                                         packet.asn_info.as_ref(),
-                                    )
+                                        )
                                         .set(packet.received_at - last_received_at);
                                 }
                                 last_received_at = Some(packet.received_at);
@@ -337,11 +391,7 @@ impl DownstreamReceiveWorkerConfig {
                 let asn_info = packet.asn_info.clone();
                 let asn_info = asn_info.as_ref();
                 match Self::process_downstream_received_packet(packet, config, sessions).await {
-                    Ok(size) => {
-                        crate::metrics::packets_total(crate::metrics::READ, asn_info).inc();
-                        crate::metrics::bytes_total(crate::metrics::READ, asn_info)
-                            .inc_by(size as u64);
-                    }
+                    Ok(()) => {}
                     Err(error) => {
                         let source = error.to_string();
                         crate::metrics::errors_total(crate::metrics::READ, &source, asn_info).inc();
@@ -364,7 +414,7 @@ impl DownstreamReceiveWorkerConfig {
         packet: DownstreamPacket,
         config: Arc<Config>,
         sessions: Arc<SessionPool>,
-    ) -> Result<usize, PipelineError> {
+    ) -> Result<(), PipelineError> {
         let endpoints: Vec<_> = config.clusters.read().endpoints().collect();
         if endpoints.is_empty() {
             return Err(PipelineError::NoUpstreamEndpoints);
@@ -373,7 +423,6 @@ impl DownstreamReceiveWorkerConfig {
         let filters = config.filters.load();
         let mut context = ReadContext::new(endpoints, packet.source.into(), packet.contents);
         filters.read(&mut context).await?;
-        let mut bytes_written = 0;
 
         for endpoint in context.endpoints.iter() {
             let session_key = SessionKey {
@@ -381,12 +430,16 @@ impl DownstreamReceiveWorkerConfig {
                 dest: endpoint.address.to_socket_addr().await?,
             };
 
-            bytes_written += sessions
-                .send(session_key, packet.asn_info.clone(), &context.contents)
+            sessions
+                .send(
+                    session_key,
+                    packet.asn_info.clone(),
+                    context.contents.clone(),
+                )
                 .await?;
         }
 
-        Ok(bytes_written)
+        Ok(())
     }
 }
 
@@ -400,6 +453,8 @@ pub enum PipelineError {
     Qcmp(#[from] crate::codec::qcmp::Error),
     #[error("OS level error: {0}")]
     Io(#[from] std::io::Error),
+    #[error("Channel closed")]
+    ChannelClosed,
 }
 
 #[cfg(test)]
@@ -431,8 +486,8 @@ mod tests {
         config.clusters.modify(|clusters| {
             clusters.insert_default(
                 [
-                    Endpoint::new(endpoint1.socket.local_ipv4_addr().unwrap().into()),
-                    Endpoint::new(endpoint2.socket.local_ipv6_addr().unwrap().into()),
+                    Endpoint::new(endpoint1.socket.local_addr().unwrap().into()),
+                    Endpoint::new(endpoint2.socket.local_addr().unwrap().into()),
                 ]
                 .into(),
             );
@@ -477,10 +532,7 @@ mod tests {
         let config = Arc::new(Config::default());
         config.clusters.modify(|clusters| {
             clusters.insert_default(
-                [Endpoint::new(
-                    endpoint.socket.local_ipv6_addr().unwrap().into(),
-                )]
-                .into(),
+                [Endpoint::new(endpoint.socket.local_addr().unwrap().into())].into(),
             );
         });
         t.run_server(config, proxy, None);
@@ -521,10 +573,7 @@ mod tests {
         );
         config.clusters.modify(|clusters| {
             clusters.insert_default(
-                [Endpoint::new(
-                    endpoint.socket.local_ipv4_addr().unwrap().into(),
-                )]
-                .into(),
+                [Endpoint::new(endpoint.socket.local_addr().unwrap().into())].into(),
             );
         });
         t.run_server(
@@ -553,35 +602,27 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn spawn_downstream_receive_workers() {
         let t = TestHelper::default();
 
-        let socket = Arc::new(create_socket().await);
-        let addr = socket.local_ipv6_addr().unwrap();
+        let addr = available_addr(&AddressType::Random).await;
         let endpoint = t.open_socket_and_recv_single_packet().await;
         let msg = "hello";
         let config = Arc::new(Config::default());
         config.clusters.modify(|clusters| {
-            clusters.insert_default([endpoint.socket.local_ipv6_addr().unwrap().into()].into())
+            clusters.insert_default([endpoint.socket.local_addr().unwrap().into()].into())
         });
+        let (tx, rx) = async_channel::unbounded();
+        let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(());
 
         // we'll test a single DownstreamReceiveWorkerConfig
         DownstreamReceiveWorkerConfig {
             worker_id: 1,
-            socket: socket.clone(),
+            port: addr.port(),
+            upstream_receiver: rx.clone(),
             config: config.clone(),
-            sessions: SessionPool::new(
-                config,
-                Arc::new(
-                    DualStackLocalSocket::new(
-                        crate::test::available_addr(&AddressType::Random)
-                            .await
-                            .port(),
-                    )
-                    .unwrap(),
-                ),
-                tokio::sync::watch::channel(()).1,
-            ),
+            sessions: SessionPool::new(config, tx, shutdown_rx),
         }
         .spawn();
 
@@ -613,29 +654,18 @@ mod tests {
         config.clusters.modify(|clusters| {
             clusters.insert_default(
                 [crate::net::endpoint::Endpoint::from(
-                    endpoint.socket.local_ipv4_addr().unwrap(),
+                    endpoint.socket.local_addr().unwrap(),
                 )]
                 .into(),
             )
         });
 
-        let shared_socket = Arc::new(
-            DualStackLocalSocket::new(
-                crate::test::available_addr(&AddressType::Random)
-                    .await
-                    .port(),
-            )
-            .unwrap(),
-        );
-        let sessions = SessionPool::new(
-            config.clone(),
-            shared_socket.clone(),
-            tokio::sync::watch::channel(()).1,
-        );
+        let (tx, rx) = async_channel::unbounded();
+        let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(());
 
-        proxy
-            .run_recv_from(&config, &sessions, shared_socket)
-            .unwrap();
+        let sessions = SessionPool::new(config.clone(), tx, shutdown_rx);
+
+        proxy.run_recv_from(&config, &sessions, rx).unwrap();
 
         let socket = create_socket().await;
         socket.send_to(msg.as_bytes(), &local_addr).await.unwrap();

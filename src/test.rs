@@ -26,7 +26,7 @@ use crate::{
     filters::{prelude::*, FilterRegistry},
     net::endpoint::metadata::Value,
     net::endpoint::{Endpoint, EndpointAddress},
-    net::DualStackLocalSocket,
+    net::DualStackEpollSocket as DualStackLocalSocket,
 };
 
 static LOG_ONCE: Once = Once::new();
