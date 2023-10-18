@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-mod sessions;
+pub(crate) mod sessions;
 
 use std::{
     net::SocketAddr,
@@ -425,6 +425,7 @@ impl DownstreamReceiveWorkerConfig {
         filters.read(&mut context).await?;
 
         for endpoint in context.endpoints.iter() {
+            sessions::ADDRESS_MAP.get(&endpoint.address);
             let session_key = SessionKey {
                 source: packet.source,
                 dest: endpoint.address.to_socket_addr().await?,

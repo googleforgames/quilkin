@@ -107,6 +107,7 @@ strum_macros = "0.25.2"
 tokio-uring = { version = "0.4.0", features = ["bytes"] }
 async-channel = "1.9.0"
 cfg-if = "1.0.0"
+itertools = "0.11.0"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 sys-info = "0.9.1"

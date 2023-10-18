@@ -21,6 +21,7 @@ use std::{
     time::Duration,
 };
 
+use once_cell::sync::Lazy;
 use tokio::{
     sync::{mpsc, watch, RwLock},
     time::Instant,
@@ -37,6 +38,10 @@ pub type SessionMap = crate::collections::ttl::TtlMap<SessionKey, Session>;
 type UpstreamSender = mpsc::UnboundedSender<(Vec<u8>, Option<IpNetEntry>, SocketAddr)>;
 type DownstreamSender = async_channel::Sender<(Vec<u8>, Option<IpNetEntry>, SocketAddr)>;
 pub type DownstreamReceiver = async_channel::Receiver<(Vec<u8>, Option<IpNetEntry>, SocketAddr)>;
+
+pub(crate) static ADDRESS_MAP: Lazy<
+    crate::collections::ttl::TtlMap<crate::net::endpoint::EndpointAddress, ()>,
+> = Lazy::new(<_>::default);
 
 /// A data structure that is responsible for holding sessions, and pooling
 /// sockets between them. This means that we only provide new unique sockets
@@ -233,6 +238,7 @@ impl SessionPool {
         asn_info: Option<IpNetEntry>,
     ) -> Result<UpstreamSender, super::PipelineError> {
         tracing::trace!(source=%key.source, dest=%key.dest, "SessionPool::get");
+        ADDRESS_MAP.insert(dest.into(), ());
         // If we already have a session for the key pairing, return that session.
         if let Some(entry) = self.session_map.get(&key) {
             tracing::trace!("returning existing session");
