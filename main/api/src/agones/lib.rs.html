@@ -1404,7 +1404,7 @@ filters:
 
 <span class="comment">// Output the events and logs for each pod that matches this label selector.
 // Useful for determining why something is failing in CI without having to run a cluster.
-// Requires quilkin::test_utils::enable_log(&quot;agones=debug&quot;); to enable debug logging within
+// Requires quilkin::test::enable_log(&quot;agones=debug&quot;); to enable debug logging within
 // the test
 </span><span class="kw">pub async fn </span>debug_pods(client: <span class="kw-2">&amp;</span>Client, labels: String) {
     <span class="macro">debug!</span>(labels, <span class="string">&quot;🪓 Debug output for Selector&quot;</span>);

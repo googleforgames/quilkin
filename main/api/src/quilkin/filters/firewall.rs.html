@@ -296,8 +296,8 @@
 </span><span class="kw">mod </span>tests {
     <span class="kw">use </span>std::net::Ipv4Addr;
 
-    <span class="kw">use </span><span class="kw">crate</span>::endpoint::Endpoint;
     <span class="kw">use </span><span class="kw">crate</span>::filters::firewall::config::PortRange;
+    <span class="kw">use </span><span class="kw">crate</span>::net::endpoint::Endpoint;
     <span class="kw">use </span>tracing_test::traced_test;
 
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
@@ -344,7 +344,7 @@
             }],
         };
 
-        <span class="kw">let </span>local_addr: <span class="kw">crate</span>::endpoint::EndpointAddress = (Ipv4Addr::LOCALHOST, <span class="number">8081</span>).into();
+        <span class="kw">let </span>local_addr: <span class="kw">crate</span>::net::endpoint::EndpointAddress = (Ipv4Addr::LOCALHOST, <span class="number">8081</span>).into();
 
         <span class="kw">let </span><span class="kw-2">mut </span>ctx =
             WriteContext::new(([<span class="number">192</span>, <span class="number">168</span>, <span class="number">75</span>, <span class="number">20</span>], <span class="number">80</span>).into(), local_addr.clone(), <span class="macro">vec!</span>[]);

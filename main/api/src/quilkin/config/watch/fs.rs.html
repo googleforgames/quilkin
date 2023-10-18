@@ -142,7 +142,7 @@
     config: Arc&lt;Config&gt;,
     health_check: Arc&lt;AtomicBool&gt;,
     path: <span class="kw">impl </span>Into&lt;std::path::PathBuf&gt;,
-    locality: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::endpoint::Locality&gt;,
+    locality: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::net::endpoint::Locality&gt;,
 ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
     <span class="kw">let </span>path = path.into();
     <span class="kw">let </span>span = <span class="macro">tracing::info_span!</span>(<span class="string">&quot;config_provider&quot;</span>, path = %path.display());
@@ -207,9 +207,9 @@
 
         source.clusters.modify(|clusters| {
             clusters.insert_default(
-                [<span class="kw">crate</span>::endpoint::Endpoint::with_metadata(
+                [<span class="kw">crate</span>::net::endpoint::Endpoint::with_metadata(
                     (std::net::Ipv4Addr::LOCALHOST, <span class="number">4321</span>).into(),
-                    <span class="kw">crate</span>::endpoint::Metadata {
+                    <span class="kw">crate</span>::net::endpoint::Metadata {
                         tokens: &lt;<span class="kw">_</span>&gt;::from([Vec::from(<span class="kw-2">*</span><span class="string">b&quot;1x7ijy6&quot;</span>)]),
                     },
                 )]

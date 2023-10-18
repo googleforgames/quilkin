@@ -228,8 +228,8 @@
         mode: <span class="kw">crate</span>::cli::Admin,
         <span class="kw-2">mut </span>shutdown_rx: tokio::sync::watch::Receiver&lt;()&gt;,
     ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
-        <span class="kw">let </span>xds_server = <span class="kw">crate</span>::xds::server::spawn(<span class="self">self</span>.xds_port, config.clone());
-        <span class="kw">let </span>mds_server = tokio::spawn(<span class="kw">crate</span>::xds::server::control_plane_discovery_server(
+        <span class="kw">let </span>xds_server = <span class="kw">crate</span>::net::xds::server::spawn(<span class="self">self</span>.xds_port, config.clone());
+        <span class="kw">let </span>mds_server = tokio::spawn(<span class="kw">crate</span>::net::xds::server::control_plane_discovery_server(
             <span class="self">self</span>.mds_port,
             <span class="self">self</span>.idle_request_interval_secs,
             config.clone(),

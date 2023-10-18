@@ -211,7 +211,7 @@
         <span class="kw-2">mut </span>shutdown_rx: tokio::sync::watch::Receiver&lt;()&gt;,
     ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
         <span class="kw">let </span>locality = (<span class="self">self</span>.region.is_some() || <span class="self">self</span>.zone.is_some() || <span class="self">self</span>.sub_zone.is_some())
-            .then(|| <span class="kw">crate</span>::endpoint::Locality {
+            .then(|| <span class="kw">crate</span>::net::endpoint::Locality {
                 region: <span class="self">self</span>.region.clone().unwrap_or_default(),
                 zone: <span class="self">self</span>.zone.clone().unwrap_or_default(),
                 sub_zone: <span class="self">self</span>.sub_zone.clone().unwrap_or_default(),
@@ -229,7 +229,7 @@
                 <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;no configuration provider given&quot;</span>)),
             };
 
-            <span class="kw">let </span>task = <span class="kw">crate</span>::xds::client::MdsClient::connect(
+            <span class="kw">let </span>task = <span class="kw">crate</span>::net::xds::client::MdsClient::connect(
                 String::clone(<span class="kw-2">&amp;</span>config.id.load()),
                 mode.clone(),
                 <span class="self">self</span>.relay.clone(),
@@ -244,7 +244,7 @@
             <span class="prelude-val">None
         </span>};
 
-        <span class="kw">crate</span>::protocol::spawn(<span class="self">self</span>.qcmp_port).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">crate</span>::codec::qcmp::spawn(<span class="self">self</span>.qcmp_port).<span class="kw">await</span><span class="question-mark">?</span>;
         shutdown_rx.changed().<span class="kw">await</span>.map_err(From::from)
     }
 }

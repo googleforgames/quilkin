@@ -622,7 +622,7 @@
 
         <span class="macro">tracing::info!</span>(
             version = <span class="macro">crate_version!</span>(),
-            commit = <span class="kw">crate</span>::metadata::build::GIT_COMMIT_HASH,
+            commit = <span class="kw">crate</span>::net::endpoint::metadata::build::GIT_COMMIT_HASH,
             <span class="string">&quot;Starting Quilkin&quot;
         </span>);
 
@@ -754,9 +754,9 @@
 
     <span class="kw">use crate</span>::{
         config::{Filter, Providers},
-        endpoint::Endpoint,
         filters::{Capture, StaticFilter, TokenRouter},
-        test_utils::{create_socket, AddressType, TestHelper},
+        net::endpoint::Endpoint,
+        test::{create_socket, AddressType, TestHelper},
     };
 
     <span class="attr">#[tokio::test]
@@ -800,7 +800,7 @@
             config.clusters.write().insert_default(
                 [Endpoint::with_metadata(
                     (std::net::Ipv4Addr::LOCALHOST, server_port).into(),
-                    <span class="kw">crate</span>::endpoint::Metadata {
+                    <span class="kw">crate</span>::net::endpoint::Metadata {
                         tokens: <span class="macro">vec!</span>[<span class="string">&quot;abc&quot;</span>.into()].into_iter().collect(),
                     },
                 )]
@@ -810,7 +810,7 @@
         })
         .unwrap();
 
-        <span class="kw">let </span>relay_admin_port = <span class="kw">crate</span>::test_utils::available_addr(<span class="kw-2">&amp;</span>AddressType::Random)
+        <span class="kw">let </span>relay_admin_port = <span class="kw">crate</span>::test::available_addr(<span class="kw-2">&amp;</span>AddressType::Random)
             .<span class="kw">await
             </span>.port();
         <span class="kw">let </span>relay = Cli {
@@ -827,7 +827,7 @@
             log_format: LogFormats::default(),
         };
 
-        <span class="kw">let </span>control_plane_admin_port = <span class="kw">crate</span>::test_utils::available_addr(<span class="kw-2">&amp;</span>AddressType::Random)
+        <span class="kw">let </span>control_plane_admin_port = <span class="kw">crate</span>::test::available_addr(<span class="kw-2">&amp;</span>AddressType::Random)
             .<span class="kw">await
             </span>.port();
         <span class="kw">let </span>control_plane = Cli {
@@ -841,7 +841,7 @@
                 sub_zone: <span class="prelude-val">None</span>,
                 zone: <span class="prelude-val">None</span>,
                 idle_request_interval_secs: admin::IDLE_REQUEST_INTERVAL_SECS,
-                qcmp_port: <span class="kw">crate</span>::test_utils::available_addr(<span class="kw-2">&amp;</span>AddressType::Random)
+                qcmp_port: <span class="kw">crate</span>::test::available_addr(<span class="kw-2">&amp;</span>AddressType::Random)
                     .<span class="kw">await
                     </span>.port(),
                 provider: <span class="prelude-val">Some</span>(Providers::File {
@@ -851,7 +851,7 @@
             log_format: LogFormats::default(),
         };
 
-        <span class="kw">let </span>proxy_admin_port = <span class="kw">crate</span>::test_utils::available_addr(<span class="kw-2">&amp;</span>AddressType::Random)
+        <span class="kw">let </span>proxy_admin_port = <span class="kw">crate</span>::test::available_addr(<span class="kw-2">&amp;</span>AddressType::Random)
             .<span class="kw">await
             </span>.port();
         <span class="kw">let </span>proxy = Cli {
@@ -884,7 +884,7 @@
                 config.clusters.write().insert_default(
                     [Endpoint::with_metadata(
                         (std::net::Ipv6Addr::LOCALHOST, server_port).into(),
-                        <span class="kw">crate</span>::endpoint::Metadata {
+                        <span class="kw">crate</span>::net::endpoint::Metadata {
                             tokens: <span class="macro">vec!</span>[token.clone()].into_iter().collect(),
                         },
                     )]

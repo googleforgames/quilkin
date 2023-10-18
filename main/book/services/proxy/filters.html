@@ -231,7 +231,7 @@ clusters:
 <h2 id="filter-dynamic-metadata"><a class="header" href="#filter-dynamic-metadata">Filter Dynamic Metadata</a></h2>
 <p>A filter within the filter chain can share data within another filter further along in the filter chain by propagating the desired data alongside the packet being processed.
 This enables sharing dynamic information at runtime, e.g information about the current packet that might be useful to other filters that process that packet.</p>
-<p>At packet processing time each packet is associated with <em>filter dynamic metadata</em> (a set of key-value pairs). Each key is a unique string while its value is an associated <a href="../../../api/quilkin/metadata/enum.Value.html"><code>quilkin::metadata::Value</code></a>.
+<p>At packet processing time each packet is associated with <em>filter dynamic metadata</em> (a set of key-value pairs). Each key is a unique string while its value is an associated <a href="../../../api/quilkin/net/endpoint/metadata/enum.Value.html"><code>quilkin::metadata::Value</code></a>.
 When a filter processes a packet, it can choose to consult the associated dynamic metadata for more information or itself add/update or remove key-values from the set.</p>
 <p>As an example, the built-in [CaptureBytes] filter is one such filter that populates a packet's filter metadata.
 [CaptureBytes] extracts information (a configurable byte sequence) from each packet and appends it to the packet's dynamic metadata for other filters to leverage.

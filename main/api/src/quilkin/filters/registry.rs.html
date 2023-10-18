@@ -184,11 +184,11 @@
 </span><span class="kw">mod </span>tests {
     <span class="kw">use </span>std::net::Ipv4Addr;
 
-    <span class="kw">use </span><span class="kw">crate</span>::test_utils::load_test_filters;
+    <span class="kw">use </span><span class="kw">crate</span>::test::load_test_filters;
 
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
-    <span class="kw">use </span><span class="kw">crate</span>::endpoint::{Endpoint, EndpointAddress};
     <span class="kw">use </span><span class="kw">crate</span>::filters::{Filter, FilterError, FilterRegistry, ReadContext, WriteContext};
+    <span class="kw">use </span><span class="kw">crate</span>::net::endpoint::{Endpoint, EndpointAddress};
 
     <span class="kw">struct </span>TestFilter {}
 

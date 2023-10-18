@@ -273,7 +273,6 @@
 <a href="#273" id="273">273</a>
 <a href="#274" id="274">274</a>
 <a href="#275" id="275">275</a>
-<a href="#276" id="276">276</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -298,7 +297,7 @@
 
 <span class="kw">use crate</span>::{
     filters::{metadata::CAPTURED_BYTES, prelude::<span class="kw-2">*</span>},
-    metadata,
+    net::endpoint::metadata,
 };
 
 <span class="kw">use </span><span class="self">self</span>::quilkin::filters::token_router::v1alpha1 <span class="kw">as </span>proto;
@@ -332,7 +331,7 @@
             <span class="prelude-val">Some</span>(metadata::Value::Bytes(token)) =&gt; {
                 ctx.endpoints.retain(|endpoint| {
                     <span class="kw">if </span>endpoint.metadata.known.tokens.contains(<span class="kw-2">&amp;**</span>token) {
-                        <span class="macro">tracing::trace!</span>(%endpoint.address, token = <span class="kw-2">&amp;*</span><span class="kw">crate</span>::utils::base64_encode(token), <span class="string">&quot;Endpoint matched&quot;</span>);
+                        <span class="macro">tracing::trace!</span>(%endpoint.address, token = <span class="kw-2">&amp;*</span><span class="kw">crate</span>::codec::base64::encode(token), <span class="string">&quot;Endpoint matched&quot;</span>);
                         <span class="bool-val">true
                     </span>} <span class="kw">else </span>{
                         <span class="bool-val">false
@@ -342,7 +341,7 @@
                 <span class="kw">if </span>ctx.endpoints.is_empty() {
                     <span class="prelude-val">Err</span>(FilterError::new(Error::NoEndpointMatch(
                         <span class="self">self</span>.config.metadata_key,
-                        <span class="kw">crate</span>::utils::base64_encode(token),
+                        <span class="kw">crate</span>::codec::base64::encode(token),
                     )))
                 } <span class="kw">else </span>{
                     <span class="prelude-val">Ok</span>(())
@@ -362,11 +361,11 @@
 <span class="attr">#[derive(Debug, thiserror::Error)]
 </span><span class="kw">pub enum </span>Error {
     <span class="attr">#[error(<span class="string">&quot;no routing token found for `{0}`&quot;</span>)]
-    </span>NoTokenFound(<span class="kw">crate</span>::metadata::Key),
+    </span>NoTokenFound(metadata::Key),
     <span class="attr">#[error(<span class="string">&quot;key `{0}` was found but wasn&#39;t bytes, found {1:?}&quot;</span>)]
-    </span>InvalidType(<span class="kw">crate</span>::metadata::Key, <span class="kw">crate</span>::metadata::Value),
+    </span>InvalidType(metadata::Key, metadata::Value),
     <span class="attr">#[error(<span class="string">&quot;no endpoint matched token `{1}` from `{0}`&quot;</span>)]
-    </span>NoEndpointMatch(<span class="kw">crate</span>::metadata::Key, String),
+    </span>NoEndpointMatch(metadata::Key, String),
 }
 
 <span class="attr">#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, schemars::JsonSchema)]
@@ -414,9 +413,8 @@
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
     <span class="kw">use crate</span>::{
-        endpoint::{Endpoint, Metadata},
-        metadata::Value,
-        test_utils::assert_write_no_change,
+        net::endpoint::{metadata::Value, Endpoint, Metadata},
+        test::assert_write_no_change,
     };
 
     <span class="kw">use super</span>::<span class="kw-2">*</span>;

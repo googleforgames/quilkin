@@ -253,6 +253,7 @@
 <a href="#253" id="253">253</a>
 <a href="#254" id="254">254</a>
 <a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -275,7 +276,7 @@
 
 <span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.filters.capture.v1alpha1&quot;</span>);
 
-<span class="kw">use crate</span>::{filters::prelude::<span class="kw-2">*</span>, metadata};
+<span class="kw">use crate</span>::{filters::prelude::<span class="kw-2">*</span>, net::endpoint::metadata};
 
 <span class="kw">use </span><span class="self">self</span>::quilkin::filters::capture::v1alpha1 <span class="kw">as </span>proto;
 
@@ -346,8 +347,9 @@
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
     <span class="kw">use crate</span>::{
-        endpoint::Endpoint, filters::metadata::CAPTURED_BYTES, metadata::Value,
-        test_utils::assert_write_no_change,
+        filters::metadata::CAPTURED_BYTES,
+        net::endpoint::{metadata::Value, Endpoint},
+        test::assert_write_no_change,
     };
 
     <span class="kw">use super</span>::<span class="kw-2">*</span>;

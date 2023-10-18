@@ -533,6 +533,8 @@
 <a href="#533" id="533">533</a>
 <a href="#534" id="534">534</a>
 <a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -561,7 +563,7 @@
 <span class="kw">use crate</span>::{
     cluster::ClusterMap,
     filters::prelude::<span class="kw-2">*</span>,
-    xds::{
+    net::xds::{
         config::listener::v3::Listener, service::discovery::v3::DiscoveryResponse, Resource,
         ResourceType,
     },
@@ -608,7 +610,7 @@
     <span class="kw">fn </span>update_from_json(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         map: serde_json::Map&lt;String, serde_json::Value&gt;,
-        locality: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::endpoint::Locality&gt;,
+        locality: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::net::endpoint::Locality&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), eyre::Error&gt; {
         <span class="macro">macro_rules! </span>replace_if_present {
             ($(<span class="macro-nonterminal">$field</span>:ident),+) =&gt; {
@@ -711,7 +713,7 @@
                         .endpoints
                         .iter()
                         .cloned()
-                        .map(<span class="kw">crate</span>::endpoint::Endpoint::try_from)
+                        .map(<span class="kw">crate</span>::net::endpoint::Endpoint::try_from)
                         .collect::&lt;<span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>,
                 );
             }
@@ -771,11 +773,13 @@
     <span class="kw">pub </span>config: <span class="prelude-ty">Option</span>&lt;serde_json::Value&gt;,
 }
 
-<span class="kw">impl </span>TryFrom&lt;<span class="kw">crate</span>::xds::config::listener::v3::Filter&gt; <span class="kw">for </span>Filter {
+<span class="kw">impl </span>TryFrom&lt;<span class="kw">crate</span>::net::xds::config::listener::v3::Filter&gt; <span class="kw">for </span>Filter {
     <span class="kw">type </span>Error = CreationError;
 
-    <span class="kw">fn </span>try_from(filter: <span class="kw">crate</span>::xds::config::listener::v3::Filter) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
-        <span class="kw">use </span><span class="kw">crate</span>::xds::config::listener::v3::filter::ConfigType;
+    <span class="kw">fn </span>try_from(
+        filter: <span class="kw">crate</span>::net::xds::config::listener::v3::Filter,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
+        <span class="kw">use </span><span class="kw">crate</span>::net::xds::config::listener::v3::filter::ConfigType;
 
         <span class="kw">let </span>config = <span class="kw">if let </span><span class="prelude-val">Some</span>(config_type) = filter.config_type {
             <span class="kw">let </span>config = <span class="kw">match </span>config_type {
@@ -805,11 +809,11 @@
     }
 }
 
-<span class="kw">impl </span>TryFrom&lt;Filter&gt; <span class="kw">for </span><span class="kw">crate</span>::xds::config::listener::v3::Filter {
+<span class="kw">impl </span>TryFrom&lt;Filter&gt; <span class="kw">for </span><span class="kw">crate</span>::net::xds::config::listener::v3::Filter {
     <span class="kw">type </span>Error = CreationError;
 
     <span class="kw">fn </span>try_from(filter: Filter) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
-        <span class="kw">use </span><span class="kw">crate</span>::xds::config::listener::v3::filter::ConfigType;
+        <span class="kw">use </span><span class="kw">crate</span>::net::xds::config::listener::v3::filter::ConfigType;
 
         <span class="kw">let </span>config = <span class="kw">if let </span><span class="prelude-val">Some</span>(config) = filter.config {
             <span class="prelude-val">Some</span>(
@@ -844,7 +848,7 @@
 
     <span class="kw">use </span>serde_json::json;
 
-    <span class="kw">use </span><span class="kw">crate</span>::endpoint::{Endpoint, Metadata};
+    <span class="kw">use </span><span class="kw">crate</span>::net::endpoint::{Endpoint, Metadata};
 
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
 

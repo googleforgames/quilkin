@@ -299,6 +299,7 @@
 <a href="#299" id="299">299</a>
 <a href="#300" id="300">300</a>
 <a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC All Rights Reserved.
  *
@@ -370,7 +371,7 @@
     <span class="doccomment">/// The key to use when storing the captured value in the filter context.
     /// If a match was found it is available
     /// under `{{metadata_key}}/is_present`.
-    </span><span class="kw">pub </span>metadata_key: <span class="kw">crate</span>::metadata::Key,
+    </span><span class="kw">pub </span>metadata_key: <span class="kw">crate</span>::net::endpoint::metadata::Key,
     <span class="doccomment">/// The capture strategy.
     </span><span class="kw">pub </span>strategy: Strategy,
 }
@@ -466,8 +467,9 @@
                     }
                 }
 
-                <span class="kw">let </span>metadata_key = metadata_key
-                    .unwrap_or_else(|| <span class="kw">crate</span>::metadata::Key::from_static(CAPTURED_BYTES));
+                <span class="kw">let </span>metadata_key = metadata_key.unwrap_or_else(|| {
+                    <span class="kw">crate</span>::net::endpoint::metadata::Key::from_static(CAPTURED_BYTES)
+                });
                 <span class="kw">let </span>strategy = strategy.ok_or_else(|| {
                     serde::de::Error::custom(
                         <span class="string">&quot;Capture strategy of `regex`, `suffix`, or `prefix` is required&quot;</span>,
@@ -505,7 +507,7 @@
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             metadata_key: p
                 .metadata_key
-                .map(<span class="kw">crate</span>::metadata::Key::from)
+                .map(<span class="kw">crate</span>::net::endpoint::metadata::Key::from)
                 .ok_or_else(|| {
                     ConvertProtoConfigError::new(<span class="string">&quot;Missing&quot;</span>, <span class="prelude-val">Some</span>(<span class="string">&quot;metadata_key&quot;</span>.into()))
                 })<span class="question-mark">?</span>,

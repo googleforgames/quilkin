@@ -207,6 +207,10 @@
 <a href="#207" id="207">207</a>
 <a href="#208" id="208">208</a>
 <a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -227,7 +231,11 @@
 
 <span class="kw">use </span>chrono::prelude::<span class="kw-2">*</span>;
 
-<span class="kw">use crate</span>::{filters::prelude::<span class="kw-2">*</span>, metadata::Value, metrics::Direction};
+<span class="kw">use crate</span>::{
+    filters::prelude::<span class="kw-2">*</span>,
+    metrics::Direction,
+    net::endpoint::metadata::{<span class="self">self</span>, Value},
+};
 
 <span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.filters.timestamp.v1alpha1&quot;</span>);
 <span class="kw">use </span><span class="self">self</span>::quilkin::filters::timestamp::v1alpha1 <span class="kw">as </span>proto;
@@ -242,7 +250,7 @@
 <span class="kw">impl </span>Timestamp {
     <span class="doccomment">/// Observes the duration since a timestamp stored in `metadata` and now,
     /// if present.
-    </span><span class="kw">pub fn </span>observe(<span class="kw-2">&amp;</span><span class="self">self</span>, metadata: <span class="kw-2">&amp;</span><span class="kw">crate</span>::metadata::DynamicMetadata, direction: Direction) {
+    </span><span class="kw">pub fn </span>observe(<span class="kw-2">&amp;</span><span class="self">self</span>, metadata: <span class="kw-2">&amp;</span>metadata::DynamicMetadata, direction: Direction) {
         <span class="kw">let </span>value = metadata
             .get(<span class="kw-2">&amp;</span><span class="self">self</span>.config.metadata_key)
             .and_then(|item| <span class="kw">match </span>item {
@@ -334,7 +342,7 @@
 </span><span class="kw">pub struct </span>Config {
     <span class="doccomment">/// The metadata key to read the UTC UNIX Timestamp from.
     </span><span class="attr">#[serde(rename = <span class="string">&quot;metadataKey&quot;</span>)]
-    </span><span class="kw">pub </span>metadata_key: <span class="kw">crate</span>::metadata::Key,
+    </span><span class="kw">pub </span>metadata_key: metadata::Key,
 }
 
 <span class="kw">impl </span>Config {
