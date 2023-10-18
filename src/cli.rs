@@ -202,58 +202,21 @@ impl Cli {
             shutdown_tx.send(()).ok();
         });
 
-        let fut = tryhard::retry_fn({
-            let shutdown_rx = shutdown_rx.clone();
-            let mode = mode.clone();
-            move || match self.command.clone() {
-                Commands::Agent(agent) => {
-                    let config = config.clone();
-                    let shutdown_rx = shutdown_rx.clone();
-                    let mode = mode.clone();
-                    tokio::spawn(async move {
-                        agent.run(config.clone(), mode, shutdown_rx.clone()).await
-                    })
-                }
-                Commands::Proxy(runner) => {
-                    let config = config.clone();
-                    let shutdown_rx = shutdown_rx.clone();
-                    let mode = mode.clone();
-                    tokio::spawn(async move {
-                        runner
-                            .run(config.clone(), mode.clone(), shutdown_rx.clone())
-                            .await
-                    })
-                }
-                Commands::Manage(manager) => {
-                    let config = config.clone();
-                    let shutdown_rx = shutdown_rx.clone();
-                    let mode = mode.clone();
-                    tokio::spawn(async move {
-                        manager
-                            .manage(config.clone(), mode, shutdown_rx.clone())
-                            .await
-                    })
-                }
-                Commands::Relay(relay) => {
-                    let config = config.clone();
-                    let shutdown_rx = shutdown_rx.clone();
-                    let mode = mode.clone();
-                    tokio::spawn(
-                        async move { relay.relay(config, mode, shutdown_rx.clone()).await },
-                    )
-                }
-                Commands::GenerateConfigSchema(_) | Commands::Qcmp(_) => unreachable!(),
+        match self.command {
+            Commands::Agent(agent) => agent.run(config.clone(), mode, shutdown_rx.clone()).await,
+            Commands::Proxy(runner) => {
+                runner
+                    .run(config.clone(), mode.clone(), shutdown_rx.clone())
+                    .await
             }
-        })
-        .retries(3)
-        .on_retry(|_, _, error| {
-            let error = error.to_string();
-            async move {
-                tracing::warn!(%error, "error would have caused fatal crash");
+            Commands::Manage(manager) => {
+                manager
+                    .manage(config.clone(), mode, shutdown_rx.clone())
+                    .await
             }
-        });
-
-        fut.await?
+            Commands::Relay(relay) => relay.relay(config, mode, shutdown_rx.clone()).await,
+            Commands::GenerateConfigSchema(_) | Commands::Qcmp(_) => unreachable!(),
+        }
     }
 
     /// Searches for the configuration file, and panics if not found.
