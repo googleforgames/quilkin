@@ -44,7 +44,7 @@ pub async fn spawn(port: u16) -> crate::Result<()> {
             let mut output_buf = Vec::new();
 
             loop {
-                tracing::info!(%v4_addr, %v6_addr, "awaiting qcmp packets");
+                tracing::debug!("awaiting qcmp packets");
 
                 match socket.recv_from(&mut buf).await {
                     Ok((size, source)) => {
@@ -83,7 +83,7 @@ pub async fn spawn(port: u16) -> crate::Result<()> {
                 }
             }
         }
-        .instrument(tracing::info_span!("qcmp_task", %v4_addr, %v6_addr)),
+        .instrument(tracing::debug_span!("qcmp_task", %v4_addr, %v6_addr)),
     );
     Ok(())
 }

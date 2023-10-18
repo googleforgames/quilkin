@@ -353,29 +353,36 @@ impl SessionPool {
     ) {
         tracing::trace!("releasing socket");
         let mut storage = self.storage.write().await;
-        let socket_set = storage.destination_to_sockets.get_mut(dest).unwrap();
+        let Some(socket_set) = storage.destination_to_sockets.get_mut(dest) else {
+            return;
+        };
 
-        assert!(socket_set.remove(&port));
+        socket_set.remove(&port);
 
         if socket_set.is_empty() {
-            storage.destination_to_sockets.remove(dest).unwrap();
+            storage.destination_to_sockets.remove(dest);
         }
 
-        let dest_set = storage.sockets_to_destination.get_mut(&port).unwrap();
+        let Some(dest_set) = storage.sockets_to_destination.get_mut(&port) else {
+            return;
+        };
 
-        assert!(dest_set.remove(dest));
+        dest_set.remove(dest);
 
         if dest_set.is_empty() {
-            storage.sockets_to_destination.remove(&port).unwrap();
+            storage.sockets_to_destination.remove(&port);
         }
 
         // Not asserted because the source might not have GeoIP info.
         storage.sources_to_asn_info.remove(source);
-        assert!(storage
-            .destination_to_sources
-            .remove(&(*dest, port))
-            .is_some());
+        storage.destination_to_sources.remove(&(*dest, port));
         tracing::trace!("socket released");
+    }
+}
+
+impl Drop for SessionPool {
+    fn drop(&mut self) {
+        drop(std::mem::take(&mut self.session_map));
     }
 }
 

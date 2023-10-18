@@ -190,7 +190,6 @@ mod tests {
         // Test that the client can handle the manager dropping out.
         let handle = tokio::spawn(server::spawn(xds_port, xds_config.clone()));
 
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(());
         tokio::spawn(server::spawn(xds_port, xds_config.clone()));
         let client_proxy = crate::cli::Proxy {
@@ -207,7 +206,6 @@ mod tests {
         });
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         handle.abort();
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         tokio::spawn(server::spawn(xds_port, xds_config.clone()));
@@ -279,10 +277,11 @@ mod tests {
             .send_to(&packet, (std::net::Ipv6Addr::LOCALHOST, client_addr.port()))
             .await
             .unwrap();
-        let response = tokio::time::timeout(std::time::Duration::from_secs(1), client.packet_rx)
-            .await
-            .unwrap()
-            .unwrap();
+        let response =
+            tokio::time::timeout(std::time::Duration::from_millis(100), client.packet_rx)
+                .await
+                .unwrap()
+                .unwrap();
 
         assert_eq!(format!("{}{}", fixture, token), response);
     }
@@ -308,7 +307,7 @@ mod tests {
             config.clone(),
             crate::cli::admin::IDLE_REQUEST_INTERVAL_SECS,
         );
-        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
         // Each time, we create a new upstream endpoint and send a cluster update for it.
         let concat_bytes = vec![("b", "c,"), ("d", "e")];
@@ -322,7 +321,6 @@ mod tests {
                 cluster.clear();
                 cluster.insert(Endpoint::new(local_addr.clone()));
             });
-            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
             let filters = crate::filters::FilterChain::try_from(vec![
                 Concatenate::as_filter_config(concatenate::Config {
@@ -346,7 +344,7 @@ mod tests {
                 .discovery_request(ResourceType::Cluster, &[])
                 .await
                 .unwrap();
-            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
             assert_eq!(
                 local_addr,
                 config
@@ -364,7 +362,7 @@ mod tests {
                 .discovery_request(ResourceType::Listener, &[])
                 .await
                 .unwrap();
-            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
             let changed_filters = config.filters.load();
 
             assert_eq!(changed_filters.len(), 2);
