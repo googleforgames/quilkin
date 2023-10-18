@@ -128,6 +128,7 @@ async-trait = "0.1.73"
 nom = "7.1.3"
 strum = "0.25.0"
 strum_macros = "0.25.2"
+itertools = "0.11.0"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 sys-info = "0.9.1"
