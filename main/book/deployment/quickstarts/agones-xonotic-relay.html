@@ -398,7 +398,7 @@ routing token <code>456</code> from before, to ensure our traffic gets routed to
 <p>Run <code>kubectl get service quilkin-proxies</code> to get the <code>EXTERNAL-IP</code> of the Service you created. </p>
 <pre><code class="language-shell">$ kubectl get service quilkin-proxies
 NAME              TYPE           CLUSTER-IP    EXTERNAL-IP     PORT(S)          AGE
-quilkin-proxies   LoadBalancer   10.109.0.12   35.246.94.14    7000:30174/UDP   3h22m
+quilkin-proxies   LoadBalancer   10.109.0.12   35.246.94.14    7777:30174/UDP   3h22m
 </code></pre>
 <p>We have a <a href="https://github.com/googleforgames/quilkin/blob/main/examples/agones-xonotic-relay/client-token.yaml">Quilkin config yaml</a>
 file all ready for you, that is configured to append the routing token <code>456</code> to each 
