@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Base64Standard","ConfigType","ValidationError","Version"],"mod":["providers","watch"],"struct":["Config","Filter","Slot"]};
