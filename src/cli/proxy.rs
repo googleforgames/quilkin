@@ -265,7 +265,7 @@ impl RuntimeConfig {
             .xds_is_healthy
             .read()
             .as_ref()
-            .map_or(true, |health| health.load(Ordering::SeqCst));
+            .map_or(false, |health| health.load(Ordering::SeqCst));
 
         if !xds_is_healthy {
             tracing::warn!("xds is not healthy");
@@ -277,7 +277,7 @@ impl RuntimeConfig {
             tracing::warn!("no endpoints available currently");
         }
 
-        xds_is_healthy && has_endpoints
+        xds_is_healthy || has_endpoints
     }
 }
 
