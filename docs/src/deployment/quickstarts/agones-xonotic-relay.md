@@ -271,7 +271,7 @@ Run `kubectl get service quilkin-proxies` to get the `EXTERNAL-IP` of the Servic
 ```shell
 $ kubectl get service quilkin-proxies
 NAME              TYPE           CLUSTER-IP    EXTERNAL-IP     PORT(S)          AGE
-quilkin-proxies   LoadBalancer   10.109.0.12   35.246.94.14    7000:30174/UDP   3h22m
+quilkin-proxies   LoadBalancer   10.109.0.12   35.246.94.14    7777:30174/UDP   3h22m
 ```
 
 We have a [Quilkin config yaml](https://github.com/googleforgames/quilkin/blob/{{GITHUB_REF_NAME}}/examples/agones-xonotic-relay/client-token.yaml)
