@@ -82,7 +82,16 @@ fn gameserver_events(
     let gameservers_namespace = namespace.as_ref();
     let gameservers: kube::Api<GameServer> = kube::Api::namespaced(client, gameservers_namespace);
     let gs_writer = kube::runtime::reflector::store::Writer::<GameServer>::default();
-    let gameserver_stream = kube::runtime::watcher(gameservers, <_>::default());
+    let mut config = kube::runtime::watcher::Config::default()
+        // Default timeout is 5 minutes, for too slow for us to react.
+        .timeout(15)
+        // Use `Any` as we care about speed more than consistency.
+        .any_semantic();
+
+    // Retreive unbounded results.
+    config.page_size = None;
+
+    let gameserver_stream = kube::runtime::watcher(gameservers, config);
     kube::runtime::reflector(gs_writer, gameserver_stream)
 }
 
