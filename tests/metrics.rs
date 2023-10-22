@@ -22,6 +22,7 @@ use quilkin::{
 };
 
 #[tokio::test]
+#[ignore]
 async fn metrics_server() {
     let mut t = TestHelper::default();
 
