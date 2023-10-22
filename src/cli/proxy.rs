@@ -254,7 +254,8 @@ pub(crate) struct DownstreamReceiveWorkerConfig {
     /// ID of the worker.
     pub worker_id: usize,
     /// Socket with reused port from which the worker receives packets.
-    pub socket: Arc<DualStackLocalSocket>,
+    pub upstream_receiver: async_channel::Receiver<(Vec<u8>, SocketAddr)>,
+    pub port: u16,
     pub config: Arc<Config>,
     pub sessions: Arc<SessionPool>,
 }
@@ -263,16 +264,19 @@ impl DownstreamReceiveWorkerConfig {
     pub fn spawn(self) {
         let Self {
             worker_id,
-            socket,
+            upstream_receiver,
+            port,
             config,
             sessions,
         } = self;
 
-        tokio::spawn(async move {
+        uring_spawn!(async move {
             // Initialize a buffer for the UDP packet. We use the maximum size of a UDP
             // packet, which is the maximum value of 16 a bit integer.
             let mut buf = vec![0; 1 << 16];
             let mut last_received_at = None;
+            let socket = DualStackLocalSocket::new(port).unwrap();
+
             loop {
                 tracing::debug!(
                     id = worker_id,
@@ -281,7 +285,9 @@ impl DownstreamReceiveWorkerConfig {
                 );
 
                 tokio::select! {
-                    result = socket.recv_from(&mut buf) => {
+                    result = socket.recv_from(buf) => {
+                        let (result, new_buf) = result;
+                        buf = new_buf;
                         match result {
                             Ok((size, mut source)) => {
                                 crate::net::to_canonical(&mut source);
@@ -367,7 +373,7 @@ impl DownstreamReceiveWorkerConfig {
         packet: DownstreamPacket,
         config: Arc<Config>,
         sessions: Arc<SessionPool>,
-    ) -> Result<usize, PipelineError> {
+    ) -> Result<(), PipelineError> {
         let endpoints: Vec<_> = config.clusters.read().endpoints().collect();
         if endpoints.is_empty() {
             return Err(PipelineError::NoUpstreamEndpoints);
@@ -376,7 +382,6 @@ impl DownstreamReceiveWorkerConfig {
         let filters = config.filters.load();
         let mut context = ReadContext::new(endpoints, packet.source.into(), packet.contents);
         filters.read(&mut context).await?;
-        let mut bytes_written = 0;
 
         for endpoint in context.endpoints.iter() {
             let session_key = SessionKey {
@@ -389,7 +394,7 @@ impl DownstreamReceiveWorkerConfig {
                 .await?;
         }
 
-        Ok(bytes_written)
+        Ok(())
     }
 }
 

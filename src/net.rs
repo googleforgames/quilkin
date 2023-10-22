@@ -24,14 +24,13 @@ use std::{
 };
 
 use socket2::{Protocol, Socket, Type};
-use tokio::net::ToSocketAddrs;
 use tokio_uring::net::UdpSocket;
 
 pub use endpoint::{Endpoint, EndpointAddress};
 
 /// returns a UdpSocket with address and port reuse, on Ipv6Addr::UNSPECIFIED
 fn socket_with_reuse(port: u16) -> std::io::Result<UdpSocket> {
-    raw_socket_with_reuse(port).and_then(UdpSocket::from_std)
+    raw_socket_with_reuse(port).map(From::from).map(UdpSocket::from_std)
 }
 
 /// returns a UdpSocket with address and port reuse, on Ipv6Addr::UNSPECIFIED
@@ -40,7 +39,7 @@ pub(crate) fn raw_socket_with_reuse(port: u16) -> std::io::Result<Socket> {
 }
 
 fn socket_with_reuse_and_address(addr: SocketAddr) -> std::io::Result<UdpSocket> {
-    raw_socket_with_reuse_and_address(addr).and_then(UdpSocket::from_std)
+    raw_socket_with_reuse_and_address(addr).map(From::from).map(UdpSocket::from_std)
 }
 
 fn raw_socket_with_reuse_and_address(addr: SocketAddr) -> std::io::Result<Socket> {
@@ -57,7 +56,7 @@ fn raw_socket_with_reuse_and_address(addr: SocketAddr) -> std::io::Result<Socket
         sock.set_only_v6(false)?;
     }
     sock.bind(&addr.into())?;
-    sock
+    Ok(sock)
 }
 
 #[cfg(not(target_family = "windows"))]
@@ -74,35 +73,34 @@ fn enable_reuse(sock: &Socket) -> io::Result<()> {
 
 /// An ipv6 socket that can accept and send data from either a local ipv4 address or ipv6 address
 /// with port reuse enabled and only_v6 set to false.
-#[derive(Debug)]
 pub struct DualStackLocalSocket {
     socket: UdpSocket,
+    local_addr: SocketAddr,
 }
 
 impl DualStackLocalSocket {
     pub fn from_raw(socket: socket2::Socket) -> Self {
-        Self { socket: UdpSocket::from_std(socket) }
-    }
-    pub fn from_tokio(socket: UdpSocket) -> Self {
-        Self { socket }
+        let socket: std::net::UdpSocket = socket.into();
+        let local_addr = socket.local_addr().unwrap();
+        let socket = UdpSocket::from_std(socket);
+        Self { socket, local_addr }
     }
 
     pub fn new(port: u16) -> std::io::Result<DualStackLocalSocket> {
-        Ok(Self {
-            socket: socket_with_reuse(port)?,
-        })
+        raw_socket_with_reuse(port).map(Self::from_raw)
     }
 
     pub fn bind_local(port: u16) -> std::io::Result<DualStackLocalSocket> {
-        Ok(Self {
-            socket: socket_with_reuse_and_address((Ipv6Addr::LOCALHOST, port).into())?,
-        })
+        let local_addr = (Ipv6Addr::LOCALHOST, port).into();
+        let socket = socket_with_reuse_and_address(local_addr)?;
+        Ok(Self { socket, local_addr })
     }
 
     /// Primarily used for testing of ipv4 vs ipv6 addresses.
-    pub(crate) fn new_with_address(addr: SocketAddr) -> std::io::Result<DualStackLocalSocket> {
+    pub(crate) fn new_with_address(local_addr: SocketAddr) -> std::io::Result<DualStackLocalSocket> {
         Ok(Self {
-            socket: socket_with_reuse_and_address(addr)?,
+            socket: socket_with_reuse_and_address(local_addr)?,
+            local_addr,
         })
     }
 
@@ -111,22 +109,20 @@ impl DualStackLocalSocket {
     }
 
     pub fn local_ipv4_addr(&self) -> io::Result<SocketAddr> {
-        let addr = self.socket.local_addr()?;
-        match addr {
-            SocketAddr::V4(_) => Ok(addr),
-            SocketAddr::V6(_) => Ok((Ipv4Addr::UNSPECIFIED, addr.port()).into()),
-        }
+        Ok(match self.local_addr {
+            SocketAddr::V4(_) => self.local_addr,
+            SocketAddr::V6(_) => (Ipv4Addr::UNSPECIFIED, self.local_addr.port()).into(),
+        })
     }
 
     pub fn local_ipv6_addr(&self) -> io::Result<SocketAddr> {
-        let addr = self.socket.local_addr()?;
-        match addr {
-            SocketAddr::V4(v4addr) => Ok(SocketAddr::new(
+        Ok(match self.local_addr {
+            SocketAddr::V4(v4addr) => SocketAddr::new(
                 IpAddr::V6(v4addr.ip().to_ipv6_mapped()),
-                addr.port(),
-            )),
-            SocketAddr::V6(_) => Ok(addr),
-        }
+                self.local_addr.port(),
+            ),
+            SocketAddr::V6(_) => self.local_addr,
+        })
     }
 
     pub async fn send_to(&self, buf: Vec<u8>, target: SocketAddr) -> (io::Result<usize>, Vec<u8>) {
@@ -134,15 +130,17 @@ impl DualStackLocalSocket {
     }
 }
 
-/// On linux spawns a io-uring 
-pub fn uring_spawn(future: impl std::future::Future<Output = ()>) {
-    cfg_if::cfg_if! {
-        if #[cfg(target_os = "linux")] {
-            std::thread::spawn(move || {
-                tokio_uring::start(future);
-            });
-        } else {
-            tokio::spawn(future);
+/// On linux spawns a io-uring, everywhere else spawns a regular tokio task.
+macro_rules! uring_spawn {
+    ($future:expr) => {
+        cfg_if::cfg_if! {
+            if #[cfg(target_os = "linux")] {
+                std::thread::spawn(move || {
+                    tokio_uring::start($future);
+                });
+            } else {
+                tokio::spawn($future);
+            }
         }
     }
 }

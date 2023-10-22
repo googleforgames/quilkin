@@ -33,7 +33,7 @@ const DISCRIMINANT_LEN: usize = 1;
 type Result<T, E = Error> = std::result::Result<T, E>;
 
 pub async fn spawn(port: u16) -> crate::Result<()> {
-    crate::net::uring_spawn(async move {
+    uring_spawn!(async move {
         // Initialize a buffer for the UDP packet. We use the maximum size of a UDP
         // packet, which is the maximum value of 16 a bit integer.
         let mut input_buf = vec![0; 1 << 16];
@@ -45,7 +45,7 @@ pub async fn spawn(port: u16) -> crate::Result<()> {
         loop {
             tracing::info!(%v4_addr, %v6_addr, "awaiting qcmp packets");
 
-            let new_input_buf = match socket.recv_from(input_buf).await {
+            match socket.recv_from(input_buf).await {
                 (Ok((size, source)), new_input_buf) => {
                     input_buf = new_input_buf;
                     let received_at = chrono::Utc::now().timestamp_nanos_opt().unwrap();

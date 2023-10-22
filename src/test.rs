@@ -18,7 +18,7 @@ use std::net::Ipv4Addr;
 /// Common utilities for testing
 use std::{net::SocketAddr, str::from_utf8, sync::Arc, sync::Once};
 
-use tokio::sync::{mpsc, oneshot, watch};
+use tokio::{sync::{mpsc, oneshot, watch}, net::UdpSocket};
 use tracing_subscriber::EnvFilter;
 
 use crate::{
@@ -26,7 +26,6 @@ use crate::{
     filters::{prelude::*, FilterRegistry},
     net::endpoint::metadata::Value,
     net::endpoint::{Endpoint, EndpointAddress},
-    net::DualStackLocalSocket,
 };
 
 static LOG_ONCE: Once = Once::new();
@@ -59,20 +58,8 @@ pub async fn available_addr(address_type: &AddressType) -> SocketAddr {
     addr
 }
 
-fn get_address(address_type: &AddressType, socket: &DualStackLocalSocket) -> SocketAddr {
-    let addr = match address_type {
-        AddressType::Random => {
-            // sometimes give ipv6, sometimes ipv4.
-            match rand::random() {
-                true => socket.local_ipv6_addr().unwrap(),
-                false => socket.local_ipv4_addr().unwrap(),
-            }
-        }
-        AddressType::Ipv4 => socket.local_ipv4_addr().unwrap(),
-        AddressType::Ipv6 => socket.local_ipv6_addr().unwrap(),
-    };
-    tracing::debug!(addr = ?addr, "test_util::get_address");
-    addr
+fn get_address(address_type: &AddressType, socket: &tokio::net::UdpSocket) -> SocketAddr {
+    socket.local_addr().unwrap()
 }
 
 // TestFilter is useful for testing that commands are executing filters appropriately.
@@ -125,7 +112,7 @@ pub struct TestHelper {
 /// Returned from [creating a socket](TestHelper::open_socket_and_recv_single_packet)
 pub struct OpenSocketRecvPacket {
     /// The opened socket
-    pub socket: Arc<DualStackLocalSocket>,
+    pub socket: Arc<UdpSocket>,
     /// A channel on which the received packet will be forwarded.
     pub packet_rx: oneshot::Receiver<String>,
 }
@@ -171,7 +158,7 @@ impl TestHelper {
     /// returned channel.
     pub async fn open_socket_and_recv_multiple_packets(
         &mut self,
-    ) -> (mpsc::Receiver<String>, Arc<DualStackLocalSocket>) {
+    ) -> (mpsc::Receiver<String>, Arc<UdpSocket>) {
         let socket = Arc::new(create_socket().await);
         let packet_rx = self.recv_multiple_packets(&socket).await;
         (packet_rx, socket)
@@ -180,9 +167,9 @@ impl TestHelper {
     // Same as above, but sometimes you just need an ipv4 socket
     pub async fn open_ipv4_socket_and_recv_multiple_packets(
         &mut self,
-    ) -> (mpsc::Receiver<String>, Arc<DualStackLocalSocket>) {
+    ) -> (mpsc::Receiver<String>, Arc<UdpSocket>) {
         let socket = Arc::new(
-            DualStackLocalSocket::new_with_address((Ipv4Addr::LOCALHOST, 0).into()).unwrap(),
+            UdpSocket::bind((Ipv4Addr::LOCALHOST, 0)).await.unwrap(),
         );
         let packet_rx = self.recv_multiple_packets(&socket).await;
         (packet_rx, socket)
@@ -190,7 +177,7 @@ impl TestHelper {
 
     async fn recv_multiple_packets(
         &mut self,
-        socket: &Arc<DualStackLocalSocket>,
+        socket: &Arc<UdpSocket>,
     ) -> mpsc::Receiver<String> {
         let (packet_tx, packet_rx) = mpsc::channel::<String>(10);
         let mut shutdown_rx = self.get_shutdown_subscriber().await;
@@ -347,8 +334,8 @@ pub fn map_addr_to_localhost(address: &mut SocketAddr) {
 }
 
 /// Opens a new socket bound to an ephemeral port
-pub async fn create_socket() -> DualStackLocalSocket {
-    DualStackLocalSocket::new(0).unwrap()
+pub async fn create_socket() -> tokio::net::UdpSocket {
+    tokio::net::UdpSocket::bind((std::net::Ipv4Addr::UNSPECIFIED, 0)).await.unwrap()
 }
 
 pub fn config_with_dummy_endpoint() -> Config {
