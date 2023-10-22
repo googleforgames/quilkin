@@ -37,6 +37,7 @@ pub(crate) mod metrics;
 pub type SessionMap = crate::collections::ttl::TtlMap<SessionKey, Session>;
 type UpstreamSender = mpsc::UnboundedSender<(Vec<u8>, Option<IpNetEntry>, SocketAddr)>;
 type DownstreamSender = async_channel::Sender<(Vec<u8>, Option<IpNetEntry>, SocketAddr)>;
+#[cfg(test)]
 pub type DownstreamReceiver = async_channel::Receiver<(Vec<u8>, Option<IpNetEntry>, SocketAddr)>;
 
 pub(crate) static ADDRESS_MAP: Lazy<
