@@ -61,6 +61,10 @@ categories = ["game-development", "network-programming"]
 edition = "2021"
 exclude = ["docs", "build", "examples", "image"]
 
+[profile.release]
+lto = "fat"
+codegen-units = 1
+
 [[bench]]
 name = "throughput"
 harness = false
