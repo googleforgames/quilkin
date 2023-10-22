@@ -137,18 +137,16 @@ mod tests {
         };
 
         let local_ip = [192, 168, 75, 20];
-        let mut ctx = ReadContext::new(
-            vec![Endpoint::new((Ipv4Addr::LOCALHOST, 8080).into())],
-            (local_ip, 80).into(),
-            vec![],
+        let endpoints = crate::net::cluster::ClusterMap::new_default(
+            [Endpoint::new((Ipv4Addr::LOCALHOST, 8080).into())].into(),
         );
+        let mut ctx = ReadContext::new(endpoints.into(), (local_ip, 80).into(), vec![]);
         assert!(firewall.read(&mut ctx).await.is_ok());
 
-        let mut ctx = ReadContext::new(
-            vec![Endpoint::new((Ipv4Addr::LOCALHOST, 8080).into())],
-            (local_ip, 2000).into(),
-            vec![],
+        let endpoints = crate::net::cluster::ClusterMap::new_default(
+            [Endpoint::new((Ipv4Addr::LOCALHOST, 8080).into())].into(),
         );
+        let mut ctx = ReadContext::new(endpoints.into(), (local_ip, 2000).into(), vec![]);
         assert!(logs_contain("quilkin::filters::firewall")); // the given name to the the logger by tracing
         assert!(logs_contain("Allow"));
 

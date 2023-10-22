@@ -307,13 +307,17 @@ pub async fn assert_filter_read_no_change<F>(filter: &F)
 where
     F: Filter,
 {
-    let endpoints = vec!["127.0.0.1:80".parse::<Endpoint>().unwrap()];
+    let endpoints = std::sync::Arc::new(crate::net::cluster::ClusterMap::default());
+    endpoints.insert_default(std::collections::BTreeSet::from(["127.0.0.1:80"
+        .parse::<Endpoint>()
+        .unwrap()]));
     let source = "127.0.0.1:90".parse().unwrap();
     let contents = "hello".to_string().into_bytes();
     let mut context = ReadContext::new(endpoints.clone(), source, contents.clone());
 
     filter.read(&mut context).await.unwrap();
-    assert_eq!(endpoints, &*context.endpoints);
+    assert!(context.destinations.is_empty());
+    assert_eq!(endpoints, context.endpoints);
     assert_eq!(contents, &*context.contents);
 }
 

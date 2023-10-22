@@ -278,6 +278,17 @@ impl Filter for FilterChain {
             }
         }
 
+        // Special case to handle to allow for pass-through, if no filter
+        // has rejected, and the destinations is empty, we passthrough to all.
+        // Which mimics the old behaviour while avoid clones in most cases.
+        if ctx.destinations.is_empty() {
+            ctx.destinations = ctx
+                .endpoints
+                .iter()
+                .flat_map(|e| e.value().iter().cloned().collect::<Vec<_>>())
+                .collect();
+        }
+
         Ok(())
     }
 
@@ -340,11 +351,15 @@ mod tests {
         assert!(result.is_err());
     }
 
-    fn endpoints() -> Vec<Endpoint> {
-        vec![
-            Endpoint::new("127.0.0.1:80".parse().unwrap()),
-            Endpoint::new("127.0.0.1:90".parse().unwrap()),
-        ]
+    fn endpoints() -> std::sync::Arc<crate::net::cluster::ClusterMap> {
+        crate::net::cluster::ClusterMap::new_default(
+            [
+                Endpoint::new("127.0.0.1:80".parse().unwrap()),
+                Endpoint::new("127.0.0.1:90".parse().unwrap()),
+            ]
+            .into(),
+        )
+        .into()
     }
 
     #[tokio::test]
@@ -361,7 +376,10 @@ mod tests {
         config.filters.read(&mut context).await.unwrap();
         let expected = endpoints_fixture.clone();
 
-        assert_eq!(expected, &*context.endpoints);
+        assert_eq!(
+            &*expected.endpoints().collect::<Vec<_>>(),
+            &*context.destinations
+        );
         assert_eq!(b"hello:odr:127.0.0.1:70", &*context.contents);
         assert_eq!(
             "receive",
@@ -369,7 +387,12 @@ mod tests {
         );
 
         let mut context = WriteContext::new(
-            endpoints_fixture[0].address.clone(),
+            endpoints_fixture
+                .endpoints()
+                .next()
+                .unwrap()
+                .address
+                .clone(),
             "127.0.0.1:70".parse().unwrap(),
             b"hello".to_vec(),
         );
@@ -405,7 +428,10 @@ mod tests {
 
         chain.read(&mut context).await.unwrap();
         let expected = endpoints_fixture.clone();
-        assert_eq!(expected, context.endpoints.to_vec());
+        assert_eq!(
+            expected.endpoints().collect::<Vec<_>>(),
+            context.destinations
+        );
         assert_eq!(
             b"hello:odr:127.0.0.1:70:odr:127.0.0.1:70",
             &*context.contents
@@ -416,7 +442,12 @@ mod tests {
         );
 
         let mut context = WriteContext::new(
-            endpoints_fixture[0].address.clone(),
+            endpoints_fixture
+                .endpoints()
+                .next()
+                .unwrap()
+                .address
+                .clone(),
             "127.0.0.1:70".parse().unwrap(),
             b"hello".to_vec(),
         );
