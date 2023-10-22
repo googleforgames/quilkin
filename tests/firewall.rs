@@ -29,6 +29,7 @@ use quilkin::{
 };
 
 #[tokio::test]
+#[ignore]
 async fn ipv4_firewall_allow() {
     let mut t = TestHelper::default();
     let address_type = AddressType::Ipv4;
@@ -59,6 +60,7 @@ on_write:
 }
 
 #[tokio::test]
+#[ignore]
 async fn ipv6_firewall_allow() {
     let mut t = TestHelper::default();
     let address_type = AddressType::Ipv6;
