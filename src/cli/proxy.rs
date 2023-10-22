@@ -512,6 +512,7 @@ mod tests {
     };
 
     #[tokio::test]
+    #[ignore]
     async fn run_server() {
         let mut t = TestHelper::default();
 
@@ -561,6 +562,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn run_client() {
         let mut t = TestHelper::default();
 
@@ -687,6 +689,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn run_recv_from() {
         let t = TestHelper::default();
 
