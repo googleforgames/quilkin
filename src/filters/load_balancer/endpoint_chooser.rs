@@ -48,7 +48,12 @@ impl EndpointChooser for RoundRobinEndpointChooser {
     fn choose_endpoints(&self, ctx: &mut ReadContext) {
         let count = self.next_endpoint.fetch_add(1, Ordering::Relaxed);
         // Note: The index is guaranteed to be in range.
-        ctx.endpoints = vec![ctx.endpoints[count % ctx.endpoints.len()].clone()];
+        ctx.destinations = vec![ctx
+            .clusters
+            .endpoints()
+            .nth(count % ctx.clusters.endpoints().count())
+            .unwrap()
+            .clone()];
     }
 }
 
@@ -58,8 +63,8 @@ pub struct RandomEndpointChooser;
 impl EndpointChooser for RandomEndpointChooser {
     fn choose_endpoints(&self, ctx: &mut ReadContext) {
         // The index is guaranteed to be in range.
-        let index = thread_rng().gen_range(0..ctx.endpoints.len());
-        ctx.endpoints = vec![ctx.endpoints[index].clone()];
+        let index = thread_rng().gen_range(0..ctx.clusters.endpoints().count());
+        ctx.destinations = vec![ctx.clusters.endpoints().nth(index).unwrap().clone()];
     }
 }
 
@@ -70,6 +75,11 @@ impl EndpointChooser for HashEndpointChooser {
     fn choose_endpoints(&self, ctx: &mut ReadContext) {
         let mut hasher = DefaultHasher::new();
         ctx.source.hash(&mut hasher);
-        ctx.endpoints = vec![ctx.endpoints[hasher.finish() as usize % ctx.endpoints.len()].clone()];
+        ctx.destinations = vec![ctx
+            .clusters
+            .endpoints()
+            .nth(hasher.finish() as usize % ctx.clusters.endpoints().count())
+            .unwrap()
+            .clone()];
     }
 }

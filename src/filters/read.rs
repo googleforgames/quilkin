@@ -14,15 +14,22 @@
  * limitations under the License.
  */
 
+use std::sync::Arc;
+
 #[cfg(doc)]
 use crate::filters::Filter;
-use crate::net::endpoint::{metadata::DynamicMetadata, Endpoint, EndpointAddress};
+use crate::{
+    cluster::ClusterMap,
+    net::endpoint::{metadata::DynamicMetadata, Endpoint, EndpointAddress},
+};
 
 /// The input arguments to [`Filter::read`].
 #[non_exhaustive]
 pub struct ReadContext {
     /// The upstream endpoints that the packet will be forwarded to.
-    pub endpoints: Vec<Endpoint>,
+    pub clusters: Arc<ClusterMap>,
+    /// The upstream endpoints that the packet will be forwarded to.
+    pub destinations: Vec<Endpoint>,
     /// The source of the received packet.
     pub source: EndpointAddress,
     /// Contents of the received packet.
@@ -33,9 +40,10 @@ pub struct ReadContext {
 
 impl ReadContext {
     /// Creates a new [`ReadContext`].
-    pub fn new(endpoints: Vec<Endpoint>, source: EndpointAddress, contents: Vec<u8>) -> Self {
+    pub fn new(clusters: Arc<ClusterMap>, source: EndpointAddress, contents: Vec<u8>) -> Self {
         Self {
-            endpoints,
+            clusters,
+            destinations: Vec::new(),
             source,
             contents,
             metadata: DynamicMetadata::new(),

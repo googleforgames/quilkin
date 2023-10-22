@@ -168,8 +168,9 @@ mod tests {
     async fn basic() {
         const TIMESTAMP_KEY: &str = "BASIC";
         let filter = Timestamp::from_config(Config::new(TIMESTAMP_KEY).into());
+        let endpoints = crate::cluster::ClusterMap::default();
         let mut ctx = ReadContext::new(
-            vec![],
+            endpoints.into(),
             (std::net::Ipv4Addr::UNSPECIFIED, 0).into(),
             b"hello".to_vec(),
         );
@@ -199,8 +200,9 @@ mod tests {
         );
         let timestamp = Timestamp::from_config(Config::new(TIMESTAMP_KEY).into());
         let source = (std::net::Ipv4Addr::UNSPECIFIED, 0);
+        let endpoints = crate::cluster::ClusterMap::default();
         let mut ctx = ReadContext::new(
-            vec![],
+            endpoints.into(),
             source.into(),
             [0, 0, 0, 0, 99, 81, 55, 181].to_vec(),
         );

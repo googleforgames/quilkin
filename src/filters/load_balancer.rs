@@ -68,16 +68,14 @@ mod tests {
         input_addresses: &[EndpointAddress],
         source: EndpointAddress,
     ) -> Vec<EndpointAddress> {
-        let mut context = ReadContext::new(
-            Vec::from_iter(input_addresses.iter().cloned().map(Endpoint::new)),
-            source,
-            vec![],
-        );
+        let endpoints = crate::cluster::ClusterMap::default();
+        endpoints.insert_default(input_addresses.iter().cloned().map(Endpoint::new).collect());
+        let mut context = ReadContext::new(endpoints.into(), source, vec![]);
 
         filter.read(&mut context).await.unwrap();
 
         context
-            .endpoints
+            .destinations
             .iter()
             .map(|ep| ep.address.clone())
             .collect::<Vec<_>>()

@@ -91,6 +91,7 @@ struct NoValueCaptured;
 #[cfg(test)]
 mod tests {
     use crate::{
+        cluster::ClusterMap,
         filters::metadata::CAPTURED_BYTES,
         net::endpoint::{metadata::Value, Endpoint},
         test::assert_write_no_change,
@@ -159,10 +160,11 @@ mod tests {
             }),
         };
         let filter = Capture::from_config(config.into());
-        let endpoints = vec![Endpoint::new("127.0.0.1:81".parse().unwrap())];
+        let endpoints = ClusterMap::default();
+        endpoints.insert_default([Endpoint::new("127.0.0.1:81".parse().unwrap())].into());
         assert!(filter
             .read(&mut ReadContext::new(
-                endpoints,
+                endpoints.into(),
                 (std::net::Ipv4Addr::LOCALHOST, 80).into(),
                 "abc".to_string().into_bytes(),
             ))
@@ -235,9 +237,10 @@ mod tests {
     where
         F: Filter + ?Sized,
     {
-        let endpoints = vec![Endpoint::new("127.0.0.1:81".parse().unwrap())];
+        let endpoints = ClusterMap::default();
+        endpoints.insert_default([Endpoint::new("127.0.0.1:81".parse().unwrap())].into());
         let mut context = ReadContext::new(
-            endpoints,
+            endpoints.into(),
             "127.0.0.1:80".parse().unwrap(),
             "helloabc".to_string().into_bytes(),
         );

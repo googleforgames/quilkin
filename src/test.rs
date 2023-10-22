@@ -306,13 +306,18 @@ pub async fn assert_filter_read_no_change<F>(filter: &F)
 where
     F: Filter,
 {
-    let endpoints = vec!["127.0.0.1:80".parse::<Endpoint>().unwrap()];
+    let clusters = crate::cluster::ClusterMap::default();
+    let expected_endpoints = ["127.0.0.1:80".parse::<Endpoint>().unwrap()];
+    clusters.insert_default(expected_endpoints.clone().into());
     let source = "127.0.0.1:90".parse().unwrap();
     let contents = "hello".to_string().into_bytes();
-    let mut context = ReadContext::new(endpoints.clone(), source, contents.clone());
+    let mut context = ReadContext::new(clusters.into(), source, contents.clone());
 
     filter.read(&mut context).await.unwrap();
-    assert_eq!(endpoints, &*context.endpoints);
+    assert_eq!(
+        expected_endpoints,
+        &*context.clusters.endpoints().collect::<Vec<_>>()
+    );
     assert_eq!(contents, &*context.contents);
 }
 

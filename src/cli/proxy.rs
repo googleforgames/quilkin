@@ -454,16 +454,19 @@ impl DownstreamReceiveWorkerConfig {
         config: &Arc<Config>,
         sessions: &Arc<SessionPool>,
     ) -> Result<(), PipelineError> {
-        let endpoints: Vec<_> = config.clusters.read().endpoints().collect();
-        if endpoints.is_empty() {
+        if config.clusters.read().num_of_endpoints() == 0 {
             return Err(PipelineError::NoUpstreamEndpoints);
         }
 
         let filters = config.filters.load();
-        let mut context = ReadContext::new(endpoints, packet.source.into(), packet.contents);
+        let mut context = ReadContext::new(
+            config.clusters.clone_value(),
+            packet.source.into(),
+            packet.contents,
+        );
         filters.read(&mut context).await?;
 
-        for endpoint in context.endpoints.iter() {
+        for endpoint in context.destinations.iter() {
             sessions::ADDRESS_MAP.get(&endpoint.address);
             let session_key = SessionKey {
                 source: packet.source,
