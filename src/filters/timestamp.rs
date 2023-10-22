@@ -169,7 +169,7 @@ mod tests {
         const TIMESTAMP_KEY: &str = "BASIC";
         let filter = Timestamp::from_config(Config::new(TIMESTAMP_KEY).into());
         let mut ctx = ReadContext::new(
-            vec![],
+            Vec::new().into(),
             (std::net::Ipv4Addr::UNSPECIFIED, 0).into(),
             b"hello".to_vec(),
         );
@@ -200,7 +200,7 @@ mod tests {
         let timestamp = Timestamp::from_config(Config::new(TIMESTAMP_KEY).into());
         let source = (std::net::Ipv4Addr::UNSPECIFIED, 0);
         let mut ctx = ReadContext::new(
-            vec![],
+            Vec::new().into(),
             source.into(),
             [0, 0, 0, 0, 99, 81, 55, 181].to_vec(),
         );

@@ -226,7 +226,7 @@ mod tests {
             (Ipv4Addr::LOCALHOST, 8089).into(),
         )];
 
-        let mut context = ReadContext::new(endpoints, address.clone(), vec![9]);
+        let mut context = ReadContext::new(endpoints.into(), address.clone(), vec![9]);
         let result = r.read(&mut context).await;
 
         if should_succeed {

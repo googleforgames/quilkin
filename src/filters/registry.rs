@@ -104,12 +104,9 @@ mod tests {
         let addr: EndpointAddress = (Ipv4Addr::LOCALHOST, 8080).into();
         let endpoint = Endpoint::new(addr.clone());
 
+        let clusters = vec![endpoint.clone()];
         assert!(filter
-            .read(&mut ReadContext::new(
-                vec![endpoint.clone()],
-                addr.clone(),
-                vec![]
-            ))
+            .read(&mut ReadContext::new(clusters.into(), addr.clone(), vec![]))
             .await
             .is_ok());
         assert!(filter
