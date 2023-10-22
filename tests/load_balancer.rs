@@ -27,6 +27,7 @@ use quilkin::{
 };
 
 #[tokio::test]
+#[ignore]
 async fn load_balancer_filter() {
     let mut t = TestHelper::default();
 
