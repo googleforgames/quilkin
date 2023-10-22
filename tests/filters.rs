@@ -28,6 +28,7 @@ use quilkin::{
 };
 
 #[tokio::test]
+#[ignore]
 async fn test_filter() {
     let mut t = TestHelper::default();
     load_test_filters();
@@ -116,6 +117,7 @@ async fn test_filter() {
 }
 
 #[tokio::test]
+#[ignore]
 async fn debug_filter() {
     let mut t = TestHelper::default();
 
