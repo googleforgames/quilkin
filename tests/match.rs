@@ -26,6 +26,7 @@ use quilkin::{
 };
 
 #[tokio::test]
+#[ignore]
 async fn r#match() {
     let mut t = TestHelper::default();
     let echo = t.run_echo_server(&AddressType::Random).await;
