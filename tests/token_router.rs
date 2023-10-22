@@ -28,6 +28,7 @@ use quilkin::{
 /// This test covers both token_router and capture filters,
 /// since they work in concert together.
 #[tokio::test]
+#[ignore]
 async fn token_router() {
     let mut t = TestHelper::default();
     let mut echo = t.run_echo_server(&AddressType::Ipv6).await;

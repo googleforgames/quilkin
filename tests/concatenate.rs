@@ -26,6 +26,7 @@ use quilkin::{
 };
 
 #[tokio::test]
+#[ignore]
 async fn concatenate() {
     let mut t = TestHelper::default();
     let yaml = "

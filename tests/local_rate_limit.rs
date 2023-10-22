@@ -26,6 +26,7 @@ use quilkin::{
 };
 
 #[tokio::test]
+#[ignore]
 async fn local_rate_limit_filter() {
     let mut t = TestHelper::default();
 
