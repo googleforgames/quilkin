@@ -312,7 +312,8 @@ where
     let mut context = ReadContext::new(endpoints.clone().into(), source, contents.clone());
 
     filter.read(&mut context).await.unwrap();
-    assert_eq!(endpoints, &*context.endpoints);
+    assert!(context.destinations.is_empty());
+    assert_eq!(&*endpoints, &*context.endpoints);
     assert_eq!(contents, &*context.contents);
 }
 

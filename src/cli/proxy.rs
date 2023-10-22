@@ -413,14 +413,14 @@ impl DownstreamReceiveWorkerConfig {
 
         let filters = config.filters.load();
         let mut context = ReadContext::new(
-            config.endpoints.load().to_vec(),
+            config.endpoints.load(),
             packet.source.into(),
             packet.contents,
         );
         filters.read(&mut context).await?;
         let mut bytes_written = 0;
 
-        for endpoint in context.endpoints.iter() {
+        for endpoint in context.destinations.iter() {
             sessions::ADDRESS_MAP.get(&endpoint.address);
             let session_key = SessionKey {
                 source: packet.source,

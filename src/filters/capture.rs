@@ -162,7 +162,7 @@ mod tests {
         let endpoints = vec![Endpoint::new("127.0.0.1:81".parse().unwrap())];
         assert!(filter
             .read(&mut ReadContext::new(
-                endpoints,
+                endpoints.into(),
                 (std::net::Ipv4Addr::LOCALHOST, 80).into(),
                 "abc".to_string().into_bytes(),
             ))
@@ -237,7 +237,7 @@ mod tests {
     {
         let endpoints = vec![Endpoint::new("127.0.0.1:81".parse().unwrap())];
         let mut context = ReadContext::new(
-            endpoints,
+            endpoints.into(),
             "127.0.0.1:80".parse().unwrap(),
             "helloabc".to_string().into_bytes(),
         );

@@ -205,8 +205,9 @@ mod tests {
         assert_eq!(0, filter.metrics.packets_matched_total.get());
 
         // config so we can test match and fallthrough.
+        let endpoints = vec![Endpoint::new("127.0.0.1:81".parse().unwrap())];
         let mut ctx = ReadContext::new(
-            vec![Default::default()],
+            endpoints.into(),
             ([127, 0, 0, 1], 7000).into(),
             contents.clone(),
         );
@@ -216,11 +217,8 @@ mod tests {
         assert_eq!(1, filter.metrics.packets_matched_total.get());
         assert_eq!(0, filter.metrics.packets_fallthrough_total.get());
 
-        let mut ctx = ReadContext::new(
-            vec![Default::default()],
-            ([127, 0, 0, 1], 7000).into(),
-            contents,
-        );
+        let endpoints = vec![Endpoint::new("127.0.0.1:81".parse().unwrap())];
+        let mut ctx = ReadContext::new(endpoints.into(), ([127, 0, 0, 1], 7000).into(), contents);
         ctx.metadata.insert(key, "xyz".into());
 
         let result = filter.read(&mut ctx).await;

@@ -54,16 +54,16 @@ impl Filter for TokenRouter {
     async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         match ctx.metadata.get(&self.config.metadata_key) {
             Some(metadata::Value::Bytes(token)) => {
-                ctx.endpoints.retain(|endpoint| {
+                ctx.destinations = ctx.endpoints.iter().filter(|endpoint| {
                     if endpoint.metadata.known.tokens.contains(&**token) {
                         tracing::trace!(%endpoint.address, token = &*crate::codec::base64::encode(token), "Endpoint matched");
                         true
                     } else {
                         false
                     }
-                });
+                }).cloned().collect();
 
-                if ctx.endpoints.is_empty() {
+                if ctx.destinations.is_empty() {
                     Err(FilterError::new(Error::NoEndpointMatch(
                         self.config.metadata_key,
                         crate::codec::base64::encode(token),
@@ -257,8 +257,9 @@ mod tests {
             },
         );
 
+        let endpoints = vec![endpoint1, endpoint2];
         ReadContext::new(
-            vec![endpoint1, endpoint2],
+            endpoints.into(),
             "127.0.0.1:100".parse().unwrap(),
             b"hello".to_vec(),
         )

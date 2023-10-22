@@ -139,6 +139,10 @@ impl ClusterMap {
         self.entry(None).or_default()
     }
 
+    pub fn num_of_endpoints(&self) -> usize {
+        self.0.iter().map(|entry| entry.value().len()).sum()
+    }
+
     pub fn endpoints(&self) -> impl Iterator<Item = Endpoint> + '_ {
         self.0
             .iter()

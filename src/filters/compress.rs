@@ -176,8 +176,9 @@ mod tests {
         let expected = contents_fixture();
 
         // read compress
+        let endpoints = vec![Endpoint::new("127.0.0.1:81".parse().unwrap())];
         let mut read_context = ReadContext::new(
-            vec![Endpoint::new("127.0.0.1:80".parse().unwrap())],
+            endpoints.into(),
             "127.0.0.1:8080".parse().unwrap(),
             expected.clone(),
         );
@@ -238,9 +239,10 @@ mod tests {
             Metrics::new(),
         );
 
+        let endpoints = vec![Endpoint::new("127.0.0.1:81".parse().unwrap())];
         assert!(compression
             .read(&mut ReadContext::new(
-                vec![Endpoint::new("127.0.0.1:80".parse().unwrap())],
+                endpoints.into(),
                 "127.0.0.1:8080".parse().unwrap(),
                 b"hello".to_vec(),
             ))
@@ -259,8 +261,9 @@ mod tests {
             Metrics::new(),
         );
 
+        let endpoints = vec![Endpoint::new("127.0.0.1:81".parse().unwrap())];
         let mut read_context = ReadContext::new(
-            vec![Endpoint::new("127.0.0.1:80".parse().unwrap())],
+            endpoints.into(),
             "127.0.0.1:8080".parse().unwrap(),
             b"hello".to_vec(),
         );
@@ -345,8 +348,9 @@ mod tests {
         );
 
         // read decompress
+        let endpoints = vec![Endpoint::new("127.0.0.1:81".parse().unwrap())];
         let mut read_context = ReadContext::new(
-            vec![Endpoint::new("127.0.0.1:80".parse().unwrap())],
+            endpoints.into(),
             "127.0.0.1:8080".parse().unwrap(),
             write_context.contents.clone(),
         );
