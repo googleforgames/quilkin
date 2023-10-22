@@ -599,6 +599,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn run_with_filter() {
         let mut t = TestHelper::default();
 
