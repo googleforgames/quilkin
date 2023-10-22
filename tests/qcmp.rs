@@ -61,12 +61,14 @@ async fn agent_ping() {
 }
 
 async fn ping(port: u16) {
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
     let socket = tokio::net::UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0))
         .await
         .unwrap();
     let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port);
     let ping = Protocol::ping();
 
+    tracing::trace!(dest=%local_addr, "sending ping");
     socket.send_to(&ping.encode(), &local_addr).await.unwrap();
     let mut buf = [0; u16::MAX as usize];
     let (size, _) = tokio::time::timeout(Duration::from_secs(1), socket.recv_from(&mut buf))

@@ -109,6 +109,10 @@ impl DualStackLocalSocket {
         self.socket.recv_from(buf).await
     }
 
+    pub fn local_addr(&self) -> SocketAddr {
+        self.local_addr
+    }
+
     pub fn local_ipv4_addr(&self) -> io::Result<SocketAddr> {
         Ok(match self.local_addr {
             SocketAddr::V4(_) => self.local_addr,
