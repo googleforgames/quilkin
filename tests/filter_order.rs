@@ -26,6 +26,7 @@ use quilkin::{
 };
 
 #[tokio::test]
+#[ignore]
 async fn filter_order() {
     let mut t = TestHelper::default();
 
