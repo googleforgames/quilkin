@@ -56,6 +56,8 @@ pub(crate) const CONNECTION_TIMEOUT: u64 = 5;
 pub struct Config {
     #[serde(default)]
     pub clusters: Watch<ClusterMap>,
+    #[serde(default, skip)]
+    pub num_of_available_endpoints: Slot<usize>,
     #[serde(default)]
     pub filters: Slot<crate::filters::FilterChain>,
     #[serde(default = "default_proxy_id")]
@@ -100,6 +102,8 @@ impl Config {
                     clusters.update_unlocated_endpoints(locality);
                 }
             });
+            self.num_of_available_endpoints
+                .store((*self.clusters.read()).num_of_endpoints().into());
         }
 
         self.apply_metrics();
@@ -179,12 +183,28 @@ impl Config {
                         .map(crate::net::endpoint::Endpoint::try_from)
                         .collect::<Result<_, _>>()?,
                 );
+                self.num_of_available_endpoints
+                    .store((*self.clusters.read()).num_of_endpoints().into());
             }
         }
 
         self.apply_metrics();
 
         Ok(())
+    }
+
+    fn watch_clusters(&self) {
+        let mut watcher = self.clusters.watch();
+        let clusters = self.clusters.clone();
+        let count = self.num_of_available_endpoints.clone();
+        tokio::spawn(async move {
+            loop {
+                if let Err(error) = watcher.changed().await {
+                    tracing::error!(%error, "error watching changes");
+                }
+                count.store(clusters.read().num_of_endpoints().into());
+            }
+        });
     }
 
     pub fn apply_metrics(&self) {
@@ -196,12 +216,17 @@ impl Config {
 
 impl Default for Config {
     fn default() -> Self {
-        Self {
+        let this = Self {
             clusters: <_>::default(),
             filters: <_>::default(),
+            num_of_available_endpoints: <_>::default(),
             id: default_proxy_id(),
             version: Slot::with_default(),
-        }
+        };
+
+        this.watch_clusters();
+
+        this
     }
 }
 
@@ -319,8 +344,8 @@ mod tests {
         Config::from_reader(yaml.as_bytes()).unwrap()
     }
 
-    #[test]
-    fn deserialise_client() {
+    #[tokio::test]
+    async fn deserialise_client() {
         let config = Config::default();
         config.clusters.modify(|clusters| {
             clusters.insert_default([Endpoint::new("127.0.0.1:25999".parse().unwrap())].into())
@@ -329,8 +354,8 @@ mod tests {
         let _ = serde_yaml::to_string(&config).unwrap();
     }
 
-    #[test]
-    fn deserialise_server() {
+    #[tokio::test]
+    async fn deserialise_server() {
         let config = Config::default();
         config.clusters.modify(|clusters| {
             clusters.insert_default(

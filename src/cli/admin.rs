@@ -209,8 +209,8 @@ mod tests {
         assert_eq!(response.status(), hyper::StatusCode::OK);
     }
 
-    #[test]
-    fn check_proxy_readiness() {
+    #[tokio::test]
+    async fn check_proxy_readiness() {
         let config = crate::Config::default();
         assert_eq!(config.clusters.read().endpoints().count(), 0);
 

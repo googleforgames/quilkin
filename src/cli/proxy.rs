@@ -403,8 +403,7 @@ impl DownstreamReceiveWorkerConfig {
         config: &Arc<Config>,
         sessions: &Arc<SessionPool>,
     ) -> Result<usize, PipelineError> {
-        let endpoints: Vec<_> = config.clusters.read().endpoints().collect();
-        if endpoints.is_empty() {
+        if *config.num_of_available_endpoints.load() == 0usize {
             return Err(PipelineError::NoUpstreamEndpoints);
         }
 
