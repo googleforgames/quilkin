@@ -104,8 +104,6 @@ impl Config {
                     clusters.update_unlocated_endpoints(locality);
                 }
             });
-            self.endpoints
-                .store(self.clusters.read().endpoints().collect::<Vec<_>>().into());
         }
 
         self.apply_metrics();
@@ -159,7 +157,6 @@ impl Config {
         })
     }
 
-    #[tracing::instrument(skip_all, fields(response = response.type_url()))]
     pub fn apply(&self, response: &Resource) -> crate::Result<()> {
         tracing::trace!(resource=?response, "applying resource");
 
@@ -185,8 +182,6 @@ impl Config {
                         .map(crate::net::endpoint::Endpoint::try_from)
                         .collect::<Result<_, _>>()?,
                 );
-                self.endpoints
-                    .store(self.clusters.read().endpoints().collect::<Vec<_>>().into());
             }
         }
 
@@ -195,7 +190,7 @@ impl Config {
         Ok(())
     }
 
-    fn watch_clusters(&self) {
+    pub(crate) fn watch_clusters(&self) {
         let mut watcher = self.clusters.watch();
         let clusters = self.clusters.clone();
         let endpoints = self.endpoints.clone();
@@ -212,7 +207,7 @@ impl Config {
     pub fn apply_metrics(&self) {
         let clusters = self.clusters.read();
         crate::cluster::active_clusters().set(clusters.len() as i64);
-        crate::cluster::active_endpoints().set(clusters.endpoints().count() as i64);
+        crate::cluster::active_endpoints().set(self.endpoints.load().len() as i64);
     }
 }
 

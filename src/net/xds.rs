@@ -179,13 +179,17 @@ mod tests {
         .map(Arc::new)
         .unwrap();
 
+        xds_config.watch_clusters();
+
         let client_addr = crate::test::available_addr(&AddressType::Random).await;
-        let client_config = serde_json::from_value(serde_json::json!({
+        let client_config: Arc<Config> = serde_json::from_value(serde_json::json!({
             "version": "v1alpha1",
             "id": "test-proxy",
         }))
         .map(Arc::new)
         .unwrap();
+
+        client_config.watch_clusters();
 
         // Test that the client can handle the manager dropping out.
         let handle = tokio::spawn(server::spawn(xds_port, xds_config.clone()));
