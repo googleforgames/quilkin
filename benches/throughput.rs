@@ -26,8 +26,8 @@ const PACKETS: &[&[u8]] = &[
 /// Run and instance of quilkin that sends and received data
 /// from the given address.
 fn run_quilkin(port: u16, endpoint: SocketAddr) {
-    std::thread::spawn(move || {
-        let runtime = tokio::runtime::Runtime::new().unwrap();
+    let runtime = tokio::runtime::Runtime::new().unwrap();
+    runtime.block_on(async move {
         let config = Arc::new(quilkin::Config::default());
         config.clusters.modify(|clusters| {
             clusters.insert_default([quilkin::net::endpoint::Endpoint::new(endpoint.into())].into())
@@ -35,17 +35,13 @@ fn run_quilkin(port: u16, endpoint: SocketAddr) {
 
         let proxy = quilkin::cli::Proxy {
             port,
-            qcmp_port: runtime
-                .block_on(quilkin::test::available_addr(&AddressType::Random))
-                .port(),
+            qcmp_port: quilkin::test::available_addr(&AddressType::Random).await.port(),
             ..<_>::default()
         };
 
-        runtime.block_on(async move {
-            let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel::<()>(());
-            let admin = quilkin::cli::Admin::Proxy(<_>::default());
-            proxy.run(config, admin, shutdown_rx).await.unwrap();
-        });
+        let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel::<()>(());
+        let admin = quilkin::cli::Admin::Proxy(<_>::default());
+        proxy.run(config, admin, shutdown_rx).await.unwrap();
     });
 }
 
