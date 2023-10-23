@@ -232,6 +232,10 @@ impl ClusterMap {
 
 impl PartialEq for ClusterMap {
     fn eq(&self, rhs: &Self) -> bool {
+        if self.len() != rhs.len() {
+            return false;
+        }
+
         for a in self.iter() {
             match rhs.get(a.key()).filter(|b| *a.value() == **b) {
                 Some(_) => {}
