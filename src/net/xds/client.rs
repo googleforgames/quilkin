@@ -250,7 +250,7 @@ impl AdsStream {
             mode,
         }: &AdsClient,
         config: Arc<Config>,
-        _idle_request_interval_secs: u64,
+        idle_request_interval_secs: u64,
     ) -> Self {
         let mut client = client.clone();
         let identifier = identifier.clone();
@@ -301,7 +301,7 @@ impl AdsStream {
 
                     loop {
                         let next_response = tokio::time::timeout(
-                            std::time::Duration::from_millis(50),
+                            std::time::Duration::from_millis(idle_request_interval_secs),
                             stream.next(),
                         );
 
