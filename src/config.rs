@@ -57,7 +57,7 @@ pub struct Config {
     #[serde(default)]
     pub clusters: Watch<ClusterMap>,
     #[serde(default, skip)]
-    pub num_of_available_endpoints: Slot<usize>,
+    pub endpoints: Slot<Vec<crate::net::Endpoint>>,
     #[serde(default)]
     pub filters: Slot<crate::filters::FilterChain>,
     #[serde(default = "default_proxy_id")]
@@ -102,8 +102,8 @@ impl Config {
                     clusters.update_unlocated_endpoints(locality);
                 }
             });
-            self.num_of_available_endpoints
-                .store((*self.clusters.read()).num_of_endpoints().into());
+            self.endpoints
+                .store(self.clusters.read().endpoints().collect::<Vec<_>>().into());
         }
 
         self.apply_metrics();
@@ -183,8 +183,8 @@ impl Config {
                         .map(crate::net::endpoint::Endpoint::try_from)
                         .collect::<Result<_, _>>()?,
                 );
-                self.num_of_available_endpoints
-                    .store((*self.clusters.read()).num_of_endpoints().into());
+                self.endpoints
+                    .store(self.clusters.read().endpoints().collect::<Vec<_>>().into());
             }
         }
 
@@ -196,13 +196,13 @@ impl Config {
     fn watch_clusters(&self) {
         let mut watcher = self.clusters.watch();
         let clusters = self.clusters.clone();
-        let count = self.num_of_available_endpoints.clone();
+        let endpoints = self.endpoints.clone();
         tokio::spawn(async move {
             loop {
                 if let Err(error) = watcher.changed().await {
                     tracing::error!(%error, "error watching changes");
                 }
-                count.store(clusters.read().num_of_endpoints().into());
+                endpoints.store(clusters.read().endpoints().collect::<Vec<_>>().into());
             }
         });
     }
@@ -219,7 +219,7 @@ impl Default for Config {
         let this = Self {
             clusters: <_>::default(),
             filters: <_>::default(),
-            num_of_available_endpoints: <_>::default(),
+            endpoints: <_>::default(),
             id: default_proxy_id(),
             version: Slot::with_default(),
         };

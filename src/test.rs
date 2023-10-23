@@ -309,7 +309,7 @@ where
     let endpoints = vec!["127.0.0.1:80".parse::<Endpoint>().unwrap()];
     let source = "127.0.0.1:90".parse().unwrap();
     let contents = "hello".to_string().into_bytes();
-    let mut context = ReadContext::new(endpoints.clone(), source, contents.clone());
+    let mut context = ReadContext::new(endpoints.clone().into(), source, contents.clone());
 
     filter.read(&mut context).await.unwrap();
     assert_eq!(endpoints, &*context.endpoints);

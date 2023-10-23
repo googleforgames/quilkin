@@ -43,11 +43,6 @@ exclude = ["docs", "build", "examples", "image"]
 lto = "fat"
 codegen-units = 1
 
-[[bench]]
-name = "throughput"
-harness = false
-test = true
-
 [dependencies]
 # Local
 quilkin-macros = { version = "0.7.0-dev", path = "./macros" }
