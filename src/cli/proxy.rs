@@ -407,12 +407,16 @@ impl DownstreamReceiveWorkerConfig {
         config: &Arc<Config>,
         sessions: &Arc<SessionPool>,
     ) -> Result<usize, PipelineError> {
-        if *config.num_of_available_endpoints.load() == 0usize {
+        if config.endpoints.load().len() == 0usize {
             return Err(PipelineError::NoUpstreamEndpoints);
         }
 
         let filters = config.filters.load();
-        let mut context = ReadContext::new(endpoints, packet.source.into(), packet.contents);
+        let mut context = ReadContext::new(
+            config.endpoints.load().to_vec(),
+            packet.source.into(),
+            packet.contents,
+        );
         filters.read(&mut context).await?;
         let mut bytes_written = 0;
 
