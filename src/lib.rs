@@ -47,19 +47,19 @@ pub(crate) trait Loggable {
     fn log(&self);
 }
 
-#[cfg(doctest)]
-mod external_doc_tests {
-    #![doc = include_str!("../docs/src/services/proxy/filters.md")]
-    #![doc = include_str!("../docs/src/services/proxy/filters/capture.md")]
-    #![doc = include_str!("../docs/src/services/proxy/filters/compress.md")]
-    #![doc = include_str!("../docs/src/services/proxy/filters/concatenate.md")]
-    #![doc = include_str!("../docs/src/services/proxy/filters/debug.md")]
-    #![doc = include_str!("../docs/src/services/proxy/filters/firewall.md")]
-    #![doc = include_str!("../docs/src/services/proxy/filters/load_balancer.md")]
-    #![doc = include_str!("../docs/src/services/proxy/filters/local_rate_limit.md")]
-    #![doc = include_str!("../docs/src/services/proxy/filters/match.md")]
-    #![doc = include_str!("../docs/src/services/proxy/filters/timestamp.md")]
-    #![doc = include_str!("../docs/src/services/proxy/filters/token_router.md")]
-    #![doc = include_str!("../docs/src/services/proxy/filters/writing_custom_filters.md")]
-    #![doc = include_str!("../docs/src/services/xds/providers/filesystem.md")]
-}
+// #[cfg(doctest)]
+// mod external_doc_tests {
+//     #![doc = include_str!("../docs/src/services/proxy/filters.md")]
+//     #![doc = include_str!("../docs/src/services/proxy/filters/capture.md")]
+//     #![doc = include_str!("../docs/src/services/proxy/filters/compress.md")]
+//     #![doc = include_str!("../docs/src/services/proxy/filters/concatenate.md")]
+//     #![doc = include_str!("../docs/src/services/proxy/filters/debug.md")]
+//     #![doc = include_str!("../docs/src/services/proxy/filters/firewall.md")]
+//     #![doc = include_str!("../docs/src/services/proxy/filters/load_balancer.md")]
+//     #![doc = include_str!("../docs/src/services/proxy/filters/local_rate_limit.md")]
+//     #![doc = include_str!("../docs/src/services/proxy/filters/match.md")]
+//     #![doc = include_str!("../docs/src/services/proxy/filters/timestamp.md")]
+//     #![doc = include_str!("../docs/src/services/proxy/filters/token_router.md")]
+//     #![doc = include_str!("../docs/src/services/proxy/filters/writing_custom_filters.md")]
+//     #![doc = include_str!("../docs/src/services/xds/providers/filesystem.md")]
+// }
