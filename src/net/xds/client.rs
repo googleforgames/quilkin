@@ -250,7 +250,7 @@ impl AdsStream {
             mode,
         }: &AdsClient,
         config: Arc<Config>,
-        idle_request_interval_secs: u64,
+        _idle_request_interval_secs: u64,
     ) -> Self {
         let mut client = client.clone();
         let identifier = identifier.clone();
@@ -301,7 +301,7 @@ impl AdsStream {
 
                     loop {
                         let next_response = tokio::time::timeout(
-                            std::time::Duration::from_secs(idle_request_interval_secs),
+                            std::time::Duration::from_millis(50),
                             stream.next(),
                         );
 
@@ -327,7 +327,7 @@ impl AdsStream {
                                 break;
                             }
                             Err(_) => {
-                                tracing::info!(
+                                tracing::debug!(
                                     "exceeded idle request interval sending new requests"
                                 );
                                 Self::refresh_resources(
