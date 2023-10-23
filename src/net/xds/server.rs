@@ -358,7 +358,7 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
 
                 loop {
                     let next_response = tokio::time::timeout(
-                        std::time::Duration::from_secs(idle_request_interval_secs),
+                        std::time::Duration::from_millis(50),
                         response_handler.next(),
                     );
 

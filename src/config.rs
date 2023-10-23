@@ -75,7 +75,9 @@ pub struct Config {
 impl Config {
     /// Attempts to deserialize `input` as a YAML object representing `Self`.
     pub fn from_reader<R: std::io::Read>(input: R) -> Result<Self, serde_yaml::Error> {
-        serde_yaml::from_reader(input)
+        let this: Self = serde_yaml::from_reader(input)?;
+        this.watch_clusters();
+        Ok(this)
     }
 
     fn update_from_json(
@@ -495,8 +497,8 @@ mod tests {
         assert!(config.id.load().len() > 1);
     }
 
-    #[test]
-    fn parse_proxy() {
+    #[tokio::test]
+    async fn parse_proxy() {
         let yaml = "
 version: v1alpha1
 id: server-proxy
