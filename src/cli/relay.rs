@@ -120,6 +120,7 @@ impl Relay {
                         Ok(())
                     }
                 },
+                crate::config::providers::MAX_DELAY,
             )))
         } else if let Some(Providers::File { path }) = &self.providers {
             let config = config.clone();
@@ -135,6 +136,7 @@ impl Relay {
                         crate::config::watch::fs(config, provider_is_healthy, path, None).await
                     }
                 },
+                crate::config::providers::MAX_DELAY,
             )))
         } else {
             None

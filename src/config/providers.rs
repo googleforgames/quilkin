@@ -6,7 +6,7 @@ pub mod k8s;
 
 const RETRIES: u32 = 25;
 const BACKOFF_STEP: std::time::Duration = std::time::Duration::from_millis(250);
-const MAX_DELAY: std::time::Duration = std::time::Duration::from_secs(60 * 5);
+pub const MAX_DELAY: std::time::Duration = std::time::Duration::from_secs(60 * 5);
 
 /// The available xDS source providers.
 #[derive(Clone, Debug, clap::Subcommand)]
@@ -30,6 +30,9 @@ pub enum Providers {
             default_value = "default"
         )]
         gameservers_namespace: String,
+        /// The maximum delay in seconds to watch for changes of agones.
+        #[clap(short, long, env = "QUILKIN_AGONES_MAX_DELAY", default_value = "300")]
+        max_delay_in_seconds: u64,
     },
 
     /// Watches for changes to the file located at `path`.
@@ -52,32 +55,41 @@ impl Providers {
             Self::Agones {
                 gameservers_namespace,
                 config_namespace,
-            } => tokio::spawn(Self::task(health_check.clone(), {
-                let gameservers_namespace = gameservers_namespace.clone();
-                let config_namespace = config_namespace.clone();
-                let health_check = health_check.clone();
-                move || {
-                    crate::config::watch::agones(
-                        gameservers_namespace.clone(),
-                        config_namespace.clone(),
-                        health_check.clone(),
-                        locality.clone(),
-                        config.clone(),
-                    )
-                }
-            })),
-            Self::File { path } => tokio::spawn(Self::task(health_check.clone(), {
-                let path = path.clone();
-                let health_check = health_check.clone();
-                move || {
-                    crate::config::watch::fs(
-                        config.clone(),
-                        health_check.clone(),
-                        path.clone(),
-                        locality.clone(),
-                    )
-                }
-            })),
+                max_delay_in_seconds,
+            } => tokio::spawn(Self::task(
+                health_check.clone(),
+                {
+                    let gameservers_namespace = gameservers_namespace.clone();
+                    let config_namespace = config_namespace.clone();
+                    let health_check = health_check.clone();
+                    move || {
+                        crate::config::watch::agones(
+                            gameservers_namespace.clone(),
+                            config_namespace.clone(),
+                            health_check.clone(),
+                            locality.clone(),
+                            config.clone(),
+                        )
+                    }
+                },
+                std::time::Duration::from_secs(*max_delay_in_seconds),
+            )),
+            Self::File { path } => tokio::spawn(Self::task(
+                health_check.clone(),
+                {
+                    let path = path.clone();
+                    let health_check = health_check.clone();
+                    move || {
+                        crate::config::watch::fs(
+                            config.clone(),
+                            health_check.clone(),
+                            path.clone(),
+                            locality.clone(),
+                        )
+                    }
+                },
+                MAX_DELAY,
+            )),
         }
     }
 
@@ -85,6 +97,7 @@ impl Providers {
     pub async fn task<F>(
         health_check: Arc<AtomicBool>,
         task: impl FnMut() -> F,
+        retry_max_delay: std::time::Duration,
     ) -> crate::Result<()>
     where
         F: std::future::Future<Output = crate::Result<()>>,
@@ -92,7 +105,7 @@ impl Providers {
         tryhard::retry_fn(task)
             .retries(RETRIES)
             .exponential_backoff(BACKOFF_STEP)
-            .max_delay(MAX_DELAY)
+            .max_delay(retry_max_delay)
             .on_retry(|attempt, _, error: &eyre::Error| {
                 health_check.store(false, Ordering::SeqCst);
                 let error = error.to_string();
