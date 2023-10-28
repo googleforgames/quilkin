@@ -36,6 +36,7 @@ async fn proxy_ping() {
     };
     let server_config = std::sync::Arc::new(quilkin::Config::default());
     t.run_server(server_config, server_proxy, None);
+    tokio::time::sleep(Duration::from_millis(50)).await;
     ping(server_port).await;
 }
 
@@ -57,6 +58,7 @@ async fn agent_ping() {
             .await
             .expect("Agent should run")
     });
+    tokio::time::sleep(Duration::from_millis(50)).await;
     ping(qcmp_port).await;
 }
 
