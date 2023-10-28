@@ -19,7 +19,6 @@
 use std::sync::Arc;
 
 use nom::bytes::complete;
-use tracing::Instrument;
 
 use crate::net::{phoenix::Measurement, DualStackLocalSocket};
 
@@ -73,60 +72,65 @@ impl Measurement for QcmpMeasurement {
     }
 }
 
-pub async fn spawn(port: u16) -> crate::Result<()> {
-    let socket = DualStackLocalSocket::new(port)?;
-    let v4_addr = socket.local_ipv4_addr()?;
-    let v6_addr = socket.local_ipv6_addr()?;
+pub fn spawn(port: u16, mut shutdown_rx: tokio::sync::watch::Receiver<()>) -> crate::Result<()> {
+    std::thread::spawn(move || {
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .expect("couldn't create tokio runtime in thread");
+        runtime.block_on(async move {
+            for _ in 0..num_cpus::get() {
+                tokio::spawn(async move {
+                    let socket = DualStackLocalSocket::new(port).unwrap();
+                    // Initialize a buffer for the UDP packet. We use the maximum size of a UDP
+                    // packet, which is the maximum value of 16 a bit integer.
+                    let mut buf = vec![0; 1 << 16];
+                    let mut output_buf = Vec::new();
 
-    tokio::spawn(
-        async move {
-            // Initialize a buffer for the UDP packet. We use the maximum size of a UDP
-            // packet, which is the maximum value of 16 a bit integer.
-            let mut buf = vec![0; 1 << 16];
-            let mut output_buf = Vec::new();
+                    loop {
+                        tracing::debug!("awaiting qcmp packets");
 
-            loop {
-                tracing::debug!("awaiting qcmp packets");
+                        match socket.recv_from(&mut buf).await {
+                            Ok((size, source)) => {
+                                let received_at = chrono::Utc::now().timestamp_nanos_opt().unwrap();
+                                let command = match Protocol::parse(&buf[..size]) {
+                                    Ok(Some(command)) => command,
+                                    Ok(None) => {
+                                        tracing::debug!("rejected non-qcmp packet");
+                                        continue;
+                                    }
+                                    Err(error) => {
+                                        tracing::debug!(%error, "rejected malformed packet");
+                                        continue;
+                                    }
+                                };
 
-                match socket.recv_from(&mut buf).await {
-                    Ok((size, source)) => {
-                        let received_at = chrono::Utc::now().timestamp_nanos_opt().unwrap();
-                        let command = match Protocol::parse(&buf[..size]) {
-                            Ok(Some(command)) => command,
-                            Ok(None) => {
-                                tracing::debug!("rejected non-qcmp packet");
-                                continue;
+                                let Protocol::Ping {
+                                    client_timestamp,
+                                    nonce,
+                                } = command
+                                else {
+                                    tracing::warn!("rejected unsupported QCMP packet");
+                                    continue;
+                                };
+
+                                Protocol::ping_reply(nonce, client_timestamp, received_at)
+                                    .encode_into_buffer(&mut output_buf);
+
+                                if let Err(error) = socket.send_to(&output_buf, &source).await {
+                                    tracing::warn!(%error, "error responding to ping");
+                                }
+
+                                output_buf.clear();
                             }
-                            Err(error) => {
-                                tracing::debug!(%error, "rejected malformed packet");
-                                continue;
-                            }
-                        };
-
-                        let Protocol::Ping {
-                            client_timestamp,
-                            nonce,
-                        } = command
-                        else {
-                            tracing::warn!("rejected unsupported QCMP packet");
-                            continue;
-                        };
-
-                        Protocol::ping_reply(nonce, client_timestamp, received_at)
-                            .encode_into_buffer(&mut output_buf);
-
-                        if let Err(error) = socket.send_to(&output_buf, &source).await {
-                            tracing::warn!(%error, "error responding to ping");
+                            Err(error) => tracing::warn!(%error, "error receiving packet"),
                         }
-
-                        output_buf.clear();
                     }
-                    Err(error) => tracing::warn!(%error, "error receiving packet"),
-                }
+                });
             }
-        }
-        .instrument(tracing::debug_span!("qcmp_task", %v4_addr, %v6_addr)),
-    );
+            let _ = shutdown_rx.changed().await;
+        });
+    });
     Ok(())
 }
 

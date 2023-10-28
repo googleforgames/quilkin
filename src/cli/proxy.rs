@@ -163,7 +163,7 @@ impl Proxy {
         };
 
         self.run_recv_from(&config, &sessions, shared_socket)?;
-        crate::codec::qcmp::spawn(self.qcmp_port).await?;
+        crate::codec::qcmp::spawn(self.qcmp_port, shutdown_rx.clone())?;
         tracing::info!("Quilkin is ready");
 
         shutdown_rx
