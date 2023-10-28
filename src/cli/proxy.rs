@@ -131,32 +131,42 @@ impl Proxy {
         let shared_socket = Arc::new(DualStackLocalSocket::new(self.port)?);
         let sessions = SessionPool::new(config.clone(), shared_socket.clone(), shutdown_rx.clone());
 
-        let _xds_stream = if !self.management_server.is_empty() {
+        if !self.management_server.is_empty() {
             {
                 let mut lock = runtime_config.xds_is_healthy.write();
                 let check: Arc<AtomicBool> = <_>::default();
                 *lock = Some(check.clone());
             }
 
-            let client = crate::net::xds::AdsClient::connect(
-                String::clone(&id),
-                mode.clone(),
-                self.management_server.clone(),
-            )
-            .await?;
-            let mut stream =
-                client.xds_client_stream(config.clone(), self.idle_request_interval_secs);
+            let mut shutdown_rx = shutdown_rx.clone();
+            let config = config.clone();
+            let management_server = self.management_server.clone();
+            let idle_request_interval_secs = self.idle_request_interval_secs;
+            std::thread::spawn(move || {
+                let runtime = tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .expect("couldn't create tokio runtime in thread");
+                runtime.block_on(async move {
+                    let client = crate::net::xds::AdsClient::connect(
+                        String::clone(&id),
+                        mode.clone(),
+                        management_server,
+                    )
+                    .await?;
+                    let mut stream = client.xds_client_stream(config, idle_request_interval_secs);
 
-            tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
-            stream.discovery_request(ResourceType::Cluster, &[]).await?;
-            tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
-            stream
-                .discovery_request(ResourceType::Listener, &[])
-                .await?;
-            Some((client, stream))
-        } else {
-            None
-        };
+                    tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
+                    stream.discovery_request(ResourceType::Cluster, &[]).await?;
+                    tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
+                    stream
+                        .discovery_request(ResourceType::Listener, &[])
+                        .await?;
+                    let _ = shutdown_rx.changed().await;
+                    Ok::<_, eyre::Error>(())
+                })
+            });
+        }
 
         self.run_recv_from(&config, &sessions, shared_socket)?;
         crate::codec::qcmp::spawn(self.qcmp_port, shutdown_rx.clone())?;
