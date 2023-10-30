@@ -111,7 +111,7 @@
 
 <span class="kw">const </span>RETRIES: u32 = <span class="number">25</span>;
 <span class="kw">const </span>BACKOFF_STEP: std::time::Duration = std::time::Duration::from_millis(<span class="number">250</span>);
-<span class="kw">const </span>MAX_DELAY: std::time::Duration = std::time::Duration::from_secs(<span class="number">60 </span>* <span class="number">5</span>);
+<span class="kw">const </span>MAX_DELAY: std::time::Duration = std::time::Duration::from_secs(<span class="number">2</span>);
 
 <span class="doccomment">/// The available xDS source providers.
 </span><span class="attr">#[derive(Clone, Debug, clap::Subcommand)]
