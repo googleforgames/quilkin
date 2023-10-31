@@ -94,30 +94,64 @@ impl Agent {
 
         let runtime_config = mode.unwrap_agent();
 
-        let _mds_task = if !self.relay.is_empty() {
-            let _provider_task = match self.provider.as_ref() {
-                Some(provider) => Some(provider.spawn(
-                    config.clone(),
-                    runtime_config.provider_is_healthy.clone(),
-                    locality.clone(),
-                )),
+        if !self.relay.is_empty() {
+            match self.provider.as_ref() {
+                Some(provider) => {
+                    let config = config.clone();
+                    let provider_is_healthy = runtime_config.provider_is_healthy.clone();
+                    let locality = locality.clone();
+                    let provider = provider.clone();
+                    let mut shutdown_rx = shutdown_rx.clone();
+                    std::thread::spawn(move || {
+                        let runtime = tokio::runtime::Builder::new_current_thread()
+                            .enable_all()
+                            .build()
+                            .unwrap();
+
+                        runtime
+                            .block_on(async move {
+                                let provider_task =
+                                    provider.spawn(config, provider_is_healthy.clone(), locality);
+
+                                tokio::select! {
+                                    result = provider_task => result,
+                                    _ = shutdown_rx.changed() => Ok(Ok(())),
+                                }
+                            })
+                            .unwrap()
+                            .unwrap();
+                    });
+                }
                 None => return Err(eyre::eyre!("no configuration provider given")),
             };
 
-            let task = crate::net::xds::client::MdsClient::connect(
-                String::clone(&config.id.load()),
-                mode.clone(),
-                self.relay.clone(),
-            );
+            let relay = self.relay.clone();
+            let config = config.clone();
+            let mode = mode.clone();
+            let mut shutdown_rx = shutdown_rx.clone();
+            std::thread::spawn(move || {
+                let runtime = tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .unwrap();
 
-            tokio::select! {
-                result = task => Some(result?.mds_client_stream(config.clone())),
-                _ = shutdown_rx.changed() => return Ok(()),
-            }
-        } else {
-            tracing::info!("no relay servers given");
-            None
-        };
+                runtime
+                    .block_on(async move {
+                        let client = crate::net::xds::client::MdsClient::connect(
+                            String::clone(&config.id.load()),
+                            mode.clone(),
+                            relay.clone(),
+                        )
+                        .await
+                        .unwrap();
+
+                        let _stream = client.mds_client_stream(config);
+
+                        shutdown_rx.changed().await
+                    })
+                    .unwrap();
+            });
+        }
 
         crate::codec::qcmp::spawn(self.qcmp_port, shutdown_rx.clone())?;
         shutdown_rx.changed().await.map_err(From::from)
