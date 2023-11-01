@@ -633,17 +633,6 @@
 <a href="#633" id="633">633</a>
 <a href="#634" id="634">634</a>
 <a href="#635" id="635">635</a>
-<a href="#636" id="636">636</a>
-<a href="#637" id="637">637</a>
-<a href="#638" id="638">638</a>
-<a href="#639" id="639">639</a>
-<a href="#640" id="640">640</a>
-<a href="#641" id="641">641</a>
-<a href="#642" id="642">642</a>
-<a href="#643" id="643">643</a>
-<a href="#644" id="644">644</a>
-<a href="#645" id="645">645</a>
-<a href="#646" id="646">646</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -944,7 +933,7 @@
                                 }
                                 last_received_at = <span class="prelude-val">Some</span>(packet.received_at);
 
-                                <span class="self">Self</span>::spawn_process_task(packet, source, worker_id, <span class="kw-2">&amp;</span>config, <span class="kw-2">&amp;</span>sessions)
+                                <span class="self">Self</span>::process_task(packet, source, worker_id, <span class="kw-2">&amp;</span>config, <span class="kw-2">&amp;</span>sessions).<span class="kw">await</span>;
                             }
                             <span class="prelude-val">Err</span>(error) =&gt; {
                                 <span class="macro">tracing::error!</span>(%error, <span class="string">&quot;error receiving packet&quot;</span>);
@@ -958,7 +947,7 @@
     }
 
     <span class="attr">#[inline]
-    </span><span class="kw">fn </span>spawn_process_task(
+    </span><span class="kw">async fn </span>process_task(
         packet: DownstreamPacket,
         source: std::net::SocketAddr,
         worker_id: usize,
@@ -973,43 +962,32 @@
             <span class="string">&quot;received packet from downstream&quot;
         </span>);
 
-        tokio::spawn({
-            <span class="kw">let </span>config = config.clone();
-            <span class="kw">let </span>sessions = sessions.clone();
+        <span class="kw">let </span>timer = <span class="kw">crate</span>::metrics::processing_time(<span class="kw">crate</span>::metrics::READ).start_timer();
 
-            <span class="kw">async move </span>{
-                <span class="kw">let </span>timer = <span class="kw">crate</span>::metrics::processing_time(<span class="kw">crate</span>::metrics::READ).start_timer();
-
-                <span class="kw">let </span>asn_info = packet.asn_info.clone();
-                <span class="kw">let </span>asn_info = asn_info.as_ref();
-                <span class="kw">match </span><span class="self">Self</span>::process_downstream_received_packet(packet, config, sessions).<span class="kw">await </span>{
-                    <span class="prelude-val">Ok</span>(size) =&gt; {
-                        <span class="kw">crate</span>::metrics::packets_total(<span class="kw">crate</span>::metrics::READ, asn_info).inc();
-                        <span class="kw">crate</span>::metrics::bytes_total(<span class="kw">crate</span>::metrics::READ, asn_info)
-                            .inc_by(size <span class="kw">as </span>u64);
-                    }
-                    <span class="prelude-val">Err</span>(error) =&gt; {
-                        <span class="kw">let </span>source = error.to_string();
-                        <span class="kw">crate</span>::metrics::errors_total(<span class="kw">crate</span>::metrics::READ, <span class="kw-2">&amp;</span>source, asn_info).inc();
-                        <span class="kw">crate</span>::metrics::packets_dropped_total(
-                            <span class="kw">crate</span>::metrics::READ,
-                            <span class="kw-2">&amp;</span>source,
-                            asn_info,
-                        )
-                        .inc();
-                    }
-                }
-
-                timer.stop_and_record();
+        <span class="kw">let </span>asn_info = packet.asn_info.clone();
+        <span class="kw">let </span>asn_info = asn_info.as_ref();
+        <span class="kw">match </span><span class="self">Self</span>::process_downstream_received_packet(packet, config, sessions).<span class="kw">await </span>{
+            <span class="prelude-val">Ok</span>(size) =&gt; {
+                <span class="kw">crate</span>::metrics::packets_total(<span class="kw">crate</span>::metrics::READ, asn_info).inc();
+                <span class="kw">crate</span>::metrics::bytes_total(<span class="kw">crate</span>::metrics::READ, asn_info).inc_by(size <span class="kw">as </span>u64);
             }
-        });
+            <span class="prelude-val">Err</span>(error) =&gt; {
+                <span class="kw">let </span>source = error.to_string();
+                <span class="kw">crate</span>::metrics::errors_total(<span class="kw">crate</span>::metrics::READ, <span class="kw-2">&amp;</span>source, asn_info).inc();
+                <span class="kw">crate</span>::metrics::packets_dropped_total(<span class="kw">crate</span>::metrics::READ, <span class="kw-2">&amp;</span>source, asn_info)
+                    .inc();
+            }
+        }
+
+        timer.stop_and_record();
     }
 
     <span class="doccomment">/// Processes a packet by running it through the filter chain.
+    </span><span class="attr">#[inline]
     </span><span class="kw">async fn </span>process_downstream_received_packet(
         packet: DownstreamPacket,
-        config: Arc&lt;Config&gt;,
-        sessions: Arc&lt;SessionPool&gt;,
+        config: <span class="kw-2">&amp;</span>Arc&lt;Config&gt;,
+        sessions: <span class="kw-2">&amp;</span>Arc&lt;SessionPool&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;usize, PipelineError&gt; {
         <span class="kw">let </span>endpoints: Vec&lt;<span class="kw">_</span>&gt; = config.clusters.read().endpoints().collect();
         <span class="kw">if </span>endpoints.is_empty() {
