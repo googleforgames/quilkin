@@ -168,6 +168,15 @@
 <a href="#168" id="168">168</a>
 <a href="#169" id="169">169</a>
 <a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
 </pre></div><pre class="rust"><code><span class="kw">pub mod </span>agones;
 
 <span class="kw">use </span>std::{collections::BTreeSet, sync::Arc};
@@ -252,7 +261,16 @@
     <span class="kw">let </span>gameservers_namespace = namespace.as_ref();
     <span class="kw">let </span>gameservers: kube::Api&lt;GameServer&gt; = kube::Api::namespaced(client, gameservers_namespace);
     <span class="kw">let </span>gs_writer = kube::runtime::reflector::store::Writer::&lt;GameServer&gt;::default();
-    <span class="kw">let </span>gameserver_stream = kube::runtime::watcher(gameservers, &lt;<span class="kw">_</span>&gt;::default());
+    <span class="kw">let </span><span class="kw-2">mut </span>config = kube::runtime::watcher::Config::default()
+        <span class="comment">// Default timeout is 5 minutes, far too slow for us to react.
+        </span>.timeout(<span class="number">15</span>)
+        <span class="comment">// Use `Any` as we care about speed more than consistency.
+        </span>.any_semantic();
+
+    <span class="comment">// Retreive unbounded results.
+    </span>config.page_size = <span class="prelude-val">None</span>;
+
+    <span class="kw">let </span>gameserver_stream = kube::runtime::watcher(gameservers, config);
     kube::runtime::reflector(gs_writer, gameserver_stream)
 }
 
