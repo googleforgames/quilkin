@@ -121,8 +121,8 @@ impl std::str::FromStr for Locality {
     }
 }
 
-impl From<crate::cluster::proto::Locality> for Locality {
-    fn from(value: crate::cluster::proto::Locality) -> Self {
+impl From<crate::net::cluster::proto::Locality> for Locality {
+    fn from(value: crate::net::cluster::proto::Locality) -> Self {
         Self {
             region: value.region,
             zone: value.zone,
@@ -131,7 +131,7 @@ impl From<crate::cluster::proto::Locality> for Locality {
     }
 }
 
-impl From<Locality> for crate::cluster::proto::Locality {
+impl From<Locality> for crate::net::cluster::proto::Locality {
     fn from(value: Locality) -> Self {
         Self {
             region: value.region,
