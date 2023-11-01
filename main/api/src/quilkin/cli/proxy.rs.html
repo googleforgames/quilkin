@@ -633,6 +633,44 @@
 <a href="#633" id="633">633</a>
 <a href="#634" id="634">634</a>
 <a href="#635" id="635">635</a>
+<a href="#636" id="636">636</a>
+<a href="#637" id="637">637</a>
+<a href="#638" id="638">638</a>
+<a href="#639" id="639">639</a>
+<a href="#640" id="640">640</a>
+<a href="#641" id="641">641</a>
+<a href="#642" id="642">642</a>
+<a href="#643" id="643">643</a>
+<a href="#644" id="644">644</a>
+<a href="#645" id="645">645</a>
+<a href="#646" id="646">646</a>
+<a href="#647" id="647">647</a>
+<a href="#648" id="648">648</a>
+<a href="#649" id="649">649</a>
+<a href="#650" id="650">650</a>
+<a href="#651" id="651">651</a>
+<a href="#652" id="652">652</a>
+<a href="#653" id="653">653</a>
+<a href="#654" id="654">654</a>
+<a href="#655" id="655">655</a>
+<a href="#656" id="656">656</a>
+<a href="#657" id="657">657</a>
+<a href="#658" id="658">658</a>
+<a href="#659" id="659">659</a>
+<a href="#660" id="660">660</a>
+<a href="#661" id="661">661</a>
+<a href="#662" id="662">662</a>
+<a href="#663" id="663">663</a>
+<a href="#664" id="664">664</a>
+<a href="#665" id="665">665</a>
+<a href="#666" id="666">666</a>
+<a href="#667" id="667">667</a>
+<a href="#668" id="668">668</a>
+<a href="#669" id="669">669</a>
+<a href="#670" id="670">670</a>
+<a href="#671" id="671">671</a>
+<a href="#672" id="672">672</a>
+<a href="#673" id="673">673</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -660,6 +698,7 @@
     time::Duration,
 };
 
+<span class="kw">use </span>tokio::sync::mpsc;
 <span class="kw">use </span>tonic::transport::Endpoint;
 
 <span class="kw">use </span><span class="kw">super</span>::Admin;
@@ -825,6 +864,7 @@
         <span class="comment">// The number of worker tasks to spawn. Each task gets a dedicated queue to
         // consume packets off.
         </span><span class="kw">let </span>num_workers = num_cpus::get();
+        <span class="kw">let </span>(error_sender, <span class="kw-2">mut </span>error_receiver) = mpsc::unbounded_channel();
 
         <span class="comment">// Contains config for each worker task.
         </span><span class="kw">let </span><span class="kw-2">mut </span>workers = Vec::with_capacity(num_workers);
@@ -833,6 +873,7 @@
             socket: shared_socket,
             config: config.clone(),
             sessions: sessions.clone(),
+            error_sender: error_sender.clone(),
         });
 
         <span class="kw">for </span>worker_id <span class="kw">in </span><span class="number">1</span>..num_workers {
@@ -841,6 +882,7 @@
                 socket: Arc::new(DualStackLocalSocket::new(<span class="self">self</span>.port)<span class="question-mark">?</span>),
                 config: config.clone(),
                 sessions: sessions.clone(),
+                error_sender: error_sender.clone(),
             })
         }
 
@@ -849,6 +891,31 @@
         </span><span class="kw">for </span>worker <span class="kw">in </span>workers {
             worker.spawn();
         }
+
+        tokio::spawn(<span class="kw">async move </span>{
+            <span class="kw">let </span><span class="kw-2">mut </span>log_task = tokio::time::interval(std::time::Duration::from_secs(<span class="number">5</span>));
+
+            <span class="kw">let </span><span class="kw-2">mut </span>pipeline_errors = std::collections::HashMap::&lt;String, u64&gt;::new();
+            <span class="kw">loop </span>{
+                <span class="macro">tokio::select! </span>{
+                    <span class="kw">_ </span>= log_task.tick() =&gt; {
+                        <span class="kw">for </span>(error, instances) <span class="kw">in </span><span class="kw-2">&amp;</span>pipeline_errors {
+                            <span class="macro">tracing::info!</span>(%error, %instances, <span class="string">&quot;pipeline report&quot;</span>);
+                        }
+                        pipeline_errors.clear();
+                    }
+                    received = error_receiver.recv() =&gt; {
+                        <span class="kw">let </span><span class="prelude-val">Some</span>(error) = received <span class="kw">else </span>{
+                            <span class="macro">tracing::info!</span>(<span class="string">&quot;pipeline reporting task closed&quot;</span>);
+                            <span class="kw">return</span>;
+                        };
+
+                        <span class="kw">let </span>entry = pipeline_errors.entry(error.to_string()).or_default();
+                        <span class="kw-2">*</span>entry += <span class="number">1</span>;
+                    }
+                }
+            }
+        });
 
         <span class="prelude-val">Ok</span>(())
     }
@@ -889,6 +956,7 @@
     </span><span class="kw">pub </span>socket: Arc&lt;DualStackLocalSocket&gt;,
     <span class="kw">pub </span>config: Arc&lt;Config&gt;,
     <span class="kw">pub </span>sessions: Arc&lt;SessionPool&gt;,
+    <span class="kw">pub </span>error_sender: mpsc::UnboundedSender&lt;PipelineError&gt;,
 }
 
 <span class="kw">impl </span>DownstreamReceiveWorkerConfig {
@@ -898,6 +966,7 @@
             socket,
             config,
             sessions,
+            error_sender,
         } = <span class="self">self</span>;
 
         tokio::spawn(<span class="kw">async move </span>{
@@ -933,7 +1002,7 @@
                                 }
                                 last_received_at = <span class="prelude-val">Some</span>(packet.received_at);
 
-                                <span class="self">Self</span>::process_task(packet, source, worker_id, <span class="kw-2">&amp;</span>config, <span class="kw-2">&amp;</span>sessions).<span class="kw">await</span>;
+                                <span class="self">Self</span>::process_task(packet, source, worker_id, <span class="kw-2">&amp;</span>config, <span class="kw-2">&amp;</span>sessions, <span class="kw-2">&amp;</span>error_sender).<span class="kw">await</span>;
                             }
                             <span class="prelude-val">Err</span>(error) =&gt; {
                                 <span class="macro">tracing::error!</span>(%error, <span class="string">&quot;error receiving packet&quot;</span>);
@@ -953,6 +1022,7 @@
         worker_id: usize,
         config: <span class="kw-2">&amp;</span>Arc&lt;Config&gt;,
         sessions: <span class="kw-2">&amp;</span>Arc&lt;SessionPool&gt;,
+        error_sender: <span class="kw-2">&amp;</span>mpsc::UnboundedSender&lt;PipelineError&gt;,
     ) {
         <span class="macro">tracing::trace!</span>(
             id = worker_id,
@@ -972,10 +1042,15 @@
                 <span class="kw">crate</span>::metrics::bytes_total(<span class="kw">crate</span>::metrics::READ, asn_info).inc_by(size <span class="kw">as </span>u64);
             }
             <span class="prelude-val">Err</span>(error) =&gt; {
-                <span class="kw">let </span>source = error.to_string();
-                <span class="kw">crate</span>::metrics::errors_total(<span class="kw">crate</span>::metrics::READ, <span class="kw-2">&amp;</span>source, asn_info).inc();
-                <span class="kw">crate</span>::metrics::packets_dropped_total(<span class="kw">crate</span>::metrics::READ, <span class="kw-2">&amp;</span>source, asn_info)
-                    .inc();
+                <span class="kw">let </span>discriminant = PipelineErrorDiscriminants::from(<span class="kw-2">&amp;</span>error).to_string();
+                <span class="kw">crate</span>::metrics::errors_total(<span class="kw">crate</span>::metrics::READ, <span class="kw-2">&amp;</span>discriminant, asn_info).inc();
+                <span class="kw">crate</span>::metrics::packets_dropped_total(
+                    <span class="kw">crate</span>::metrics::READ,
+                    <span class="kw-2">&amp;</span>discriminant,
+                    asn_info,
+                )
+                .inc();
+                <span class="kw">let _ </span>= error_sender.send(error);
             }
         }
 
@@ -1014,14 +1089,13 @@
     }
 }
 
-<span class="attr">#[derive(thiserror::Error, Debug)]
+<span class="attr">#[derive(thiserror::Error, Debug, strum_macros::EnumDiscriminants)]
+#[strum_discriminants(derive(strum_macros::Display))]
 </span><span class="kw">pub enum </span>PipelineError {
     <span class="attr">#[error(<span class="string">&quot;No upstream endpoints available&quot;</span>)]
     </span>NoUpstreamEndpoints,
     <span class="attr">#[error(<span class="string">&quot;filter {0}&quot;</span>)]
     </span>Filter(<span class="attr">#[from] </span><span class="kw">crate</span>::filters::FilterError),
-    <span class="attr">#[error(<span class="string">&quot;qcmp: {0}&quot;</span>)]
-    </span>Qcmp(<span class="attr">#[from] </span><span class="kw">crate</span>::codec::qcmp::Error),
     <span class="attr">#[error(<span class="string">&quot;OS level error: {0}&quot;</span>)]
     </span>Io(<span class="attr">#[from] </span>std::io::Error),
 }
@@ -1176,6 +1250,7 @@
     </span><span class="kw">async fn </span>spawn_downstream_receive_workers() {
         <span class="kw">let </span>t = TestHelper::default();
 
+        <span class="kw">let </span>(error_sender, _error_receiver) = mpsc::unbounded_channel();
         <span class="kw">let </span>socket = Arc::new(create_socket().<span class="kw">await</span>);
         <span class="kw">let </span>addr = socket.local_ipv6_addr().unwrap();
         <span class="kw">let </span>endpoint = t.open_socket_and_recv_single_packet().<span class="kw">await</span>;
@@ -1190,6 +1265,7 @@
             worker_id: <span class="number">1</span>,
             socket: socket.clone(),
             config: config.clone(),
+            error_sender,
             sessions: SessionPool::new(
                 config,
                 Arc::new(
