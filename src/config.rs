@@ -24,8 +24,8 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    cluster::ClusterMap,
     filters::prelude::*,
+    net::cluster::ClusterMap,
     net::xds::{
         config::listener::v3::Listener, service::discovery::v3::DiscoveryResponse, Resource,
         ResourceType,
@@ -125,7 +125,7 @@ impl Config {
                 if names.is_empty() {
                     for cluster in self.clusters.read().iter() {
                         resources.push(resource_type.encode_to_any(
-                            &crate::cluster::proto::Cluster::try_from((
+                            &crate::net::cluster::proto::Cluster::try_from((
                                 cluster.key(),
                                 cluster.value(),
                             ))?,
@@ -135,7 +135,7 @@ impl Config {
                     for locality in names.iter().filter_map(|name| name.parse().ok()) {
                         if let Some(cluster) = self.clusters.read().get(&Some(locality)) {
                             resources.push(resource_type.encode_to_any(
-                                &crate::cluster::proto::Cluster::try_from((
+                                &crate::net::cluster::proto::Cluster::try_from((
                                     cluster.key(),
                                     cluster.value(),
                                 ))?,
@@ -189,8 +189,8 @@ impl Config {
 
     pub fn apply_metrics(&self) {
         let clusters = self.clusters.read();
-        crate::cluster::active_clusters().set(clusters.len() as i64);
-        crate::cluster::active_endpoints().set(clusters.endpoints().count() as i64);
+        crate::net::cluster::active_clusters().set(clusters.len() as i64);
+        crate::net::cluster::active_endpoints().set(clusters.endpoints().count() as i64);
     }
 }
 

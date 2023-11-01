@@ -20,7 +20,6 @@ pub(crate) mod collections;
 pub(crate) mod metrics;
 
 pub mod cli;
-pub mod cluster;
 pub mod codec;
 pub mod config;
 pub mod filters;
