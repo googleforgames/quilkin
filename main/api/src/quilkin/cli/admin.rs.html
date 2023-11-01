@@ -217,6 +217,14 @@
 <a href="#217" id="217">217</a>
 <a href="#218" id="218">218</a>
 <a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2023 Google LLC
  *
@@ -306,30 +314,38 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         config: Arc&lt;Config&gt;,
         address: <span class="prelude-ty">Option</span>&lt;std::net::SocketAddr&gt;,
-    ) -&gt; tokio::task::JoinHandle&lt;<span class="prelude-ty">Result</span>&lt;(), hyper::Error&gt;&gt; {
+    ) -&gt; std::thread::JoinHandle&lt;<span class="prelude-ty">Result</span>&lt;(), hyper::Error&gt;&gt; {
         <span class="kw">let </span>address = address.unwrap_or_else(|| (std::net::Ipv6Addr::UNSPECIFIED, PORT).into());
         <span class="kw">let </span>health = Health::new();
         <span class="macro">tracing::info!</span>(address = %address, <span class="string">&quot;Starting admin endpoint&quot;</span>);
 
         <span class="kw">let </span>mode = <span class="self">self</span>.clone();
-        <span class="kw">let </span>make_svc = make_service_fn(<span class="kw">move </span>|_conn| {
-            <span class="kw">let </span>config = config.clone();
-            <span class="kw">let </span>health = health.clone();
-            <span class="kw">let </span>mode = mode.clone();
-            <span class="kw">async move </span>{
-                <span class="kw">let </span>config = config.clone();
-                <span class="kw">let </span>health = health.clone();
-                <span class="kw">let </span>mode = mode.clone();
-                <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, Infallible&gt;(service_fn(<span class="kw">move </span>|req| {
+        std::thread::spawn(<span class="kw">move </span>|| {
+            <span class="kw">let </span>runtime = tokio::runtime::Builder::new_current_thread()
+                .enable_io()
+                .build()
+                .expect(<span class="string">&quot;couldn&#39;t create tokio runtime in thread&quot;</span>);
+            runtime.block_on(<span class="kw">async move </span>{
+                <span class="kw">let </span>make_svc = make_service_fn(<span class="kw">move </span>|_conn| {
                     <span class="kw">let </span>config = config.clone();
                     <span class="kw">let </span>health = health.clone();
                     <span class="kw">let </span>mode = mode.clone();
-                    <span class="kw">async move </span>{ <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, Infallible&gt;(mode.handle_request(req, config, health)) }
-                }))
-            }
-        });
+                    <span class="kw">async move </span>{
+                        <span class="kw">let </span>config = config.clone();
+                        <span class="kw">let </span>health = health.clone();
+                        <span class="kw">let </span>mode = mode.clone();
+                        <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, Infallible&gt;(service_fn(<span class="kw">move </span>|req| {
+                            <span class="kw">let </span>config = config.clone();
+                            <span class="kw">let </span>health = health.clone();
+                            <span class="kw">let </span>mode = mode.clone();
+                            <span class="kw">async move </span>{ <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, Infallible&gt;(mode.handle_request(req, config, health)) }
+                        }))
+                    }
+                });
 
-        tokio::spawn(HyperServer::bind(<span class="kw-2">&amp;</span>address).serve(make_svc))
+                HyperServer::bind(<span class="kw-2">&amp;</span>address).serve(make_svc).<span class="kw">await
+            </span>})
+        })
     }
 
     <span class="kw">fn </span>is_ready(<span class="kw-2">&amp;</span><span class="self">self</span>, config: <span class="kw-2">&amp;</span>Config) -&gt; bool {
