@@ -229,6 +229,10 @@
 <a href="#229" id="229">229</a>
 <a href="#230" id="230">230</a>
 <a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -245,7 +249,8 @@
  * limitations under the License.
  */
 
-</span><span class="kw">pub mod </span>endpoint;
+</span><span class="kw">pub mod </span>cluster;
+<span class="kw">pub mod </span>endpoint;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>maxmind_db;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>xds;
 
@@ -257,7 +262,10 @@
 <span class="kw">use </span>socket2::{Protocol, Socket, Type};
 <span class="kw">use </span>tokio::{net::ToSocketAddrs, net::UdpSocket};
 
-<span class="kw">pub use </span>endpoint::{Endpoint, EndpointAddress};
+<span class="kw">pub use </span><span class="self">self</span>::{
+    cluster::ClusterMap,
+    endpoint::{Endpoint, EndpointAddress},
+};
 
 <span class="doccomment">/// returns a UdpSocket with address and port reuse, on Ipv6Addr::UNSPECIFIED
 </span><span class="kw">fn </span>socket_with_reuse(port: u16) -&gt; std::io::Result&lt;UdpSocket&gt; {

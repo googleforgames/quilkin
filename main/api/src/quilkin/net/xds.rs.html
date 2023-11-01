@@ -537,7 +537,7 @@
             <span class="kw">crate</span>::test::map_to_localhost(<span class="kw-2">&amp;mut </span>addr.address).<span class="kw">await</span>;
             addr
         };
-        <span class="kw">let </span>clusters = <span class="kw">crate</span>::cluster::ClusterMap::default();
+        <span class="kw">let </span>clusters = <span class="kw">crate</span>::net::cluster::ClusterMap::default();
 
         <span class="macro">tracing::debug!</span>(<span class="question-mark">?</span>address);
         clusters.insert_default([address].into());

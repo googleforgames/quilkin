@@ -561,8 +561,8 @@
 <span class="kw">use </span>uuid::Uuid;
 
 <span class="kw">use crate</span>::{
-    cluster::ClusterMap,
     filters::prelude::<span class="kw-2">*</span>,
+    net::cluster::ClusterMap,
     net::xds::{
         config::listener::v3::Listener, service::discovery::v3::DiscoveryResponse, Resource,
         ResourceType,
@@ -662,7 +662,7 @@
                 <span class="kw">if </span>names.is_empty() {
                     <span class="kw">for </span>cluster <span class="kw">in </span><span class="self">self</span>.clusters.read().iter() {
                         resources.push(resource_type.encode_to_any(
-                            <span class="kw-2">&amp;</span><span class="kw">crate</span>::cluster::proto::Cluster::try_from((
+                            <span class="kw-2">&amp;</span><span class="kw">crate</span>::net::cluster::proto::Cluster::try_from((
                                 cluster.key(),
                                 cluster.value(),
                             ))<span class="question-mark">?</span>,
@@ -672,7 +672,7 @@
                     <span class="kw">for </span>locality <span class="kw">in </span>names.iter().filter_map(|name| name.parse().ok()) {
                         <span class="kw">if let </span><span class="prelude-val">Some</span>(cluster) = <span class="self">self</span>.clusters.read().get(<span class="kw-2">&amp;</span><span class="prelude-val">Some</span>(locality)) {
                             resources.push(resource_type.encode_to_any(
-                                <span class="kw-2">&amp;</span><span class="kw">crate</span>::cluster::proto::Cluster::try_from((
+                                <span class="kw-2">&amp;</span><span class="kw">crate</span>::net::cluster::proto::Cluster::try_from((
                                     cluster.key(),
                                     cluster.value(),
                                 ))<span class="question-mark">?</span>,
@@ -726,8 +726,8 @@
 
     <span class="kw">pub fn </span>apply_metrics(<span class="kw-2">&amp;</span><span class="self">self</span>) {
         <span class="kw">let </span>clusters = <span class="self">self</span>.clusters.read();
-        <span class="kw">crate</span>::cluster::active_clusters().set(clusters.len() <span class="kw">as </span>i64);
-        <span class="kw">crate</span>::cluster::active_endpoints().set(clusters.endpoints().count() <span class="kw">as </span>i64);
+        <span class="kw">crate</span>::net::cluster::active_clusters().set(clusters.len() <span class="kw">as </span>i64);
+        <span class="kw">crate</span>::net::cluster::active_endpoints().set(clusters.endpoints().count() <span class="kw">as </span>i64);
     }
 }
 

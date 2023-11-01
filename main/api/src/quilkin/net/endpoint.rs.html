@@ -398,7 +398,7 @@
     }
 }
 
-<span class="kw">impl </span>From&lt;Endpoint&gt; <span class="kw">for </span><span class="kw">crate</span>::cluster::proto::Endpoint {
+<span class="kw">impl </span>From&lt;Endpoint&gt; <span class="kw">for </span><span class="kw">crate</span>::net::cluster::proto::Endpoint {
     <span class="kw">fn </span>from(endpoint: Endpoint) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             host: endpoint.address.host.to_string(),
@@ -408,10 +408,10 @@
     }
 }
 
-<span class="kw">impl </span>TryFrom&lt;<span class="kw">crate</span>::cluster::proto::Endpoint&gt; <span class="kw">for </span>Endpoint {
+<span class="kw">impl </span>TryFrom&lt;<span class="kw">crate</span>::net::cluster::proto::Endpoint&gt; <span class="kw">for </span>Endpoint {
     <span class="kw">type </span>Error = eyre::Error;
 
-    <span class="kw">fn </span>try_from(endpoint: <span class="kw">crate</span>::cluster::proto::Endpoint) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
+    <span class="kw">fn </span>try_from(endpoint: <span class="kw">crate</span>::net::cluster::proto::Endpoint) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
         <span class="kw">let </span>host: address::AddressKind = endpoint.host.parse()<span class="question-mark">?</span>;
         <span class="kw">if </span>endpoint.port &gt; u16::MAX <span class="kw">as </span>u32 {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;invalid endpoint port&quot;</span>));
