@@ -162,7 +162,7 @@ mod tests {
             crate::test::map_to_localhost(&mut addr.address).await;
             addr
         };
-        let clusters = crate::cluster::ClusterMap::default();
+        let clusters = crate::net::cluster::ClusterMap::default();
 
         tracing::debug!(?address);
         clusters.insert_default([address].into());

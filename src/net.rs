@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+pub mod cluster;
 pub mod endpoint;
 pub(crate) mod maxmind_db;
 pub(crate) mod xds;
@@ -26,7 +27,10 @@ use std::{
 use socket2::{Protocol, Socket, Type};
 use tokio::{net::ToSocketAddrs, net::UdpSocket};
 
-pub use endpoint::{Endpoint, EndpointAddress};
+pub use self::{
+    cluster::ClusterMap,
+    endpoint::{Endpoint, EndpointAddress},
+};
 
 /// returns a UdpSocket with address and port reuse, on Ipv6Addr::UNSPECIFIED
 fn socket_with_reuse(port: u16) -> std::io::Result<UdpSocket> {

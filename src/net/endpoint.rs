@@ -76,7 +76,7 @@ impl std::str::FromStr for Endpoint {
     }
 }
 
-impl From<Endpoint> for crate::cluster::proto::Endpoint {
+impl From<Endpoint> for crate::net::cluster::proto::Endpoint {
     fn from(endpoint: Endpoint) -> Self {
         Self {
             host: endpoint.address.host.to_string(),
@@ -86,10 +86,10 @@ impl From<Endpoint> for crate::cluster::proto::Endpoint {
     }
 }
 
-impl TryFrom<crate::cluster::proto::Endpoint> for Endpoint {
+impl TryFrom<crate::net::cluster::proto::Endpoint> for Endpoint {
     type Error = eyre::Error;
 
-    fn try_from(endpoint: crate::cluster::proto::Endpoint) -> Result<Self, Self::Error> {
+    fn try_from(endpoint: crate::net::cluster::proto::Endpoint) -> Result<Self, Self::Error> {
         let host: address::AddressKind = endpoint.host.parse()?;
         if endpoint.port > u16::MAX as u32 {
             return Err(eyre::eyre!("invalid endpoint port"));

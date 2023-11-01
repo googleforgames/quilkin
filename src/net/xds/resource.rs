@@ -39,7 +39,7 @@ type_urls! {
 
 #[derive(Clone, Debug)]
 pub enum Resource {
-    Cluster(Box<crate::cluster::proto::Cluster>),
+    Cluster(Box<crate::net::cluster::proto::Cluster>),
     Listener(Box<Listener>),
 }
 
