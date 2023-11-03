@@ -143,7 +143,8 @@ impl Cli {
 
             match self.log_format {
                 LogFormats::Auto => {
-                    if atty::isnt(atty::Stream::Stdout) {
+                    use std::io::IsTerminal;
+                    if !std::io::stdout().is_terminal() {
                         subscriber.json().init();
                     } else {
                         subscriber.init();
