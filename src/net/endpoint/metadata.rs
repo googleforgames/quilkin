@@ -18,7 +18,7 @@ pub(crate) mod symbol;
 
 #[doc(hidden)]
 pub mod build {
-    include!(concat!(env!("OUT_DIR"), "/built.rs"));
+    pub const GIT_COMMIT_HASH: Option<&str> = option_env!("GIT_COMMIT_HASH");
 }
 
 use std::{collections::HashMap, convert::TryFrom};
