@@ -298,7 +298,7 @@ mod tests {
         tokio::spawn(server::spawn(23456, config.clone()));
         let client = Client::connect(
             "test-client".into(),
-            crate::cli::Admin::Manage(<_>::default()),
+            crate::cli::Admin::Proxy(<_>::default()),
             vec!["http://127.0.0.1:23456".try_into().unwrap()],
         )
         .await
