@@ -35,12 +35,12 @@ impl Drop {
 
 #[async_trait::async_trait]
 impl Filter for Drop {
-    #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
+    #[cfg_attr(feature = "instrument", tracing::instrument(skip_all))]
     async fn read(&self, _: &mut ReadContext) -> Result<(), FilterError> {
         Err(FilterError::new("intentionally dropped"))
     }
 
-    #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
+    #[cfg_attr(feature = "instrument", tracing::instrument(skip_all))]
     async fn write(&self, _: &mut WriteContext) -> Result<(), FilterError> {
         Err(FilterError::new("intentionally dropped"))
     }
