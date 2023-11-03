@@ -329,7 +329,7 @@
 
 <span class="attr">#[doc(hidden)]
 </span><span class="kw">pub mod </span>build {
-    <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/built.rs&quot;</span>));
+    <span class="kw">pub const </span>GIT_COMMIT_HASH: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt; = <span class="macro">option_env!</span>(<span class="string">&quot;GIT_COMMIT_HASH&quot;</span>);
 }
 
 <span class="kw">use </span>std::{collections::HashMap, convert::TryFrom};
