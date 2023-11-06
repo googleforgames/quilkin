@@ -423,6 +423,8 @@ pub enum PipelineError {
     NoUpstreamEndpoints,
     #[error("filter {0}")]
     Filter(#[from] crate::filters::FilterError),
+    #[error("session error: {0}")]
+    Session(#[from] eyre::Error),
     #[error("OS level error: {0}")]
     Io(#[from] std::io::Error),
 }
