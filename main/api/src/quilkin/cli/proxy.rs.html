@@ -671,6 +671,8 @@
 <a href="#671" id="671">671</a>
 <a href="#672" id="672">672</a>
 <a href="#673" id="673">673</a>
+<a href="#674" id="674">674</a>
+<a href="#675" id="675">675</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -1096,6 +1098,8 @@
     </span>NoUpstreamEndpoints,
     <span class="attr">#[error(<span class="string">&quot;filter {0}&quot;</span>)]
     </span>Filter(<span class="attr">#[from] </span><span class="kw">crate</span>::filters::FilterError),
+    <span class="attr">#[error(<span class="string">&quot;session error: {0}&quot;</span>)]
+    </span>Session(<span class="attr">#[from] </span>eyre::Error),
     <span class="attr">#[error(<span class="string">&quot;OS level error: {0}&quot;</span>)]
     </span>Io(<span class="attr">#[from] </span>std::io::Error),
 }
