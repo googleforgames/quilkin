@@ -34,9 +34,10 @@ use crate::{
 pub(crate) mod metrics;
 
 pub type SessionMap = crate::collections::ttl::TtlMap<SessionKey, Session>;
-type UpstreamSender = mpsc::UnboundedSender<(Vec<u8>, Option<IpNetEntry>, SocketAddr)>;
-type DownstreamSender = async_channel::Sender<(Vec<u8>, Option<IpNetEntry>, SocketAddr)>;
-pub type DownstreamReceiver = async_channel::Receiver<(Vec<u8>, Option<IpNetEntry>, SocketAddr)>;
+type ChannelData = (Vec<u8>, Option<IpNetEntry>, SocketAddr);
+type UpstreamSender = mpsc::UnboundedSender<ChannelData>;
+type DownstreamSender = async_channel::Sender<ChannelData>;
+pub type DownstreamReceiver = async_channel::Receiver<ChannelData>;
 
 /// A data structure that is responsible for holding sessions, and pooling
 /// sockets between them. This means that we only provide new unique sockets
@@ -100,12 +101,11 @@ impl SessionPool {
             .ok_or_else(|| eyre::eyre!("couldn't get socket address from raw socket"))
             .map_err(super::PipelineError::Session)?
             .port();
-        let (tx, mut downstream_receiver) = mpsc::unbounded_channel();
-        self.ports_to_sockets.write().await.insert(port, tx.clone());
+        let (tx, mut downstream_receiver) = mpsc::unbounded_channel::<ChannelData>();
 
         let pool = self.clone();
 
-        uring_spawn!(async move {
+        let initialised = uring_spawn!(async move {
             let mut buf: Vec<u8> = vec![0; 65535];
             let mut last_received_at = None;
             let mut shutdown_rx = pool.shutdown_rx.clone();
@@ -183,6 +183,9 @@ impl SessionPool {
             }
         });
 
+        initialised.await.map_err(|error| eyre::eyre!(error))??;
+
+        self.ports_to_sockets.write().await.insert(port, tx.clone());
         self.create_session_from_existing_socket(key, tx, port, asn_info)
             .await
     }

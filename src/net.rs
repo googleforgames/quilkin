@@ -233,17 +233,30 @@ impl DualStackEpollSocket {
 
 /// On linux spawns a io-uring runtime + thread, everywhere else spawns a regular tokio task.
 macro_rules! uring_spawn {
-    ($future:expr) => {
+    ($future:expr) => {{
+        let (tx, rx) = tokio::sync::oneshot::channel();
         cfg_if::cfg_if! {
             if #[cfg(target_os = "linux")] {
                 std::thread::spawn(move || {
-                    tokio_uring::start($future);
+                    match tokio_uring::Runtime::new(&tokio_uring::builder().entries(2048)) {
+                        Ok(runtime) => {
+                            let _ = tx.send(Ok(()));
+                            runtime.block_on($future);
+                        }
+                        Err(error) => {
+                            let _ = tx.send(Err(error));
+                        }
+                    };
                 });
             } else {
-                tokio::spawn($future);
+                tokio::spawn(async move {
+                    tx.send(Ok(()));
+                    $future.await
+                });
             }
         }
-    };
+        rx
+    }};
 }
 
 /// On linux spawns a io-uring task, everywhere else spawns a regular tokio task.
