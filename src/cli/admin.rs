@@ -50,6 +50,11 @@ impl Admin {
         }
     }
 
+    #[must_use]
+    pub fn is_agent(&self) -> bool {
+        matches!(self, Self::Agent(_))
+    }
+
     #[track_caller]
     pub fn unwrap_proxy(&self) -> &proxy::RuntimeConfig {
         match self {

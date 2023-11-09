@@ -188,10 +188,19 @@ mod tests {
         .unwrap();
 
         // Test that the client can handle the manager dropping out.
-        let handle = tokio::spawn(server::spawn(xds_port, xds_config.clone()));
+        let manage_admin = crate::cli::Admin::Manage(<_>::default());
+        let handle = tokio::spawn(server::spawn(
+            xds_port,
+            manage_admin.clone(),
+            xds_config.clone(),
+        ));
 
         let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(());
-        tokio::spawn(server::spawn(xds_port, xds_config.clone()));
+        tokio::spawn(server::spawn(
+            xds_port,
+            manage_admin.clone(),
+            xds_config.clone(),
+        ));
         let client_proxy = crate::cli::Proxy {
             port: client_addr.port(),
             management_server: vec![format!("http://[::1]:{}", xds_port).parse().unwrap()],
@@ -208,7 +217,7 @@ mod tests {
 
         handle.abort();
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-        tokio::spawn(server::spawn(xds_port, xds_config.clone()));
+        tokio::spawn(server::spawn(xds_port, manage_admin, xds_config.clone()));
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
         const VERSION_KEY: &str = "quilkin.dev/load_balancer/version";
@@ -295,10 +304,11 @@ mod tests {
         .map(Arc::new)
         .unwrap();
 
-        tokio::spawn(server::spawn(23456, config.clone()));
+        let proxy_mode = crate::cli::Admin::Proxy(<_>::default());
+        tokio::spawn(server::spawn(23456, proxy_mode.clone(), config.clone()));
         let client = Client::connect(
             "test-client".into(),
-            crate::cli::Admin::Proxy(<_>::default()),
+            proxy_mode,
             vec!["http://127.0.0.1:23456".try_into().unwrap()],
         )
         .await

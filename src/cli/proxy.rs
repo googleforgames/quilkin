@@ -153,6 +153,10 @@ impl Proxy {
             stream
                 .discovery_request(ResourceType::Listener, &[])
                 .await?;
+            tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
+            stream
+                .discovery_request(ResourceType::Datacenter, &[])
+                .await?;
             Some((client, stream))
         } else {
             None

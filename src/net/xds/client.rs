@@ -401,6 +401,7 @@ impl MdsStream {
                         }),
                         ..<_>::default()
                     };
+                    tracing::trace!("sending initial mds response");
                     let _ = requests.send(initial_response);
                     let stream = client
                         .stream_requests(
@@ -414,10 +415,8 @@ impl MdsStream {
                         .await?
                         .into_inner();
 
-                    let control_plane = super::server::ControlPlane::from_arc(
-                        config.clone(),
-                        mode.idle_request_interval_secs(),
-                    );
+                    let control_plane =
+                        super::server::ControlPlane::from_arc(config.clone(), mode.clone());
                     let mut stream = control_plane.stream_aggregated_resources(stream).await?;
                     mode.unwrap_agent()
                         .relay_is_healthy
@@ -546,7 +545,7 @@ enum RpcSessionError {
 pub fn handle_discovery_responses(
     identifier: String,
     stream: impl futures::Stream<Item = tonic::Result<DiscoveryResponse>> + 'static + Send,
-    on_new_resource: impl Fn(&Resource) -> crate::Result<()> + Send + Sync + 'static,
+    on_new_resource: impl Fn(&mut Resource) -> crate::Result<()> + Send + Sync + 'static,
 ) -> std::pin::Pin<Box<dyn futures::Stream<Item = Result<DiscoveryRequest>> + Send>> {
     Box::pin(async_stream::try_stream! {
         let _stream_metrics = super::metrics::StreamConnectionMetrics::new(identifier.clone());
@@ -577,9 +576,9 @@ pub fn handle_discovery_responses(
                 .cloned()
                 .map(Resource::try_from)
                 .try_for_each(|resource| {
-                    let resource = resource?;
+                    let mut resource = resource?;
                     tracing::debug!("applying resource");
-                    (on_new_resource)(&resource)
+                    (on_new_resource)(&mut resource)
                 });
 
             let mut request = DiscoveryRequest::try_from(response)?;

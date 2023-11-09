@@ -55,6 +55,9 @@ pub struct Agent {
     /// request from a relay server before restarting the connection.
     #[clap(long, env = "QUILKIN_IDLE_REQUEST_INTERVAL_SECS", default_value_t = super::admin::IDLE_REQUEST_INTERVAL_SECS)]
     pub idle_request_interval_secs: u64,
+    /// The ICAO code for the agent.
+    #[clap(short, long, env, default_value_t = crate::config::IcaoCode::default())]
+    pub icao_code: crate::config::IcaoCode,
 }
 
 impl Default for Agent {
@@ -67,6 +70,7 @@ impl Default for Agent {
             sub_zone: <_>::default(),
             provider: <_>::default(),
             idle_request_interval_secs: super::admin::IDLE_REQUEST_INTERVAL_SECS,
+            icao_code: <_>::default(),
         }
     }
 }
@@ -84,6 +88,9 @@ impl Agent {
                 zone: self.zone.clone().unwrap_or_default(),
                 sub_zone: self.sub_zone.clone().unwrap_or_default(),
             });
+
+        config.qcmp_port.store(self.qcmp_port.into());
+        config.icao_code.store(self.icao_code.clone().into());
 
         let runtime_config = mode.unwrap_agent();
 

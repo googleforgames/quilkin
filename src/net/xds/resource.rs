@@ -34,12 +34,14 @@ type_urls! {
     "type.googleapis.com": {
         CLUSTER_TYPE = "quilkin.config.v1alpha1.Cluster",
         LISTENER_TYPE = "envoy.config.listener.v3.Listener",
+        DATACENTER_TYPE = "quilkin.config.v1alpha1.Datacenter",
     }
 }
 
 #[derive(Clone, Debug)]
 pub enum Resource {
     Cluster(Box<crate::net::cluster::proto::Cluster>),
+    Datacenter(Box<crate::net::cluster::proto::Datacenter>),
     Listener(Box<Listener>),
 }
 
@@ -52,6 +54,7 @@ impl Resource {
                 .map(|locality| crate::net::endpoint::Locality::from(locality).to_string())
                 .unwrap_or_default(),
             Self::Listener(listener) => listener.name.to_string(),
+            Self::Datacenter(dc) => dc.icao_code.to_string(),
         }
     }
 
@@ -59,6 +62,16 @@ impl Resource {
         match self {
             Self::Cluster(_) => ResourceType::Cluster,
             Self::Listener(_) => ResourceType::Listener,
+            Self::Datacenter(_) => ResourceType::Datacenter,
+        }
+    }
+
+    /// In the relay service, it receives datacenter resources from the agents
+    /// without a host, because hosts don't know their own public IP, but the
+    /// relay does, so we add it to the `Resource`.
+    pub fn add_host_to_datacenter(&mut self, addr: std::net::SocketAddr) {
+        if let Self::Datacenter(dc) = self {
+            dc.host = addr.ip().to_string();
         }
     }
 
@@ -74,6 +87,7 @@ impl TryFrom<prost_types::Any> for Resource {
         Ok(match &*any.type_url {
             CLUSTER_TYPE => Resource::Cluster(<_>::decode(&*any.value)?),
             LISTENER_TYPE => Resource::Listener(<_>::decode(&*any.value)?),
+            DATACENTER_TYPE => Resource::Datacenter(<_>::decode(&*any.value)?),
             url => return Err(UnknownResourceType(url.into()).into()),
         })
     }
@@ -83,16 +97,18 @@ impl TryFrom<prost_types::Any> for Resource {
 pub enum ResourceType {
     Cluster,
     Listener,
+    Datacenter,
 }
 
 impl ResourceType {
-    pub const VARIANTS: &'static [Self] = &[Self::Cluster, Self::Listener];
+    pub const VARIANTS: &'static [Self] = &[Self::Cluster, Self::Listener, Self::Datacenter];
 
     /// Returns the corresponding type URL for the response type.
     pub const fn type_url(&self) -> &'static str {
         match self {
             Self::Cluster => CLUSTER_TYPE,
             Self::Listener => LISTENER_TYPE,
+            Self::Datacenter => DATACENTER_TYPE,
         }
     }
 
@@ -120,6 +136,7 @@ impl TryFrom<&'_ str> for ResourceType {
         Ok(match url {
             CLUSTER_TYPE => Self::Cluster,
             LISTENER_TYPE => Self::Listener,
+            DATACENTER_TYPE => Self::Datacenter,
             unknown => return Err(UnknownResourceType(unknown.to_owned())),
         })
     }

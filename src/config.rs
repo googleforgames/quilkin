@@ -16,7 +16,7 @@
 
 //! Quilkin configuration.
 
-use std::sync::Arc;
+use std::{net::IpAddr, sync::Arc};
 
 use base64_serde::base64_serde_type;
 use schemars::JsonSchema;
@@ -62,6 +62,12 @@ pub struct Config {
     pub id: Slot<String>,
     #[serde(default)]
     pub version: Slot<Version>,
+    #[serde(default)]
+    pub datacenters: Watch<DatacenterMap>,
+    #[serde(default)]
+    pub icao_code: Slot<IcaoCode>,
+    #[serde(default)]
+    pub qcmp_port: Slot<u16>,
 }
 
 impl Config {
@@ -109,12 +115,34 @@ impl Config {
 
     pub fn discovery_request(
         &self,
+        mode: &crate::cli::Admin,
         _node_id: &str,
         resource_type: ResourceType,
         names: &[String],
     ) -> Result<DiscoveryResponse, eyre::Error> {
         let mut resources = Vec::new();
         match resource_type {
+            ResourceType::Datacenter => {
+                if mode.is_agent() {
+                    resources.push(resource_type.encode_to_any(
+                        &crate::net::cluster::proto::Datacenter {
+                            qcmp_port: u16::clone(&self.qcmp_port.load()).into(),
+                            icao_code: self.icao_code.load().to_string(),
+                            ..<_>::default()
+                        },
+                    )?);
+                } else {
+                    for entry in self.datacenters.read().iter() {
+                        resources.push(resource_type.encode_to_any(
+                            &crate::net::cluster::proto::Datacenter {
+                                host: entry.key().to_string(),
+                                qcmp_port: entry.qcmp_port.into(),
+                                icao_code: entry.icao_code.to_string(),
+                            },
+                        )?);
+                    }
+                }
+            }
             ResourceType::Listener => {
                 resources.push(resource_type.encode_to_any(&Listener {
                     filter_chains: vec![(&*self.filters.load()).try_into()?],
@@ -169,6 +197,16 @@ impl Config {
                     .collect::<Result<Vec<_>, _>>()?;
                 self.filters.store(Arc::new(chain.try_into()?));
             }
+            Resource::Datacenter(dc) => {
+                let host = dbg!(&dc).host.parse()?;
+                self.datacenters.write().insert(
+                    host,
+                    Datacenter {
+                        qcmp_port: dc.qcmp_port.try_into()?,
+                        icao_code: dc.icao_code.parse()?,
+                    },
+                );
+            }
             Resource::Cluster(cluster) => {
                 self.clusters.write().merge(
                     cluster.locality.clone().map(From::from),
@@ -201,7 +239,84 @@ impl Default for Config {
             filters: <_>::default(),
             id: default_proxy_id(),
             version: Slot::with_default(),
+            datacenters: <_>::default(),
+            qcmp_port: <_>::default(),
+            icao_code: <_>::default(),
         }
+    }
+}
+
+#[derive(Clone, Default, Debug, Deserialize, Serialize)]
+pub struct DatacenterMap(dashmap::DashMap<IpAddr, Datacenter>);
+
+impl std::ops::Deref for DatacenterMap {
+    type Target = dashmap::DashMap<IpAddr, Datacenter>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl schemars::JsonSchema for DatacenterMap {
+    fn schema_name() -> String {
+        <std::collections::HashMap<IpAddr, Datacenter>>::schema_name()
+    }
+    fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+        <std::collections::HashMap<IpAddr, Datacenter>>::json_schema(gen)
+    }
+
+    fn is_referenceable() -> bool {
+        <std::collections::HashMap<IpAddr, Datacenter>>::is_referenceable()
+    }
+}
+
+impl PartialEq for DatacenterMap {
+    fn eq(&self, rhs: &Self) -> bool {
+        if self.0.len() != rhs.0.len() {
+            return false;
+        }
+
+        for a in self.iter() {
+            match rhs.get(a.key()).filter(|b| *a.value() == **b) {
+                Some(_) => {}
+                None => return false,
+            }
+        }
+
+        true
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, JsonSchema, Serialize, Deserialize)]
+pub struct Datacenter {
+    pub qcmp_port: u16,
+    pub icao_code: IcaoCode,
+}
+
+#[derive(Clone, Debug, PartialEq, JsonSchema, Serialize, Deserialize)]
+pub struct IcaoCode(String);
+
+impl Default for IcaoCode {
+    fn default() -> Self {
+        Self("XXXX".to_owned())
+    }
+}
+
+impl std::str::FromStr for IcaoCode {
+    type Err = eyre::Error;
+
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        if input.len() == 4 {
+            Ok(Self(input.to_owned()))
+        } else {
+            Err(eyre::eyre!("invalid ICAO code"))
+        }
+    }
+}
+
+impl std::fmt::Display for IcaoCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        self.0.fmt(f)
     }
 }
 
