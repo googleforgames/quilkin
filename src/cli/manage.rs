@@ -105,7 +105,7 @@ impl Manage {
             None
         };
 
-        let server_task = tokio::spawn(crate::net::xds::server::spawn(self.port, config))
+        let server_task = tokio::spawn(crate::net::xds::server::spawn(self.port, mode, config))
             .map_err(From::from)
             .and_then(std::future::ready);
 

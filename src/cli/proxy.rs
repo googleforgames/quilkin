@@ -192,6 +192,7 @@ impl Proxy {
                                 [
                                     (ResourceType::Cluster, Vec::new()),
                                     (ResourceType::Listener, Vec::new()),
+                                    (ResourceType::Datacenter, Vec::new()),
                                 ],
                             )
                             .await
@@ -208,6 +209,10 @@ impl Proxy {
                                 tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
                                 stream
                                     .aggregated_subscribe(ResourceType::Listener, &[])
+                                    .await?;
+                                tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
+                                stream
+                                    .aggregated_subscribe(ResourceType::Datacenter, &[])
                                     .await?;
 
                                 state_sub = Some(stream);

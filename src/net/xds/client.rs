@@ -705,6 +705,7 @@ impl MdsStream {
                         }),
                         ..<_>::default()
                     };
+                    tracing::trace!("sending initial mds response");
                     let _ = requests.send(initial_response);
                     let stream = client
                         .stream_requests(
@@ -719,8 +720,8 @@ impl MdsStream {
                         .into_inner();
 
                     let control_plane =
-                        super::server::ControlPlane::from_arc(config.clone(), idle_interval);
-                    let mut stream = control_plane.stream_resources(stream).await?;
+                        super::server::ControlPlane::from_arc(config.clone(), mode.clone());
+                    let mut stream = control_plane.stream_aggregated_resources(stream).await?;
                     mode.unwrap_agent()
                         .relay_is_healthy
                         .store(true, Ordering::SeqCst);
@@ -877,7 +878,8 @@ pub fn handle_discovery_responses(
                 .into_iter()
                 .map(Resource::try_from)
                 .try_for_each(|resource| {
-                    let resource = resource?;
+                    let mut resource = resource?;
+
                     resource_names.push(resource.name().to_owned());
 
                     tracing::debug!("applying resource");
