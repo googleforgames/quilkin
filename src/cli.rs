@@ -23,7 +23,7 @@ use std::{
 
 use clap::builder::TypedValueParser;
 use clap::crate_version;
-use tokio::{signal, sync::watch};
+use tokio::signal;
 
 use crate::Config;
 use strum_macros::{Display, EnumString};
@@ -181,7 +181,7 @@ impl Cli {
             mode.server(config.clone(), self.admin_address);
         }
 
-        let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
+        let (shutdown_tx, shutdown_rx) = crate::make_shutdown_channel(Default::default());
 
         #[cfg(target_os = "linux")]
         let mut sig_term_fut = signal::unix::signal(signal::unix::SignalKind::terminate())?;
@@ -200,7 +200,7 @@ impl Cli {
             tracing::info!(%signal, "shutting down from signal");
             // Don't unwrap in order to ensure that we execute
             // any subsequent shutdown tasks.
-            shutdown_tx.send(()).ok();
+            shutdown_tx.send(crate::ShutdownKind::Normal).ok();
         });
 
         match self.command {

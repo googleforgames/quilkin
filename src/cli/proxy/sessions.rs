@@ -21,14 +21,11 @@ use std::{
     time::Duration,
 };
 
-use tokio::{
-    sync::{watch, RwLock},
-    time::Instant,
-};
+use tokio::{sync::RwLock, time::Instant};
 
 use crate::{
     config::Config, filters::Filter, net::maxmind_db::IpNetEntry, net::DualStackLocalSocket,
-    Loggable,
+    Loggable, ShutdownRx,
 };
 
 pub(crate) mod metrics;
@@ -48,7 +45,7 @@ pub struct SessionPool {
     storage: Arc<RwLock<SocketStorage>>,
     session_map: SessionMap,
     downstream_socket: Arc<DualStackLocalSocket>,
-    shutdown_rx: watch::Receiver<()>,
+    shutdown_rx: ShutdownRx,
     config: Arc<Config>,
 }
 
@@ -68,7 +65,7 @@ impl SessionPool {
     pub fn new(
         config: Arc<Config>,
         downstream_socket: Arc<DualStackLocalSocket>,
-        shutdown_rx: watch::Receiver<()>,
+        shutdown_rx: ShutdownRx,
     ) -> Arc<Self> {
         const SESSION_TIMEOUT_SECONDS: Duration = Duration::from_secs(60);
         const SESSION_EXPIRY_POLL_INTERVAL: Duration = Duration::from_secs(60);
@@ -499,11 +496,15 @@ impl Loggable for Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test::{available_addr, AddressType, TestHelper};
+    use crate::{
+        make_shutdown_channel,
+        test::{available_addr, AddressType, TestHelper},
+        ShutdownKind, ShutdownTx,
+    };
     use std::sync::Arc;
 
-    async fn new_pool(config: impl Into<Option<Config>>) -> (Arc<SessionPool>, watch::Sender<()>) {
-        let (tx, rx) = watch::channel(());
+    async fn new_pool(config: impl Into<Option<Config>>) -> (Arc<SessionPool>, ShutdownTx) {
+        let (tx, rx) = make_shutdown_channel(ShutdownKind::Testing);
         (
             SessionPool::new(
                 Arc::new(config.into().unwrap_or_default()),

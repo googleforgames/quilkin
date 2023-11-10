@@ -61,7 +61,7 @@ impl Relay {
         &self,
         config: Arc<Config>,
         mode: crate::cli::Admin,
-        mut shutdown_rx: tokio::sync::watch::Receiver<()>,
+        mut shutdown_rx: crate::ShutdownRx,
     ) -> crate::Result<()> {
         let xds_server = crate::net::xds::server::spawn(self.xds_port, config.clone());
         let mds_server = tokio::spawn(crate::net::xds::server::control_plane_discovery_server(

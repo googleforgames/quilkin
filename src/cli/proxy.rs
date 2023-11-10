@@ -37,7 +37,7 @@ use crate::filters::FilterFactory;
 use crate::{
     filters::{Filter, ReadContext},
     net::{xds::ResourceType, DualStackLocalSocket},
-    Config, Result,
+    Config, Result, ShutdownRx,
 };
 
 define_port!(7777);
@@ -87,7 +87,7 @@ impl Proxy {
         &self,
         config: std::sync::Arc<crate::Config>,
         mode: Admin,
-        mut shutdown_rx: tokio::sync::watch::Receiver<()>,
+        mut shutdown_rx: ShutdownRx,
     ) -> crate::Result<()> {
         let _mmdb_task = self.mmdb.clone().map(|source| {
             tokio::spawn(async move {
@@ -167,12 +167,14 @@ impl Proxy {
             .await
             .map_err(|error| eyre::eyre!(error))?;
 
-        tracing::info!(sessions=%sessions.sessions().len(), "waiting for active sessions to expire");
-        while sessions.sessions().is_not_empty() {
-            tokio::time::sleep(Duration::from_secs(1)).await;
-            tracing::debug!(sessions=%sessions.sessions().len(), "sessions still active");
+        if *shutdown_rx.borrow() == crate::ShutdownKind::Normal {
+            tracing::info!(sessions=%sessions.sessions().len(), "waiting for active sessions to expire");
+            while sessions.sessions().is_not_empty() {
+                tokio::time::sleep(Duration::from_secs(1)).await;
+                tracing::debug!(sessions=%sessions.sessions().len(), "sessions still active");
+            }
+            tracing::info!("all sessions expired");
         }
-        tracing::info!("all sessions expired");
 
         Ok(())
     }
@@ -605,7 +607,7 @@ mod tests {
                     )
                     .unwrap(),
                 ),
-                tokio::sync::watch::channel(()).1,
+                crate::make_shutdown_channel(crate::ShutdownKind::Testing).1,
             ),
         }
         .spawn();
@@ -655,7 +657,7 @@ mod tests {
         let sessions = SessionPool::new(
             config.clone(),
             shared_socket.clone(),
-            tokio::sync::watch::channel(()).1,
+            crate::make_shutdown_channel(crate::ShutdownKind::Testing).1,
         );
 
         proxy

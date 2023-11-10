@@ -76,7 +76,7 @@ impl Agent {
         &self,
         config: Arc<Config>,
         mode: Admin,
-        mut shutdown_rx: tokio::sync::watch::Receiver<()>,
+        mut shutdown_rx: crate::ShutdownRx,
     ) -> crate::Result<()> {
         let locality = (self.region.is_some() || self.zone.is_some() || self.sub_zone.is_some())
             .then(|| crate::net::endpoint::Locality {

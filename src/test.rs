@@ -18,7 +18,7 @@ use std::net::Ipv4Addr;
 /// Common utilities for testing
 use std::{net::SocketAddr, str::from_utf8, sync::Arc, sync::Once};
 
-use tokio::sync::{mpsc, oneshot, watch};
+use tokio::sync::{mpsc, oneshot};
 use tracing_subscriber::EnvFilter;
 
 use crate::{
@@ -27,6 +27,7 @@ use crate::{
     net::endpoint::metadata::Value,
     net::endpoint::{Endpoint, EndpointAddress},
     net::DualStackLocalSocket,
+    ShutdownKind, ShutdownRx, ShutdownTx,
 };
 
 static LOG_ONCE: Once = Once::new();
@@ -118,8 +119,8 @@ impl StaticFilter for TestFilter {
 #[derive(Default)]
 pub struct TestHelper {
     /// Channel to subscribe to, and trigger the shutdown of created resources.
-    shutdown_ch: Option<(watch::Sender<()>, watch::Receiver<()>)>,
-    server_shutdown_tx: Vec<Option<watch::Sender<()>>>,
+    shutdown_ch: Option<(ShutdownTx, ShutdownRx)>,
+    server_shutdown_tx: Vec<Option<ShutdownTx>>,
 }
 
 /// Returned from [creating a socket](TestHelper::open_socket_and_recv_single_packet)
@@ -134,7 +135,7 @@ impl Drop for TestHelper {
     fn drop(&mut self) {
         for shutdown_tx in self.server_shutdown_tx.iter_mut().flat_map(|tx| tx.take()) {
             shutdown_tx
-                .send(())
+                .send(ShutdownKind::Testing)
                 .map_err(|error| {
                     tracing::warn!(
                         %error,
@@ -145,7 +146,7 @@ impl Drop for TestHelper {
         }
 
         if let Some((shutdown_tx, _)) = self.shutdown_ch.take() {
-            shutdown_tx.send(()).unwrap();
+            shutdown_tx.send(ShutdownKind::Testing).unwrap();
         }
     }
 }
@@ -273,7 +274,7 @@ impl TestHelper {
         server: crate::cli::Proxy,
         with_admin: Option<Option<SocketAddr>>,
     ) {
-        let (shutdown_tx, shutdown_rx) = watch::channel::<()>(());
+        let (shutdown_tx, shutdown_rx) = crate::make_shutdown_channel(crate::ShutdownKind::Testing);
         self.server_shutdown_tx.push(Some(shutdown_tx));
         let mode = crate::cli::Admin::Proxy(<_>::default());
 
@@ -287,12 +288,12 @@ impl TestHelper {
     }
 
     /// Returns a receiver subscribed to the helper's shutdown event.
-    async fn get_shutdown_subscriber(&mut self) -> watch::Receiver<()> {
+    async fn get_shutdown_subscriber(&mut self) -> ShutdownRx {
         // If this is the first call, then we set up the channel first.
         match self.shutdown_ch {
             Some((_, ref rx)) => rx.clone(),
             None => {
-                let ch = watch::channel(());
+                let ch = crate::make_shutdown_channel(crate::ShutdownKind::Testing);
                 let recv = ch.1.clone();
                 self.shutdown_ch = Some(ch);
                 recv

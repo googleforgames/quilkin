@@ -190,7 +190,7 @@ mod tests {
         // Test that the client can handle the manager dropping out.
         let handle = tokio::spawn(server::spawn(xds_port, xds_config.clone()));
 
-        let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(());
+        let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(crate::ShutdownKind::Testing);
         tokio::spawn(server::spawn(xds_port, xds_config.clone()));
         let client_proxy = crate::cli::Proxy {
             port: client_addr.port(),
