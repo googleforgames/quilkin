@@ -208,7 +208,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         config: Arc&lt;Config&gt;,
         mode: Admin,
-        <span class="kw-2">mut </span>shutdown_rx: tokio::sync::watch::Receiver&lt;()&gt;,
+        <span class="kw-2">mut </span>shutdown_rx: <span class="kw">crate</span>::ShutdownRx,
     ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
         <span class="kw">let </span>locality = (<span class="self">self</span>.region.is_some() || <span class="self">self</span>.zone.is_some() || <span class="self">self</span>.sub_zone.is_some())
             .then(|| <span class="kw">crate</span>::net::endpoint::Locality {

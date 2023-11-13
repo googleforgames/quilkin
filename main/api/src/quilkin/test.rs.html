@@ -420,6 +420,7 @@
 <a href="#420" id="420">420</a>
 <a href="#421" id="421">421</a>
 <a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -440,7 +441,7 @@
 <span class="doccomment">/// Common utilities for testing
 </span><span class="kw">use </span>std::{net::SocketAddr, str::from_utf8, sync::Arc, sync::Once};
 
-<span class="kw">use </span>tokio::sync::{mpsc, oneshot, watch};
+<span class="kw">use </span>tokio::sync::{mpsc, oneshot};
 <span class="kw">use </span>tracing_subscriber::EnvFilter;
 
 <span class="kw">use crate</span>::{
@@ -449,6 +450,7 @@
     net::endpoint::metadata::Value,
     net::endpoint::{Endpoint, EndpointAddress},
     net::DualStackLocalSocket,
+    ShutdownKind, ShutdownRx, ShutdownTx,
 };
 
 <span class="kw">static </span>LOG_ONCE: Once = Once::new();
@@ -540,8 +542,8 @@
 <span class="attr">#[derive(Default)]
 </span><span class="kw">pub struct </span>TestHelper {
     <span class="doccomment">/// Channel to subscribe to, and trigger the shutdown of created resources.
-    </span>shutdown_ch: <span class="prelude-ty">Option</span>&lt;(watch::Sender&lt;()&gt;, watch::Receiver&lt;()&gt;)&gt;,
-    server_shutdown_tx: Vec&lt;<span class="prelude-ty">Option</span>&lt;watch::Sender&lt;()&gt;&gt;&gt;,
+    </span>shutdown_ch: <span class="prelude-ty">Option</span>&lt;(ShutdownTx, ShutdownRx)&gt;,
+    server_shutdown_tx: Vec&lt;<span class="prelude-ty">Option</span>&lt;ShutdownTx&gt;&gt;,
 }
 
 <span class="doccomment">/// Returned from [creating a socket](TestHelper::open_socket_and_recv_single_packet)
@@ -556,7 +558,7 @@
     <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="kw">for </span>shutdown_tx <span class="kw">in </span><span class="self">self</span>.server_shutdown_tx.iter_mut().flat_map(|tx| tx.take()) {
             shutdown_tx
-                .send(())
+                .send(ShutdownKind::Testing)
                 .map_err(|error| {
                     <span class="macro">tracing::warn!</span>(
                         %error,
@@ -567,7 +569,7 @@
         }
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>((shutdown_tx, <span class="kw">_</span>)) = <span class="self">self</span>.shutdown_ch.take() {
-            shutdown_tx.send(()).unwrap();
+            shutdown_tx.send(ShutdownKind::Testing).unwrap();
         }
     }
 }
@@ -695,7 +697,7 @@
         server: <span class="kw">crate</span>::cli::Proxy,
         with_admin: <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Option</span>&lt;SocketAddr&gt;&gt;,
     ) {
-        <span class="kw">let </span>(shutdown_tx, shutdown_rx) = watch::channel::&lt;()&gt;(());
+        <span class="kw">let </span>(shutdown_tx, shutdown_rx) = <span class="kw">crate</span>::make_shutdown_channel(<span class="kw">crate</span>::ShutdownKind::Testing);
         <span class="self">self</span>.server_shutdown_tx.push(<span class="prelude-val">Some</span>(shutdown_tx));
         <span class="kw">let </span>mode = <span class="kw">crate</span>::cli::Admin::Proxy(&lt;<span class="kw">_</span>&gt;::default());
 
@@ -709,12 +711,12 @@
     }
 
     <span class="doccomment">/// Returns a receiver subscribed to the helper&#39;s shutdown event.
-    </span><span class="kw">async fn </span>get_shutdown_subscriber(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; watch::Receiver&lt;()&gt; {
+    </span><span class="kw">async fn </span>get_shutdown_subscriber(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; ShutdownRx {
         <span class="comment">// If this is the first call, then we set up the channel first.
         </span><span class="kw">match </span><span class="self">self</span>.shutdown_ch {
             <span class="prelude-val">Some</span>((<span class="kw">_</span>, <span class="kw-2">ref </span>rx)) =&gt; rx.clone(),
             <span class="prelude-val">None </span>=&gt; {
-                <span class="kw">let </span>ch = watch::channel(());
+                <span class="kw">let </span>ch = <span class="kw">crate</span>::make_shutdown_channel(<span class="kw">crate</span>::ShutdownKind::Testing);
                 <span class="kw">let </span>recv = ch.<span class="number">1</span>.clone();
                 <span class="self">self</span>.shutdown_ch = <span class="prelude-val">Some</span>(ch);
                 recv

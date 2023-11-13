@@ -247,7 +247,7 @@ tokio = { version = &quot;1&quot;, features = [&quot;full&quot;]}
 async fn main() -&gt; quilkin::Result&lt;()&gt; {
     quilkin::filters::FilterRegistry::register(vec![Greet::factory()].into_iter());
 
-    let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(());
+    let (_shutdown_tx, shutdown_rx) = quilkin::make_shutdown_channel(quilkin::ShutdownKind::Normal);
     let proxy = quilkin::Proxy::default();
     let config = quilkin::Config::default();
     config.filters.store(std::sync::Arc::new(

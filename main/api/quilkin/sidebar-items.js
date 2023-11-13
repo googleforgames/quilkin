@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"macro":["include_proto"],"mod":["cli","codec","config","filters","net"],"struct":["Cli","Config","Proxy"],"type":["Result"]};
+window.SIDEBAR_ITEMS = {"enum":["ShutdownKind"],"fn":["make_shutdown_channel"],"macro":["include_proto"],"mod":["cli","codec","config","filters","net"],"struct":["Cli","Config","Proxy"],"type":["Result","ShutdownRx","ShutdownTx"]};

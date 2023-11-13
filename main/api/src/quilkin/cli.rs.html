@@ -452,7 +452,7 @@
 
 <span class="kw">use </span>clap::builder::TypedValueParser;
 <span class="kw">use </span>clap::crate_version;
-<span class="kw">use </span>tokio::{signal, sync::watch};
+<span class="kw">use </span>tokio::signal;
 
 <span class="kw">use </span><span class="kw">crate</span>::Config;
 <span class="kw">use </span>strum_macros::{Display, EnumString};
@@ -610,7 +610,7 @@
             mode.server(config.clone(), <span class="self">self</span>.admin_address);
         }
 
-        <span class="kw">let </span>(shutdown_tx, shutdown_rx) = watch::channel::&lt;()&gt;(());
+        <span class="kw">let </span>(shutdown_tx, shutdown_rx) = <span class="kw">crate</span>::make_shutdown_channel(Default::default());
 
         <span class="attr">#[cfg(target_os = <span class="string">&quot;linux&quot;</span>)]
         </span><span class="kw">let </span><span class="kw-2">mut </span>sig_term_fut = signal::unix::signal(signal::unix::SignalKind::terminate())<span class="question-mark">?</span>;
@@ -629,7 +629,7 @@
             <span class="macro">tracing::info!</span>(%signal, <span class="string">&quot;shutting down from signal&quot;</span>);
             <span class="comment">// Don&#39;t unwrap in order to ensure that we execute
             // any subsequent shutdown tasks.
-            </span>shutdown_tx.send(()).ok();
+            </span>shutdown_tx.send(<span class="kw">crate</span>::ShutdownKind::Normal).ok();
         });
 
         <span class="kw">match </span><span class="self">self</span>.command {

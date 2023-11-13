@@ -673,6 +673,8 @@
 <a href="#673" id="673">673</a>
 <a href="#674" id="674">674</a>
 <a href="#675" id="675">675</a>
+<a href="#676" id="676">676</a>
+<a href="#677" id="677">677</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -712,7 +714,7 @@
 <span class="kw">use crate</span>::{
     filters::{Filter, ReadContext},
     net::{xds::ResourceType, DualStackLocalSocket},
-    Config, <span class="prelude-ty">Result</span>,
+    Config, <span class="prelude-ty">Result</span>, ShutdownRx,
 };
 
 <span class="macro">define_port!</span>(<span class="number">7777</span>);
@@ -762,7 +764,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         config: std::sync::Arc&lt;<span class="kw">crate</span>::Config&gt;,
         mode: Admin,
-        <span class="kw-2">mut </span>shutdown_rx: tokio::sync::watch::Receiver&lt;()&gt;,
+        <span class="kw-2">mut </span>shutdown_rx: ShutdownRx,
     ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
         <span class="kw">let </span>_mmdb_task = <span class="self">self</span>.mmdb.clone().map(|source| {
             tokio::spawn(<span class="kw">async move </span>{
@@ -842,12 +844,14 @@
             .<span class="kw">await
             </span>.map_err(|error| <span class="macro">eyre::eyre!</span>(error))<span class="question-mark">?</span>;
 
-        <span class="macro">tracing::info!</span>(sessions=%sessions.sessions().len(), <span class="string">&quot;waiting for active sessions to expire&quot;</span>);
-        <span class="kw">while </span>sessions.sessions().is_not_empty() {
-            tokio::time::sleep(Duration::from_secs(<span class="number">1</span>)).<span class="kw">await</span>;
-            <span class="macro">tracing::debug!</span>(sessions=%sessions.sessions().len(), <span class="string">&quot;sessions still active&quot;</span>);
+        <span class="kw">if </span><span class="kw-2">*</span>shutdown_rx.borrow() == <span class="kw">crate</span>::ShutdownKind::Normal {
+            <span class="macro">tracing::info!</span>(sessions=%sessions.sessions().len(), <span class="string">&quot;waiting for active sessions to expire&quot;</span>);
+            <span class="kw">while </span>sessions.sessions().is_not_empty() {
+                tokio::time::sleep(Duration::from_secs(<span class="number">1</span>)).<span class="kw">await</span>;
+                <span class="macro">tracing::debug!</span>(sessions=%sessions.sessions().len(), <span class="string">&quot;sessions still active&quot;</span>);
+            }
+            <span class="macro">tracing::info!</span>(<span class="string">&quot;all sessions expired&quot;</span>);
         }
-        <span class="macro">tracing::info!</span>(<span class="string">&quot;all sessions expired&quot;</span>);
 
         <span class="prelude-val">Ok</span>(())
     }
@@ -977,7 +981,7 @@
             </span><span class="kw">let </span><span class="kw-2">mut </span>buf = <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">1 </span>&lt;&lt; <span class="number">16</span>];
             <span class="kw">let </span><span class="kw-2">mut </span>last_received_at = <span class="prelude-val">None</span>;
             <span class="kw">loop </span>{
-                <span class="macro">tracing::debug!</span>(
+                <span class="macro">tracing::trace!</span>(
                     id = worker_id,
                     port = <span class="question-mark">?</span>socket.local_ipv6_addr().map(|addr| addr.port()),
                     <span class="string">&quot;Awaiting packet&quot;
@@ -1280,7 +1284,7 @@
                     )
                     .unwrap(),
                 ),
-                tokio::sync::watch::channel(()).<span class="number">1</span>,
+                <span class="kw">crate</span>::make_shutdown_channel(<span class="kw">crate</span>::ShutdownKind::Testing).<span class="number">1</span>,
             ),
         }
         .spawn();
@@ -1330,7 +1334,7 @@
         <span class="kw">let </span>sessions = SessionPool::new(
             config.clone(),
             shared_socket.clone(),
-            tokio::sync::watch::channel(()).<span class="number">1</span>,
+            <span class="kw">crate</span>::make_shutdown_channel(<span class="kw">crate</span>::ShutdownKind::Testing).<span class="number">1</span>,
         );
 
         proxy

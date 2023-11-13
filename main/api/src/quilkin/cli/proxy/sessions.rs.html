@@ -689,6 +689,7 @@
 <a href="#689" id="689">689</a>
 <a href="#690" id="690">690</a>
 <a href="#691" id="691">691</a>
+<a href="#692" id="692">692</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -712,14 +713,11 @@
     time::Duration,
 };
 
-<span class="kw">use </span>tokio::{
-    sync::{watch, RwLock},
-    time::Instant,
-};
+<span class="kw">use </span>tokio::{sync::RwLock, time::Instant};
 
 <span class="kw">use crate</span>::{
     config::Config, filters::Filter, net::maxmind_db::IpNetEntry, net::DualStackLocalSocket,
-    Loggable,
+    Loggable, ShutdownRx,
 };
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>metrics;
@@ -739,7 +737,7 @@
     storage: Arc&lt;RwLock&lt;SocketStorage&gt;&gt;,
     session_map: SessionMap,
     downstream_socket: Arc&lt;DualStackLocalSocket&gt;,
-    shutdown_rx: watch::Receiver&lt;()&gt;,
+    shutdown_rx: ShutdownRx,
     config: Arc&lt;Config&gt;,
 }
 
@@ -759,7 +757,7 @@
     </span><span class="kw">pub fn </span>new(
         config: Arc&lt;Config&gt;,
         downstream_socket: Arc&lt;DualStackLocalSocket&gt;,
-        shutdown_rx: watch::Receiver&lt;()&gt;,
+        shutdown_rx: ShutdownRx,
     ) -&gt; Arc&lt;<span class="self">Self</span>&gt; {
         <span class="kw">const </span>SESSION_TIMEOUT_SECONDS: Duration = Duration::from_secs(<span class="number">60</span>);
         <span class="kw">const </span>SESSION_EXPIRY_POLL_INTERVAL: Duration = Duration::from_secs(<span class="number">60</span>);
@@ -1190,11 +1188,15 @@
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
-    <span class="kw">use </span><span class="kw">crate</span>::test::{available_addr, AddressType, TestHelper};
+    <span class="kw">use crate</span>::{
+        make_shutdown_channel,
+        test::{available_addr, AddressType, TestHelper},
+        ShutdownKind, ShutdownTx,
+    };
     <span class="kw">use </span>std::sync::Arc;
 
-    <span class="kw">async fn </span>new_pool(config: <span class="kw">impl </span>Into&lt;<span class="prelude-ty">Option</span>&lt;Config&gt;&gt;) -&gt; (Arc&lt;SessionPool&gt;, watch::Sender&lt;()&gt;) {
-        <span class="kw">let </span>(tx, rx) = watch::channel(());
+    <span class="kw">async fn </span>new_pool(config: <span class="kw">impl </span>Into&lt;<span class="prelude-ty">Option</span>&lt;Config&gt;&gt;) -&gt; (Arc&lt;SessionPool&gt;, ShutdownTx) {
+        <span class="kw">let </span>(tx, rx) = make_shutdown_channel(ShutdownKind::Testing);
         (
             SessionPool::new(
                 Arc::new(config.into().unwrap_or_default()),

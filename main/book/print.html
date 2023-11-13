@@ -249,7 +249,7 @@ your local machine through <a href="installation.html#cargo">Cargo</a>.</p>
 <dl>
   <dt><strong>Source / Method</strong></dt>
   <dd>
-<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.8.0-dev-87a6808
+<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.8.0-dev-044de43
 </code></pre>
 </dd>
   <dt><strong>Notes</strong></dt>
@@ -2189,7 +2189,7 @@ tokio = { version = &quot;1&quot;, features = [&quot;full&quot;]}
 async fn main() -&gt; quilkin::Result&lt;()&gt; {
     quilkin::filters::FilterRegistry::register(vec![Greet::factory()].into_iter());
 
-    let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(());
+    let (_shutdown_tx, shutdown_rx) = quilkin::make_shutdown_channel(quilkin::ShutdownKind::Normal);
     let proxy = quilkin::Proxy::default();
     let config = quilkin::Config::default();
     config.filters.store(std::sync::Arc::new(

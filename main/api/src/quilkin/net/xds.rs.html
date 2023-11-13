@@ -565,7 +565,7 @@
         <span class="comment">// Test that the client can handle the manager dropping out.
         </span><span class="kw">let </span>handle = tokio::spawn(server::spawn(xds_port, xds_config.clone()));
 
-        <span class="kw">let </span>(_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(());
+        <span class="kw">let </span>(_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(<span class="kw">crate</span>::ShutdownKind::Testing);
         tokio::spawn(server::spawn(xds_port, xds_config.clone()));
         <span class="kw">let </span>client_proxy = <span class="kw">crate</span>::cli::Proxy {
             port: client_addr.port(),

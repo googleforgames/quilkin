@@ -250,7 +250,7 @@
         <span class="kw">let </span>mmdb = <span class="kw">match </span><span class="kw">crate</span>::MaxmindDb::instance().clone() {
             <span class="prelude-val">Some</span>(mmdb) =&gt; mmdb,
             <span class="prelude-val">None </span>=&gt; {
-                <span class="macro">tracing::debug!</span>(<span class="string">&quot;skipping mmdb telemetry, no maxmind database available&quot;</span>);
+                <span class="macro">tracing::trace!</span>(<span class="string">&quot;skipping mmdb telemetry, no maxmind database available&quot;</span>);
                 <span class="kw">return </span><span class="prelude-val">None</span>;
             }
         };
