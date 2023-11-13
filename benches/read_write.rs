@@ -101,12 +101,9 @@ mod write {
                 }
             });
 
-            let mut wtf = 0;
-
             b.counter(counter(N)).bench_local(|| {
                 // Signal the read loop to run
                 loop_tx.send((NUMBER_OF_PACKETS, N)).unwrap();
-                wtf += 1;
 
                 writer.write_all(NUMBER_OF_PACKETS);
             });

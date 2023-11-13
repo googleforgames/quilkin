@@ -86,8 +86,6 @@ pub fn read_to_end<const N: usize>(
     tx: &mpsc::Sender<ReadLoopMsg>,
     packet_count: u16,
 ) {
-    use std::fmt;
-
     let mut packet = [0; N];
 
     let mut num_packets = 0;
@@ -99,29 +97,7 @@ pub fn read_to_end<const N: usize>(
 
     struct Batch {
         received: usize,
-        bits: Vec<bool>,
         range: std::ops::Range<u16>,
-    }
-
-    impl fmt::Debug for Batch {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            writeln!(f, "{:?}", self.range)?;
-
-            let side = (self.range.len() as f32).sqrt().ceil() as usize;
-
-            for ch in self.bits.chunks(side) {
-                f.write_str("\n")?;
-                for v in ch {
-                    if *v {
-                        f.write_str("x")?;
-                    } else {
-                        f.write_str(".")?;
-                    }
-                }
-            }
-
-            Ok(())
-        }
     }
 
     let mut batch_i = 0u16;
@@ -140,12 +116,10 @@ pub fn read_to_end<const N: usize>(
     let mut batches = [
         Batch {
             received: 0,
-            bits: vec![false; batch_size as usize],
             range: batch_range(),
         },
         Batch {
             received: 0,
-            bits: vec![false; batch_size as usize],
             range: batch_range(),
         },
     ];
@@ -163,11 +137,6 @@ pub fn read_to_end<const N: usize>(
 
         {
             let seq = (packet[1] as u16) << 8 | packet[0] as u16;
-
-            if seq > num_packets {
-                dbg!(&batches[0]);
-                dbg!(&batches[1]);
-            }
 
             let batch = batches.iter_mut().find(|b| b.range.contains(&seq)).unwrap();
 
