@@ -304,7 +304,7 @@ impl DownstreamReceiveWorkerConfig {
             let mut buf = vec![0; 1 << 16];
             let mut last_received_at = None;
             loop {
-                tracing::debug!(
+                tracing::trace!(
                     id = worker_id,
                     port = ?socket.local_ipv6_addr().map(|addr| addr.port()),
                     "Awaiting packet"
