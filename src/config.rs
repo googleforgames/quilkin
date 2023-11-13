@@ -198,7 +198,7 @@ impl Config {
                 self.filters.store(Arc::new(chain.try_into()?));
             }
             Resource::Datacenter(dc) => {
-                let host = dbg!(&dc).host.parse()?;
+                let host = dc.host.parse()?;
                 self.datacenters.write().insert(
                     host,
                     Datacenter {
@@ -293,7 +293,7 @@ pub struct Datacenter {
     pub icao_code: IcaoCode,
 }
 
-#[derive(Clone, Debug, PartialEq, JsonSchema, Serialize, Deserialize)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq, JsonSchema, Serialize, Deserialize)]
 pub struct IcaoCode(String);
 
 impl Default for IcaoCode {

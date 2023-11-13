@@ -16,10 +16,12 @@
 
 //! Logic for parsing and generating Quilkin Control Message Protocol (QCMP) messages.
 
+use std::sync::Arc;
+
 use nom::bytes::complete;
 use tracing::Instrument;
 
-use crate::net::DualStackLocalSocket;
+use crate::net::{phoenix::Measurement, DualStackLocalSocket};
 
 // Magic number to distinguish control packets from regular traffic.
 const MAGIC_NUMBER: &[u8] = b"QLKN";
@@ -32,10 +34,50 @@ const DISCRIMINANT_LEN: usize = 1;
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
+/// A measurement implementation using QCMP pings for measuring the distance
+/// between nodes.
+#[derive(Debug, Clone)]
+pub struct QcmpMeasurement {
+    socket: Arc<DualStackLocalSocket>,
+}
+
+impl QcmpMeasurement {
+    pub fn new() -> crate::Result<Self> {
+        Ok(Self {
+            socket: Arc::new(DualStackLocalSocket::new(0)?),
+        })
+    }
+}
+
+#[async_trait::async_trait]
+impl Measurement for QcmpMeasurement {
+    async fn measure_distance(&self, address: std::net::SocketAddr) -> eyre::Result<(i64, i64)> {
+        self.socket
+            .send_to(&Protocol::ping().encode(), address)
+            .await?;
+        let mut recv = [0u8; 512];
+
+        let (size, _) = tokio::time::timeout(
+            std::time::Duration::from_millis(500),
+            self.socket.recv_from(&mut recv),
+        )
+        .await??;
+        let now = chrono::Utc::now().timestamp_nanos_opt().unwrap();
+        let Some(reply) = Protocol::parse(&recv[..size])? else {
+            return Err(eyre::eyre!("received non qcmp packet"));
+        };
+
+        reply
+            .incoming_and_outgoing_latency(now)
+            .ok_or_else(|| eyre::eyre!("received non ping reply"))
+    }
+}
+
 pub async fn spawn(port: u16) -> crate::Result<()> {
     let socket = DualStackLocalSocket::new(port)?;
     let v4_addr = socket.local_ipv4_addr()?;
     let v6_addr = socket.local_ipv6_addr()?;
+
     tokio::spawn(
         async move {
             // Initialize a buffer for the UDP packet. We use the maximum size of a UDP
@@ -219,6 +261,28 @@ impl Protocol {
         )
     }
 
+    /// If the command is [`Protocol::PingReply`], with `client_response_timestamp`
+    /// returns the time between the client -> server, and the server -> client.
+    pub fn incoming_and_outgoing_latency(
+        &self,
+        client_response_timestamp: i64,
+    ) -> Option<(i64, i64)> {
+        let Protocol::PingReply {
+            client_timestamp,
+            server_start_timestamp,
+            server_transmit_timestamp,
+            ..
+        } = self
+        else {
+            return None;
+        };
+
+        Some((
+            server_start_timestamp - client_timestamp,
+            client_response_timestamp - server_transmit_timestamp,
+        ))
+    }
+
     /// Returns the discriminant code, identifying the payload.
     const fn discriminant(&self) -> u8 {
         match self {
@@ -393,7 +457,7 @@ mod tests {
         let ping_reply = Protocol::parse(INPUT).unwrap().unwrap();
 
         assert!(matches!(
-            dbg!(ping_reply),
+            ping_reply,
             Protocol::PingReply { nonce: 0xBF, .. }
         ));
         assert_eq!(ping_reply.encode(), INPUT);
@@ -456,5 +520,29 @@ mod tests {
         const INPUT: &[u8] = &[0xff, 0xff, 0, 0, 0, 0, 0x63, 0xb6, 0xe9, 0x57];
 
         assert!(Protocol::parse(INPUT).unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn qcmp_measurement() {
+        const FIFTY_MILLIS_IN_NANOS: i64 = 50_000_000;
+        let port = crate::test::available_addr(&crate::test::AddressType::Random)
+            .await
+            .port();
+
+        tokio::spawn(super::spawn(port));
+
+        let node = QcmpMeasurement::new().unwrap();
+
+        let (incoming, outgoing) = node
+            .measure_distance((std::net::Ipv4Addr::LOCALHOST, port).into())
+            .await
+            .unwrap();
+
+        assert!(
+            FIFTY_MILLIS_IN_NANOS > incoming + outgoing,
+            "Node1's distance is {}ns, greater than {}ns",
+            incoming + outgoing,
+            FIFTY_MILLIS_IN_NANOS
+        );
     }
 }

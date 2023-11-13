@@ -69,8 +69,9 @@ impl Resource {
     /// In the relay service, it receives datacenter resources from the agents
     /// without a host, because hosts don't know their own public IP, but the
     /// relay does, so we add it to the `Resource`.
-    pub fn add_host_to_datacenter(&mut self, addr: std::net::SocketAddr) {
+    pub fn add_host_to_datacenter(&mut self, mut addr: std::net::SocketAddr) {
         if let Self::Datacenter(dc) = self {
+            crate::net::to_canonical(&mut addr);
             dc.host = addr.ip().to_string();
         }
     }

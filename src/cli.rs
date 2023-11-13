@@ -344,23 +344,26 @@ mod tests {
             icao_code,
         };
 
+        let relay_datacenters = relay_config.datacenters.read();
+        let proxy_datacenters = proxy_config.datacenters.read();
+
         assert!(agent_config.datacenters.read().is_empty());
-        assert!(!relay_config.datacenters.read().is_empty());
-        assert!(!proxy_config.datacenters.read().is_empty());
+        assert!(!relay_datacenters.is_empty());
+        assert!(!proxy_datacenters.is_empty());
+        // We check both local IPs because some OS's default differently.
+        // (e.g. Some map to ::1 and some map to ::ffff:127.0.0.1.)
         assert_eq!(
-            relay_config
-                .datacenters
-                .read()
-                .get(&std::net::Ipv6Addr::LOCALHOST.into())
+            relay_datacenters
+                .get(&std::net::Ipv4Addr::LOCALHOST.into())
+                .or_else(|| relay_datacenters.get(&std::net::Ipv6Addr::LOCALHOST.into()))
                 .unwrap()
                 .value(),
             &datacenter
         );
         assert_eq!(
-            proxy_config
-                .datacenters
-                .read()
-                .get(&std::net::Ipv6Addr::LOCALHOST.into())
+            proxy_datacenters
+                .get(&std::net::Ipv4Addr::LOCALHOST.into())
+                .or_else(|| proxy_datacenters.get(&std::net::Ipv6Addr::LOCALHOST.into()))
                 .unwrap()
                 .value(),
             &datacenter
@@ -502,7 +505,7 @@ mod tests {
                 serde_yaml::to_string(&config).unwrap()
             })
             .unwrap();
-            tokio::time::sleep(Duration::from_millis(80)).await;
+            tokio::time::sleep(Duration::from_millis(280)).await;
             let mut msg = Vec::from(*b"hello");
             msg.extend_from_slice(&token);
             tracing::info!(?token, "sending packet");
