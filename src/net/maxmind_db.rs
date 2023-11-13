@@ -62,7 +62,7 @@ impl MaxmindDb {
         let mmdb = match crate::MaxmindDb::instance().clone() {
             Some(mmdb) => mmdb,
             None => {
-                tracing::debug!("skipping mmdb telemetry, no maxmind database available");
+                tracing::trace!("skipping mmdb telemetry, no maxmind database available");
                 return None;
             }
         };

@@ -40,6 +40,26 @@ pub use quilkin_macros::include_proto;
 
 pub(crate) use self::net::maxmind_db::MaxmindDb;
 
+#[derive(Copy, Clone, PartialEq, Default, Debug)]
+pub enum ShutdownKind {
+    /// Normal shutdown kind, the receiver should perform proper shutdown procedures
+    #[default]
+    Normal,
+    /// In a testing environment, some or all shutdown behavior may be skippable
+    Testing,
+    /// In a benching environment, some or all shutdown behavior may be skippable
+    Benching,
+}
+
+/// Receiver for a shutdown event.
+pub type ShutdownRx = tokio::sync::watch::Receiver<ShutdownKind>;
+pub type ShutdownTx = tokio::sync::watch::Sender<ShutdownKind>;
+
+#[inline]
+pub fn make_shutdown_channel(init: ShutdownKind) -> (ShutdownTx, ShutdownRx) {
+    tokio::sync::watch::channel(init)
+}
+
 /// A type which can be logged, usually error types.
 pub(crate) trait Loggable {
     /// Output a log.

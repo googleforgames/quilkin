@@ -49,7 +49,7 @@ async fn agent_ping() {
         ..<_>::default()
     };
     let server_config = std::sync::Arc::new(quilkin::Config::default());
-    let (_tx, rx) = tokio::sync::watch::channel(());
+    let (_tx, rx) = quilkin::make_shutdown_channel(quilkin::ShutdownKind::Testing);
     let admin = quilkin::cli::Admin::Agent(<_>::default());
     tokio::spawn(async move {
         agent
