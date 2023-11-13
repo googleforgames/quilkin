@@ -3,99 +3,73 @@ mod shared;
 use divan::Bencher;
 use shared::*;
 
-use std::thread::spawn;
-
 fn main() {
     divan::main();
 }
 
-/// We use this to run each benchmark on the different packets, note the size
-/// of the packet rather than than packet index is used to give better output
-/// from divan
-const SIZES: &[usize] = &[254, 508, 1500];
-
 #[inline]
 fn counter(psize: usize) -> impl divan::counter::Counter {
-    divan::counter::BytesCount::new(psize * NUMBER_OF_PACKETS)
+    divan::counter::BytesCount::new(psize * NUMBER_OF_PACKETS as usize)
 }
 
-#[inline]
-fn get_packet_from_size<const N: usize>() -> &'static [u8] {
-    PACKETS
-        .iter()
-        .find(|p| p.len() == N)
-        .expect("failed to find appropriately sized packet")
-}
-
+#[divan::bench_group(sample_count = 10)]
 mod read {
     use super::*;
 
-    #[divan::bench(consts = SIZES)]
+    #[divan::bench(consts = PACKET_SIZES)]
     fn direct<const N: usize>(b: Bencher) {
         let (writer, reader) = socket_pair(None, None);
         let (tx, rx) = channel();
-        let packet = get_packet_from_size::<N>();
+        let writer = Writer::<N>::new(writer, reader.local_addr().unwrap(), rx);
 
-        let writer = Writer::new(writer, reader.local_addr().unwrap(), rx, packet);
-
-        spawn(move || loop {
+        spawn(format!("direct_writer_{N}"), move || loop {
             if !writer.write_all(NUMBER_OF_PACKETS) {
                 break;
             }
         });
 
         b.counter(counter(N)).bench_local(|| {
-            read_to_end(&reader, &tx, NUMBER_OF_PACKETS, N);
+            read_to_end::<N>(&reader, &tx, NUMBER_OF_PACKETS);
         });
     }
 
-    #[divan::bench(consts = SIZES)]
+    #[divan::bench(consts = PACKET_SIZES)]
     fn quilkin<const N: usize>(b: Bencher) {
         let (writer, reader) = socket_pair(None, None);
         let (tx, rx) = channel();
-        let packet = get_packet_from_size::<N>();
 
-        //quilkin::test::enable_log("quilkin=debug");
+        let quilkin_loop = QuilkinLoop::spinup(READ_QUILKIN_PORT, reader.local_addr().unwrap());
+        let writer = Writer::<N>::new(writer, (Ipv4Addr::LOCALHOST, READ_QUILKIN_PORT).into(), rx);
+        let _quilkin_loop = writer.wait_ready(quilkin_loop, &reader);
 
-        let _quilkin_loop = QuilkinLoop::spinup(READ_QUILKIN_PORT, reader.local_addr().unwrap());
-
-        let writer = Writer::new(
-            writer,
-            (Ipv4Addr::LOCALHOST, READ_QUILKIN_PORT).into(),
-            rx,
-            packet,
-        );
-
-        std::thread::sleep(std::time::Duration::from_millis(100));
-
-        spawn(move || loop {
+        spawn(format!("quilkin_writer_{N}"), move || loop {
             if !writer.write_all(NUMBER_OF_PACKETS) {
                 break;
             }
         });
 
         b.counter(counter(N)).bench_local(|| {
-            read_to_end(&reader, &tx, NUMBER_OF_PACKETS, N);
+            read_to_end::<N>(&reader, &tx, NUMBER_OF_PACKETS);
         });
     }
 }
 
+#[divan::bench_group(sample_count = 10)]
 mod write {
     use super::*;
 
-    #[divan::bench(consts = SIZES)]
+    #[divan::bench(consts = PACKET_SIZES)]
     fn direct<const N: usize>(b: Bencher) {
         let (writer, reader) = socket_pair(None, None);
         let (tx, rx) = channel();
-        let packet = get_packet_from_size::<N>();
 
-        let writer = Writer::new(writer, reader.local_addr().unwrap(), rx, packet);
+        let writer = Writer::<N>::new(writer, reader.local_addr().unwrap(), rx);
 
         let (loop_tx, loop_rx) = mpsc::sync_channel(1);
 
-        spawn(move || {
-            while let Ok((num, size)) = loop_rx.recv() {
-                read_to_end(&reader, &tx, num, size);
+        spawn(format!("direct_reader_{N}"), move || {
+            while let Ok((num, _size)) = loop_rx.recv() {
+                read_to_end::<N>(&reader, &tx, num);
             }
         });
 
@@ -107,36 +81,39 @@ mod write {
         });
     }
 
-    #[divan::bench(consts = SIZES)]
+    #[divan::bench(consts = PACKET_SIZES)]
     fn quilkin<const N: usize>(b: Bencher) {
         let (writer, reader) = socket_pair(None, None);
         let (tx, rx) = channel();
-        let packet = get_packet_from_size::<N>();
 
-        let (loop_tx, loop_rx) = mpsc::sync_channel(1);
+        //quilkin::test::enable_log("quilkin=debug");
 
-        let _quilkin_loop = QuilkinLoop::spinup(WRITE_QUILKIN_PORT, reader.local_addr().unwrap());
+        let quilkin_loop = QuilkinLoop::spinup(WRITE_QUILKIN_PORT, reader.local_addr().unwrap());
+        let writer = Writer::<N>::new(writer, (Ipv4Addr::LOCALHOST, WRITE_QUILKIN_PORT).into(), rx);
+        let _quilkin_loop = writer.wait_ready(quilkin_loop, &reader);
 
-        let writer = Writer::new(
-            writer,
-            (Ipv4Addr::LOCALHOST, WRITE_QUILKIN_PORT).into(),
-            rx,
-            packet,
-        );
+        let thread = {
+            let (loop_tx, loop_rx) = mpsc::sync_channel(1);
 
-        std::thread::sleep(std::time::Duration::from_millis(100));
+            let thread = spawn(format!("quilkin_reader_{}", N), move || {
+                while let Ok((num, _size)) = loop_rx.recv() {
+                    read_to_end::<N>(&reader, &tx, num);
+                }
+            });
 
-        spawn(move || {
-            while let Ok((num, size)) = loop_rx.recv() {
-                read_to_end(&reader, &tx, num, size);
-            }
-        });
+            let mut wtf = 0;
 
-        b.counter(counter(N)).bench_local(|| {
-            // Signal the read loop to run
-            loop_tx.send((NUMBER_OF_PACKETS, N)).unwrap();
+            b.counter(counter(N)).bench_local(|| {
+                // Signal the read loop to run
+                loop_tx.send((NUMBER_OF_PACKETS, N)).unwrap();
+                wtf += 1;
 
-            writer.write_all(NUMBER_OF_PACKETS);
-        });
+                writer.write_all(NUMBER_OF_PACKETS);
+            });
+
+            thread
+        };
+
+        thread.join().unwrap();
     }
 }
