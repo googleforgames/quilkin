@@ -542,7 +542,7 @@ pub struct Datacenter {
     pub icao_code: IcaoCode,
 }
 
-#[derive(Clone, Debug, PartialEq, JsonSchema, Serialize, Deserialize)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq, JsonSchema, Serialize, Deserialize)]
 pub struct IcaoCode(String);
 
 impl Default for IcaoCode {

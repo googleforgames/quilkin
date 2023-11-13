@@ -250,7 +250,7 @@ impl Proxy {
             buffer_pool,
         )?;
 
-        crate::codec::qcmp::spawn(self.qcmp_port).await?;
+        crate::codec::qcmp::spawn(self.qcmp_port);
         for notification in worker_notifications {
             notification.notified().await;
         }

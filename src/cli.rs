@@ -347,12 +347,15 @@ mod tests {
             }
         });
         proxy_init.await.unwrap();
-        tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+        tokio::time::sleep(Duration::from_millis(150)).await;
 
         let datacenter = crate::config::Datacenter {
             qcmp_port: agent_qcmp_port,
             icao_code,
         };
+
+        let relay_datacenters = relay_config.datacenters.read();
+        let proxy_datacenters = proxy_config.datacenters.read();
 
         assert!(agent_config.datacenters.read().is_empty());
         assert!(!relay_config.datacenters.read().is_empty());
@@ -512,7 +515,7 @@ mod tests {
                 config.write_to_file(endpoints_file.path());
             }
 
-            tokio::time::sleep(Duration::from_millis(80)).await;
+            tokio::time::sleep(Duration::from_millis(280)).await;
             let mut msg = b"hello".to_vec();
             msg.extend_from_slice(&token.inner);
             tracing::info!(%token, "sending packet");

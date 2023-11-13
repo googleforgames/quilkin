@@ -137,7 +137,7 @@ impl Agent {
             None
         };
 
-        crate::codec::qcmp::spawn(self.qcmp_port).await?;
+        crate::codec::qcmp::spawn(self.qcmp_port);
         shutdown_rx.changed().await.map_err(From::from)
     }
 }
