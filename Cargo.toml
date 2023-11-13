@@ -64,7 +64,7 @@ exclude = ["docs", "build", "examples", "image"]
 [[bench]]
 name = "read_write"
 harness = false
-test = true
+test = false
 
 [dependencies]
 # Local
