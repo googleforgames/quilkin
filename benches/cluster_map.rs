@@ -219,21 +219,17 @@ fn gen_cluster_map<const S: u64>() -> GenCluster {
 #[divan::bench_group(sample_count = 10)]
 mod serde {
     use super::*;
+    use prost_types::Any;
+    use quilkin::net::cluster::proto::Cluster;
 
-    fn serialize_to_protobuf(gc: &GenCluster) -> Vec<prost_types::Any> {
+    fn serialize_to_protobuf(cm: &ClusterMap) -> Vec<Any> {
         let mut resources = Vec::new();
         let resource_type = quilkin::net::xds::ResourceType::Cluster;
 
-        for cluster in gc.cm.iter() {
+        for cluster in cm.iter() {
             resources.push(
                 resource_type
-                    .encode_to_any(
-                        &quilkin::net::cluster::proto::Cluster::try_from((
-                            cluster.key(),
-                            cluster.value(),
-                        ))
-                        .unwrap(),
-                    )
+                    .encode_to_any(&Cluster::try_from((cluster.key(), cluster.value())).unwrap())
                     .unwrap(),
             );
         }
@@ -241,25 +237,69 @@ mod serde {
         resources
     }
 
-    fn deserialize_from_json(json: &serde_json::Value) -> ClusterMap {
+    fn deserialize_from_protobuf(pv: Vec<Any>) -> ClusterMap {
+        let cm = ClusterMap::default();
+
+        for any in pv {
+            let c = quilkin::net::xds::Resource::try_from(any).unwrap();
+
+            let quilkin::net::xds::Resource::Cluster(cluster) = c else {
+                unreachable!()
+            };
+            cm.merge(
+                cluster.locality.map(From::from),
+                cluster
+                    .endpoints
+                    .into_iter()
+                    .map(TryFrom::try_from)
+                    .collect::<Result<_, _>>()
+                    .unwrap(),
+            );
+        }
+
+        cm
+    }
+
+    fn serialize_to_json(cm: &ClusterMap) -> serde_json::Value {
+        serde_json::to_value(cm).unwrap()
+    }
+
+    fn deserialize_from_json(json: serde_json::Value) -> ClusterMap {
         serde_json::from_value(json.clone()).unwrap()
     }
 
     #[divan::bench(consts = SEEDS)]
-    fn serialize<const S: u64>(b: Bencher) {
-        b.with_inputs(gen_cluster_map::<S>)
-            .input_counter(|cm| cm.total_endpoints)
-            .bench_refs(|cm| divan::black_box(serialize_to_protobuf(cm)));
+    fn serialize_proto<const S: u64>(b: Bencher) {
+        let gc = gen_cluster_map::<S>();
+        b.counter(gc.total_endpoints)
+            .bench(|| divan::black_box(serialize_to_protobuf(&gc.cm)));
     }
 
     #[divan::bench(consts = SEEDS)]
-    fn deserialize<const S: u64>(b: Bencher) {
-        b.with_inputs(|| {
-            let gc = gen_cluster_map::<S>();
-            (serde_json::to_value(&gc.cm).unwrap(), gc.total_endpoints)
-        })
-        .input_counter(|(_json, total_endpoints)| *total_endpoints)
-        .bench_refs(|(json, _)| divan::black_box(deserialize_from_json(json)));
+    fn serialize_json<const S: u64>(b: Bencher) {
+        let gc = gen_cluster_map::<S>();
+        b.counter(gc.total_endpoints)
+            .bench(|| divan::black_box(serialize_to_json(&gc.cm)));
+    }
+
+    #[divan::bench(consts = SEEDS)]
+    fn deserialize_json<const S: u64>(b: Bencher) {
+        let gc = gen_cluster_map::<S>();
+        let json = serialize_to_json(&gc.cm);
+
+        b.with_inputs(|| json.clone())
+            .counter(gc.total_endpoints)
+            .bench_values(|json| divan::black_box(deserialize_from_json(json)));
+    }
+
+    #[divan::bench(consts = SEEDS)]
+    fn deserialize_proto<const S: u64>(b: Bencher) {
+        let gc = gen_cluster_map::<S>();
+        let pv = serialize_to_protobuf(&gc.cm);
+
+        b.with_inputs(|| pv.clone())
+            .counter(gc.total_endpoints)
+            .bench_values(|pv| divan::black_box(deserialize_from_protobuf(pv)));
     }
 }
 
