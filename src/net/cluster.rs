@@ -127,6 +127,37 @@ impl ClusterMap {
         self.0.iter()
     }
 
+    #[cfg(test)]
+    pub fn endpoints(&self) -> impl Iterator<Item = Endpoint> + '_ {
+        self.0
+            .iter()
+            .flat_map(|entry| entry.value().iter().cloned().collect::<Vec<_>>())
+    }
+
+    pub fn nth_endpoint(&self, mut index: usize) -> Option<Endpoint> {
+        for set in self.iter() {
+            if index < set.len() {
+                return set.value().iter().nth(index).cloned();
+            } else {
+                index -= set.len();
+            }
+        }
+
+        None
+    }
+
+    pub fn filter_endpoints(&self, f: impl Fn(&Endpoint) -> bool) -> Vec<Endpoint> {
+        let mut endpoints = Vec::new();
+
+        for set in self.iter() {
+            for endpoint in set.iter().filter(|e| (f)(e)) {
+                endpoints.push(endpoint.clone());
+            }
+        }
+
+        endpoints
+    }
+
     pub fn entry(
         &self,
         key: Option<Locality>,
@@ -138,10 +169,12 @@ impl ClusterMap {
         self.entry(None).or_default()
     }
 
-    pub fn endpoints(&self) -> impl Iterator<Item = Endpoint> + '_ {
-        self.0
-            .iter()
-            .flat_map(|entry| entry.value().iter().cloned().collect::<Vec<_>>())
+    pub fn num_of_endpoints(&self) -> usize {
+        self.0.iter().map(|entry| entry.value().len()).sum()
+    }
+
+    pub fn has_endpoints(&self) -> bool {
+        self.num_of_endpoints() != 0
     }
 
     pub fn update_unlocated_endpoints(&self, locality: Locality) {

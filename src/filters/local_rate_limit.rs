@@ -222,11 +222,14 @@ mod tests {
 
     /// Send a packet to the filter and assert whether or not it was processed.
     async fn read(r: &LocalRateLimit, address: &EndpointAddress, should_succeed: bool) {
-        let endpoints = vec![crate::net::endpoint::Endpoint::new(
-            (Ipv4Addr::LOCALHOST, 8089).into(),
-        )];
+        let endpoints = crate::net::cluster::ClusterMap::new_default(
+            [crate::net::endpoint::Endpoint::new(
+                (Ipv4Addr::LOCALHOST, 8089).into(),
+            )]
+            .into(),
+        );
 
-        let mut context = ReadContext::new(endpoints, address.clone(), vec![9]);
+        let mut context = ReadContext::new(endpoints.into(), address.clone(), vec![9]);
         let result = r.read(&mut context).await;
 
         if should_succeed {

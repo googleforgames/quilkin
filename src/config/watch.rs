@@ -38,6 +38,10 @@ impl<T: Clone> Watch<T> {
     pub fn watch(&self) -> watch::Receiver<T> {
         self.watchers.subscribe()
     }
+
+    pub fn clone_value(&self) -> std::sync::Arc<T> {
+        self.value.clone()
+    }
 }
 
 impl<T: Clone + PartialEq + std::fmt::Debug> Watch<T> {

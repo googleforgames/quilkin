@@ -104,9 +104,10 @@ mod tests {
         let addr: EndpointAddress = (Ipv4Addr::LOCALHOST, 8080).into();
         let endpoint = Endpoint::new(addr.clone());
 
+        let endpoints = crate::net::cluster::ClusterMap::new_default([endpoint.clone()].into());
         assert!(filter
             .read(&mut ReadContext::new(
-                vec![endpoint.clone()],
+                endpoints.into(),
                 addr.clone(),
                 vec![]
             ))

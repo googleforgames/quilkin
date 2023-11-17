@@ -118,10 +118,10 @@ impl Proxy {
             });
         }
 
-        if config.clusters.read().endpoints().count() == 0 && self.management_server.is_empty() {
+        if !config.clusters.read().has_endpoints() && self.management_server.is_empty() {
             return Err(eyre::eyre!(
-                "`quilkin proxy` requires at least one `to` address or `management_server` endpoint."
-            ));
+                    "`quilkin proxy` requires at least one `to` address or `management_server` endpoint."
+                ));
         }
 
         let id = config.id.load();
@@ -263,7 +263,7 @@ impl RuntimeConfig {
             .read()
             .as_ref()
             .map_or(true, |health| health.load(Ordering::SeqCst))
-            && config.clusters.read().endpoints().count() != 0
+            && config.clusters.read().has_endpoints()
     }
 }
 
@@ -393,17 +393,20 @@ impl DownstreamReceiveWorkerConfig {
         config: &Arc<Config>,
         sessions: &Arc<SessionPool>,
     ) -> Result<usize, PipelineError> {
-        let endpoints: Vec<_> = config.clusters.read().endpoints().collect();
-        if endpoints.is_empty() {
+        if !config.clusters.read().has_endpoints() {
             return Err(PipelineError::NoUpstreamEndpoints);
         }
 
         let filters = config.filters.load();
-        let mut context = ReadContext::new(endpoints, packet.source.into(), packet.contents);
+        let mut context = ReadContext::new(
+            config.clusters.clone_value(),
+            packet.source.into(),
+            packet.contents,
+        );
         filters.read(&mut context).await?;
         let mut bytes_written = 0;
 
-        for endpoint in context.endpoints.iter() {
+        for endpoint in context.destinations.iter() {
             let session_key = SessionKey {
                 source: packet.source,
                 dest: endpoint.address.to_socket_addr().await?,

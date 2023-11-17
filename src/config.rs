@@ -190,7 +190,7 @@ impl Config {
     pub fn apply_metrics(&self) {
         let clusters = self.clusters.read();
         crate::net::cluster::active_clusters().set(clusters.len() as i64);
-        crate::net::cluster::active_endpoints().set(clusters.endpoints().count() as i64);
+        crate::net::cluster::active_endpoints().set(clusters.num_of_endpoints() as i64);
     }
 }
 
