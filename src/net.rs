@@ -34,7 +34,7 @@ pub use self::{
 
 /// returns a UdpSocket with address and port reuse, on Ipv6Addr::UNSPECIFIED
 fn socket_with_reuse(port: u16) -> std::io::Result<UdpSocket> {
-    socket_with_reuse_and_address((Ipv6Addr::UNSPECIFIED, port).into())
+    socket_with_reuse_and_address((Ipv4Addr::UNSPECIFIED, port).into())
 }
 
 fn socket_with_reuse_and_address(addr: SocketAddr) -> std::io::Result<UdpSocket> {
@@ -82,7 +82,7 @@ impl DualStackLocalSocket {
 
     pub fn bind_local(port: u16) -> std::io::Result<DualStackLocalSocket> {
         Ok(Self {
-            socket: socket_with_reuse_and_address((Ipv6Addr::LOCALHOST, port).into())?,
+            socket: socket_with_reuse_and_address((Ipv4Addr::LOCALHOST, port).into())?,
         })
     }
 

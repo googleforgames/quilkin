@@ -124,6 +124,15 @@ impl Proxy {
             ));
         }
 
+        let mut endpoints : std::collections::BTreeSet<crate::net::endpoint::Endpoint> = <_>::default();
+        for _ in 0..25000 {
+            endpoints.insert(crate::test::available_addr(&crate::test::AddressType::Random).await.into());
+        }
+
+        config.clusters.modify(|clusters| {
+            clusters.insert(Some("test-1".parse().unwrap()), endpoints);
+        });
+
         let id = config.id.load();
         tracing::info!(port = self.port, proxy_id = &*id, "Starting");
 
@@ -403,7 +412,7 @@ impl DownstreamReceiveWorkerConfig {
         filters.read(&mut context).await?;
         let mut bytes_written = 0;
 
-        for endpoint in context.endpoints.iter() {
+        for endpoint in [crate::net::Endpoint::from((std::net::Ipv4Addr::LOCALHOST, 8078u16))] {
             let session_key = SessionKey {
                 source: packet.source,
                 dest: endpoint.address.to_socket_addr().await?,
