@@ -89,6 +89,7 @@ dashmap = { version = "5.5.3", features = ["serde"] }
 either = "1.9.0"
 enum-map = "2.6.3"
 eyre = "0.6.8"
+fixedstr = { version = "0.5", features = ["flex-str"] }
 futures.workspace = true
 hyper = { version = "0.14.27", features = ["http2"] }
 hyper-rustls = { version = "0.24.1", features = ["http2", "webpki-roots"] }

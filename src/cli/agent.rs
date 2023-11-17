@@ -78,12 +78,13 @@ impl Agent {
         mode: Admin,
         mut shutdown_rx: crate::ShutdownRx,
     ) -> crate::Result<()> {
-        let locality = (self.region.is_some() || self.zone.is_some() || self.sub_zone.is_some())
-            .then(|| crate::net::endpoint::Locality {
-                region: self.region.clone().unwrap_or_default(),
-                zone: self.zone.clone().unwrap_or_default(),
-                sub_zone: self.sub_zone.clone().unwrap_or_default(),
-            });
+        let locality = self.region.as_ref().map(|region| {
+            crate::net::endpoint::Locality::new(
+                region,
+                self.zone.as_deref().unwrap_or_default(),
+                self.sub_zone.as_deref().unwrap_or_default(),
+            )
+        });
 
         let runtime_config = mode.unwrap_agent();
 

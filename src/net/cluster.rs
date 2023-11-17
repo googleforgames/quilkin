@@ -312,8 +312,8 @@ mod tests {
 
     #[test]
     fn merge() {
-        let nl1 = Locality::region("nl-1");
-        let de1 = Locality::region("de-1");
+        let nl1 = Locality::with_region("nl-1");
+        let de1 = Locality::with_region("de-1");
 
         let mut endpoint = Endpoint::new((Ipv4Addr::LOCALHOST, 7777).into());
         let cluster1 = ClusterMap::default();
