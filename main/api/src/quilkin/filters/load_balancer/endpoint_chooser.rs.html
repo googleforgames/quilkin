@@ -73,6 +73,14 @@
 <a href="#73" id="73">73</a>
 <a href="#74" id="74">74</a>
 <a href="#75" id="75">75</a>
+<a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -123,7 +131,11 @@
     <span class="kw">fn </span>choose_endpoints(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) {
         <span class="kw">let </span>count = <span class="self">self</span>.next_endpoint.fetch_add(<span class="number">1</span>, Ordering::Relaxed);
         <span class="comment">// Note: The index is guaranteed to be in range.
-        </span>ctx.endpoints = <span class="macro">vec!</span>[ctx.endpoints[count % ctx.endpoints.len()].clone()];
+        </span>ctx.destinations = <span class="macro">vec!</span>[ctx
+            .endpoints
+            .nth_endpoint(count % ctx.endpoints.num_of_endpoints())
+            .unwrap()
+            .clone()];
     }
 }
 
@@ -133,8 +145,8 @@
 <span class="kw">impl </span>EndpointChooser <span class="kw">for </span>RandomEndpointChooser {
     <span class="kw">fn </span>choose_endpoints(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) {
         <span class="comment">// The index is guaranteed to be in range.
-        </span><span class="kw">let </span>index = thread_rng().gen_range(<span class="number">0</span>..ctx.endpoints.len());
-        ctx.endpoints = <span class="macro">vec!</span>[ctx.endpoints[index].clone()];
+        </span><span class="kw">let </span>index = thread_rng().gen_range(<span class="number">0</span>..ctx.endpoints.num_of_endpoints());
+        ctx.destinations = <span class="macro">vec!</span>[ctx.endpoints.nth_endpoint(index).unwrap().clone()];
     }
 }
 
@@ -145,7 +157,11 @@
     <span class="kw">fn </span>choose_endpoints(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) {
         <span class="kw">let </span><span class="kw-2">mut </span>hasher = DefaultHasher::new();
         ctx.source.hash(<span class="kw-2">&amp;mut </span>hasher);
-        ctx.endpoints = <span class="macro">vec!</span>[ctx.endpoints[hasher.finish() <span class="kw">as </span>usize % ctx.endpoints.len()].clone()];
+        ctx.destinations = <span class="macro">vec!</span>[ctx
+            .endpoints
+            .nth_endpoint(hasher.finish() <span class="kw">as </span>usize % ctx.endpoints.num_of_endpoints())
+            .unwrap()
+            .clone()];
     }
 }
 </code></pre></div></section></main></body></html>

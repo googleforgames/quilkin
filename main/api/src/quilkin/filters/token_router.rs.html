@@ -273,6 +273,8 @@
 <a href="#273" id="273">273</a>
 <a href="#274" id="274">274</a>
 <a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -329,7 +331,7 @@
     <span class="kw">async fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="kw">match </span>ctx.metadata.get(<span class="kw-2">&amp;</span><span class="self">self</span>.config.metadata_key) {
             <span class="prelude-val">Some</span>(metadata::Value::Bytes(token)) =&gt; {
-                ctx.endpoints.retain(|endpoint| {
+                ctx.destinations = ctx.endpoints.filter_endpoints(|endpoint| {
                     <span class="kw">if </span>endpoint.metadata.known.tokens.contains(<span class="kw-2">&amp;**</span>token) {
                         <span class="macro">tracing::trace!</span>(%endpoint.address, token = <span class="kw-2">&amp;*</span><span class="kw">crate</span>::codec::base64::encode(token), <span class="string">&quot;Endpoint matched&quot;</span>);
                         <span class="bool-val">true
@@ -338,7 +340,7 @@
                     </span>}
                 });
 
-                <span class="kw">if </span>ctx.endpoints.is_empty() {
+                <span class="kw">if </span>ctx.destinations.is_empty() {
                     <span class="prelude-val">Err</span>(FilterError::new(Error::NoEndpointMatch(
                         <span class="self">self</span>.config.metadata_key,
                         <span class="kw">crate</span>::codec::base64::encode(token),
@@ -532,8 +534,10 @@
             },
         );
 
+        <span class="kw">let </span>endpoints = <span class="kw">crate</span>::net::cluster::ClusterMap::default();
+        endpoints.insert_default([endpoint1, endpoint2].into());
         ReadContext::new(
-            <span class="macro">vec!</span>[endpoint1, endpoint2],
+            endpoints.into(),
             <span class="string">&quot;127.0.0.1:100&quot;</span>.parse().unwrap(),
             <span class="string">b&quot;hello&quot;</span>.to_vec(),
         )

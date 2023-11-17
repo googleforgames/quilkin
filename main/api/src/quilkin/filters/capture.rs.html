@@ -254,6 +254,10 @@
 <a href="#254" id="254">254</a>
 <a href="#255" id="255">255</a>
 <a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -415,10 +419,12 @@
             }),
         };
         <span class="kw">let </span>filter = Capture::from_config(config.into());
-        <span class="kw">let </span>endpoints = <span class="macro">vec!</span>[Endpoint::new(<span class="string">&quot;127.0.0.1:81&quot;</span>.parse().unwrap())];
+        <span class="kw">let </span>endpoints = <span class="kw">crate</span>::net::cluster::ClusterMap::new_default(
+            [Endpoint::new(<span class="string">&quot;127.0.0.1:81&quot;</span>.parse().unwrap())].into(),
+        );
         <span class="macro">assert!</span>(filter
             .read(<span class="kw-2">&amp;mut </span>ReadContext::new(
-                endpoints,
+                endpoints.into(),
                 (std::net::Ipv4Addr::LOCALHOST, <span class="number">80</span>).into(),
                 <span class="string">&quot;abc&quot;</span>.to_string().into_bytes(),
             ))
@@ -491,9 +497,11 @@
     <span class="kw">where
         </span>F: Filter + <span class="question-mark">?</span>Sized,
     {
-        <span class="kw">let </span>endpoints = <span class="macro">vec!</span>[Endpoint::new(<span class="string">&quot;127.0.0.1:81&quot;</span>.parse().unwrap())];
+        <span class="kw">let </span>endpoints = <span class="kw">crate</span>::net::cluster::ClusterMap::new_default(
+            [Endpoint::new(<span class="string">&quot;127.0.0.1:81&quot;</span>.parse().unwrap())].into(),
+        );
         <span class="kw">let </span><span class="kw-2">mut </span>context = ReadContext::new(
-            endpoints,
+            endpoints.into(),
             <span class="string">&quot;127.0.0.1:80&quot;</span>.parse().unwrap(),
             <span class="string">&quot;helloabc&quot;</span>.to_string().into_bytes(),
         );

@@ -174,8 +174,6 @@
 <a href="#174" id="174">174</a>
 <a href="#175" id="175">175</a>
 <a href="#176" id="176">176</a>
-<a href="#177" id="177">177</a>
-<a href="#178" id="178">178</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -315,18 +313,16 @@
         };
 
         <span class="kw">let </span>local_ip = [<span class="number">192</span>, <span class="number">168</span>, <span class="number">75</span>, <span class="number">20</span>];
-        <span class="kw">let </span><span class="kw-2">mut </span>ctx = ReadContext::new(
-            <span class="macro">vec!</span>[Endpoint::new((Ipv4Addr::LOCALHOST, <span class="number">8080</span>).into())],
-            (local_ip, <span class="number">80</span>).into(),
-            <span class="macro">vec!</span>[],
+        <span class="kw">let </span>endpoints = <span class="kw">crate</span>::net::cluster::ClusterMap::new_default(
+            [Endpoint::new((Ipv4Addr::LOCALHOST, <span class="number">8080</span>).into())].into(),
         );
+        <span class="kw">let </span><span class="kw-2">mut </span>ctx = ReadContext::new(endpoints.into(), (local_ip, <span class="number">80</span>).into(), <span class="macro">vec!</span>[]);
         <span class="macro">assert!</span>(firewall.read(<span class="kw-2">&amp;mut </span>ctx).<span class="kw">await</span>.is_ok());
 
-        <span class="kw">let </span><span class="kw-2">mut </span>ctx = ReadContext::new(
-            <span class="macro">vec!</span>[Endpoint::new((Ipv4Addr::LOCALHOST, <span class="number">8080</span>).into())],
-            (local_ip, <span class="number">2000</span>).into(),
-            <span class="macro">vec!</span>[],
+        <span class="kw">let </span>endpoints = <span class="kw">crate</span>::net::cluster::ClusterMap::new_default(
+            [Endpoint::new((Ipv4Addr::LOCALHOST, <span class="number">8080</span>).into())].into(),
         );
+        <span class="kw">let </span><span class="kw-2">mut </span>ctx = ReadContext::new(endpoints.into(), (local_ip, <span class="number">2000</span>).into(), <span class="macro">vec!</span>[]);
         <span class="macro">assert!</span>(logs_contain(<span class="string">&quot;quilkin::filters::firewall&quot;</span>)); <span class="comment">// the given name to the the logger by tracing
         </span><span class="macro">assert!</span>(logs_contain(<span class="string">&quot;Allow&quot;</span>));
 

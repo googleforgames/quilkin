@@ -258,6 +258,8 @@
 <a href="#258" id="258">258</a>
 <a href="#259" id="259">259</a>
 <a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC All Rights Reserved.
  *
@@ -328,16 +330,18 @@
         input_addresses: <span class="kw-2">&amp;</span>[EndpointAddress],
         source: EndpointAddress,
     ) -&gt; Vec&lt;EndpointAddress&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>context = ReadContext::new(
-            Vec::from_iter(input_addresses.iter().cloned().map(Endpoint::new)),
-            source,
-            <span class="macro">vec!</span>[],
-        );
+        <span class="kw">let </span>endpoints = input_addresses
+            .iter()
+            .cloned()
+            .map(Endpoint::new)
+            .collect::&lt;std::collections::BTreeSet&lt;<span class="kw">_</span>&gt;&gt;();
+        <span class="kw">let </span>endpoints = <span class="kw">crate</span>::net::cluster::ClusterMap::new_default(endpoints);
+        <span class="kw">let </span><span class="kw-2">mut </span>context = ReadContext::new(endpoints.into(), source, <span class="macro">vec!</span>[]);
 
         filter.read(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span>.unwrap();
 
         context
-            .endpoints
+            .destinations
             .iter()
             .map(|ep| ep.address.clone())
             .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()

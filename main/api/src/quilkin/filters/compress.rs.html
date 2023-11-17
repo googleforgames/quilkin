@@ -360,6 +360,18 @@
 <a href="#360" id="360">360</a>
 <a href="#361" id="361">361</a>
 <a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -538,8 +550,11 @@
         <span class="kw">let </span>expected = contents_fixture();
 
         <span class="comment">// read compress
-        </span><span class="kw">let </span><span class="kw-2">mut </span>read_context = ReadContext::new(
-            <span class="macro">vec!</span>[Endpoint::new(<span class="string">&quot;127.0.0.1:80&quot;</span>.parse().unwrap())],
+        </span><span class="kw">let </span>endpoints = <span class="kw">crate</span>::net::cluster::ClusterMap::new_default(
+            [Endpoint::new(<span class="string">&quot;127.0.0.1:81&quot;</span>.parse().unwrap())].into(),
+        );
+        <span class="kw">let </span><span class="kw-2">mut </span>read_context = ReadContext::new(
+            endpoints.into(),
             <span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(),
             expected.clone(),
         );
@@ -600,9 +615,12 @@
             Metrics::new(),
         );
 
+        <span class="kw">let </span>endpoints = <span class="kw">crate</span>::net::cluster::ClusterMap::new_default(
+            [Endpoint::new(<span class="string">&quot;127.0.0.1:81&quot;</span>.parse().unwrap())].into(),
+        );
         <span class="macro">assert!</span>(compression
             .read(<span class="kw-2">&amp;mut </span>ReadContext::new(
-                <span class="macro">vec!</span>[Endpoint::new(<span class="string">&quot;127.0.0.1:80&quot;</span>.parse().unwrap())],
+                endpoints.into(),
                 <span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(),
                 <span class="string">b&quot;hello&quot;</span>.to_vec(),
             ))
@@ -621,8 +639,11 @@
             Metrics::new(),
         );
 
+        <span class="kw">let </span>endpoints = <span class="kw">crate</span>::net::cluster::ClusterMap::new_default(
+            [Endpoint::new(<span class="string">&quot;127.0.0.1:81&quot;</span>.parse().unwrap())].into(),
+        );
         <span class="kw">let </span><span class="kw-2">mut </span>read_context = ReadContext::new(
-            <span class="macro">vec!</span>[Endpoint::new(<span class="string">&quot;127.0.0.1:80&quot;</span>.parse().unwrap())],
+            endpoints.into(),
             <span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(),
             <span class="string">b&quot;hello&quot;</span>.to_vec(),
         );
@@ -707,8 +728,11 @@
         );
 
         <span class="comment">// read decompress
-        </span><span class="kw">let </span><span class="kw-2">mut </span>read_context = ReadContext::new(
-            <span class="macro">vec!</span>[Endpoint::new(<span class="string">&quot;127.0.0.1:80&quot;</span>.parse().unwrap())],
+        </span><span class="kw">let </span>endpoints = <span class="kw">crate</span>::net::cluster::ClusterMap::new_default(
+            [Endpoint::new(<span class="string">&quot;127.0.0.1:81&quot;</span>.parse().unwrap())].into(),
+        );
+        <span class="kw">let </span><span class="kw-2">mut </span>read_context = ReadContext::new(
+            endpoints.into(),
             <span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(),
             write_context.contents.clone(),
         );

@@ -118,6 +118,7 @@
 <a href="#118" id="118">118</a>
 <a href="#119" id="119">119</a>
 <a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -224,9 +225,10 @@
         <span class="kw">let </span>addr: EndpointAddress = (Ipv4Addr::LOCALHOST, <span class="number">8080</span>).into();
         <span class="kw">let </span>endpoint = Endpoint::new(addr.clone());
 
+        <span class="kw">let </span>endpoints = <span class="kw">crate</span>::net::cluster::ClusterMap::new_default([endpoint.clone()].into());
         <span class="macro">assert!</span>(filter
             .read(<span class="kw-2">&amp;mut </span>ReadContext::new(
-                <span class="macro">vec!</span>[endpoint.clone()],
+                endpoints.into(),
                 addr.clone(),
                 <span class="macro">vec!</span>[]
             ))

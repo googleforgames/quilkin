@@ -727,7 +727,7 @@
     <span class="kw">pub fn </span>apply_metrics(<span class="kw-2">&amp;</span><span class="self">self</span>) {
         <span class="kw">let </span>clusters = <span class="self">self</span>.clusters.read();
         <span class="kw">crate</span>::net::cluster::active_clusters().set(clusters.len() <span class="kw">as </span>i64);
-        <span class="kw">crate</span>::net::cluster::active_endpoints().set(clusters.endpoints().count() <span class="kw">as </span>i64);
+        <span class="kw">crate</span>::net::cluster::active_endpoints().set(clusters.num_of_endpoints() <span class="kw">as </span>i64);
     }
 }
 

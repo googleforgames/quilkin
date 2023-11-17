@@ -675,6 +675,9 @@
 <a href="#675" id="675">675</a>
 <a href="#676" id="676">676</a>
 <a href="#677" id="677">677</a>
+<a href="#678" id="678">678</a>
+<a href="#679" id="679">679</a>
+<a href="#680" id="680">680</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -795,10 +798,10 @@
             });
         }
 
-        <span class="kw">if </span>config.clusters.read().endpoints().count() == <span class="number">0 </span>&amp;&amp; <span class="self">self</span>.management_server.is_empty() {
+        <span class="kw">if </span>!config.clusters.read().has_endpoints() &amp;&amp; <span class="self">self</span>.management_server.is_empty() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(
-                <span class="string">&quot;`quilkin proxy` requires at least one `to` address or `management_server` endpoint.&quot;
-            </span>));
+                    <span class="string">&quot;`quilkin proxy` requires at least one `to` address or `management_server` endpoint.&quot;
+                </span>));
         }
 
         <span class="kw">let </span>id = config.id.load();
@@ -940,8 +943,8 @@
             .read()
             .as_ref()
             .map_or(<span class="bool-val">true</span>, |health| health.load(Ordering::SeqCst))
-            &amp;&amp; config.clusters.read().endpoints().count() != <span class="number">0
-    </span>}
+            &amp;&amp; config.clusters.read().has_endpoints()
+    }
 }
 
 <span class="doccomment">/// Packet received from local port
@@ -1070,17 +1073,20 @@
         config: <span class="kw-2">&amp;</span>Arc&lt;Config&gt;,
         sessions: <span class="kw-2">&amp;</span>Arc&lt;SessionPool&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;usize, PipelineError&gt; {
-        <span class="kw">let </span>endpoints: Vec&lt;<span class="kw">_</span>&gt; = config.clusters.read().endpoints().collect();
-        <span class="kw">if </span>endpoints.is_empty() {
+        <span class="kw">if </span>!config.clusters.read().has_endpoints() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(PipelineError::NoUpstreamEndpoints);
         }
 
         <span class="kw">let </span>filters = config.filters.load();
-        <span class="kw">let </span><span class="kw-2">mut </span>context = ReadContext::new(endpoints, packet.source.into(), packet.contents);
+        <span class="kw">let </span><span class="kw-2">mut </span>context = ReadContext::new(
+            config.clusters.clone_value(),
+            packet.source.into(),
+            packet.contents,
+        );
         filters.read(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>bytes_written = <span class="number">0</span>;
 
-        <span class="kw">for </span>endpoint <span class="kw">in </span>context.endpoints.iter() {
+        <span class="kw">for </span>endpoint <span class="kw">in </span>context.destinations.iter() {
             <span class="kw">let </span>session_key = SessionKey {
                 source: packet.source,
                 dest: endpoint.address.to_socket_addr().<span class="kw">await</span><span class="question-mark">?</span>,

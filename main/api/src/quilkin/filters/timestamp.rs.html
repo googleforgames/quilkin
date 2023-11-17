@@ -382,7 +382,7 @@
         <span class="kw">const </span>TIMESTAMP_KEY: <span class="kw-2">&amp;</span>str = <span class="string">&quot;BASIC&quot;</span>;
         <span class="kw">let </span>filter = Timestamp::from_config(Config::new(TIMESTAMP_KEY).into());
         <span class="kw">let </span><span class="kw-2">mut </span>ctx = ReadContext::new(
-            <span class="macro">vec!</span>[],
+            &lt;<span class="kw">_</span>&gt;::default(),
             (std::net::Ipv4Addr::UNSPECIFIED, <span class="number">0</span>).into(),
             <span class="string">b&quot;hello&quot;</span>.to_vec(),
         );
@@ -413,7 +413,7 @@
         <span class="kw">let </span>timestamp = Timestamp::from_config(Config::new(TIMESTAMP_KEY).into());
         <span class="kw">let </span>source = (std::net::Ipv4Addr::UNSPECIFIED, <span class="number">0</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>ctx = ReadContext::new(
-            <span class="macro">vec!</span>[],
+            &lt;<span class="kw">_</span>&gt;::default(),
             source.into(),
             [<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">99</span>, <span class="number">81</span>, <span class="number">55</span>, <span class="number">181</span>].to_vec(),
         );

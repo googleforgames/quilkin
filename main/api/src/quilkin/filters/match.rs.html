@@ -229,6 +229,8 @@
 <a href="#229" id="229">229</a>
 <a href="#230" id="230">230</a>
 <a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -436,8 +438,11 @@
         <span class="macro">assert_eq!</span>(<span class="number">0</span>, filter.metrics.packets_matched_total.get());
 
         <span class="comment">// config so we can test match and fallthrough.
-        </span><span class="kw">let </span><span class="kw-2">mut </span>ctx = ReadContext::new(
-            <span class="macro">vec!</span>[Default::default()],
+        </span><span class="kw">let </span>endpoints = <span class="kw">crate</span>::net::cluster::ClusterMap::new_default(
+            [Endpoint::new(<span class="string">&quot;127.0.0.1:81&quot;</span>.parse().unwrap())].into(),
+        );
+        <span class="kw">let </span><span class="kw-2">mut </span>ctx = ReadContext::new(
+            endpoints.into(),
             ([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>], <span class="number">7000</span>).into(),
             contents.clone(),
         );
@@ -447,11 +452,10 @@
         <span class="macro">assert_eq!</span>(<span class="number">1</span>, filter.metrics.packets_matched_total.get());
         <span class="macro">assert_eq!</span>(<span class="number">0</span>, filter.metrics.packets_fallthrough_total.get());
 
-        <span class="kw">let </span><span class="kw-2">mut </span>ctx = ReadContext::new(
-            <span class="macro">vec!</span>[Default::default()],
-            ([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>], <span class="number">7000</span>).into(),
-            contents,
+        <span class="kw">let </span>endpoints = <span class="kw">crate</span>::net::cluster::ClusterMap::new_default(
+            [Endpoint::new(<span class="string">&quot;127.0.0.1:81&quot;</span>.parse().unwrap())].into(),
         );
+        <span class="kw">let </span><span class="kw-2">mut </span>ctx = ReadContext::new(endpoints.into(), ([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>], <span class="number">7000</span>).into(), contents);
         ctx.metadata.insert(key, <span class="string">&quot;xyz&quot;</span>.into());
 
         <span class="kw">let </span>result = filter.read(<span class="kw-2">&amp;mut </span>ctx).<span class="kw">await</span>;

@@ -395,6 +395,9 @@
 <a href="#395" id="395">395</a>
 <a href="#396" id="396">396</a>
 <a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -619,11 +622,14 @@
 
     <span class="doccomment">/// Send a packet to the filter and assert whether or not it was processed.
     </span><span class="kw">async fn </span>read(r: <span class="kw-2">&amp;</span>LocalRateLimit, address: <span class="kw-2">&amp;</span>EndpointAddress, should_succeed: bool) {
-        <span class="kw">let </span>endpoints = <span class="macro">vec!</span>[<span class="kw">crate</span>::net::endpoint::Endpoint::new(
-            (Ipv4Addr::LOCALHOST, <span class="number">8089</span>).into(),
-        )];
+        <span class="kw">let </span>endpoints = <span class="kw">crate</span>::net::cluster::ClusterMap::new_default(
+            [<span class="kw">crate</span>::net::endpoint::Endpoint::new(
+                (Ipv4Addr::LOCALHOST, <span class="number">8089</span>).into(),
+            )]
+            .into(),
+        );
 
-        <span class="kw">let </span><span class="kw-2">mut </span>context = ReadContext::new(endpoints, address.clone(), <span class="macro">vec!</span>[<span class="number">9</span>]);
+        <span class="kw">let </span><span class="kw-2">mut </span>context = ReadContext::new(endpoints.into(), address.clone(), <span class="macro">vec!</span>[<span class="number">9</span>]);
         <span class="kw">let </span>result = r.read(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span>;
 
         <span class="kw">if </span>should_succeed {
