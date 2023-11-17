@@ -49,7 +49,7 @@ impl ToTokens for IncludeProto {
         let module = id.split('.').rev().fold::<Vec<_>, _>(items, |acc, module| {
             let module = syn::Ident::new(module, Span::mixed_site());
             let result: syn::ItemMod = syn::parse_quote! {
-                #[allow(warnings, clippy::all)] pub(crate) mod #module { #(#acc)* }
+                #[allow(warnings, clippy::all)] pub mod #module { #(#acc)* }
             };
 
             vec![syn::Item::Mod(result)]

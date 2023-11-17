@@ -66,6 +66,11 @@ name = "read_write"
 harness = false
 test = false
 
+[[bench]]
+name = "cluster_map"
+harness = false
+test = false
+
 [dependencies]
 # Local
 quilkin-macros = { version = "0.8.0-dev", path = "./macros" }
@@ -79,6 +84,7 @@ bytes = { version = "1.5.0", features = ["serde"] }
 cached = "0.46.0"
 chrono = "0.4.31"
 clap = { version = "4.4.6", features = ["cargo", "derive", "env"] }
+crossbeam-skiplist = "0.1"
 dashmap = { version = "5.5.3", features = ["serde"] }
 either = "1.9.0"
 enum-map = "2.6.3"
@@ -140,6 +146,7 @@ rand = "0.8.5"
 regex = "1.9.6"
 tracing-test = "0.2.4"
 tempfile = "3.8.0"
+xxhash-rust = { version = "0.8", features = ["xxh3"] }
 
 [build-dependencies]
 tonic-build = { version = "0.10.2", default_features = false, features = [

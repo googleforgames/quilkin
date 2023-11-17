@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
-use std::collections::BTreeSet;
+use std::{
+    collections::{hash_map::RandomState, BTreeSet},
+    fmt,
+};
 
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
@@ -25,7 +28,7 @@ use crate::net::endpoint::{Endpoint, Locality};
 const SUBSYSTEM: &str = "cluster";
 
 crate::include_proto!("quilkin.config.v1alpha1");
-pub(crate) use self::quilkin::config::v1alpha1 as proto;
+pub use self::quilkin::config::v1alpha1 as proto;
 
 pub(crate) fn active_clusters() -> &'static prometheus::IntGauge {
     static ACTIVE_CLUSTERS: Lazy<prometheus::IntGauge> = Lazy::new(|| {
@@ -58,18 +61,45 @@ pub(crate) fn active_endpoints() -> &'static prometheus::IntGauge {
 }
 
 /// Represents a full snapshot of all clusters.
-#[derive(Clone, Default, Debug)]
-pub struct ClusterMap(DashMap<Option<Locality>, BTreeSet<Endpoint>>);
+#[derive(Clone)]
+pub struct ClusterMap<S = RandomState>(DashMap<Option<Locality>, BTreeSet<Endpoint>, S>);
 
-type DashMapRef<'inner> = dashmap::mapref::one::Ref<'inner, Option<Locality>, BTreeSet<Endpoint>>;
-type DashMapRefMut<'inner> =
-    dashmap::mapref::one::RefMut<'inner, Option<Locality>, BTreeSet<Endpoint>>;
+impl<S> fmt::Debug for ClusterMap<S>
+where
+    S: Default + std::hash::BuildHasher + Clone,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ClusterMap")
+            .field("map", &self.0)
+            .finish_non_exhaustive()
+    }
+}
 
-impl ClusterMap {
+impl Default for ClusterMap<RandomState> {
+    fn default() -> Self {
+        Self(DashMap::new())
+    }
+}
+
+impl ClusterMap<RandomState> {
     pub fn new_default(cluster: BTreeSet<Endpoint>) -> Self {
         let this = Self::default();
         this.insert_default(cluster);
         this
+    }
+}
+
+type DashMapRef<'inner, S> =
+    dashmap::mapref::one::Ref<'inner, Option<Locality>, BTreeSet<Endpoint>, S>;
+type DashMapRefMut<'inner, S> =
+    dashmap::mapref::one::RefMut<'inner, Option<Locality>, BTreeSet<Endpoint>, S>;
+
+impl<S> ClusterMap<S>
+where
+    S: Default + std::hash::BuildHasher + Clone,
+{
+    pub fn benchmarking(capacity: usize, hasher: S) -> Self {
+        Self(DashMap::with_capacity_and_hasher(capacity, hasher))
     }
 
     pub fn insert(
@@ -88,19 +118,19 @@ impl ClusterMap {
         self.0.is_empty()
     }
 
-    pub fn get(&self, key: &Option<Locality>) -> Option<DashMapRef> {
+    pub fn get(&self, key: &Option<Locality>) -> Option<DashMapRef<S>> {
         self.0.get(key)
     }
 
-    pub fn get_mut(&self, key: &Option<Locality>) -> Option<DashMapRefMut> {
+    pub fn get_mut(&self, key: &Option<Locality>) -> Option<DashMapRefMut<S>> {
         self.0.get_mut(key)
     }
 
-    pub fn get_default(&self) -> Option<DashMapRef> {
+    pub fn get_default(&self) -> Option<DashMapRef<S>> {
         self.get(&None)
     }
 
-    pub fn get_default_mut(&self) -> Option<DashMapRefMut> {
+    pub fn get_default_mut(&self) -> Option<DashMapRefMut<S>> {
         self.get_mut(&None)
     }
 
@@ -123,18 +153,18 @@ impl ClusterMap {
         false
     }
 
-    pub fn iter(&self) -> dashmap::iter::Iter<Option<Locality>, BTreeSet<Endpoint>> {
+    pub fn iter(&self) -> dashmap::iter::Iter<Option<Locality>, BTreeSet<Endpoint>, S> {
         self.0.iter()
     }
 
     pub fn entry(
         &self,
         key: Option<Locality>,
-    ) -> dashmap::mapref::entry::Entry<Option<Locality>, BTreeSet<Endpoint>> {
+    ) -> dashmap::mapref::entry::Entry<Option<Locality>, BTreeSet<Endpoint>, S> {
         self.0.entry(key)
     }
 
-    pub fn default_entry(&self) -> DashMapRefMut {
+    pub fn default_entry(&self) -> DashMapRefMut<S> {
         self.entry(None).or_default()
     }
 
