@@ -20,8 +20,7 @@ use prost_types::value::Kind;
 use serde_json::Value;
 
 pub fn encode<M: prost::Message>(message: &M) -> Result<Vec<u8>, prost::EncodeError> {
-    let mut buf = Vec::new();
-    buf.reserve(message.encoded_len());
+    let mut buf = Vec::with_capacity(message.encoded_len());
     message.encode(&mut buf)?;
     Ok(buf)
 }
