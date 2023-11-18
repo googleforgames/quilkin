@@ -39,7 +39,6 @@ use crate::{
     },
 };
 
-#[tracing::instrument(skip_all)]
 pub fn spawn(
     port: u16,
     mode: Admin,
@@ -278,7 +277,6 @@ impl AggregatedDiscoveryService for ControlPlane {
     type DeltaAggregatedResourcesStream =
         tokio_stream::wrappers::ReceiverStream<Result<DeltaDiscoveryResponse, tonic::Status>>;
 
-    #[tracing::instrument(skip_all)]
     async fn stream_aggregated_resources(
         &self,
         request: tonic::Request<tonic::Streaming<DiscoveryRequest>>,
@@ -305,7 +303,6 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
     type StreamAggregatedResourcesStream =
         std::pin::Pin<Box<dyn Stream<Item = Result<DiscoveryRequest, tonic::Status>> + Send>>;
 
-    #[tracing::instrument(skip_all)]
     async fn stream_aggregated_resources(
         &self,
         responses: tonic::Request<tonic::Streaming<DiscoveryResponse>>,

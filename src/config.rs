@@ -181,7 +181,6 @@ impl Config {
         })
     }
 
-    #[tracing::instrument(skip_all, fields(response = response.type_url()))]
     pub fn apply(&self, response: &Resource) -> crate::Result<()> {
         tracing::trace!(resource=?response, "applying resource");
 
