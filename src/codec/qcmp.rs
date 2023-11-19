@@ -533,7 +533,9 @@ mod tests {
             .await
             .port();
 
-        tokio::spawn(super::spawn(port));
+        let (_tx, rx) = tokio::sync::watch::channel(());
+        super::spawn(port, rx).unwrap();
+        tokio::time::sleep(std::time::Duration::from_millis(250)).await;
 
         let node = QcmpMeasurement::new().unwrap();
 

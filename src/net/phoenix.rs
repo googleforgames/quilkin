@@ -308,8 +308,7 @@ pub struct Builder<M> {
 impl<M: Measurement> Builder<M> {
     const DEFAULT_STABILITY_THRESHOLD: Duration = Duration::from_millis(50);
     const DEFAULT_ADJUSTMENT_DURATION: Duration = Duration::from_millis(5);
-    const DEFAULT_INTERVAL_RANGE: Range<Duration> =
-        Duration::from_secs(3)..Duration::from_secs(10);
+    const DEFAULT_INTERVAL_RANGE: Range<Duration> = Duration::from_secs(3)..Duration::from_secs(10);
     const DEFAULT_SUBSET: f64 = 0.5;
 
     /// Constructs a new [`Phoenix`] builder.
@@ -663,9 +662,11 @@ mod tests {
             },
         );
 
-        tokio::spawn(crate::codec::qcmp::spawn(qcmp_port));
+        let (_tx, rx) = tokio::sync::watch::channel(());
+        crate::codec::qcmp::spawn(qcmp_port, rx).unwrap();
+        tokio::time::sleep(std::time::Duration::from_millis(250)).await;
         super::spawn(qcmp_port, config.clone()).unwrap();
-        tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(250)).await;
 
         let client = hyper::Client::new();
 
