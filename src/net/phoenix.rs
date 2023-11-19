@@ -38,30 +38,25 @@ pub fn spawn(port: u16, config: Arc<crate::Config>) -> crate::Result<()> {
             .enable_all()
             .build()?;
         runtime.block_on({
-            let mut watcher = config.datacenters.watch();
+            let mut config_watcher = config.datacenters.watch();
+            let mut phoenix_watcher = phoenix.update_watcher();
             let config = config.clone();
 
             async move {
+                let json = crate::config::Slot::new(serde_json::Map::default());
+
                 tokio::spawn({
                     let phoenix = phoenix.clone();
                     async move { phoenix.background_update_task().await }
                 });
-                let phoenix2 = phoenix.clone();
 
+                let json2 = json.clone();
                 let make_svc = make_service_fn(move |_conn| {
-                    let phoenix = phoenix2.clone();
+                    let json = json2.clone();
                     async move {
-                        let phoenix = phoenix.clone();
                         Ok::<_, std::convert::Infallible>(service_fn(move |_| {
-                            let phoenix = phoenix.clone();
+                            let json = json.clone();
                             async move {
-                                let nodes = phoenix.ordered_nodes_by_latency();
-                                let mut json = serde_json::Map::default();
-
-                                for (identifier, latency) in nodes {
-                                    json.insert(identifier.to_string(), latency.into());
-                                }
-
                                 Ok::<_, std::convert::Infallible>(
                                     Response::builder()
                                         .status(StatusCode::OK)
@@ -82,8 +77,19 @@ pub fn spawn(port: u16, config: Arc<crate::Config>) -> crate::Result<()> {
                 tokio::spawn(HyperServer::bind(&address).serve(make_svc));
 
                 loop {
-                    watcher.changed().await?;
+                    tokio::select! {
+                        result = config_watcher.changed() => result?,
+                        result = phoenix_watcher.changed() => result?,
+                    }
                     phoenix.add_nodes_from_config(&config);
+                    let nodes = phoenix.ordered_nodes_by_latency();
+                    let mut new_json = serde_json::Map::default();
+
+                    for (identifier, latency) in dbg!(nodes) {
+                        new_json.insert(identifier.to_string(), latency.into());
+                    }
+
+                    json.store(new_json.into());
                 }
             }
         })
@@ -117,6 +123,10 @@ pub struct Inner<M> {
     adjustment_duration: Duration,
     interval_range: Range<Duration>,
     subset_percentage: f64,
+    update_watcher: (
+        tokio::sync::watch::Sender<()>,
+        tokio::sync::watch::Receiver<()>,
+    ),
 }
 
 impl<M: Measurement + 'static> Phoenix<M> {
@@ -181,8 +191,13 @@ impl<M: Measurement + 'static> Phoenix<M> {
                 }
             }
 
+            let _ = self.update_watcher.0.send(());
             tokio::time::sleep(current_interval).await;
         }
+    }
+
+    fn update_watcher(&self) -> tokio::sync::watch::Receiver<()> {
+        self.update_watcher.1.clone()
     }
 
     fn all_nodes(&self) -> Vec<SocketAddr> {
@@ -369,6 +384,7 @@ impl<M: Measurement> Builder<M> {
                     .unwrap_or(Self::DEFAULT_ADJUSTMENT_DURATION),
                 interval_range: self.interval_range.unwrap_or(Self::DEFAULT_INTERVAL_RANGE),
                 subset_percentage: self.subset_percentage.unwrap_or(Self::DEFAULT_SUBSET),
+                update_watcher: tokio::sync::watch::channel(()),
             }),
         }
     }
@@ -651,7 +667,7 @@ mod tests {
     #[tokio::test]
     async fn http_server() {
         let config = Arc::new(crate::Config::default());
-        let qcmp_port = crate::test::available_addr(&crate::test::AddressType::Random)
+        let qcmp_port = crate::test::available_addr(&crate::test::AddressType::Ipv4)
             .await
             .port();
         config.datacenters.write().insert(
@@ -666,7 +682,7 @@ mod tests {
         crate::codec::qcmp::spawn(qcmp_port, rx).unwrap();
         tokio::time::sleep(std::time::Duration::from_millis(250)).await;
         super::spawn(qcmp_port, config.clone()).unwrap();
-        tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
 
         let client = hyper::Client::new();
 
@@ -681,6 +697,6 @@ mod tests {
 
         let map = serde_json::from_slice::<serde_json::Map<_, _>>(&resp).unwrap();
 
-        assert!(map.contains_key("ABCD"));
+        assert!(dbg!(map).contains_key("ABCD"));
     }
 }
