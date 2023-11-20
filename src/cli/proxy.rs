@@ -120,8 +120,8 @@ impl Proxy {
 
         if !config.clusters.read().has_endpoints() && self.management_server.is_empty() {
             return Err(eyre::eyre!(
-                    "`quilkin proxy` requires at least one `to` address or `management_server` endpoint."
-                ));
+                "`quilkin proxy` requires at least one `to` address or `management_server` endpoint."
+            ));
         }
 
         let id = config.id.load();
@@ -461,8 +461,7 @@ impl DownstreamReceiveWorkerConfig {
         config: &Arc<Config>,
         sessions: &Arc<SessionPool>,
     ) -> Result<(), PipelineError> {
-        let endpoints: Vec<_> = config.clusters.read().endpoints().collect();
-        if endpoints.is_empty() {
+        if !config.clusters.read().has_endpoints() {
             return Err(PipelineError::NoUpstreamEndpoints);
         }
 
