@@ -27,7 +27,7 @@ use crate::{
     net::endpoint::metadata::Value,
     net::endpoint::{Endpoint, EndpointAddress},
     net::DualStackEpollSocket as DualStackLocalSocket,
-    ShutdownRx, ShutdownTx,
+    ShutdownKind, ShutdownRx, ShutdownTx,
 };
 
 static LOG_ONCE: Once = Once::new();

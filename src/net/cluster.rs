@@ -127,7 +127,6 @@ impl ClusterMap {
         self.0.iter()
     }
 
-    #[cfg(test)]
     pub fn endpoints(&self) -> impl Iterator<Item = Endpoint> + '_ {
         self.0
             .iter()

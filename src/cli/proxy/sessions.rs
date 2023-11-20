@@ -562,9 +562,8 @@ impl Loggable for Error {
 mod tests {
     use super::*;
     use crate::{
-        make_shutdown_channel,
         test::{available_addr, AddressType, TestHelper},
-        ShutdownKind, ShutdownTx,
+        ShutdownTx,
     };
     use std::sync::Arc;
 
