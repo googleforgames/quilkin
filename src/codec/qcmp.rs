@@ -72,7 +72,7 @@ impl Measurement for QcmpMeasurement {
     }
 }
 
-pub fn spawn(port: u16) {
+pub fn spawn(port: u16, mut shutdown_rx: crate::ShutdownRx) {
     uring_spawn!(async move {
         // Initialize a buffer for the UDP packet. We use the maximum size of a UDP
         // packet, which is the maximum value of 16 a bit integer.
@@ -80,7 +80,11 @@ pub fn spawn(port: u16) {
         let mut output_buf = Vec::new();
         let socket = DualStackLocalSocket::new(port).unwrap();
         loop {
-            match socket.recv_from(input_buf).await {
+            let result = tokio::select! {
+                result = socket.recv_from(input_buf) => result,
+                _ = shutdown_rx.changed() => return,
+            };
+            match result {
                 (Ok((size, source)), new_input_buf) => {
                     input_buf = new_input_buf;
                     let received_at = chrono::Utc::now().timestamp_nanos_opt().unwrap();
@@ -527,7 +531,8 @@ mod tests {
             .await
             .port();
 
-        super::spawn(port);
+        let (_tx, rx) = crate::make_shutdown_channel(Default::default());
+        super::spawn(port, rx);
         tokio::time::sleep(std::time::Duration::from_millis(150)).await;
 
         let node = QcmpMeasurement::new().unwrap();

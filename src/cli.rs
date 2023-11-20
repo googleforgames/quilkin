@@ -484,14 +484,16 @@ mod tests {
         };
 
         tokio::spawn(relay.drive(None));
+        tokio::time::sleep(Duration::from_millis(150)).await;
         tokio::spawn(control_plane.drive(None));
-        tokio::time::sleep(Duration::from_millis(50)).await;
+        tokio::time::sleep(Duration::from_millis(150)).await;
 
         let (tx, proxy_init) = tokio::sync::oneshot::channel();
 
         tokio::spawn(proxy.drive(Some(tx)));
 
         proxy_init.await.unwrap();
+        tokio::time::sleep(Duration::from_millis(150)).await;
 
         let socket = create_socket().await;
         let config = TestConfig::default();
@@ -500,6 +502,7 @@ mod tests {
         let server_port = server_socket.local_addr().unwrap().port();
         for _ in 0..5 {
             let token = Token::new();
+            tokio::time::sleep(Duration::from_millis(50)).await;
 
             {
                 tracing::info!(%token, "writing new config");

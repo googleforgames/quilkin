@@ -250,14 +250,11 @@ impl Proxy {
             buffer_pool,
         )?;
 
-        crate::codec::qcmp::spawn(self.qcmp_port);
+        crate::codec::qcmp::spawn(self.qcmp_port, shutdown_rx.clone());
+        crate::net::phoenix::spawn(self.qcmp_port, config.clone(), shutdown_rx.clone())?;
         for notification in worker_notifications {
             notification.notified().await;
         }
-
-        self.run_recv_from(&config, &sessions, shared_socket)?;
-        crate::codec::qcmp::spawn(self.qcmp_port, shutdown_rx.clone());
-        crate::net::phoenix::spawn(self.qcmp_port, config.clone())?;
 
         tracing::info!("Quilkin is ready");
         if let Some(initialized) = initialized {

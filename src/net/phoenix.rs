@@ -25,7 +25,11 @@ use dashmap::DashMap;
 
 use crate::config::IcaoCode;
 
-pub fn spawn(port: u16, config: Arc<crate::Config>) -> crate::Result<()> {
+pub fn spawn(
+    port: u16,
+    config: Arc<crate::Config>,
+    mut shutdown_rx: crate::ShutdownRx,
+) -> crate::Result<()> {
     use hyper::service::{make_service_fn, service_fn};
     use hyper::{Body, Response, Server as HyperServer, StatusCode};
 
@@ -78,6 +82,7 @@ pub fn spawn(port: u16, config: Arc<crate::Config>) -> crate::Result<()> {
 
                 loop {
                     tokio::select! {
+                        _ = shutdown_rx.changed() => return Ok(()),
                         result = config_watcher.changed() => result?,
                         result = phoenix_watcher.changed() => result?,
                     }
@@ -85,7 +90,7 @@ pub fn spawn(port: u16, config: Arc<crate::Config>) -> crate::Result<()> {
                     let nodes = phoenix.ordered_nodes_by_latency();
                     let mut new_json = serde_json::Map::default();
 
-                    for (identifier, latency) in dbg!(nodes) {
+                    for (identifier, latency) in nodes {
                         new_json.insert(identifier.to_string(), latency.into());
                     }
 
@@ -678,9 +683,10 @@ mod tests {
             },
         );
 
-        crate::codec::qcmp::spawn(qcmp_port);
+        let (_tx, rx) = crate::make_shutdown_channel(Default::default());
+        crate::codec::qcmp::spawn(qcmp_port, rx.clone());
         tokio::time::sleep(std::time::Duration::from_millis(150)).await;
-        super::spawn(qcmp_port, config.clone()).unwrap();
+        super::spawn(qcmp_port, config.clone(), rx).unwrap();
         tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
 
         let client = hyper::Client::new();
