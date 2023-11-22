@@ -47,18 +47,18 @@ impl Compressor {
             }
             Self::Lz4 => {
                 let size = block::get_maximum_output_size(contents.len()) + 3;
-                let mut encoded = vec![0; size];
+                let mut encoded = pool.alloc_sized(size);
 
-                let slen = size::write(&mut encoded, contents.len() as u16);
+                let slen = size::write(encoded.as_mut_slice(0..size), contents.len() as u16);
 
-                let compressed =
-                    block::compress_into(contents, &mut encoded[slen..]).map_err(|_e| {
-                        // This should be impossible
-                        io::Error::new(
-                            io::ErrorKind::OutOfMemory,
-                            "not enough space allocated for compressed output",
-                        )
-                    })?;
+                let compressed = block::compress_into(contents, encoded.as_mut_slice(slen..size))
+                    .map_err(|_e| {
+                    // This should be impossible
+                    io::Error::new(
+                        io::ErrorKind::OutOfMemory,
+                        "not enough space allocated for compressed output",
+                    )
+                })?;
 
                 encoded.truncate(compressed + slen);
                 encoded
@@ -83,10 +83,11 @@ impl Compressor {
             }
             Self::Lz4 => {
                 let (size, slen) = size::read(contents);
-                let mut decoded = vec![0; size as usize];
+                let mut decoded = pool.alloc_sized(size as _);
 
-                let decompressed = block::decompress_into(&contents[slen..], &mut decoded)
-                    .map_err(|_e| {
+                let decompressed =
+                    block::decompress_into(&contents[slen..], decoded.as_mut_slice(0..size as _))
+                        .map_err(|_e| {
                         // This should be impossible
                         io::Error::new(
                             io::ErrorKind::OutOfMemory,
