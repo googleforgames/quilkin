@@ -185,7 +185,7 @@
 </span><span class="kw">mod </span>tests {
     <span class="kw">use </span>std::net::Ipv4Addr;
 
-    <span class="kw">use </span><span class="kw">crate</span>::test::load_test_filters;
+    <span class="kw">use </span><span class="kw">crate</span>::test::{alloc_buffer, load_test_filters};
 
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
     <span class="kw">use </span><span class="kw">crate</span>::filters::{Filter, FilterError, FilterRegistry, ReadContext, WriteContext};
@@ -230,12 +230,12 @@
             .read(<span class="kw-2">&amp;mut </span>ReadContext::new(
                 endpoints.into(),
                 addr.clone(),
-                <span class="macro">vec!</span>[]
+                alloc_buffer([]),
             ))
             .<span class="kw">await
             </span>.is_ok());
         <span class="macro">assert!</span>(filter
-            .write(<span class="kw-2">&amp;mut </span>WriteContext::new(addr.clone(), addr, <span class="macro">vec!</span>[],))
+            .write(<span class="kw-2">&amp;mut </span>WriteContext::new(addr.clone(), addr, alloc_buffer([])))
             .<span class="kw">await
             </span>.is_ok());
     }

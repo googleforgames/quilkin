@@ -55,6 +55,10 @@
 <a href="#55" id="55">55</a>
 <a href="#56" id="56">56</a>
 <a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -75,9 +79,12 @@
 
 <span class="attr">#[cfg(doc)]
 </span><span class="kw">use </span><span class="kw">crate</span>::filters::Filter;
-<span class="kw">use </span><span class="kw">crate</span>::net::{
-    endpoint::{metadata::DynamicMetadata, Endpoint, EndpointAddress},
-    ClusterMap,
+<span class="kw">use crate</span>::{
+    net::{
+        endpoint::{metadata::DynamicMetadata, Endpoint, EndpointAddress},
+        ClusterMap,
+    },
+    pool::PoolBuffer,
 };
 
 <span class="doccomment">/// The input arguments to [`Filter::read`].
@@ -90,14 +97,15 @@
     <span class="doccomment">/// The source of the received packet.
     </span><span class="kw">pub </span>source: EndpointAddress,
     <span class="doccomment">/// Contents of the received packet.
-    </span><span class="kw">pub </span>contents: Vec&lt;u8&gt;,
+    </span><span class="kw">pub </span>contents: PoolBuffer,
     <span class="doccomment">/// Arbitrary values that can be passed from one filter to another.
     </span><span class="kw">pub </span>metadata: DynamicMetadata,
 }
 
 <span class="kw">impl </span>ReadContext {
     <span class="doccomment">/// Creates a new [`ReadContext`].
-    </span><span class="kw">pub fn </span>new(endpoints: Arc&lt;ClusterMap&gt;, source: EndpointAddress, contents: Vec&lt;u8&gt;) -&gt; <span class="self">Self </span>{
+    </span><span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>new(endpoints: Arc&lt;ClusterMap&gt;, source: EndpointAddress, contents: PoolBuffer) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             endpoints,
             destinations: Vec::new(),

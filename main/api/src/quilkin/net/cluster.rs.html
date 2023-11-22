@@ -352,6 +352,32 @@
 <a href="#352" id="352">352</a>
 <a href="#353" id="353">353</a>
 <a href="#354" id="354">354</a>
+<a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -368,7 +394,10 @@
  * limitations under the License.
  */
 
-</span><span class="kw">use </span>std::collections::BTreeSet;
+</span><span class="kw">use </span>std::{
+    collections::BTreeSet,
+    sync::atomic::{AtomicUsize, Ordering::Relaxed},
+};
 
 <span class="kw">use </span>dashmap::DashMap;
 <span class="kw">use </span>once_cell::sync::Lazy;
@@ -412,12 +441,13 @@
 }
 
 <span class="doccomment">/// Represents a full snapshot of all clusters.
-</span><span class="attr">#[derive(Clone, Default, Debug)]
-</span><span class="kw">pub struct </span>ClusterMap(DashMap&lt;<span class="prelude-ty">Option</span>&lt;Locality&gt;, BTreeSet&lt;Endpoint&gt;&gt;);
+</span><span class="attr">#[derive(Default, Debug)]
+</span><span class="kw">pub struct </span>ClusterMap {
+    map: DashMap&lt;<span class="prelude-ty">Option</span>&lt;Locality&gt;, BTreeSet&lt;Endpoint&gt;&gt;,
+    num_endpoints: AtomicUsize,
+}
 
 <span class="kw">type </span>DashMapRef&lt;<span class="lifetime">&#39;inner</span>&gt; = dashmap::mapref::one::Ref&lt;<span class="lifetime">&#39;inner</span>, <span class="prelude-ty">Option</span>&lt;Locality&gt;, BTreeSet&lt;Endpoint&gt;&gt;;
-<span class="kw">type </span>DashMapRefMut&lt;<span class="lifetime">&#39;inner</span>&gt; =
-    dashmap::mapref::one::RefMut&lt;<span class="lifetime">&#39;inner</span>, <span class="prelude-ty">Option</span>&lt;Locality&gt;, BTreeSet&lt;Endpoint&gt;&gt;;
 
 <span class="kw">impl </span>ClusterMap {
     <span class="kw">pub fn </span>new_default(cluster: BTreeSet&lt;Endpoint&gt;) -&gt; <span class="self">Self </span>{
@@ -426,50 +456,63 @@
         this
     }
 
-    <span class="kw">pub fn </span>insert(
+    <span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>insert(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         locality: <span class="prelude-ty">Option</span>&lt;Locality&gt;,
         cluster: BTreeSet&lt;Endpoint&gt;,
     ) -&gt; <span class="prelude-ty">Option</span>&lt;BTreeSet&lt;Endpoint&gt;&gt; {
-        <span class="self">self</span>.<span class="number">0</span>.insert(locality, cluster)
+        <span class="kw">let </span>new_len = cluster.len();
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(old) = <span class="self">self</span>.map.insert(locality, cluster) {
+            <span class="kw">let </span>old_len = old.len();
+            <span class="kw">if </span>new_len &gt;= old_len {
+                <span class="self">self</span>.num_endpoints.fetch_add(new_len - old_len, Relaxed);
+            } <span class="kw">else </span>{
+                <span class="self">self</span>.num_endpoints.fetch_sub(old_len - new_len, Relaxed);
+            }
+            <span class="prelude-val">Some</span>(old)
+        } <span class="kw">else </span>{
+            <span class="self">self</span>.num_endpoints.fetch_add(new_len, Relaxed);
+            <span class="prelude-val">None
+        </span>}
     }
 
-    <span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
-        <span class="self">self</span>.<span class="number">0</span>.len()
+    <span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="self">self</span>.map.len()
     }
 
-    <span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
-        <span class="self">self</span>.<span class="number">0</span>.is_empty()
+    <span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.map.is_empty()
     }
 
-    <span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;Locality&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;DashMapRef&gt; {
-        <span class="self">self</span>.<span class="number">0</span>.get(key)
+    <span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;Locality&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;DashMapRef&gt; {
+        <span class="self">self</span>.map.get(key)
     }
 
-    <span class="kw">pub fn </span>get_mut(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;Locality&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;DashMapRefMut&gt; {
-        <span class="self">self</span>.<span class="number">0</span>.get_mut(key)
-    }
-
-    <span class="kw">pub fn </span>get_default(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;DashMapRef&gt; {
+    <span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>get_default(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;DashMapRef&gt; {
         <span class="self">self</span>.get(<span class="kw-2">&amp;</span><span class="prelude-val">None</span>)
     }
 
-    <span class="kw">pub fn </span>get_default_mut(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;DashMapRefMut&gt; {
-        <span class="self">self</span>.get_mut(<span class="kw-2">&amp;</span><span class="prelude-val">None</span>)
-    }
-
-    <span class="kw">pub fn </span>insert_default(<span class="kw-2">&amp;</span><span class="self">self</span>, endpoints: BTreeSet&lt;Endpoint&gt;) {
+    <span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>insert_default(<span class="kw-2">&amp;</span><span class="self">self</span>, endpoints: BTreeSet&lt;Endpoint&gt;) {
         <span class="self">self</span>.insert(<span class="prelude-val">None</span>, endpoints);
     }
 
-    <span class="kw">pub fn </span>remove_endpoint(<span class="kw-2">&amp;</span><span class="self">self</span>, needle: <span class="kw-2">&amp;</span>Endpoint) -&gt; bool {
+    <span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>remove_endpoint(<span class="kw-2">&amp;</span><span class="self">self</span>, needle: <span class="kw-2">&amp;</span>Endpoint) -&gt; bool {
         <span class="self">self</span>.remove_endpoint_if(|endpoint| endpoint.address == needle.address)
     }
 
-    <span class="kw">pub fn </span>remove_endpoint_if(<span class="kw-2">&amp;</span><span class="self">self</span>, closure: <span class="kw">impl </span>Fn(<span class="kw-2">&amp;</span>Endpoint) -&gt; bool) -&gt; bool {
-        <span class="kw">for </span><span class="kw-2">mut </span>entry <span class="kw">in </span><span class="self">self</span>.<span class="number">0</span>.iter_mut() {
+    <span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>remove_endpoint_if(<span class="kw-2">&amp;</span><span class="self">self</span>, closure: <span class="kw">impl </span>Fn(<span class="kw-2">&amp;</span>Endpoint) -&gt; bool) -&gt; bool {
+        <span class="kw">for </span><span class="kw-2">mut </span>entry <span class="kw">in </span><span class="self">self</span>.map.iter_mut() {
             <span class="kw">let </span>set = entry.value_mut();
             <span class="kw">if let </span><span class="prelude-val">Some</span>(endpoint) = set.iter().find(|endpoint| (closure)(endpoint)).cloned() {
+                <span class="self">self</span>.num_endpoints.fetch_sub(<span class="number">1</span>, Relaxed);
                 <span class="kw">return </span>set.remove(<span class="kw-2">&amp;</span>endpoint);
             }
         }
@@ -477,14 +520,30 @@
         <span class="bool-val">false
     </span>}
 
-    <span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; dashmap::iter::Iter&lt;<span class="prelude-ty">Option</span>&lt;Locality&gt;, BTreeSet&lt;Endpoint&gt;&gt; {
-        <span class="self">self</span>.<span class="number">0</span>.iter()
+    <span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>replace(<span class="kw-2">&amp;</span><span class="self">self</span>, locality: <span class="prelude-ty">Option</span>&lt;Locality&gt;, endpoint: Endpoint) -&gt; <span class="prelude-ty">Option</span>&lt;Endpoint&gt; {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>set) = <span class="self">self</span>.map.get_mut(<span class="kw-2">&amp;</span>locality) {
+            <span class="kw">let </span>replaced = set.replace(endpoint);
+            <span class="kw">if </span>replaced.is_none() {
+                <span class="self">self</span>.num_endpoints.fetch_add(<span class="number">1</span>, Relaxed);
+            }
+
+            replaced
+        } <span class="kw">else </span>{
+            <span class="self">self</span>.insert(locality, [endpoint].into());
+            <span class="self">self</span>.num_endpoints.fetch_add(<span class="number">1</span>, Relaxed);
+            <span class="prelude-val">None
+        </span>}
     }
 
-    <span class="attr">#[cfg(test)]
-    </span><span class="kw">pub fn </span>endpoints(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl </span>Iterator&lt;Item = Endpoint&gt; + <span class="lifetime">&#39;_ </span>{
-        <span class="self">self</span>.<span class="number">0
-            </span>.iter()
+    <span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; dashmap::iter::Iter&lt;<span class="prelude-ty">Option</span>&lt;Locality&gt;, BTreeSet&lt;Endpoint&gt;&gt; {
+        <span class="self">self</span>.map.iter()
+    }
+
+    <span class="kw">pub fn </span>endpoints(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl </span>Iterator&lt;Item = Endpoint&gt; + <span class="lifetime">&#39;_ </span>{
+        <span class="self">self</span>.map
+            .iter()
             .flat_map(|entry| entry.value().iter().cloned().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;())
     }
 
@@ -512,37 +571,27 @@
         endpoints
     }
 
-    <span class="kw">pub fn </span>entry(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        key: <span class="prelude-ty">Option</span>&lt;Locality&gt;,
-    ) -&gt; dashmap::mapref::entry::Entry&lt;<span class="prelude-ty">Option</span>&lt;Locality&gt;, BTreeSet&lt;Endpoint&gt;&gt; {
-        <span class="self">self</span>.<span class="number">0</span>.entry(key)
+    <span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>num_of_endpoints(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="self">self</span>.num_endpoints.load(Relaxed)
     }
 
-    <span class="kw">pub fn </span>default_entry(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; DashMapRefMut {
-        <span class="self">self</span>.entry(<span class="prelude-val">None</span>).or_default()
-    }
-
-    <span class="kw">pub fn </span>num_of_endpoints(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
-        <span class="self">self</span>.<span class="number">0</span>.iter().map(|entry| entry.value().len()).sum()
-    }
-
-    <span class="kw">pub fn </span>has_endpoints(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+    <span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>has_endpoints(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
         <span class="self">self</span>.num_of_endpoints() != <span class="number">0
     </span>}
 
     <span class="kw">pub fn </span>update_unlocated_endpoints(<span class="kw-2">&amp;</span><span class="self">self</span>, locality: Locality) {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>((<span class="kw">_</span>, set)) = <span class="self">self</span>.<span class="number">0</span>.remove(<span class="kw-2">&amp;</span><span class="prelude-val">None</span>) {
-            <span class="self">self</span>.<span class="number">0</span>.insert(<span class="prelude-val">Some</span>(locality), set);
+        <span class="kw">if let </span><span class="prelude-val">Some</span>((<span class="kw">_</span>, set)) = <span class="self">self</span>.map.remove(<span class="kw-2">&amp;</span><span class="prelude-val">None</span>) {
+            <span class="self">self</span>.map.insert(<span class="prelude-val">Some</span>(locality), set);
         }
     }
+}
 
-    <span class="kw">pub fn </span>merge(<span class="kw-2">&amp;</span><span class="self">self</span>, locality: <span class="prelude-ty">Option</span>&lt;Locality&gt;, endpoints: BTreeSet&lt;Endpoint&gt;) {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>set) = <span class="self">self</span>.get_mut(<span class="kw-2">&amp;</span>locality) {
-            <span class="kw-2">*</span>set = endpoints;
-        } <span class="kw">else </span>{
-            <span class="self">self</span>.insert(locality, endpoints);
-        }
+<span class="kw">impl </span>Clone <span class="kw">for </span>ClusterMap {
+    <span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>map = <span class="self">self</span>.map.clone();
+        <span class="self">Self</span>::from(map)
     }
 }
 
@@ -605,12 +654,14 @@
             ));
         }
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span>(DashMap::from_iter(vec.into_iter().map(
+        <span class="kw">let </span>map = DashMap::from_iter(vec.into_iter().map(
             |EndpointWithLocality {
                  locality,
                  endpoints,
              }| (locality, endpoints),
-        ))))
+        ));
+
+        <span class="prelude-val">Ok</span>(<span class="self">Self</span>::from(map))
     }
 }
 
@@ -619,8 +670,8 @@
     <span class="kw">where
         </span>S: serde::Serializer,
     {
-        <span class="self">self</span>.<span class="number">0
-            </span>.iter()
+        <span class="self">self</span>.map
+            .iter()
             .map(|entry| EndpointWithLocality::from((entry.key().clone(), entry.value().clone())))
             .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
             .serialize(ser)
@@ -628,8 +679,9 @@
 }
 
 <span class="kw">impl </span>From&lt;DashMap&lt;<span class="prelude-ty">Option</span>&lt;Locality&gt;, BTreeSet&lt;Endpoint&gt;&gt;&gt; <span class="kw">for </span>ClusterMap {
-    <span class="kw">fn </span>from(value: DashMap&lt;<span class="prelude-ty">Option</span>&lt;Locality&gt;, BTreeSet&lt;Endpoint&gt;&gt;) -&gt; <span class="self">Self </span>{
-        <span class="self">Self</span>(value)
+    <span class="kw">fn </span>from(map: DashMap&lt;<span class="prelude-ty">Option</span>&lt;Locality&gt;, BTreeSet&lt;Endpoint&gt;&gt;) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>num_endpoints = AtomicUsize::new(map.iter().map(|kv| kv.value().len()).sum());
+        <span class="self">Self </span>{ map, num_endpoints }
     }
 }
 
@@ -676,7 +728,7 @@
         <span class="kw">let </span>cluster1 = ClusterMap::default();
 
         cluster1.insert(<span class="prelude-val">Some</span>(nl1.clone()), [endpoint.clone()].into());
-        cluster1.merge(<span class="prelude-val">Some</span>(de1.clone()), [endpoint.clone()].into());
+        cluster1.insert(<span class="prelude-val">Some</span>(de1.clone()), [endpoint.clone()].into());
 
         <span class="macro">assert_eq!</span>(cluster1.get(<span class="kw-2">&amp;</span><span class="prelude-val">Some</span>(nl1.clone())).unwrap().len(), <span class="number">1</span>);
         <span class="macro">assert!</span>(cluster1
@@ -691,7 +743,7 @@
 
         endpoint.address.port = <span class="number">8080</span>;
 
-        cluster1.merge(<span class="prelude-val">Some</span>(de1.clone()), [endpoint.clone()].into());
+        cluster1.insert(<span class="prelude-val">Some</span>(de1.clone()), [endpoint.clone()].into());
 
         <span class="macro">assert_eq!</span>(cluster1.get(<span class="kw-2">&amp;</span><span class="prelude-val">Some</span>(nl1.clone())).unwrap().len(), <span class="number">1</span>);
         <span class="macro">assert_eq!</span>(cluster1.get(<span class="kw-2">&amp;</span><span class="prelude-val">Some</span>(de1.clone())).unwrap().len(), <span class="number">1</span>);
@@ -700,7 +752,7 @@
             .unwrap()
             .contains(<span class="kw-2">&amp;</span>endpoint));
 
-        cluster1.merge(<span class="prelude-val">Some</span>(de1.clone()), &lt;<span class="kw">_</span>&gt;::default());
+        cluster1.insert(<span class="prelude-val">Some</span>(de1.clone()), &lt;<span class="kw">_</span>&gt;::default());
 
         <span class="macro">assert_eq!</span>(cluster1.get(<span class="kw-2">&amp;</span><span class="prelude-val">Some</span>(nl1.clone())).unwrap().len(), <span class="number">1</span>);
         <span class="macro">assert!</span>(cluster1.get(<span class="kw-2">&amp;</span><span class="prelude-val">Some</span>(de1.clone())).unwrap().is_empty());

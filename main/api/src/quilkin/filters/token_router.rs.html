@@ -275,6 +275,8 @@
 <a href="#275" id="275">275</a>
 <a href="#276" id="276">276</a>
 <a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -534,12 +536,14 @@
             },
         );
 
+        <span class="kw">let </span>pool = std::sync::Arc::new(<span class="kw">crate</span>::pool::BufferPool::new(<span class="number">1</span>, <span class="number">5</span>));
+
         <span class="kw">let </span>endpoints = <span class="kw">crate</span>::net::cluster::ClusterMap::default();
         endpoints.insert_default([endpoint1, endpoint2].into());
         ReadContext::new(
             endpoints.into(),
             <span class="string">&quot;127.0.0.1:100&quot;</span>.parse().unwrap(),
-            <span class="string">b&quot;hello&quot;</span>.to_vec(),
+            pool.alloc_slice(<span class="string">b&quot;hello&quot;</span>),
         )
     }
 
@@ -549,7 +553,7 @@
     {
         filter.read(<span class="kw-2">&amp;mut </span>ctx).<span class="kw">await</span>.unwrap();
 
-        <span class="macro">assert_eq!</span>(<span class="string">b&quot;hello&quot;</span>, <span class="kw-2">&amp;*</span>ctx.contents);
+        <span class="macro">assert_eq!</span>(<span class="string">b&quot;hello&quot;</span>, ctx.contents.as_ref());
     }
 }
 </code></pre></div></section></main></body></html>

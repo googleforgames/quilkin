@@ -398,6 +398,9 @@
 <a href="#398" id="398">398</a>
 <a href="#399" id="399">399</a>
 <a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -607,7 +610,10 @@
     <span class="kw">use </span>tokio::time;
 
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
-    <span class="kw">use crate</span>::{config::ConfigType, test::assert_write_no_change};
+    <span class="kw">use crate</span>::{
+        config::ConfigType,
+        test::{alloc_buffer, assert_write_no_change},
+    };
 
     <span class="kw">fn </span>rate_limiter(config: Config) -&gt; LocalRateLimit {
         LocalRateLimit::new(config).unwrap()
@@ -629,12 +635,12 @@
             .into(),
         );
 
-        <span class="kw">let </span><span class="kw-2">mut </span>context = ReadContext::new(endpoints.into(), address.clone(), <span class="macro">vec!</span>[<span class="number">9</span>]);
+        <span class="kw">let </span><span class="kw-2">mut </span>context = ReadContext::new(endpoints.into(), address.clone(), alloc_buffer([<span class="number">9</span>]));
         <span class="kw">let </span>result = r.read(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span>;
 
         <span class="kw">if </span>should_succeed {
             result.unwrap();
-            <span class="macro">assert_eq!</span>(context.contents, <span class="macro">vec!</span>[<span class="number">9</span>]);
+            <span class="macro">assert_eq!</span>(<span class="kw-2">&amp;*</span>context.contents, [<span class="number">9</span>]);
         } <span class="kw">else </span>{
             <span class="macro">assert!</span>(result.is_err());
         }

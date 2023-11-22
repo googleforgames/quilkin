@@ -50,9 +50,13 @@
 <a href="#50" id="50">50</a>
 <a href="#51" id="51">51</a>
 <a href="#52" id="52">52</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::net::endpoint::metadata::Value;
+<a href="#53" id="53">53</a>
+<a href="#54" id="54">54</a>
+</pre></div><pre class="rust"><code><span class="kw">use crate</span>::{net::endpoint::metadata::Value, pool::PoolBuffer};
+<span class="kw">use </span>bytes::Bytes;
 
 <span class="doccomment">/// Returns whether the capture size is bigger than the packet size.
+</span><span class="attr">#[inline]
 </span><span class="kw">fn </span>is_valid_size(contents: <span class="kw-2">&amp;</span>[u8], size: u32) -&gt; bool {
     contents.len() &gt;= size <span class="kw">as </span>usize
 }
@@ -68,12 +72,12 @@
 }
 
 <span class="kw">impl </span><span class="kw">super</span>::CaptureStrategy <span class="kw">for </span>Prefix {
-    <span class="kw">fn </span>capture(<span class="kw-2">&amp;</span><span class="self">self</span>, contents: <span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;Value&gt; {
+    <span class="kw">fn </span>capture(<span class="kw-2">&amp;</span><span class="self">self</span>, contents: <span class="kw-2">&amp;mut </span>PoolBuffer) -&gt; <span class="prelude-ty">Option</span>&lt;Value&gt; {
         is_valid_size(contents, <span class="self">self</span>.size).then(|| {
             <span class="kw">if </span><span class="self">self</span>.remove {
-                Value::Bytes(contents.drain(..<span class="self">self</span>.size <span class="kw">as </span>usize).collect())
+                Value::Bytes(Bytes::copy_from_slice(contents.split_to(<span class="self">self</span>.size <span class="kw">as _</span>)))
             } <span class="kw">else </span>{
-                Value::Bytes(contents.iter().take(<span class="self">self</span>.size <span class="kw">as </span>usize).copied().collect())
+                Value::Bytes(Bytes::copy_from_slice(<span class="kw-2">&amp;</span>contents[..<span class="self">self</span>.size <span class="kw">as _</span>]))
             }
         })
     }
@@ -90,14 +94,14 @@
 }
 
 <span class="kw">impl </span><span class="kw">super</span>::CaptureStrategy <span class="kw">for </span>Suffix {
-    <span class="kw">fn </span>capture(<span class="kw-2">&amp;</span><span class="self">self</span>, contents: <span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;Value&gt; {
+    <span class="kw">fn </span>capture(<span class="kw-2">&amp;</span><span class="self">self</span>, contents: <span class="kw-2">&amp;mut </span>PoolBuffer) -&gt; <span class="prelude-ty">Option</span>&lt;Value&gt; {
         is_valid_size(contents, <span class="self">self</span>.size).then(|| {
             <span class="kw">let </span>index = contents.len() - <span class="self">self</span>.size <span class="kw">as </span>usize;
 
             <span class="kw">if </span><span class="self">self</span>.remove {
-                Value::Bytes(contents.split_off(index).into())
+                Value::Bytes(Bytes::copy_from_slice(contents.split_off(index)))
             } <span class="kw">else </span>{
-                Value::Bytes(contents.iter().skip(index).copied().collect())
+                Value::Bytes(Bytes::copy_from_slice(<span class="kw-2">&amp;</span>contents[index..]))
             }
         })
     }

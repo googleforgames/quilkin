@@ -211,6 +211,9 @@
 <a href="#211" id="211">211</a>
 <a href="#212" id="212">212</a>
 <a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -375,7 +378,10 @@
 </span><span class="kw">mod </span>tests {
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
-    <span class="kw">use </span><span class="kw">crate</span>::filters::capture::{<span class="self">self</span>, Capture};
+    <span class="kw">use crate</span>::{
+        filters::capture::{<span class="self">self</span>, Capture},
+        test::alloc_buffer,
+    };
 
     <span class="attr">#[tokio::test]
     </span><span class="kw">async fn </span>basic() {
@@ -384,7 +390,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>ctx = ReadContext::new(
             &lt;<span class="kw">_</span>&gt;::default(),
             (std::net::Ipv4Addr::UNSPECIFIED, <span class="number">0</span>).into(),
-            <span class="string">b&quot;hello&quot;</span>.to_vec(),
+            alloc_buffer(<span class="string">b&quot;hello&quot;</span>),
         );
         ctx.metadata.insert(
             TIMESTAMP_KEY.into(),
@@ -415,7 +421,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>ctx = ReadContext::new(
             &lt;<span class="kw">_</span>&gt;::default(),
             source.into(),
-            [<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">99</span>, <span class="number">81</span>, <span class="number">55</span>, <span class="number">181</span>].to_vec(),
+            alloc_buffer([<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">99</span>, <span class="number">81</span>, <span class="number">55</span>, <span class="number">181</span>]),
         );
 
         capture.read(<span class="kw-2">&amp;mut </span>ctx).<span class="kw">await</span>.unwrap();

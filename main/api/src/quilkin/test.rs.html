@@ -425,6 +425,30 @@
 <a href="#425" id="425">425</a>
 <a href="#426" id="426">426</a>
 <a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -453,7 +477,8 @@
     filters::{prelude::<span class="kw-2">*</span>, FilterRegistry},
     net::endpoint::metadata::Value,
     net::endpoint::{Endpoint, EndpointAddress},
-    net::DualStackLocalSocket,
+    net::DualStackEpollSocket <span class="kw">as </span>DualStackLocalSocket,
+    pool::BufferPool,
     ShutdownKind, ShutdownRx, ShutdownTx,
 };
 
@@ -516,7 +541,7 @@
             .or_insert_with(|| Value::String(<span class="string">&quot;receive&quot;</span>.into()));
 
         ctx.contents
-            .append(<span class="kw-2">&amp;mut </span><span class="macro">format!</span>(<span class="string">&quot;:odr:{}&quot;</span>, ctx.source).into_bytes());
+            .extend_from_slice(<span class="macro">format!</span>(<span class="string">&quot;:odr:{}&quot;</span>, ctx.source).as_bytes());
         <span class="prelude-val">Ok</span>(())
     }
 
@@ -528,7 +553,7 @@
             .or_insert_with(|| Value::String(<span class="string">&quot;receive&quot;</span>.to_string()));
 
         ctx.contents
-            .append(<span class="kw-2">&amp;mut </span><span class="macro">format!</span>(<span class="string">&quot;:our:{}:{}&quot;</span>, ctx.source, ctx.dest).into_bytes());
+            .extend_from_slice(<span class="macro">format!</span>(<span class="string">&quot;:our:{}:{}&quot;</span>, ctx.source, ctx.dest).as_bytes());
         <span class="prelude-val">Ok</span>(())
     }
 }
@@ -691,16 +716,12 @@
         addr.into()
     }
 
-    <span class="kw">pub fn </span>run_server_with_config(<span class="kw-2">&amp;mut </span><span class="self">self</span>, config: Arc&lt;Config&gt;) {
-        <span class="self">self</span>.run_server(config, <span class="kw">crate</span>::cli::Proxy::default(), <span class="prelude-val">None</span>)
-    }
-
-    <span class="kw">pub fn </span>run_server(
+    <span class="kw">pub async fn </span>run_server(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         config: Arc&lt;Config&gt;,
-        server: <span class="kw">crate</span>::cli::Proxy,
+        server: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::cli::Proxy&gt;,
         with_admin: <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Option</span>&lt;SocketAddr&gt;&gt;,
-    ) {
+    ) -&gt; u16 {
         <span class="kw">let </span>(shutdown_tx, shutdown_rx) = <span class="kw">crate</span>::make_shutdown_channel(<span class="kw">crate</span>::ShutdownKind::Testing);
         <span class="self">self</span>.server_shutdown_tx.push(<span class="prelude-val">Some</span>(shutdown_tx));
         <span class="kw">let </span>mode = <span class="kw">crate</span>::cli::Admin::Proxy(&lt;<span class="kw">_</span>&gt;::default());
@@ -709,9 +730,28 @@
             mode.server(config.clone(), address);
         }
 
-        tokio::spawn(<span class="kw">async move </span>{
-            server.run(config, mode, shutdown_rx).<span class="kw">await</span>.unwrap();
+        <span class="kw">let </span><span class="kw-2">mut </span>server = server.unwrap_or_else(|| {
+            <span class="kw">crate</span>::cli::Proxy {
+                <span class="comment">// Use an ephemeral port unless the test specifies otherwise
+                </span>port: <span class="number">0</span>,
+                ..Default::default()
+            }
         });
+
+        <span class="kw">if </span>server.workers.is_none() {
+            server.workers = <span class="prelude-val">Some</span>(<span class="number">1</span>.try_into().unwrap());
+        }
+
+        <span class="kw">let </span>(prox_tx, prox_rx) = tokio::sync::oneshot::channel();
+
+        tokio::spawn(<span class="kw">async move </span>{
+            server
+                .run(config, mode, <span class="prelude-val">Some</span>(prox_tx), shutdown_rx)
+                .<span class="kw">await
+                </span>.unwrap();
+        });
+
+        prox_rx.<span class="kw">await</span>.unwrap()
     }
 
     <span class="doccomment">/// Returns a receiver subscribed to the helper&#39;s shutdown event.
@@ -729,6 +769,14 @@
     }
 }
 
+<span class="kw">pub static </span>BUFFER_POOL: once_cell::sync::Lazy&lt;Arc&lt;BufferPool&gt;&gt; =
+    once_cell::sync::Lazy::new(|| Arc::new(BufferPool::default()));
+
+<span class="attr">#[inline]
+</span><span class="kw">pub fn </span>alloc_buffer(data: <span class="kw">impl </span>AsRef&lt;[u8]&gt;) -&gt; <span class="kw">crate</span>::pool::PoolBuffer {
+    BUFFER_POOL.clone().alloc_slice(data.as_ref())
+}
+
 <span class="doccomment">/// assert that read makes no changes
 </span><span class="kw">pub async fn </span>assert_filter_read_no_change&lt;F&gt;(filter: <span class="kw-2">&amp;</span>F)
 <span class="kw">where
@@ -739,8 +787,8 @@
         </span>.parse::&lt;Endpoint&gt;()
         .unwrap()]));
     <span class="kw">let </span>source = <span class="string">&quot;127.0.0.1:90&quot;</span>.parse().unwrap();
-    <span class="kw">let </span>contents = <span class="string">&quot;hello&quot;</span>.to_string().into_bytes();
-    <span class="kw">let </span><span class="kw-2">mut </span>context = ReadContext::new(endpoints.clone(), source, contents.clone());
+    <span class="kw">let </span>contents = <span class="string">b&quot;hello&quot;</span>;
+    <span class="kw">let </span><span class="kw-2">mut </span>context = ReadContext::new(endpoints.clone(), source, alloc_buffer(contents));
 
     filter.read(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span>.unwrap();
     <span class="macro">assert!</span>(context.destinations.is_empty());
@@ -754,11 +802,11 @@
     </span>F: Filter,
 {
     <span class="kw">let </span>endpoint = <span class="string">&quot;127.0.0.1:90&quot;</span>.parse::&lt;Endpoint&gt;().unwrap();
-    <span class="kw">let </span>contents = <span class="string">&quot;hello&quot;</span>.to_string().into_bytes();
+    <span class="kw">let </span>contents = <span class="string">b&quot;hello&quot;</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>context = WriteContext::new(
         endpoint.address,
         <span class="string">&quot;127.0.0.1:70&quot;</span>.parse().unwrap(),
-        contents.clone(),
+        alloc_buffer(contents),
     );
 
     filter.write(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span>.unwrap();

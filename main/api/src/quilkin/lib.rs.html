@@ -82,6 +82,10 @@
 <a href="#82" id="82">82</a>
 <a href="#83" id="83">83</a>
 <a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -102,12 +106,16 @@
 
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>collections;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>metrics;
+<span class="kw">mod </span>pool;
+
+<span class="comment">// Above other modules for thr `uring_spawn` macro.
+</span><span class="attr">#[macro_use]
+</span><span class="kw">pub mod </span>net;
 
 <span class="kw">pub mod </span>cli;
 <span class="kw">pub mod </span>codec;
 <span class="kw">pub mod </span>config;
 <span class="kw">pub mod </span>filters;
-<span class="kw">pub mod </span>net;
 
 <span class="attr">#[doc(hidden)]
 </span><span class="kw">pub mod </span>test;

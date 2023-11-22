@@ -30,7 +30,7 @@
 <a href="#30" id="30">30</a>
 <a href="#31" id="31">31</a>
 <a href="#32" id="32">32</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::net::endpoint::metadata::Value;
+</pre></div><pre class="rust"><code><span class="kw">use crate</span>::{net::endpoint::metadata::Value, pool::PoolBuffer};
 
 <span class="doccomment">/// Capture from the start of the packet.
 </span><span class="attr">#[derive(serde::Serialize, serde::Deserialize, Debug, schemars::JsonSchema)]
@@ -42,7 +42,7 @@
 }
 
 <span class="kw">impl </span><span class="kw">super</span>::CaptureStrategy <span class="kw">for </span>Regex {
-    <span class="kw">fn </span>capture(<span class="kw-2">&amp;</span><span class="self">self</span>, contents: <span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;Value&gt; {
+    <span class="kw">fn </span>capture(<span class="kw-2">&amp;</span><span class="self">self</span>, contents: <span class="kw-2">&amp;mut </span>PoolBuffer) -&gt; <span class="prelude-ty">Option</span>&lt;Value&gt; {
         <span class="kw">let </span>matches = <span class="self">self
             </span>.pattern
             .find_iter(contents)

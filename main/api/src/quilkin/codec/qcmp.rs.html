@@ -458,6 +458,7 @@
 <a href="#458" id="458">458</a>
 <a href="#459" id="459">459</a>
 <a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2023 Google LLC
  *
@@ -477,7 +478,6 @@
 </span><span class="doccomment">//! Logic for parsing and generating Quilkin Control Message Protocol (QCMP) messages.
 
 </span><span class="kw">use </span>nom::bytes::complete;
-<span class="kw">use </span>tracing::Instrument;
 
 <span class="kw">use </span><span class="kw">crate</span>::net::DualStackLocalSocket;
 
@@ -493,58 +493,60 @@
 <span class="kw">type </span><span class="prelude-ty">Result</span>&lt;T, E = Error&gt; = std::result::Result&lt;T, E&gt;;
 
 <span class="kw">pub async fn </span>spawn(port: u16) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
-    <span class="kw">let </span>socket = DualStackLocalSocket::new(port)<span class="question-mark">?</span>;
-    <span class="kw">let </span>v4_addr = socket.local_ipv4_addr()<span class="question-mark">?</span>;
-    <span class="kw">let </span>v6_addr = socket.local_ipv6_addr()<span class="question-mark">?</span>;
-    tokio::spawn(
-        <span class="kw">async move </span>{
-            <span class="comment">// Initialize a buffer for the UDP packet. We use the maximum size of a UDP
-            // packet, which is the maximum value of 16 a bit integer.
-            </span><span class="kw">let </span><span class="kw-2">mut </span>buf = <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">1 </span>&lt;&lt; <span class="number">16</span>];
-            <span class="kw">let </span><span class="kw-2">mut </span>output_buf = Vec::new();
-
-            <span class="kw">loop </span>{
-                <span class="macro">tracing::debug!</span>(<span class="string">&quot;awaiting qcmp packets&quot;</span>);
-
-                <span class="kw">match </span>socket.recv_from(<span class="kw-2">&amp;mut </span>buf).<span class="kw">await </span>{
-                    <span class="prelude-val">Ok</span>((size, source)) =&gt; {
-                        <span class="kw">let </span>received_at = chrono::Utc::now().timestamp_nanos_opt().unwrap();
-                        <span class="kw">let </span>command = <span class="kw">match </span>Protocol::parse(<span class="kw-2">&amp;</span>buf[..size]) {
-                            <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(command)) =&gt; command,
-                            <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; {
-                                <span class="macro">tracing::debug!</span>(<span class="string">&quot;rejected non-qcmp packet&quot;</span>);
-                                <span class="kw">continue</span>;
-                            }
-                            <span class="prelude-val">Err</span>(error) =&gt; {
-                                <span class="macro">tracing::debug!</span>(%error, <span class="string">&quot;rejected malformed packet&quot;</span>);
-                                <span class="kw">continue</span>;
-                            }
-                        };
-
-                        <span class="kw">let </span>Protocol::Ping {
-                            client_timestamp,
-                            nonce,
-                        } = command
-                        <span class="kw">else </span>{
-                            <span class="macro">tracing::warn!</span>(<span class="string">&quot;rejected unsupported QCMP packet&quot;</span>);
+    <span class="macro">uring_spawn!</span>(<span class="kw">async move </span>{
+        <span class="comment">// Initialize a buffer for the UDP packet. We use the maximum size of a UDP
+        // packet, which is the maximum value of 16 a bit integer.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>input_buf = <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">1 </span>&lt;&lt; <span class="number">16</span>];
+        <span class="kw">let </span><span class="kw-2">mut </span>output_buf = Vec::new();
+        <span class="kw">let </span>socket = DualStackLocalSocket::new(port).unwrap();
+        <span class="kw">loop </span>{
+            <span class="kw">match </span>socket.recv_from(input_buf).<span class="kw">await </span>{
+                (<span class="prelude-val">Ok</span>((size, source)), new_input_buf) =&gt; {
+                    input_buf = new_input_buf;
+                    <span class="kw">let </span>received_at = chrono::Utc::now().timestamp_nanos_opt().unwrap();
+                    <span class="kw">let </span>command = <span class="kw">match </span>Protocol::parse(<span class="kw-2">&amp;</span>input_buf[..size]) {
+                        <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(command)) =&gt; command,
+                        <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; {
+                            <span class="macro">tracing::debug!</span>(<span class="string">&quot;rejected non-qcmp packet&quot;</span>);
                             <span class="kw">continue</span>;
-                        };
-
-                        Protocol::ping_reply(nonce, client_timestamp, received_at)
-                            .encode_into_buffer(<span class="kw-2">&amp;mut </span>output_buf);
-
-                        <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = socket.send_to(<span class="kw-2">&amp;</span>output_buf, <span class="kw-2">&amp;</span>source).<span class="kw">await </span>{
-                            <span class="macro">tracing::warn!</span>(%error, <span class="string">&quot;error responding to ping&quot;</span>);
                         }
+                        <span class="prelude-val">Err</span>(error) =&gt; {
+                            <span class="macro">tracing::debug!</span>(%error, <span class="string">&quot;rejected malformed packet&quot;</span>);
+                            <span class="kw">continue</span>;
+                        }
+                    };
 
-                        output_buf.clear();
-                    }
-                    <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">tracing::warn!</span>(%error, <span class="string">&quot;error receiving packet&quot;</span>),
+                    <span class="kw">let </span>Protocol::Ping {
+                        client_timestamp,
+                        nonce,
+                    } = command
+                    <span class="kw">else </span>{
+                        <span class="macro">tracing::warn!</span>(<span class="string">&quot;rejected unsupported QCMP packet&quot;</span>);
+                        <span class="kw">continue</span>;
+                    };
+
+                    Protocol::ping_reply(nonce, client_timestamp, received_at)
+                        .encode_into_buffer(<span class="kw-2">&amp;mut </span>output_buf);
+
+                    <span class="kw">let </span><span class="kw-2">mut </span>new_output_buf = <span class="kw">match </span>socket.send_to(output_buf, source).<span class="kw">await </span>{
+                        (<span class="prelude-val">Ok</span>(<span class="kw">_</span>), buf) =&gt; buf,
+                        (<span class="prelude-val">Err</span>(error), buf) =&gt; {
+                            <span class="macro">tracing::warn!</span>(%error, <span class="string">&quot;error responding to ping&quot;</span>);
+                            buf
+                        }
+                    };
+
+                    new_output_buf.clear();
+                    output_buf = new_output_buf;
                 }
-            }
+                (<span class="prelude-val">Err</span>(error), new_input_buf) =&gt; {
+                    <span class="macro">tracing::warn!</span>(%error, <span class="string">&quot;error receiving packet&quot;</span>);
+                    input_buf = new_input_buf
+                }
+            };
         }
-        .instrument(<span class="macro">tracing::debug_span!</span>(<span class="string">&quot;qcmp_task&quot;</span>, %v4_addr, %v6_addr)),
-    );
+    });
+
     <span class="prelude-val">Ok</span>(())
 }
 

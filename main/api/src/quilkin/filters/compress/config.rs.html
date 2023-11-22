@@ -150,8 +150,6 @@
 <a href="#150" id="150">150</a>
 <a href="#151" id="151">151</a>
 <a href="#152" id="152">152</a>
-<a href="#153" id="153">153</a>
-<a href="#154" id="154">154</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -171,7 +169,7 @@
 </span><span class="kw">use </span>schemars::JsonSchema;
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 
-<span class="kw">use </span><span class="kw">super</span>::compressor::{Compressor, Snappy};
+<span class="kw">use </span><span class="kw">super</span>::compressor::Compressor;
 <span class="kw">use </span><span class="kw">super</span>::quilkin::filters::compress::v1alpha1::{
     compress::{Action <span class="kw">as </span>ProtoAction, ActionValue, Mode <span class="kw">as </span>ProtoMode, ModeValue},
     Compress <span class="kw">as </span>ProtoConfig,
@@ -189,10 +187,8 @@
 }
 
 <span class="kw">impl </span>Mode {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>as_compressor(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Box&lt;<span class="kw">dyn </span>Compressor + Send + Sync&gt; {
-        <span class="kw">match </span><span class="self">self </span>{
-            <span class="self">Self</span>::Snappy =&gt; Box::from(Snappy {}),
-        }
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>as_compressor(<span class="self">self</span>) -&gt; Compressor {
+        <span class="self">self</span>.into()
     }
 }
 

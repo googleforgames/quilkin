@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["to_canonical"],"mod":["cluster","endpoint"],"struct":["DualStackLocalSocket"]};
+window.SIDEBAR_ITEMS = {"fn":["to_canonical"],"mod":["cluster","endpoint"],"struct":["DualStackEpollSocket","DualStackLocalSocket"]};

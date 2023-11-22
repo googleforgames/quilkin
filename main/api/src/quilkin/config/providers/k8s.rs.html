@@ -174,9 +174,6 @@
 <a href="#174" id="174">174</a>
 <a href="#175" id="175">175</a>
 <a href="#176" id="176">176</a>
-<a href="#177" id="177">177</a>
-<a href="#178" id="178">178</a>
-<a href="#179" id="179">179</a>
 </pre></div><pre class="rust"><code><span class="kw">pub mod </span>agones;
 
 <span class="kw">use </span>std::{collections::BTreeSet, sync::Arc};
@@ -300,10 +297,7 @@
                     };
                     <span class="macro">tracing::debug!</span>(endpoint=%serde_json::to_value(<span class="kw-2">&amp;</span>endpoint).unwrap(), <span class="string">&quot;Adding endpoint&quot;</span>);
                     config.clusters.write()
-                        .entry(locality.clone())
-                        .or_default()
-                        .value_mut()
-                        .replace(endpoint);
+                        .replace(locality.clone(), endpoint);
                 }
 
                 Event::Restarted(servers) =&gt; {
@@ -328,7 +322,7 @@
                         <span class="string">&quot;Restarting with endpoints&quot;
                     </span>);
 
-                    config.clusters.write().merge(locality.clone(), servers);
+                    config.clusters.write().insert(locality.clone(), servers);
                 }
 
                 Event::Deleted(server) =&gt; {

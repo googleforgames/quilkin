@@ -260,6 +260,9 @@
 <a href="#260" id="260">260</a>
 <a href="#261" id="261">261</a>
 <a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC All Rights Reserved.
  *
@@ -323,7 +326,10 @@
     <span class="kw">use </span>std::{collections::HashSet, net::Ipv4Addr};
 
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
-    <span class="kw">use </span><span class="kw">crate</span>::net::endpoint::{Endpoint, EndpointAddress};
+    <span class="kw">use crate</span>::{
+        net::endpoint::{Endpoint, EndpointAddress},
+        test::alloc_buffer,
+    };
 
     <span class="kw">async fn </span>get_response_addresses(
         filter: <span class="kw-2">&amp;</span><span class="kw">dyn </span>Filter,
@@ -336,7 +342,7 @@
             .map(Endpoint::new)
             .collect::&lt;std::collections::BTreeSet&lt;<span class="kw">_</span>&gt;&gt;();
         <span class="kw">let </span>endpoints = <span class="kw">crate</span>::net::cluster::ClusterMap::new_default(endpoints);
-        <span class="kw">let </span><span class="kw-2">mut </span>context = ReadContext::new(endpoints.into(), source, <span class="macro">vec!</span>[]);
+        <span class="kw">let </span><span class="kw-2">mut </span>context = ReadContext::new(endpoints.into(), source, alloc_buffer([]));
 
         filter.read(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span>.unwrap();
 

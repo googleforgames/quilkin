@@ -427,6 +427,11 @@
 <a href="#427" id="427">427</a>
 <a href="#428" id="428">428</a>
 <a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -561,7 +566,7 @@
     <span class="doccomment">/// Drives the main quilkin application lifecycle using the command line
     /// arguments.
     </span><span class="attr">#[tracing::instrument(skip_all)]
-    </span><span class="kw">pub async fn </span>drive(<span class="self">self</span>) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
+    </span><span class="kw">pub async fn </span>drive(<span class="self">self</span>, tx: <span class="prelude-ty">Option</span>&lt;tokio::sync::oneshot::Sender&lt;u16&gt;&gt;) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
         <span class="kw">if </span>!<span class="self">self</span>.quiet {
             <span class="kw">let </span>env_filter = tracing_subscriber::EnvFilter::builder()
                 .with_default_directive(tracing_subscriber::filter::LevelFilter::INFO.into())
@@ -636,7 +641,7 @@
             Commands::Agent(agent) =&gt; agent.run(config.clone(), mode, shutdown_rx.clone()).<span class="kw">await</span>,
             Commands::Proxy(runner) =&gt; {
                 runner
-                    .run(config.clone(), mode.clone(), shutdown_rx.clone())
+                    .run(config.clone(), mode.clone(), tx, shutdown_rx.clone())
                     .<span class="kw">await
             </span>}
             Commands::Manage(manager) =&gt; {
@@ -723,7 +728,7 @@
 
         <span class="kw">let </span>endpoints_file = tempfile::NamedTempFile::new().unwrap();
         <span class="kw">let </span>config = Config::default();
-        <span class="kw">let </span>server_port = server_socket.local_ipv4_addr().unwrap().port();
+        <span class="kw">let </span>server_port = server_socket.local_addr().unwrap().port();
         std::fs::write(endpoints_file.path(), {
             config.clusters.write().insert_default(
                 [Endpoint::with_metadata(
@@ -794,20 +799,25 @@
             log_format: LogFormats::default(),
         };
 
-        tokio::spawn(relay.drive());
-        tokio::spawn(control_plane.drive());
+        tokio::spawn(relay.drive(<span class="prelude-val">None</span>));
+        tokio::spawn(control_plane.drive(<span class="prelude-val">None</span>));
         tokio::time::sleep(Duration::from_millis(<span class="number">50</span>)).<span class="kw">await</span>;
-        tokio::spawn(proxy.drive());
-        tokio::time::sleep(Duration::from_millis(<span class="number">50</span>)).<span class="kw">await</span>;
+
+        <span class="kw">let </span>(tx, proxy_init) = tokio::sync::oneshot::channel();
+
+        tokio::spawn(proxy.drive(<span class="prelude-val">Some</span>(tx)));
+
+        proxy_init.<span class="kw">await</span>.unwrap();
+
         <span class="kw">let </span>socket = create_socket().<span class="kw">await</span>;
         <span class="kw">let </span>config = Config::default();
         <span class="kw">let </span>proxy_address: SocketAddr = (std::net::Ipv4Addr::LOCALHOST, <span class="number">7777</span>).into();
 
+        <span class="kw">let </span>server_port = server_socket.local_addr().unwrap().port();
         <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">5 </span>{
             <span class="kw">let </span>token = random_three_characters();
 
             <span class="macro">tracing::info!</span>(<span class="question-mark">?</span>token, <span class="string">&quot;writing new config&quot;</span>);
-            <span class="kw">let </span>server_port = server_socket.local_ipv4_addr().unwrap().port();
             std::fs::write(endpoints_file.path(), {
                 config.clusters.write().insert_default(
                     [Endpoint::with_metadata(

@@ -133,10 +133,10 @@
     <span class="kw">async fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="kw">match </span><span class="self">self</span>.on_read {
             Strategy::Append =&gt; {
-                ctx.contents.extend(<span class="self">self</span>.bytes.iter());
+                ctx.contents.extend_from_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.bytes);
             }
             Strategy::Prepend =&gt; {
-                ctx.contents.splice(..<span class="number">0</span>, <span class="self">self</span>.bytes.iter().cloned());
+                ctx.contents.prepend_from_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.bytes);
             }
             Strategy::DoNothing =&gt; {}
         }
@@ -147,10 +147,10 @@
     <span class="kw">async fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="kw">match </span><span class="self">self</span>.on_write {
             Strategy::Append =&gt; {
-                ctx.contents.extend(<span class="self">self</span>.bytes.iter());
+                ctx.contents.extend_from_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.bytes);
             }
             Strategy::Prepend =&gt; {
-                ctx.contents.splice(..<span class="number">0</span>, <span class="self">self</span>.bytes.iter().cloned());
+                ctx.contents.prepend_from_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.bytes);
             }
             Strategy::DoNothing =&gt; {}
         }

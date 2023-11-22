@@ -630,7 +630,7 @@
             <span class="kw">let </span>value: ClusterMap = serde_json::from_value(value)<span class="question-mark">?</span>;
             <span class="self">self</span>.clusters.modify(|clusters| {
                 <span class="kw">for </span>cluster <span class="kw">in </span>value.iter() {
-                    clusters.merge(cluster.key().clone(), cluster.value().clone());
+                    clusters.insert(cluster.key().clone(), cluster.value().clone());
                 }
 
                 <span class="kw">if let </span><span class="prelude-val">Some</span>(locality) = locality {
@@ -707,7 +707,7 @@
                 <span class="self">self</span>.filters.store(Arc::new(chain.try_into()<span class="question-mark">?</span>));
             }
             Resource::Cluster(cluster) =&gt; {
-                <span class="self">self</span>.clusters.write().merge(
+                <span class="self">self</span>.clusters.write().insert(
                     cluster.locality.clone().map(From::from),
                     cluster
                         .endpoints

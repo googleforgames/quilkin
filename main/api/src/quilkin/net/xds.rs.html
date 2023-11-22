@@ -373,6 +373,9 @@
 <a href="#373" id="373">373</a>
 <a href="#374" id="374">374</a>
 <a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -576,7 +579,7 @@
         <span class="kw">let </span>proxy_admin = <span class="kw">crate</span>::cli::Admin::Proxy(&lt;<span class="kw">_</span>&gt;::default());
         tokio::spawn(<span class="kw">async move </span>{
             client_proxy
-                .run(client_config, proxy_admin, shutdown_rx)
+                .run(client_config, proxy_admin, <span class="prelude-val">None</span>, shutdown_rx)
                 .<span class="kw">await
         </span>});
         tokio::time::sleep(std::time::Duration::from_millis(<span class="number">50</span>)).<span class="kw">await</span>;
@@ -692,9 +695,12 @@
                 socket.local_addr().unwrap().into();
 
             config.clusters.modify(|clusters| {
-                <span class="kw">let </span><span class="kw-2">mut </span>cluster = clusters.default_entry();
-                cluster.clear();
-                cluster.insert(Endpoint::new(local_addr.clone()));
+                clusters.insert(
+                    <span class="prelude-val">None</span>,
+                    <span class="prelude-val">Some</span>(Endpoint::new(local_addr.clone()))
+                        .into_iter()
+                        .collect(),
+                );
             });
 
             <span class="kw">let </span>filters = <span class="kw">crate</span>::filters::FilterChain::try_from(<span class="macro">vec!</span>[

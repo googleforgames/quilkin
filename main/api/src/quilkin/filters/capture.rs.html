@@ -280,7 +280,7 @@
 
 <span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.filters.capture.v1alpha1&quot;</span>);
 
-<span class="kw">use crate</span>::{filters::prelude::<span class="kw-2">*</span>, net::endpoint::metadata};
+<span class="kw">use crate</span>::{filters::prelude::<span class="kw-2">*</span>, net::endpoint::metadata, pool::PoolBuffer};
 
 <span class="kw">use </span><span class="self">self</span>::quilkin::filters::capture::v1alpha1 <span class="kw">as </span>proto;
 
@@ -294,7 +294,7 @@
 </span><span class="kw">pub trait </span>CaptureStrategy {
     <span class="doccomment">/// Capture packet data from the contents, and optionally returns a value if
     /// anything was captured.
-    </span><span class="kw">fn </span>capture(<span class="kw-2">&amp;</span><span class="self">self</span>, contents: <span class="kw-2">&amp;mut </span>Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;metadata::Value&gt;;
+    </span><span class="kw">fn </span>capture(<span class="kw-2">&amp;</span><span class="self">self</span>, contents: <span class="kw-2">&amp;mut </span>PoolBuffer) -&gt; <span class="prelude-ty">Option</span>&lt;metadata::Value&gt;;
 }
 
 <span class="kw">pub struct </span>Capture {
@@ -353,7 +353,7 @@
     <span class="kw">use crate</span>::{
         filters::metadata::CAPTURED_BYTES,
         net::endpoint::{metadata::Value, Endpoint},
-        test::assert_write_no_change,
+        test::{alloc_buffer, assert_write_no_change},
     };
 
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
@@ -426,7 +426,7 @@
             .read(<span class="kw-2">&amp;mut </span>ReadContext::new(
                 endpoints.into(),
                 (std::net::Ipv4Addr::LOCALHOST, <span class="number">80</span>).into(),
-                <span class="string">&quot;abc&quot;</span>.to_string().into_bytes(),
+                alloc_buffer(<span class="string">b&quot;abc&quot;</span>),
             ))
             .<span class="kw">await
             </span>.is_err());
@@ -450,10 +450,10 @@
         <span class="kw">let </span>end = Regex {
             pattern: ::regex::bytes::Regex::new(<span class="string">&quot;.{3}$&quot;</span>).unwrap(),
         };
-        <span class="kw">let </span><span class="kw-2">mut </span>contents = <span class="string">b&quot;helloabc&quot;</span>.to_vec();
+        <span class="kw">let </span><span class="kw-2">mut </span>contents = alloc_buffer(<span class="string">b&quot;helloabc&quot;</span>);
         <span class="kw">let </span>result = end.capture(<span class="kw-2">&amp;mut </span>contents).unwrap();
         <span class="macro">assert_eq!</span>(Value::Bytes(<span class="string">b&quot;abc&quot;</span>.to_vec().into()), result);
-        <span class="macro">assert_eq!</span>(<span class="string">b&quot;helloabc&quot;</span>.to_vec(), contents);
+        <span class="macro">assert_eq!</span>(<span class="string">b&quot;helloabc&quot;</span>, <span class="kw-2">&amp;*</span>contents);
     }
 
     <span class="attr">#[test]
@@ -462,16 +462,16 @@
             size: <span class="number">3</span>,
             remove: <span class="bool-val">false</span>,
         };
-        <span class="kw">let </span><span class="kw-2">mut </span>contents = <span class="string">b&quot;helloabc&quot;</span>.to_vec();
+        <span class="kw">let </span><span class="kw-2">mut </span>contents = alloc_buffer(<span class="string">b&quot;helloabc&quot;</span>);
         <span class="kw">let </span>result = end.capture(<span class="kw-2">&amp;mut </span>contents).unwrap();
         <span class="macro">assert_eq!</span>(Value::Bytes(<span class="string">b&quot;abc&quot;</span>.to_vec().into()), result);
-        <span class="macro">assert_eq!</span>(<span class="string">b&quot;helloabc&quot;</span>.to_vec(), contents);
+        <span class="macro">assert_eq!</span>(<span class="string">b&quot;helloabc&quot;</span>, <span class="kw-2">&amp;*</span>contents);
 
         end.remove = <span class="bool-val">true</span>;
 
         <span class="kw">let </span>result = end.capture(<span class="kw-2">&amp;mut </span>contents).unwrap();
         <span class="macro">assert_eq!</span>(Value::Bytes(<span class="string">b&quot;abc&quot;</span>.to_vec().into()), result);
-        <span class="macro">assert_eq!</span>(<span class="string">b&quot;hello&quot;</span>.to_vec(), contents);
+        <span class="macro">assert_eq!</span>(<span class="string">b&quot;hello&quot;</span>, <span class="kw-2">&amp;*</span>contents);
     }
 
     <span class="attr">#[test]
@@ -480,17 +480,17 @@
             size: <span class="number">3</span>,
             remove: <span class="bool-val">false</span>,
         };
-        <span class="kw">let </span><span class="kw-2">mut </span>contents = <span class="string">b&quot;abchello&quot;</span>.to_vec();
+        <span class="kw">let </span><span class="kw-2">mut </span>contents = alloc_buffer(<span class="string">b&quot;abchello&quot;</span>);
 
         <span class="kw">let </span>result = beg.capture(<span class="kw-2">&amp;mut </span>contents);
         <span class="macro">assert_eq!</span>(<span class="prelude-val">Some</span>(Value::Bytes(<span class="string">b&quot;abc&quot;</span>.to_vec().into())), result);
-        <span class="macro">assert_eq!</span>(<span class="string">b&quot;abchello&quot;</span>.to_vec(), contents);
+        <span class="macro">assert_eq!</span>(<span class="string">b&quot;abchello&quot;</span>, <span class="kw-2">&amp;*</span>contents);
 
         beg.remove = <span class="bool-val">true</span>;
 
         <span class="kw">let </span>result = beg.capture(<span class="kw-2">&amp;mut </span>contents);
         <span class="macro">assert_eq!</span>(<span class="prelude-val">Some</span>(Value::Bytes(<span class="string">b&quot;abc&quot;</span>.to_vec().into())), result);
-        <span class="macro">assert_eq!</span>(<span class="string">b&quot;hello&quot;</span>.to_vec(), contents);
+        <span class="macro">assert_eq!</span>(<span class="string">b&quot;hello&quot;</span>, <span class="kw-2">&amp;*</span>contents);
     }
 
     <span class="kw">async fn </span>assert_end_strategy&lt;F&gt;(filter: <span class="kw-2">&amp;</span>F, key: metadata::Key, remove: bool)
@@ -503,7 +503,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>context = ReadContext::new(
             endpoints.into(),
             <span class="string">&quot;127.0.0.1:80&quot;</span>.parse().unwrap(),
-            <span class="string">&quot;helloabc&quot;</span>.to_string().into_bytes(),
+            alloc_buffer(<span class="string">b&quot;helloabc&quot;</span>),
         );
 
         filter.read(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span>.unwrap();

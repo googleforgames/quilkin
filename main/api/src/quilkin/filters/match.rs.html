@@ -231,6 +231,11 @@
 <a href="#231" id="231">231</a>
 <a href="#232" id="232">232</a>
 <a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -403,6 +408,7 @@
     <span class="kw">use crate</span>::{
         filters::<span class="kw-2">*</span>,
         net::endpoint::{metadata, Endpoint},
+        test::alloc_buffer,
     };
 
     <span class="attr">#[tokio::test]
@@ -422,14 +428,14 @@
         };
         <span class="kw">let </span>filter = Match::new(config, metrics).unwrap();
         <span class="kw">let </span>endpoint: Endpoint = Default::default();
-        <span class="kw">let </span>contents = <span class="string">&quot;hello&quot;</span>.to_string().into_bytes();
+        <span class="kw">let </span>contents = <span class="string">b&quot;hello&quot;</span>;
 
         <span class="comment">// no config, so should make no change.
         </span>filter
             .write(<span class="kw-2">&amp;mut </span>WriteContext::new(
                 endpoint.address,
                 <span class="string">&quot;127.0.0.1:70&quot;</span>.parse().unwrap(),
-                contents.clone(),
+                alloc_buffer(contents),
             ))
             .<span class="kw">await
             </span>.unwrap();
@@ -444,7 +450,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>ctx = ReadContext::new(
             endpoints.into(),
             ([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>], <span class="number">7000</span>).into(),
-            contents.clone(),
+            alloc_buffer(contents),
         );
         ctx.metadata.insert(key, <span class="string">&quot;abc&quot;</span>.into());
 
@@ -455,7 +461,11 @@
         <span class="kw">let </span>endpoints = <span class="kw">crate</span>::net::cluster::ClusterMap::new_default(
             [Endpoint::new(<span class="string">&quot;127.0.0.1:81&quot;</span>.parse().unwrap())].into(),
         );
-        <span class="kw">let </span><span class="kw-2">mut </span>ctx = ReadContext::new(endpoints.into(), ([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>], <span class="number">7000</span>).into(), contents);
+        <span class="kw">let </span><span class="kw-2">mut </span>ctx = ReadContext::new(
+            endpoints.into(),
+            ([<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>], <span class="number">7000</span>).into(),
+            alloc_buffer(contents),
+        );
         ctx.metadata.insert(key, <span class="string">&quot;xyz&quot;</span>.into());
 
         <span class="kw">let </span>result = filter.read(<span class="kw-2">&amp;mut </span>ctx).<span class="kw">await</span>;

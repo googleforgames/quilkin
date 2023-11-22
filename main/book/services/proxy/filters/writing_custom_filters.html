@@ -205,14 +205,15 @@ sent to a downstream client.</p>
 <pre><code class="language-rust no_run noplayground"><span class="boring">struct Greet;
 </span>use quilkin::filters::prelude::*;
 
+/// Appends data to each packet
 #[async_trait::async_trait]
 impl Filter for Greet {
     async fn read(&amp;self, ctx: &amp;mut ReadContext) -&gt; Result&lt;(), FilterError&gt; {
-        ctx.contents.extend(b&quot;Hello&quot;);
+        ctx.contents.extend_from_slice(b&quot;Hello&quot;);
         Ok(())
     }
     async fn write(&amp;self, ctx: &amp;mut WriteContext) -&gt; Result&lt;(), FilterError&gt; {
-        ctx.contents.extend(b&quot;Goodbye&quot;);
+        ctx.contents.extend_from_slice(b&quot;Goodbye&quot;);
         Ok(())
     }
 }</code></pre>
@@ -269,7 +270,7 @@ async fn main() -&gt; quilkin::Result&lt;()&gt; {
 
     let admin = quilkin::cli::Admin::Proxy(&lt;_&gt;::default());
 
-    proxy.run(config.into(), admin, shutdown_rx).await
+    proxy.run(config.into(), admin, None, shutdown_rx).await
 }</code></pre>
 <p>Now, let's try out the proxy. The following configuration starts our extended
 version of the proxy at port 7777 and forwards all packets to an upstream server
@@ -330,12 +331,12 @@ struct Greet {
 impl Filter for Greet {
     async fn read(&amp;self, ctx: &amp;mut ReadContext) -&gt; Result&lt;(), FilterError&gt; {
         ctx.contents
-            .splice(0..0, format!(&quot;{} &quot;, self.config.greeting).into_bytes());
+            .prepend_from_slice(format!(&quot;{} &quot;, self.config.greeting).as_bytes());
         Ok(())
     }
     async fn write(&amp;self, ctx: &amp;mut WriteContext) -&gt; Result&lt;(), FilterError&gt; {
         ctx.contents
-            .splice(0..0, format!(&quot;{} &quot;, self.config.greeting).into_bytes());
+            .prepend_from_slice(format!(&quot;{} &quot;, self.config.greeting).as_bytes());
         Ok(())
     }
 }</code></pre>

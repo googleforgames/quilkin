@@ -828,7 +828,7 @@
         config,
         filters::Debug,
         net::endpoint::Endpoint,
-        test::{new_test_config, TestFilter},
+        test::{alloc_buffer, new_test_config, TestFilter},
     };
 
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
@@ -876,7 +876,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>context = ReadContext::new(
             endpoints_fixture.clone(),
             <span class="string">&quot;127.0.0.1:70&quot;</span>.parse().unwrap(),
-            <span class="string">b&quot;hello&quot;</span>.to_vec(),
+            alloc_buffer(<span class="string">b&quot;hello&quot;</span>),
         );
 
         config.filters.read(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span>.unwrap();
@@ -900,7 +900,7 @@
                 .address
                 .clone(),
             <span class="string">&quot;127.0.0.1:70&quot;</span>.parse().unwrap(),
-            <span class="string">b&quot;hello&quot;</span>.to_vec(),
+            alloc_buffer(<span class="string">b&quot;hello&quot;</span>),
         );
         config.filters.write(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span>.unwrap();
 
@@ -929,7 +929,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>context = ReadContext::new(
             endpoints_fixture.clone(),
             <span class="string">&quot;127.0.0.1:70&quot;</span>.parse().unwrap(),
-            <span class="string">b&quot;hello&quot;</span>.to_vec(),
+            alloc_buffer(<span class="string">b&quot;hello&quot;</span>),
         );
 
         chain.read(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span>.unwrap();
@@ -955,7 +955,7 @@
                 .address
                 .clone(),
             <span class="string">&quot;127.0.0.1:70&quot;</span>.parse().unwrap(),
-            <span class="string">b&quot;hello&quot;</span>.to_vec(),
+            alloc_buffer(<span class="string">b&quot;hello&quot;</span>),
         );
 
         chain.write(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span>.unwrap();
