@@ -26,20 +26,17 @@ async fn health_server() {
     let mut t = TestHelper::default();
 
     // create server configuration
-    let server_port = 12349;
-    let server_proxy = quilkin::cli::Proxy {
-        port: server_port,
-        ..<_>::default()
-    };
     let server_config = std::sync::Arc::new(quilkin::Config::default());
     server_config.clusters.modify(|clusters| {
         clusters.insert_default(["127.0.0.1:0".parse::<Endpoint>().unwrap()].into())
     });
     t.run_server(
         server_config,
-        server_proxy,
+        None,
         Some(Some((std::net::Ipv6Addr::UNSPECIFIED, 9093).into())),
-    );
+    )
+    .await;
+    tokio::time::sleep(std::time::Duration::from_millis(250)).await;
 
     let client = Client::new();
     let resp = client

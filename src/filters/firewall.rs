@@ -120,6 +120,7 @@ mod tests {
 
     use crate::filters::firewall::config::PortRange;
     use crate::net::endpoint::Endpoint;
+    use crate::test::alloc_buffer;
     use tracing_test::traced_test;
 
     use super::*;
@@ -140,13 +141,13 @@ mod tests {
         let endpoints = crate::net::cluster::ClusterMap::new_default(
             [Endpoint::new((Ipv4Addr::LOCALHOST, 8080).into())].into(),
         );
-        let mut ctx = ReadContext::new(endpoints.into(), (local_ip, 80).into(), vec![]);
+        let mut ctx = ReadContext::new(endpoints.into(), (local_ip, 80).into(), alloc_buffer([]));
         assert!(firewall.read(&mut ctx).await.is_ok());
 
         let endpoints = crate::net::cluster::ClusterMap::new_default(
             [Endpoint::new((Ipv4Addr::LOCALHOST, 8080).into())].into(),
         );
-        let mut ctx = ReadContext::new(endpoints.into(), (local_ip, 2000).into(), vec![]);
+        let mut ctx = ReadContext::new(endpoints.into(), (local_ip, 2000).into(), alloc_buffer([]));
         assert!(logs_contain("quilkin::filters::firewall")); // the given name to the the logger by tracing
         assert!(logs_contain("Allow"));
 
@@ -166,11 +167,18 @@ mod tests {
 
         let local_addr: crate::net::endpoint::EndpointAddress = (Ipv4Addr::LOCALHOST, 8081).into();
 
-        let mut ctx =
-            WriteContext::new(([192, 168, 75, 20], 80).into(), local_addr.clone(), vec![]);
+        let mut ctx = WriteContext::new(
+            ([192, 168, 75, 20], 80).into(),
+            local_addr.clone(),
+            alloc_buffer([]),
+        );
         assert!(firewall.write(&mut ctx).await.is_ok());
 
-        let mut ctx = WriteContext::new(([192, 168, 77, 20], 80).into(), local_addr, vec![]);
+        let mut ctx = WriteContext::new(
+            ([192, 168, 77, 20], 80).into(),
+            local_addr,
+            alloc_buffer([]),
+        );
         assert!(firewall.write(&mut ctx).await.is_err());
     }
 }

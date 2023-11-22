@@ -1,4 +1,4 @@
-use crate::net::endpoint::metadata::Value;
+use crate::{net::endpoint::metadata::Value, pool::PoolBuffer};
 
 /// Capture from the start of the packet.
 #[derive(serde::Serialize, serde::Deserialize, Debug, schemars::JsonSchema)]
@@ -10,7 +10,7 @@ pub struct Regex {
 }
 
 impl super::CaptureStrategy for Regex {
-    fn capture(&self, contents: &mut Vec<u8>) -> Option<Value> {
+    fn capture(&self, contents: &mut PoolBuffer) -> Option<Value> {
         let matches = self
             .pattern
             .find_iter(contents)

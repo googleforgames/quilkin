@@ -61,7 +61,10 @@ mod tests {
     use std::{collections::HashSet, net::Ipv4Addr};
 
     use super::*;
-    use crate::net::endpoint::{Endpoint, EndpointAddress};
+    use crate::{
+        net::endpoint::{Endpoint, EndpointAddress},
+        test::alloc_buffer,
+    };
 
     async fn get_response_addresses(
         filter: &dyn Filter,
@@ -74,7 +77,7 @@ mod tests {
             .map(Endpoint::new)
             .collect::<std::collections::BTreeSet<_>>();
         let endpoints = crate::net::cluster::ClusterMap::new_default(endpoints);
-        let mut context = ReadContext::new(endpoints.into(), source, vec![]);
+        let mut context = ReadContext::new(endpoints.into(), source, alloc_buffer([]));
 
         filter.read(&mut context).await.unwrap();
 

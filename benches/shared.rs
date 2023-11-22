@@ -341,7 +341,7 @@ impl QuilkinLoop {
 
             runtime.block_on(async move {
                 let admin = quilkin::cli::Admin::Proxy(<_>::default());
-                proxy.run(config, admin, shutdown_rx).await.unwrap();
+                proxy.run(config, admin, None, shutdown_rx).await.unwrap();
             });
         });
 

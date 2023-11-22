@@ -207,7 +207,10 @@ mod tests {
     use tokio::time;
 
     use super::*;
-    use crate::{config::ConfigType, test::assert_write_no_change};
+    use crate::{
+        config::ConfigType,
+        test::{alloc_buffer, assert_write_no_change},
+    };
 
     fn rate_limiter(config: Config) -> LocalRateLimit {
         LocalRateLimit::new(config).unwrap()
@@ -229,12 +232,12 @@ mod tests {
             .into(),
         );
 
-        let mut context = ReadContext::new(endpoints.into(), address.clone(), vec![9]);
+        let mut context = ReadContext::new(endpoints.into(), address.clone(), alloc_buffer([9]));
         let result = r.read(&mut context).await;
 
         if should_succeed {
             result.unwrap();
-            assert_eq!(context.contents, vec![9]);
+            assert_eq!(&*context.contents, [9]);
         } else {
             assert!(result.is_err());
         }

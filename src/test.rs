@@ -26,7 +26,8 @@ use crate::{
     filters::{prelude::*, FilterRegistry},
     net::endpoint::metadata::Value,
     net::endpoint::{Endpoint, EndpointAddress},
-    net::DualStackLocalSocket,
+    net::DualStackEpollSocket as DualStackLocalSocket,
+    pool::BufferPool,
     ShutdownKind, ShutdownRx, ShutdownTx,
 };
 
@@ -89,7 +90,7 @@ impl Filter for TestFilter {
             .or_insert_with(|| Value::String("receive".into()));
 
         ctx.contents
-            .append(&mut format!(":odr:{}", ctx.source).into_bytes());
+            .extend_from_slice(format!(":odr:{}", ctx.source).as_bytes());
         Ok(())
     }
 
@@ -101,7 +102,7 @@ impl Filter for TestFilter {
             .or_insert_with(|| Value::String("receive".to_string()));
 
         ctx.contents
-            .append(&mut format!(":our:{}:{}", ctx.source, ctx.dest).into_bytes());
+            .extend_from_slice(format!(":our:{}:{}", ctx.source, ctx.dest).as_bytes());
         Ok(())
     }
 }
@@ -264,16 +265,12 @@ impl TestHelper {
         addr.into()
     }
 
-    pub fn run_server_with_config(&mut self, config: Arc<Config>) {
-        self.run_server(config, crate::cli::Proxy::default(), None)
-    }
-
-    pub fn run_server(
+    pub async fn run_server(
         &mut self,
         config: Arc<Config>,
-        server: crate::cli::Proxy,
+        server: Option<crate::cli::Proxy>,
         with_admin: Option<Option<SocketAddr>>,
-    ) {
+    ) -> u16 {
         let (shutdown_tx, shutdown_rx) = crate::make_shutdown_channel(crate::ShutdownKind::Testing);
         self.server_shutdown_tx.push(Some(shutdown_tx));
         let mode = crate::cli::Admin::Proxy(<_>::default());
@@ -282,9 +279,28 @@ impl TestHelper {
             mode.server(config.clone(), address);
         }
 
-        tokio::spawn(async move {
-            server.run(config, mode, shutdown_rx).await.unwrap();
+        let mut server = server.unwrap_or_else(|| {
+            crate::cli::Proxy {
+                // Use an ephemeral port unless the test specifies otherwise
+                port: 0,
+                ..Default::default()
+            }
         });
+
+        if server.workers.is_none() {
+            server.workers = Some(1.try_into().unwrap());
+        }
+
+        let (prox_tx, prox_rx) = tokio::sync::oneshot::channel();
+
+        tokio::spawn(async move {
+            server
+                .run(config, mode, Some(prox_tx), shutdown_rx)
+                .await
+                .unwrap();
+        });
+
+        prox_rx.await.unwrap()
     }
 
     /// Returns a receiver subscribed to the helper's shutdown event.
@@ -302,6 +318,14 @@ impl TestHelper {
     }
 }
 
+pub static BUFFER_POOL: once_cell::sync::Lazy<Arc<BufferPool>> =
+    once_cell::sync::Lazy::new(|| Arc::new(BufferPool::default()));
+
+#[inline]
+pub fn alloc_buffer(data: impl AsRef<[u8]>) -> crate::pool::PoolBuffer {
+    BUFFER_POOL.clone().alloc_slice(data.as_ref())
+}
+
 /// assert that read makes no changes
 pub async fn assert_filter_read_no_change<F>(filter: &F)
 where
@@ -312,8 +336,8 @@ where
         .parse::<Endpoint>()
         .unwrap()]));
     let source = "127.0.0.1:90".parse().unwrap();
-    let contents = "hello".to_string().into_bytes();
-    let mut context = ReadContext::new(endpoints.clone(), source, contents.clone());
+    let contents = b"hello";
+    let mut context = ReadContext::new(endpoints.clone(), source, alloc_buffer(contents));
 
     filter.read(&mut context).await.unwrap();
     assert!(context.destinations.is_empty());
@@ -327,11 +351,11 @@ where
     F: Filter,
 {
     let endpoint = "127.0.0.1:90".parse::<Endpoint>().unwrap();
-    let contents = "hello".to_string().into_bytes();
+    let contents = b"hello";
     let mut context = WriteContext::new(
         endpoint.address,
         "127.0.0.1:70".parse().unwrap(),
-        contents.clone(),
+        alloc_buffer(contents),
     );
 
     filter.write(&mut context).await.unwrap();

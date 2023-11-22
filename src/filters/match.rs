@@ -170,6 +170,7 @@ mod tests {
     use crate::{
         filters::*,
         net::endpoint::{metadata, Endpoint},
+        test::alloc_buffer,
     };
 
     #[tokio::test]
@@ -189,14 +190,14 @@ mod tests {
         };
         let filter = Match::new(config, metrics).unwrap();
         let endpoint: Endpoint = Default::default();
-        let contents = "hello".to_string().into_bytes();
+        let contents = b"hello";
 
         // no config, so should make no change.
         filter
             .write(&mut WriteContext::new(
                 endpoint.address,
                 "127.0.0.1:70".parse().unwrap(),
-                contents.clone(),
+                alloc_buffer(contents),
             ))
             .await
             .unwrap();
@@ -211,7 +212,7 @@ mod tests {
         let mut ctx = ReadContext::new(
             endpoints.into(),
             ([127, 0, 0, 1], 7000).into(),
-            contents.clone(),
+            alloc_buffer(contents),
         );
         ctx.metadata.insert(key, "abc".into());
 
@@ -222,7 +223,11 @@ mod tests {
         let endpoints = crate::net::cluster::ClusterMap::new_default(
             [Endpoint::new("127.0.0.1:81".parse().unwrap())].into(),
         );
-        let mut ctx = ReadContext::new(endpoints.into(), ([127, 0, 0, 1], 7000).into(), contents);
+        let mut ctx = ReadContext::new(
+            endpoints.into(),
+            ([127, 0, 0, 1], 7000).into(),
+            alloc_buffer(contents),
+        );
         ctx.metadata.insert(key, "xyz".into());
 
         let result = filter.read(&mut ctx).await;

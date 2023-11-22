@@ -201,7 +201,7 @@ mod tests {
         let proxy_admin = crate::cli::Admin::Proxy(<_>::default());
         tokio::spawn(async move {
             client_proxy
-                .run(client_config, proxy_admin, shutdown_rx)
+                .run(client_config, proxy_admin, None, shutdown_rx)
                 .await
         });
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
@@ -317,9 +317,12 @@ mod tests {
                 socket.local_addr().unwrap().into();
 
             config.clusters.modify(|clusters| {
-                let mut cluster = clusters.default_entry();
-                cluster.clear();
-                cluster.insert(Endpoint::new(local_addr.clone()));
+                clusters.insert(
+                    None,
+                    Some(Endpoint::new(local_addr.clone()))
+                        .into_iter()
+                        .collect(),
+                );
             });
 
             let filters = crate::filters::FilterChain::try_from(vec![

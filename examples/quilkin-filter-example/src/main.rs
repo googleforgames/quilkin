@@ -61,12 +61,12 @@ struct Greet {
 impl Filter for Greet {
     async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         ctx.contents
-            .splice(0..0, format!("{} ", self.config.greeting).into_bytes());
+            .prepend_from_slice(format!("{} ", self.config.greeting).as_bytes());
         Ok(())
     }
     async fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
         ctx.contents
-            .splice(0..0, format!("{} ", self.config.greeting).into_bytes());
+            .prepend_from_slice(format!("{} ", self.config.greeting).as_bytes());
         Ok(())
     }
 }
@@ -115,6 +115,6 @@ async fn main() -> quilkin::Result<()> {
 
     let admin = quilkin::cli::Admin::Proxy(<_>::default());
 
-    proxy.run(config.into(), admin, shutdown_rx).await
+    proxy.run(config.into(), admin, None, shutdown_rx).await
 }
 // ANCHOR_END: run

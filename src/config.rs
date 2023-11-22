@@ -93,7 +93,7 @@ impl Config {
             let value: ClusterMap = serde_json::from_value(value)?;
             self.clusters.modify(|clusters| {
                 for cluster in value.iter() {
-                    clusters.merge(cluster.key().clone(), cluster.value().clone());
+                    clusters.insert(cluster.key().clone(), cluster.value().clone());
                 }
 
                 if let Some(locality) = locality {
@@ -170,7 +170,7 @@ impl Config {
                 self.filters.store(Arc::new(chain.try_into()?));
             }
             Resource::Cluster(cluster) => {
-                self.clusters.write().merge(
+                self.clusters.write().insert(
                     cluster.locality.clone().map(From::from),
                     cluster
                         .endpoints

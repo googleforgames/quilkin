@@ -322,7 +322,7 @@ mod tests {
         config,
         filters::Debug,
         net::endpoint::Endpoint,
-        test::{new_test_config, TestFilter},
+        test::{alloc_buffer, new_test_config, TestFilter},
     };
 
     use super::*;
@@ -370,7 +370,7 @@ mod tests {
         let mut context = ReadContext::new(
             endpoints_fixture.clone(),
             "127.0.0.1:70".parse().unwrap(),
-            b"hello".to_vec(),
+            alloc_buffer(b"hello"),
         );
 
         config.filters.read(&mut context).await.unwrap();
@@ -394,7 +394,7 @@ mod tests {
                 .address
                 .clone(),
             "127.0.0.1:70".parse().unwrap(),
-            b"hello".to_vec(),
+            alloc_buffer(b"hello"),
         );
         config.filters.write(&mut context).await.unwrap();
 
@@ -423,7 +423,7 @@ mod tests {
         let mut context = ReadContext::new(
             endpoints_fixture.clone(),
             "127.0.0.1:70".parse().unwrap(),
-            b"hello".to_vec(),
+            alloc_buffer(b"hello"),
         );
 
         chain.read(&mut context).await.unwrap();
@@ -449,7 +449,7 @@ mod tests {
                 .address
                 .clone(),
             "127.0.0.1:70".parse().unwrap(),
-            b"hello".to_vec(),
+            alloc_buffer(b"hello"),
         );
 
         chain.write(&mut context).await.unwrap();

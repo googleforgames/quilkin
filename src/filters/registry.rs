@@ -64,7 +64,7 @@ impl FilterRegistry {
 mod tests {
     use std::net::Ipv4Addr;
 
-    use crate::test::load_test_filters;
+    use crate::test::{alloc_buffer, load_test_filters};
 
     use super::*;
     use crate::filters::{Filter, FilterError, FilterRegistry, ReadContext, WriteContext};
@@ -109,12 +109,12 @@ mod tests {
             .read(&mut ReadContext::new(
                 endpoints.into(),
                 addr.clone(),
-                vec![]
+                alloc_buffer([]),
             ))
             .await
             .is_ok());
         assert!(filter
-            .write(&mut WriteContext::new(addr.clone(), addr, vec![],))
+            .write(&mut WriteContext::new(addr.clone(), addr, alloc_buffer([])))
             .await
             .is_ok());
     }
