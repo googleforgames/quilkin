@@ -155,6 +155,10 @@ impl DualStackLocalSocket {
             pub async fn send_to(&self, buf: Vec<u8>, target: SocketAddr) -> (io::Result<usize>, Vec<u8>) {
                 self.socket.send_to(buf, target).await
             }
+
+            pub fn make_refcnt(self) -> std::rc::Rc<Self> {
+                std::rc::Rc::new(self)
+            }
         } else {
             pub async fn recv_from(&self, mut buf: Vec<u8>) -> (io::Result<(usize, SocketAddr)>, Vec<u8>) {
                 let result = self.socket.recv_from(&mut buf).await;
@@ -164,6 +168,10 @@ impl DualStackLocalSocket {
             pub async fn send_to(&self, buf: Vec<u8>, target: SocketAddr) -> (io::Result<usize>, Vec<u8>) {
                 let result = self.socket.send_to(&buf, target).await;
                 (result, buf)
+            }
+
+            pub fn make_refcnt(self) -> std::sync::Arc<Self> {
+                std::sync::Arc::new(self)
             }
         }
     }

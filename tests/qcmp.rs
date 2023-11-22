@@ -35,7 +35,7 @@ async fn proxy_ping() {
         ..<_>::default()
     };
     let server_config = std::sync::Arc::new(quilkin::Config::default());
-    t.run_server(server_config, server_proxy, None);
+    t.run_server(server_config, Some(server_proxy), None).await;
     ping(server_port).await;
 }
 

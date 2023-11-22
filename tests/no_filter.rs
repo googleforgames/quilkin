@@ -47,8 +47,7 @@ async fn echo() {
         )
     });
 
-    t.run_server(server_config, server_proxy, None);
-    tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+    t.run_server(server_config, Some(server_proxy), None).await;
 
     // let's send the packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;

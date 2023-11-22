@@ -40,6 +40,8 @@ use crate::{
     Config, Result, ShutdownRx,
 };
 
+use eyre::WrapErr as _;
+
 define_port!(7777);
 
 const QCMP_PORT: u16 = 7600;
@@ -66,6 +68,10 @@ pub struct Proxy {
     /// to an management server after receiving no updates.
     #[clap(long, env = "QUILKIN_IDLE_REQUEST_INTERVAL_SECS", default_value_t = super::admin::IDLE_REQUEST_INTERVAL_SECS)]
     pub idle_request_interval_secs: u64,
+    /// Number of worker threads used to process packets. If not specified defaults
+    /// to number of cpus.
+    #[clap(short, long, env = "QUILKIN_WORKERS")]
+    pub workers: Option<std::num::NonZeroUsize>,
 }
 
 impl Default for Proxy {
@@ -77,6 +83,7 @@ impl Default for Proxy {
             qcmp_port: QCMP_PORT,
             to: <_>::default(),
             idle_request_interval_secs: super::admin::IDLE_REQUEST_INTERVAL_SECS,
+            workers: None,
         }
     }
 }
@@ -87,6 +94,7 @@ impl Proxy {
         &self,
         config: std::sync::Arc<crate::Config>,
         mode: Admin,
+        initialized: Option<tokio::sync::oneshot::Sender<u16>>,
         mut shutdown_rx: ShutdownRx,
     ) -> crate::Result<()> {
         let _mmdb_task = self.mmdb.clone().map(|source| {
@@ -160,13 +168,31 @@ impl Proxy {
             None
         };
 
-        let worker_notifications = self.run_recv_from(&config, &sessions, upstream_receiver)?;
+        // Generally only for testing purposes, if port is 0 we bind to an ephemeral
+        // port and return that to the caller
+        let port = if self.port == 0 {
+            let ds = DualStackLocalSocket::new(0).wrap_err("failed to allocate ephemeral port")?;
+            let addr = ds
+                .local_ipv6_addr()
+                .wrap_err("failed to retrieve IPv6 ephemeral port")?;
+
+            addr.port()
+        } else {
+            self.port
+        };
+
+        let worker_notifications =
+            self.run_recv_from(&config, port, &sessions, upstream_receiver)?;
+
         crate::codec::qcmp::spawn(self.qcmp_port).await?;
         for notification in worker_notifications {
             notification.notified().await;
         }
 
         tracing::info!("Quilkin is ready");
+        if let Some(initialized) = initialized {
+            let _ = initialized.send(port);
+        }
 
         shutdown_rx
             .changed()
@@ -193,42 +219,35 @@ impl Proxy {
     fn run_recv_from(
         &self,
         config: &Arc<Config>,
+        port: u16,
         sessions: &Arc<SessionPool>,
         upstream_receiver: DownstreamReceiver,
     ) -> Result<Vec<Arc<tokio::sync::Notify>>> {
         // The number of worker tasks to spawn. Each task gets a dedicated queue to
         // consume packets off.
-        let num_workers = num_cpus::get();
+        let num_workers = self
+            .workers
+            .map(|nz| nz.get())
+            .unwrap_or_else(num_cpus::get);
+
+        eyre::ensure!(num_workers > 0, "must use at least 1 worker");
+
         let (error_sender, mut error_receiver) = mpsc::unbounded_channel();
 
-        // Contains config for each worker task.
-        let mut workers = Vec::with_capacity(num_workers);
-        workers.push(DownstreamReceiveWorkerConfig {
-            worker_id: 0,
-            upstream_receiver: upstream_receiver.clone(),
-            port: self.port,
-            config: config.clone(),
-            sessions: sessions.clone(),
-            error_sender: error_sender.clone(),
-        });
+        let worker_notifications = (0..num_workers)
+            .map(|worker_id| {
+                let worker = DownstreamReceiveWorkerConfig {
+                    worker_id,
+                    upstream_receiver: upstream_receiver.clone(),
+                    port,
+                    config: config.clone(),
+                    sessions: sessions.clone(),
+                    error_sender: error_sender.clone(),
+                };
 
-        for worker_id in 1..num_workers {
-            workers.push(DownstreamReceiveWorkerConfig {
-                worker_id,
-                upstream_receiver: upstream_receiver.clone(),
-                port: self.port,
-                config: config.clone(),
-                sessions: sessions.clone(),
-                error_sender: error_sender.clone(),
+                worker.spawn()
             })
-        }
-
-        let mut worker_notifications = Vec::new();
-        // Start the worker tasks that pick up received packets from their queue
-        // and processes them.
-        for worker in workers {
-            worker_notifications.push(worker.spawn());
-        }
+            .collect();
 
         tokio::spawn(async move {
             let mut log_task = tokio::time::interval(std::time::Duration::from_secs(5));
@@ -316,13 +335,7 @@ impl DownstreamReceiveWorkerConfig {
             // packet, which is the maximum value of 16 a bit integer.
             let mut recv_buf = vec![0; 1 << 16];
             let mut last_received_at = None;
-            cfg_if::cfg_if! {
-                if #[cfg(target_os = "linux")] {
-                    let socket = std::rc::Rc::new(DualStackLocalSocket::new(port).unwrap());
-                } else {
-                    let socket = std::sync::Arc::new(DualStackLocalSocket::new(port).unwrap());
-                }
-            }
+            let socket = DualStackLocalSocket::new(port).unwrap().make_refcnt();
             let send_socket = socket.clone();
 
             uring_inner_spawn!(async move {
@@ -543,8 +556,7 @@ mod tests {
             );
         });
 
-        t.run_server(config, proxy, None);
-        tokio::time::sleep(Duration::from_millis(500)).await;
+        t.run_server(config, Some(proxy), None).await;
 
         tracing::trace!(%local_addr, "sending hello");
         let msg = "hello";
@@ -588,8 +600,7 @@ mod tests {
         config.clusters.modify(|clusters| {
             clusters.insert_default([Endpoint::new(dest.into())].into());
         });
-        t.run_server(config, proxy, None);
-        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        t.run_server(config, Some(proxy), None).await;
 
         let msg = "hello";
         tracing::debug!(%local_addr, "sending packet");
@@ -631,13 +642,13 @@ mod tests {
         });
         t.run_server(
             config,
-            crate::cli::Proxy {
+            Some(crate::cli::Proxy {
                 port: local_addr.port(),
                 ..<_>::default()
-            },
+            }),
             None,
-        );
-        tokio::time::sleep(Duration::from_millis(500)).await;
+        )
+        .await;
 
         let msg = "hello";
         endpoint
@@ -723,7 +734,9 @@ mod tests {
 
         let sessions = SessionPool::new(config.clone(), tx, shutdown_rx);
 
-        proxy.run_recv_from(&config, &sessions, rx).unwrap();
+        proxy
+            .run_recv_from(&config, proxy.port, &sessions, rx)
+            .unwrap();
         tokio::time::sleep(Duration::from_millis(500)).await;
 
         let socket = create_socket().await;

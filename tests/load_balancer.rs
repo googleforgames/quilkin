@@ -46,7 +46,6 @@ policy: ROUND_ROBIN
         );
     }
 
-    let server_port = 12346;
     let server_config = std::sync::Arc::new(quilkin::Config::default());
     server_config.clusters.modify(|clusters| {
         clusters.insert_default(echo_addresses.iter().cloned().map(Endpoint::new).collect())
@@ -61,12 +60,7 @@ policy: ROUND_ROBIN
         .unwrap(),
     );
 
-    let server_proxy = quilkin::cli::Proxy {
-        port: server_port,
-        ..<_>::default()
-    };
-    t.run_server(server_config, server_proxy, None);
-    tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+    let server_port = t.run_server(server_config, None, None).await;
     let server_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port);
 
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;

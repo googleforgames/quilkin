@@ -44,22 +44,17 @@ async fn metrics_server() {
         .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
     t.run_server(
         server_config,
-        server_proxy,
+        Some(server_proxy),
         Some(Some((std::net::Ipv4Addr::UNSPECIFIED, metrics_port).into())),
-    );
+    )
+    .await;
 
     // create a local client
-    let client_port = 12347;
-    let client_proxy = quilkin::cli::Proxy {
-        port: client_port,
-        ..<_>::default()
-    };
     let client_config = std::sync::Arc::new(quilkin::Config::default());
     client_config
         .clusters
         .modify(|clusters| clusters.insert_default([Endpoint::new(server_addr.into())].into()));
-    t.run_server(client_config, client_proxy, None);
-    tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+    let client_port = t.run_server(client_config, None, None).await;
 
     // let's send the packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;

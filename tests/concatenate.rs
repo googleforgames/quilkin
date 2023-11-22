@@ -34,11 +34,6 @@ bytes: YWJj #abc
 ";
     let echo = t.run_echo_server(&AddressType::Random).await;
 
-    let server_port = 12346;
-    let server_proxy = quilkin::cli::Proxy {
-        port: server_port,
-        ..<_>::default()
-    };
     let server_config = std::sync::Arc::new(quilkin::Config::default());
     server_config
         .clusters
@@ -52,8 +47,7 @@ bytes: YWJj #abc
         .map(std::sync::Arc::new)
         .unwrap(),
     );
-    t.run_server(server_config, server_proxy, None);
-    tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+    let server_port = t.run_server(server_config, None, None).await;
 
     // let's send the packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;

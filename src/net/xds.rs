@@ -201,7 +201,7 @@ mod tests {
         let proxy_admin = crate::cli::Admin::Proxy(<_>::default());
         tokio::spawn(async move {
             client_proxy
-                .run(client_config, proxy_admin, shutdown_rx)
+                .run(client_config, proxy_admin, None, shutdown_rx)
                 .await
         });
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;

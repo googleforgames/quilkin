@@ -232,8 +232,7 @@ async fn test(
         .clusters
         .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
 
-    t.run_server(server_config, server_proxy, None);
-    tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+    t.run_server(server_config, Some(server_proxy), None).await;
 
     let local_addr: SocketAddr = match address_type {
         AddressType::Ipv4 => (std::net::Ipv4Addr::LOCALHOST, server_port).into(),

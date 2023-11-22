@@ -264,16 +264,12 @@ impl TestHelper {
         addr.into()
     }
 
-    pub fn run_server_with_config(&mut self, config: Arc<Config>) {
-        self.run_server(config, crate::cli::Proxy::default(), None)
-    }
-
-    pub fn run_server(
+    pub async fn run_server(
         &mut self,
         config: Arc<Config>,
-        server: crate::cli::Proxy,
+        server: Option<crate::cli::Proxy>,
         with_admin: Option<Option<SocketAddr>>,
-    ) {
+    ) -> u16 {
         let (shutdown_tx, shutdown_rx) = crate::make_shutdown_channel(crate::ShutdownKind::Testing);
         self.server_shutdown_tx.push(Some(shutdown_tx));
         let mode = crate::cli::Admin::Proxy(<_>::default());
@@ -282,14 +278,28 @@ impl TestHelper {
             mode.server(config.clone(), address);
         }
 
-        tokio::spawn(async move {
-            server.run(config, mode, shutdown_rx).await.unwrap();
+        let mut server = server.unwrap_or_else(|| {
+            crate::cli::Proxy {
+                // Use an ephemeral port unless the test specifies otherwise
+                port: 0,
+                ..Default::default()
+            }
         });
-        // With the introduction of io-uring with each worker having its own
-        // thread, we sleep here to give it time to initialisation.
-        // TODO: Provide better ready signalling to tests when we're ready to
-        // receive packets.
-        std::thread::sleep(std::time::Duration::from_millis(100));
+
+        if server.workers.is_none() {
+            server.workers = Some(1.try_into().unwrap());
+        }
+
+        let (prox_tx, prox_rx) = tokio::sync::oneshot::channel();
+
+        tokio::spawn(async move {
+            server
+                .run(config, mode, Some(prox_tx), shutdown_rx)
+                .await
+                .unwrap();
+        });
+
+        prox_rx.await.unwrap()
     }
 
     /// Returns a receiver subscribed to the helper's shutdown event.
