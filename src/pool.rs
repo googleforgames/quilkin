@@ -279,3 +279,12 @@ unsafe impl tokio_uring::buf::IoBuf for FrozenPoolBuffer {
         self.inner.bytes_total()
     }
 }
+
+impl std::ops::Deref for FrozenPoolBuffer {
+    type Target = [u8];
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
