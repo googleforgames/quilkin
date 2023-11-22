@@ -304,7 +304,7 @@ mod tests {
     fn snappy() {
         let expected = contents_fixture();
         let mut contents = alloc_buffer(&expected);
-        let compressor: Compressor = Mode::Snappy.into();
+        let snappy = Compressor::from(Mode::Snappy);
 
         let compression_pool = Arc::new(BufferPool::new(1, 64 * 1024));
         let ok = compressor.encode(compression_pool.clone(), &mut contents);

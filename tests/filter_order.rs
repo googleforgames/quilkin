@@ -99,7 +99,7 @@ on_write: DECOMPRESS
         .strip_suffix("xyzabc")
         .expect("expected appended data");
 
-    assert_eq!(&buf, hellos.as_bytes(),);
+    assert_eq!(&buf, hellos.as_bytes());
 }
 
 #[tokio::test]
