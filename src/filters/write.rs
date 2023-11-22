@@ -16,7 +16,10 @@
 
 use std::collections::HashMap;
 
-use crate::net::endpoint::{DynamicMetadata, EndpointAddress};
+use crate::{
+    net::endpoint::{DynamicMetadata, EndpointAddress},
+    pool::PoolBuffer,
+};
 
 #[cfg(doc)]
 use crate::filters::Filter;
@@ -29,14 +32,15 @@ pub struct WriteContext {
     /// The destination of the received packet.
     pub dest: EndpointAddress,
     /// Contents of the received packet.
-    pub contents: Vec<u8>,
+    pub contents: PoolBuffer,
     /// Arbitrary values that can be passed from one filter to another
     pub metadata: DynamicMetadata,
 }
 
 impl WriteContext {
     /// Creates a new [`WriteContext`]
-    pub fn new(source: EndpointAddress, dest: EndpointAddress, contents: Vec<u8>) -> Self {
+    #[inline]
+    pub fn new(source: EndpointAddress, dest: EndpointAddress, contents: PoolBuffer) -> Self {
         Self {
             source,
             dest,

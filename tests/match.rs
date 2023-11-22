@@ -57,11 +57,6 @@ on_read:
             bytes: YWJj # abc
 ";
 
-    let server_port = 12348;
-    let server_proxy = quilkin::cli::Proxy {
-        port: server_port,
-        ..<_>::default()
-    };
     let server_config = std::sync::Arc::new(quilkin::Config::default());
     server_config
         .clusters
@@ -83,7 +78,7 @@ on_read:
         .unwrap(),
     );
 
-    t.run_server(server_config, server_proxy, None);
+    let server_port = t.run_server(server_config, None, None).await;
 
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
 

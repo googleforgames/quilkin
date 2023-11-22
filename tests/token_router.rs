@@ -44,11 +44,6 @@ quilkin.dev:
         - YWJj # abc
         ";
 
-    let server_port = 12348;
-    let server_proxy = quilkin::cli::Proxy {
-        port: server_port,
-        ..<_>::default()
-    };
     let server_config = std::sync::Arc::new(quilkin::Config::default());
     server_config.clusters.modify(|clusters| {
         clusters.insert_default(
@@ -77,15 +72,17 @@ quilkin.dev:
         .unwrap(),
     );
 
-    t.run_server(server_config, server_proxy, None);
+    let server_port = t.run_server(server_config, None, None).await;
 
     // valid packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
 
     let local_addr = SocketAddr::from((Ipv6Addr::LOCALHOST, server_port));
     let msg = b"helloabc";
+    tracing::trace!(%local_addr, "sending echo packet");
     socket.send_to(msg, &local_addr).await.unwrap();
 
+    tracing::trace!("awaiting echo packet");
     assert_eq!(
         "hello",
         timeout(Duration::from_millis(500), recv_chan.recv())

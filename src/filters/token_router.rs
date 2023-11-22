@@ -257,12 +257,14 @@ mod tests {
             },
         );
 
+        let pool = std::sync::Arc::new(crate::pool::BufferPool::new(1, 5));
+
         let endpoints = crate::net::cluster::ClusterMap::default();
         endpoints.insert_default([endpoint1, endpoint2].into());
         ReadContext::new(
             endpoints.into(),
             "127.0.0.1:100".parse().unwrap(),
-            b"hello".to_vec(),
+            pool.alloc_slice(b"hello"),
         )
     }
 
@@ -272,6 +274,6 @@ mod tests {
     {
         filter.read(&mut ctx).await.unwrap();
 
-        assert_eq!(b"hello", &*ctx.contents);
+        assert_eq!(b"hello", ctx.contents.as_ref());
     }
 }

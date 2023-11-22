@@ -44,21 +44,17 @@ async fn metrics_server() {
         .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
     t.run_server(
         server_config,
-        server_proxy,
+        Some(server_proxy),
         Some(Some((std::net::Ipv4Addr::UNSPECIFIED, metrics_port).into())),
-    );
+    )
+    .await;
 
     // create a local client
-    let client_port = 12347;
-    let client_proxy = quilkin::cli::Proxy {
-        port: client_port,
-        ..<_>::default()
-    };
     let client_config = std::sync::Arc::new(quilkin::Config::default());
     client_config
         .clusters
         .modify(|clusters| clusters.insert_default([Endpoint::new(server_addr.into())].into()));
-    t.run_server(client_config, client_proxy, None);
+    let client_port = t.run_server(client_config, None, None).await;
 
     // let's send the packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
@@ -85,6 +81,8 @@ async fn metrics_server() {
         .unwrap();
 
     let response = String::from_utf8(resp.to_vec()).unwrap();
-    let regex = regex::Regex::new(r#"quilkin_packets_total\{.*event="read".*\} 2"#).unwrap();
-    assert!(regex.is_match(&response));
+    let read_regex = regex::Regex::new(r#"quilkin_packets_total\{.*event="read".*\} 2"#).unwrap();
+    let write_regex = regex::Regex::new(r#"quilkin_packets_total\{.*event="write".*\} 2"#).unwrap();
+    assert!(read_regex.is_match(&response));
+    assert!(write_regex.is_match(&response));
 }

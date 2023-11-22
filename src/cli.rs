@@ -132,7 +132,7 @@ impl Cli {
     /// Drives the main quilkin application lifecycle using the command line
     /// arguments.
     #[tracing::instrument(skip_all)]
-    pub async fn drive(self) -> crate::Result<()> {
+    pub async fn drive(self, tx: Option<tokio::sync::oneshot::Sender<u16>>) -> crate::Result<()> {
         if !self.quiet {
             let env_filter = tracing_subscriber::EnvFilter::builder()
                 .with_default_directive(tracing_subscriber::filter::LevelFilter::INFO.into())
@@ -207,7 +207,7 @@ impl Cli {
             Commands::Agent(agent) => agent.run(config.clone(), mode, shutdown_rx.clone()).await,
             Commands::Proxy(runner) => {
                 runner
-                    .run(config.clone(), mode.clone(), shutdown_rx.clone())
+                    .run(config.clone(), mode.clone(), tx, shutdown_rx.clone())
                     .await
             }
             Commands::Manage(manager) => {
@@ -294,7 +294,7 @@ mod tests {
 
         let endpoints_file = tempfile::NamedTempFile::new().unwrap();
         let config = Config::default();
-        let server_port = server_socket.local_ipv4_addr().unwrap().port();
+        let server_port = server_socket.local_addr().unwrap().port();
         std::fs::write(endpoints_file.path(), {
             config.clusters.write().insert_default(
                 [Endpoint::with_metadata(
@@ -365,20 +365,25 @@ mod tests {
             log_format: LogFormats::default(),
         };
 
-        tokio::spawn(relay.drive());
-        tokio::spawn(control_plane.drive());
+        tokio::spawn(relay.drive(None));
+        tokio::spawn(control_plane.drive(None));
         tokio::time::sleep(Duration::from_millis(50)).await;
-        tokio::spawn(proxy.drive());
-        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        let (tx, proxy_init) = tokio::sync::oneshot::channel();
+
+        tokio::spawn(proxy.drive(Some(tx)));
+
+        proxy_init.await.unwrap();
+
         let socket = create_socket().await;
         let config = Config::default();
         let proxy_address: SocketAddr = (std::net::Ipv4Addr::LOCALHOST, 7777).into();
 
+        let server_port = server_socket.local_addr().unwrap().port();
         for _ in 0..5 {
             let token = random_three_characters();
 
             tracing::info!(?token, "writing new config");
-            let server_port = server_socket.local_ipv4_addr().unwrap().port();
             std::fs::write(endpoints_file.path(), {
                 config.clusters.write().insert_default(
                     [Endpoint::with_metadata(

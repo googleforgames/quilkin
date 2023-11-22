@@ -53,7 +53,7 @@ on_write: COMPRESS
         ..<_>::default()
     };
     // Run server proxy.
-    t.run_server(server_config, server_proxy, None);
+    t.run_server(server_config, Some(server_proxy), None).await;
 
     // create a local client
     let client_addr = available_addr(&AddressType::Random).await;
@@ -79,7 +79,7 @@ on_write: DECOMPRESS
         ..<_>::default()
     };
     // Run client proxy.
-    t.run_server(client_config, client_proxy, None);
+    t.run_server(client_config, Some(client_proxy), None).await;
 
     // let's send the packet
     let (mut rx, tx) = t.open_socket_and_recv_multiple_packets().await;
