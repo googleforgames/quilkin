@@ -18,6 +18,7 @@ use crate::pool::{BufferPool, PoolBuffer};
 use parking_lot::Mutex;
 use std::{io, sync::Arc};
 
+use lz4_flex::block;
 use snap::raw;
 
 /// A trait that provides a compression and decompression strategy for this filter.
@@ -25,6 +26,7 @@ use snap::raw;
 /// decompression operation can occur.
 pub(crate) enum Compressor {
     Snappy(SnappyImpl),
+    Lz4,
 }
 
 impl Compressor {
@@ -41,6 +43,24 @@ impl Compressor {
 
                 let compressed = res?;
                 encoded.truncate(compressed);
+                encoded
+            }
+            Self::Lz4 => {
+                let size = block::get_maximum_output_size(contents.len()) + 3;
+                let mut encoded = vec![0; size];
+
+                let slen = size::write(&mut encoded, contents.len() as u16);
+
+                let compressed =
+                    block::compress_into(contents, &mut encoded[slen..]).map_err(|_e| {
+                        // This should be impossible
+                        io::Error::new(
+                            io::ErrorKind::OutOfMemory,
+                            "not enough space allocated for compressed output",
+                        )
+                    })?;
+
+                encoded.truncate(compressed + slen);
                 encoded
             }
         };
@@ -61,6 +81,22 @@ impl Compressor {
                 decoded.truncate(decompressed);
                 decoded
             }
+            Self::Lz4 => {
+                let (size, slen) = size::read(contents);
+                let mut decoded = vec![0; size as usize];
+
+                let decompressed = block::decompress_into(&contents[slen..], &mut decoded)
+                    .map_err(|_e| {
+                        // This should be impossible
+                        io::Error::new(
+                            io::ErrorKind::OutOfMemory,
+                            "not enough space allocated for decompressed output",
+                        )
+                    })?;
+
+                decoded.truncate(decompressed);
+                decoded
+            }
         };
 
         *contents = decoded;
@@ -74,6 +110,7 @@ impl From<super::Mode> for Compressor {
             super::Mode::Snappy => Self::Snappy(SnappyImpl {
                 encoders: Mutex::new(Vec::new()),
             }),
+            super::Mode::Lz4 => Self::Lz4,
         }
     }
 }
@@ -91,5 +128,45 @@ impl SnappyImpl {
     #[inline]
     fn absorb(&self, enc: raw::Encoder) {
         self.encoders.lock().push(enc);
+    }
+}
+
+/// Sadly lz4_flex only has prepends the size when compressing to its own
+/// allocated vector, so we can't use it, so we just implement our own based
+/// on <https://developers.google.com/protocol-buffers/docs/encoding#varints>,
+/// and bonus points, we have up to 3 bytes from the payload since lz4_flex always
+/// encodes a full 4 byte u32, regardless of the actual length (which in our case
+/// will always be <64k
+mod size {
+    #[inline]
+    pub(super) fn write(data: &mut [u8], mut n: u16) -> usize {
+        let mut i = 0;
+        while n >= 0b1000_0000 {
+            data[i] = (n as u8) | 0b1000_0000;
+            n >>= 7;
+            i += 1;
+        }
+        data[i] = n as u8;
+        i + 1
+    }
+
+    #[inline]
+    pub(super) fn read(data: &[u8]) -> (u16, usize) {
+        let mut n: u16 = 0;
+        let mut shift: u32 = 0;
+        for (i, &b) in data.iter().enumerate() {
+            if b < 0b1000_0000 {
+                return match (b as u16).checked_shl(shift) {
+                    None => (0, 0),
+                    Some(b) => (n | b, i + 1),
+                };
+            }
+            match ((b as u16) & 0b0111_1111).checked_shl(shift) {
+                None => return (0, 0),
+                Some(b) => n |= b,
+            }
+            shift += 7;
+        }
+        (0, 0)
     }
 }
