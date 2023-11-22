@@ -161,8 +161,8 @@ impl DualStackLocalSocket {
                 (result, buf)
             }
 
-            pub async fn send_to(&self, mut buf: Vec<u8>, target: SocketAddr) -> (io::Result<usize>, Vec<u8>) {
-                let result = self.socket.send_to(&mut buf, target).await;
+            pub async fn send_to(&self, buf: Vec<u8>, target: SocketAddr) -> (io::Result<usize>, Vec<u8>) {
+                let result = self.socket.send_to(&buf, target).await;
                 (result, buf)
             }
         }
@@ -234,7 +234,7 @@ impl DualStackEpollSocket {
 /// On linux spawns a io-uring runtime + thread, everywhere else spawns a regular tokio task.
 macro_rules! uring_spawn {
     ($future:expr) => {{
-        let (tx, rx) = tokio::sync::oneshot::channel();
+        let (tx, rx) = tokio::sync::oneshot::channel::<crate::Result<()>>();
         cfg_if::cfg_if! {
             if #[cfg(target_os = "linux")] {
                 std::thread::spawn(move || {
@@ -244,13 +244,13 @@ macro_rules! uring_spawn {
                             runtime.block_on($future);
                         }
                         Err(error) => {
-                            let _ = tx.send(Err(error));
+                            let _ = tx.send(Err(error.into()));
                         }
                     };
                 });
             } else {
                 tokio::spawn(async move {
-                    tx.send(Ok(()));
+                    let _ = tx.send(Ok(()));
                     $future.await
                 });
             }
