@@ -148,11 +148,11 @@ impl DualStackLocalSocket {
 
     cfg_if::cfg_if! {
         if #[cfg(target_os = "linux")] {
-            pub async fn recv_from(&self, buf: Vec<u8>) -> (io::Result<(usize, SocketAddr)>, Vec<u8>) {
+            pub async fn recv_from<B: tokio_uring::buf::IoBufMut>(&self, buf: B) -> (io::Result<(usize, SocketAddr)>, B) {
                 self.socket.recv_from(buf).await
             }
 
-            pub async fn send_to(&self, buf: Vec<u8>, target: SocketAddr) -> (io::Result<usize>, Vec<u8>) {
+            pub async fn send_to<B: tokio_uring::buf::IoBuf>(&self, buf: B, target: SocketAddr) -> (io::Result<usize>, B) {
                 self.socket.send_to(buf, target).await
             }
 
@@ -160,12 +160,12 @@ impl DualStackLocalSocket {
                 std::rc::Rc::new(self)
             }
         } else {
-            pub async fn recv_from(&self, mut buf: Vec<u8>) -> (io::Result<(usize, SocketAddr)>, Vec<u8>) {
+            pub async fn recv_from<B: std::ops::DerefMut<Target = [u8]>>(&self, mut buf: B) -> (io::Result<(usize, SocketAddr)>, B) {
                 let result = self.socket.recv_from(&mut buf).await;
                 (result, buf)
             }
 
-            pub async fn send_to(&self, buf: Vec<u8>, target: SocketAddr) -> (io::Result<usize>, Vec<u8>) {
+            pub async fn send_to<B: std::ops::Deref<Target = [u8]>>(&self, buf: B, target: SocketAddr) -> (io::Result<usize>, B) {
                 let result = self.socket.send_to(&buf, target).await;
                 (result, buf)
             }

@@ -27,6 +27,7 @@ use crate::{
     net::endpoint::metadata::Value,
     net::endpoint::{Endpoint, EndpointAddress},
     net::DualStackEpollSocket as DualStackLocalSocket,
+    pool::BufferPool,
     ShutdownKind, ShutdownRx, ShutdownTx,
 };
 
@@ -89,7 +90,7 @@ impl Filter for TestFilter {
             .or_insert_with(|| Value::String("receive".into()));
 
         ctx.contents
-            .append(&mut format!(":odr:{}", ctx.source).into_bytes());
+            .extend_from_slice(format!(":odr:{}", ctx.source).as_bytes());
         Ok(())
     }
 
@@ -101,7 +102,7 @@ impl Filter for TestFilter {
             .or_insert_with(|| Value::String("receive".to_string()));
 
         ctx.contents
-            .append(&mut format!(":our:{}:{}", ctx.source, ctx.dest).into_bytes());
+            .extend_from_slice(format!(":our:{}:{}", ctx.source, ctx.dest).as_bytes());
         Ok(())
     }
 }
@@ -317,6 +318,14 @@ impl TestHelper {
     }
 }
 
+pub static BUFFER_POOL: once_cell::sync::Lazy<Arc<BufferPool>> =
+    once_cell::sync::Lazy::new(|| Arc::new(BufferPool::default()));
+
+#[inline]
+pub fn alloc_buffer(data: impl AsRef<[u8]>) -> crate::pool::PoolBuffer {
+    BUFFER_POOL.clone().alloc_slice(data.as_ref())
+}
+
 /// assert that read makes no changes
 pub async fn assert_filter_read_no_change<F>(filter: &F)
 where
@@ -327,8 +336,8 @@ where
         .parse::<Endpoint>()
         .unwrap()]));
     let source = "127.0.0.1:90".parse().unwrap();
-    let contents = "hello".to_string().into_bytes();
-    let mut context = ReadContext::new(endpoints.clone(), source, contents.clone());
+    let contents = b"hello";
+    let mut context = ReadContext::new(endpoints.clone(), source, alloc_buffer(contents));
 
     filter.read(&mut context).await.unwrap();
     assert!(context.destinations.is_empty());
@@ -342,11 +351,11 @@ where
     F: Filter,
 {
     let endpoint = "127.0.0.1:90".parse::<Endpoint>().unwrap();
-    let contents = "hello".to_string().into_bytes();
+    let contents = b"hello";
     let mut context = WriteContext::new(
         endpoint.address,
         "127.0.0.1:70".parse().unwrap(),
-        contents.clone(),
+        alloc_buffer(contents),
     );
 
     filter.write(&mut context).await.unwrap();

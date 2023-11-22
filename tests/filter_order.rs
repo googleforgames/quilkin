@@ -85,14 +85,19 @@ on_write: DECOMPRESS
     // let's send the packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
 
-    let local_addr = (Ipv4Addr::LOCALHOST, server_port);
-    socket.send_to(b"hello", &local_addr).await.unwrap();
+    let buf = b"hello".repeat(98);
 
-    assert_eq!(
-        "helloxyzabc",
-        timeout(Duration::from_millis(500), recv_chan.recv())
-            .await
-            .expect("should have received a packet")
-            .unwrap()
-    );
+    let local_addr = (Ipv4Addr::LOCALHOST, server_port);
+    socket.send_to(&buf, &local_addr).await.unwrap();
+
+    let received = timeout(Duration::from_millis(500), recv_chan.recv())
+        .await
+        .expect("should have received a packet")
+        .unwrap();
+
+    let hellos = received
+        .strip_suffix("xyzabc")
+        .expect("expected appended data");
+
+    assert_eq!(&buf, hellos.as_bytes(),);
 }

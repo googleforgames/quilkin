@@ -27,15 +27,20 @@ use tokio::{
 };
 
 use crate::{
-    config::Config, filters::Filter, net::maxmind_db::IpNetEntry, net::DualStackLocalSocket,
+    config::Config,
+    filters::Filter,
+    net::maxmind_db::IpNetEntry,
+    net::DualStackLocalSocket,
+    pool::{BufferPool, FrozenPoolBuffer, PoolBuffer},
     Loggable, ShutdownRx,
 };
 
 pub(crate) mod metrics;
 
 pub type SessionMap = crate::collections::ttl::TtlMap<SessionKey, Session>;
-type ChannelData = (Vec<u8>, Option<IpNetEntry>, SocketAddr);
-type UpstreamSender = mpsc::UnboundedSender<ChannelData>;
+type ChannelData = (PoolBuffer, Option<IpNetEntry>, SocketAddr);
+type UpstreamChannelData = (FrozenPoolBuffer, Option<IpNetEntry>, SocketAddr);
+type UpstreamSender = mpsc::UnboundedSender<UpstreamChannelData>;
 type DownstreamSender = async_channel::Sender<ChannelData>;
 pub type DownstreamReceiver = async_channel::Receiver<ChannelData>;
 
@@ -52,6 +57,7 @@ pub struct SessionPool {
     storage: Arc<RwLock<SocketStorage>>,
     session_map: SessionMap,
     downstream_sender: DownstreamSender,
+    buffer_pool: Arc<BufferPool>,
     shutdown_rx: ShutdownRx,
     config: Arc<Config>,
 }
@@ -72,6 +78,7 @@ impl SessionPool {
     pub fn new(
         config: Arc<Config>,
         downstream_sender: DownstreamSender,
+        buffer_pool: Arc<BufferPool>,
         shutdown_rx: ShutdownRx,
     ) -> Arc<Self> {
         const SESSION_TIMEOUT_SECONDS: Duration = Duration::from_secs(60);
@@ -84,6 +91,7 @@ impl SessionPool {
             ports_to_sockets: <_>::default(),
             storage: <_>::default(),
             session_map: SessionMap::new(SESSION_TIMEOUT_SECONDS, SESSION_EXPIRY_POLL_INTERVAL),
+            buffer_pool,
         })
     }
 
@@ -101,12 +109,11 @@ impl SessionPool {
             .ok_or_else(|| eyre::eyre!("couldn't get socket address from raw socket"))
             .map_err(super::PipelineError::Session)?
             .port();
-        let (tx, mut downstream_receiver) = mpsc::unbounded_channel::<ChannelData>();
+        let (tx, mut downstream_receiver) = mpsc::unbounded_channel::<UpstreamChannelData>();
 
         let pool = self.clone();
 
         let initialised = uring_spawn!(async move {
-            let mut buf: Vec<u8> = vec![0; 65535];
             let mut last_received_at = None;
             let mut shutdown_rx = pool.shutdown_rx.clone();
             cfg_if::cfg_if! {
@@ -130,7 +137,7 @@ impl SessionPool {
                             .inc();
                         }
                         Some((data, asn_info, send_addr)) => {
-                            tracing::trace!(%send_addr, contents = %crate::codec::base64::encode(&data), "sending packet upstream");
+                            tracing::trace!(%send_addr, length = data.len(), "sending packet upstream");
                             let (result, _) = socket2.send_to(data, send_addr).await;
                             let asn_info = asn_info.as_ref();
                             match result {
@@ -163,16 +170,16 @@ impl SessionPool {
             });
 
             loop {
+                let buf = pool.buffer_pool.clone().alloc();
                 tokio::select! {
                     received = socket.recv_from(buf) => {
-                        let (result, new_buf) = received;
-                        buf = new_buf;
+                        let (result, buf) = received;
                         match result {
                             Err(error) => {
                                 tracing::trace!(%error, "error receiving packet");
                                 crate::metrics::errors_total(crate::metrics::WRITE, &error.to_string(), None).inc();
                             },
-                            Ok((size, recv_addr)) => pool.process_received_upstream_packet(&buf[..size], recv_addr, port, &mut last_received_at).await,
+                            Ok((_size, recv_addr)) => pool.process_received_upstream_packet(buf, recv_addr, port, &mut last_received_at).await,
                         }
                     }
                     _ = shutdown_rx.changed() => {
@@ -192,7 +199,7 @@ impl SessionPool {
 
     async fn process_received_upstream_packet(
         self: &Arc<Self>,
-        packet: &[u8],
+        packet: PoolBuffer,
         mut recv_addr: SocketAddr,
         port: u16,
         last_received_at: &mut Option<i64>,
@@ -362,17 +369,16 @@ impl SessionPool {
         source: SocketAddr,
         dest: SocketAddr,
         asn_info: Option<&IpNetEntry>,
-        packet: &[u8],
+        packet: PoolBuffer,
     ) -> Result<(), Error> {
-        tracing::trace!(%source, %dest, contents = %crate::codec::base64::encode(packet), "received packet from upstream");
+        tracing::trace!(%source, %dest, length = packet.len(), "received packet from upstream");
 
-        let mut context =
-            crate::filters::WriteContext::new(source.into(), dest.into(), packet.to_vec());
+        let mut context = crate::filters::WriteContext::new(source.into(), dest.into(), packet);
 
         config.filters.load().write(&mut context).await?;
 
         let packet = context.contents;
-        tracing::trace!(%source, %dest, contents = %crate::codec::base64::encode(&packet), "sending packet downstream");
+        tracing::trace!(%source, %dest, length = packet.len(), "sending packet downstream");
         downstream_sender
             .send((packet, asn_info.cloned(), dest))
             .await
@@ -390,7 +396,7 @@ impl SessionPool {
         self: &Arc<Self>,
         key: SessionKey,
         asn_info: Option<IpNetEntry>,
-        packet: Vec<u8>,
+        packet: FrozenPoolBuffer,
     ) -> Result<(), super::PipelineError> {
         self.get(key, asn_info.clone())
             .await?
@@ -562,7 +568,7 @@ impl Loggable for Error {
 mod tests {
     use super::*;
     use crate::{
-        test::{available_addr, AddressType, TestHelper},
+        test::{alloc_buffer, available_addr, AddressType, TestHelper},
         ShutdownTx,
     };
     use std::sync::Arc;
@@ -573,7 +579,12 @@ mod tests {
         let (tx, rx) = crate::make_shutdown_channel(crate::ShutdownKind::Testing);
         let (sender, receiver) = async_channel::unbounded();
         (
-            SessionPool::new(Arc::new(config.into().unwrap_or_default()), sender, rx),
+            SessionPool::new(
+                Arc::new(config.into().unwrap_or_default()),
+                sender,
+                Arc::new(BufferPool::default()),
+                rx,
+            ),
             tx,
             receiver,
         )
@@ -733,7 +744,9 @@ mod tests {
         let key: SessionKey = (source, dest).into();
         let msg = b"helloworld";
 
-        pool.send(key, None, msg.to_vec()).await.unwrap();
+        pool.send(key, None, alloc_buffer(msg).freeze())
+            .await
+            .unwrap();
 
         let (data, _, _) = tokio::time::timeout(std::time::Duration::from_secs(1), receiver.recv())
             .await

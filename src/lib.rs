@@ -18,6 +18,7 @@
 
 pub(crate) mod collections;
 pub(crate) mod metrics;
+mod pool;
 
 // Above other modules for thr `uring_spawn` macro.
 #[macro_use]

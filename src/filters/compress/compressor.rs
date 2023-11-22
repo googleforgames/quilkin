@@ -14,35 +14,82 @@
  * limitations under the License.
  */
 
-use std::io;
+use crate::pool::{BufferPool, PoolBuffer};
+use parking_lot::Mutex;
+use std::{io, sync::Arc};
 
-use snap::read::FrameDecoder;
-use snap::write::FrameEncoder;
+use snap::raw;
 
 /// A trait that provides a compression and decompression strategy for this filter.
 /// Conversion takes place on a mutable Vec, to ensure the most performant compression or
 /// decompression operation can occur.
-pub(crate) trait Compressor {
-    /// Compress the contents of the Vec - overwriting the original content.
-    fn encode(&self, contents: &mut Vec<u8>) -> io::Result<()>;
-    /// Decompress the contents of the Vec - overwriting the original content.
-    fn decode(&self, contents: &mut Vec<u8>) -> io::Result<()>;
+pub(crate) enum Compressor {
+    Snappy(SnappyImpl),
 }
 
-pub(crate) struct Snappy {}
+impl Compressor {
+    pub fn encode(&self, pool: Arc<BufferPool>, contents: &mut PoolBuffer) -> io::Result<()> {
+        let encoded = match self {
+            Self::Snappy(imp) => {
+                let size = raw::max_compress_len(contents.len());
+                let mut encoded = pool.alloc_sized(size);
 
-impl Compressor for Snappy {
-    fn encode(&self, contents: &mut Vec<u8>) -> io::Result<()> {
-        let input = std::mem::take(contents);
-        let mut wtr = FrameEncoder::new(contents);
-        io::copy(&mut input.as_slice(), &mut wtr)?;
+                let mut encoder = imp.encoder();
+
+                let res = encoder.compress(contents, encoded.as_mut_slice(0..size));
+                imp.absorb(encoder);
+
+                let compressed = res?;
+                encoded.truncate(compressed);
+                encoded
+            }
+        };
+
+        *contents = encoded;
         Ok(())
     }
 
-    fn decode(&self, contents: &mut Vec<u8>) -> io::Result<()> {
-        let input = std::mem::take(contents);
-        let mut rdr = FrameDecoder::new(input.as_slice());
-        io::copy(&mut rdr, contents)?;
+    pub fn decode(&self, pool: Arc<BufferPool>, contents: &mut PoolBuffer) -> io::Result<()> {
+        let decoded = match self {
+            Self::Snappy(_imp) => {
+                let size = raw::decompress_len(contents)?;
+                let mut decoded = pool.alloc_sized(size);
+
+                let decompressed =
+                    raw::Decoder::new().decompress(contents, decoded.as_mut_slice(0..size))?;
+
+                decoded.truncate(decompressed);
+                decoded
+            }
+        };
+
+        *contents = decoded;
         Ok(())
+    }
+}
+
+impl From<super::Mode> for Compressor {
+    fn from(mode: super::Mode) -> Self {
+        match mode {
+            super::Mode::Snappy => Self::Snappy(SnappyImpl {
+                encoders: Mutex::new(Vec::new()),
+            }),
+        }
+    }
+}
+
+pub struct SnappyImpl {
+    encoders: Mutex<Vec<raw::Encoder>>,
+}
+
+impl SnappyImpl {
+    #[inline]
+    fn encoder(&self) -> raw::Encoder {
+        self.encoders.lock().pop().unwrap_or_else(raw::Encoder::new)
+    }
+
+    #[inline]
+    fn absorb(&self, enc: raw::Encoder) {
+        self.encoders.lock().push(enc);
     }
 }

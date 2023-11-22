@@ -37,6 +37,7 @@ use crate::filters::FilterFactory;
 use crate::{
     filters::{Filter, ReadContext},
     net::{maxmind_db::IpNetEntry, xds::ResourceType, DualStackLocalSocket},
+    pool::PoolBuffer,
     Config, Result, ShutdownRx,
 };
 
@@ -137,9 +138,24 @@ impl Proxy {
 
         let runtime_config = mode.unwrap_proxy();
 
+        // The number of worker tasks to spawn. Each task gets a dedicated queue to
+        // consume packets off.
+        let num_workers = self
+            .workers
+            .map(|nz| nz.get())
+            .unwrap_or_else(num_cpus::get);
+
+        eyre::ensure!(num_workers > 0, "must use at least 1 worker");
+
         let (upstream_sender, upstream_receiver) =
-            async_channel::unbounded::<(Vec<u8>, Option<IpNetEntry>, SocketAddr)>();
-        let sessions = SessionPool::new(config.clone(), upstream_sender, shutdown_rx.clone());
+            async_channel::unbounded::<(PoolBuffer, Option<IpNetEntry>, SocketAddr)>();
+        let buffer_pool = Arc::new(crate::pool::BufferPool::new(num_workers, 64 * 1024));
+        let sessions = SessionPool::new(
+            config.clone(),
+            upstream_sender,
+            buffer_pool.clone(),
+            shutdown_rx.clone(),
+        );
 
         let _xds_stream = if !self.management_server.is_empty() {
             {
@@ -181,8 +197,14 @@ impl Proxy {
             self.port
         };
 
-        let worker_notifications =
-            self.run_recv_from(&config, port, &sessions, upstream_receiver)?;
+        let worker_notifications = self.run_recv_from(
+            &config,
+            port,
+            num_workers,
+            &sessions,
+            upstream_receiver,
+            buffer_pool,
+        )?;
 
         crate::codec::qcmp::spawn(self.qcmp_port).await?;
         for notification in worker_notifications {
@@ -220,18 +242,11 @@ impl Proxy {
         &self,
         config: &Arc<Config>,
         port: u16,
+        num_workers: usize,
         sessions: &Arc<SessionPool>,
         upstream_receiver: DownstreamReceiver,
+        buffer_pool: Arc<crate::pool::BufferPool>,
     ) -> Result<Vec<Arc<tokio::sync::Notify>>> {
-        // The number of worker tasks to spawn. Each task gets a dedicated queue to
-        // consume packets off.
-        let num_workers = self
-            .workers
-            .map(|nz| nz.get())
-            .unwrap_or_else(num_cpus::get);
-
-        eyre::ensure!(num_workers > 0, "must use at least 1 worker");
-
         let (error_sender, mut error_receiver) = mpsc::unbounded_channel();
 
         let worker_notifications = (0..num_workers)
@@ -243,6 +258,7 @@ impl Proxy {
                     config: config.clone(),
                     sessions: sessions.clone(),
                     error_sender: error_sender.clone(),
+                    buffer_pool: buffer_pool.clone(),
                 };
 
                 worker.spawn()
@@ -299,7 +315,7 @@ impl RuntimeConfig {
 #[derive(Debug)]
 struct DownstreamPacket {
     asn_info: Option<crate::net::maxmind_db::IpNetEntry>,
-    contents: Vec<u8>,
+    contents: PoolBuffer,
     received_at: i64,
     source: SocketAddr,
 }
@@ -315,6 +331,7 @@ pub(crate) struct DownstreamReceiveWorkerConfig {
     pub config: Arc<Config>,
     pub sessions: Arc<SessionPool>,
     pub error_sender: mpsc::UnboundedSender<PipelineError>,
+    pub buffer_pool: Arc<crate::pool::BufferPool>,
 }
 
 impl DownstreamReceiveWorkerConfig {
@@ -326,14 +343,15 @@ impl DownstreamReceiveWorkerConfig {
             config,
             sessions,
             error_sender,
+            buffer_pool,
         } = self;
+
         let notify = Arc::new(tokio::sync::Notify::new());
         let is_ready = notify.clone();
 
         uring_spawn!(async move {
             // Initialize a buffer for the UDP packet. We use the maximum size of a UDP
             // packet, which is the maximum value of 16 a bit integer.
-            let mut recv_buf = vec![0; 1 << 16];
             let mut last_received_at = None;
             let socket = DualStackLocalSocket::new(port).unwrap().make_refcnt();
             let send_socket = socket.clone();
@@ -387,15 +405,16 @@ impl DownstreamReceiveWorkerConfig {
             });
 
             loop {
-                let (result, new_buf) = socket.recv_from(recv_buf).await;
-                recv_buf = new_buf;
+                let buffer = buffer_pool.clone().alloc();
+
+                let (result, contents) = socket.recv_from(buffer).await;
                 match result {
-                    Ok((size, mut source)) => {
+                    Ok((_size, mut source)) => {
                         crate::net::to_canonical(&mut source);
                         let packet = DownstreamPacket {
                             received_at: chrono::Utc::now().timestamp_nanos_opt().unwrap(),
                             asn_info: crate::net::maxmind_db::MaxmindDb::lookup(source.ip()),
-                            contents: recv_buf[..size].to_vec(),
+                            contents,
                             source,
                         };
 
@@ -442,7 +461,6 @@ impl DownstreamReceiveWorkerConfig {
             id = worker_id,
             size = packet.contents.len(),
             source = %source,
-            contents=&*crate::codec::base64::encode(&packet.contents),
             "received packet from downstream"
         );
 
@@ -486,18 +504,25 @@ impl DownstreamReceiveWorkerConfig {
         );
         filters.read(&mut context).await?;
 
-        for endpoint in context.destinations.iter() {
+        let ReadContext {
+            destinations,
+            contents,
+            ..
+        } = context;
+
+        // Similar to bytes::BytesMut::freeze, we turn the mutable pool buffer
+        // into an immutable one with its own internal arc so it can be cloned
+        // cheaply and returned to the pool once all references are dropped
+        let contents = contents.freeze();
+
+        for endpoint in destinations.iter() {
             let session_key = SessionKey {
                 source: packet.source,
                 dest: endpoint.address.to_socket_addr().await?,
             };
 
             sessions
-                .send(
-                    session_key,
-                    packet.asn_info.clone(),
-                    context.contents.clone(),
-                )
+                .send(session_key, packet.asn_info.clone(), contents.clone())
                 .await?;
         }
 
@@ -529,7 +554,9 @@ mod tests {
     use crate::{
         config,
         net::endpoint::Endpoint,
-        test::{available_addr, create_socket, load_test_filters, AddressType, TestHelper},
+        test::{
+            available_addr, create_socket, load_test_filters, AddressType, TestHelper, BUFFER_POOL,
+        },
     };
 
     #[tokio::test]
@@ -689,7 +716,8 @@ mod tests {
             upstream_receiver: rx.clone(),
             config: config.clone(),
             error_sender,
-            sessions: SessionPool::new(config, tx, shutdown_rx),
+            buffer_pool: BUFFER_POOL.clone(),
+            sessions: SessionPool::new(config, tx, BUFFER_POOL.clone(), shutdown_rx),
         }
         .spawn();
         tokio::time::sleep(std::time::Duration::from_millis(500)).await;
@@ -732,10 +760,10 @@ mod tests {
         let (_shutdown_tx, shutdown_rx) =
             crate::make_shutdown_channel(crate::ShutdownKind::Testing);
 
-        let sessions = SessionPool::new(config.clone(), tx, shutdown_rx);
+        let sessions = SessionPool::new(config.clone(), tx, BUFFER_POOL.clone(), shutdown_rx);
 
         proxy
-            .run_recv_from(&config, proxy.port, &sessions, rx)
+            .run_recv_from(&config, proxy.port, 1, &sessions, rx, BUFFER_POOL.clone())
             .unwrap();
         tokio::time::sleep(Duration::from_millis(500)).await;
 

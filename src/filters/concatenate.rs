@@ -48,10 +48,10 @@ impl Filter for Concatenate {
     async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         match self.on_read {
             Strategy::Append => {
-                ctx.contents.extend(self.bytes.iter());
+                ctx.contents.extend_from_slice(&self.bytes);
             }
             Strategy::Prepend => {
-                ctx.contents.splice(..0, self.bytes.iter().cloned());
+                ctx.contents.prepend_from_slice(&self.bytes);
             }
             Strategy::DoNothing => {}
         }
@@ -62,10 +62,10 @@ impl Filter for Concatenate {
     async fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
         match self.on_write {
             Strategy::Append => {
-                ctx.contents.extend(self.bytes.iter());
+                ctx.contents.extend_from_slice(&self.bytes);
             }
             Strategy::Prepend => {
-                ctx.contents.splice(..0, self.bytes.iter().cloned());
+                ctx.contents.prepend_from_slice(&self.bytes);
             }
             Strategy::DoNothing => {}
         }

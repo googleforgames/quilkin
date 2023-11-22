@@ -18,9 +18,12 @@ use std::sync::Arc;
 
 #[cfg(doc)]
 use crate::filters::Filter;
-use crate::net::{
-    endpoint::{metadata::DynamicMetadata, Endpoint, EndpointAddress},
-    ClusterMap,
+use crate::{
+    net::{
+        endpoint::{metadata::DynamicMetadata, Endpoint, EndpointAddress},
+        ClusterMap,
+    },
+    pool::PoolBuffer,
 };
 
 /// The input arguments to [`Filter::read`].
@@ -33,14 +36,15 @@ pub struct ReadContext {
     /// The source of the received packet.
     pub source: EndpointAddress,
     /// Contents of the received packet.
-    pub contents: Vec<u8>,
+    pub contents: PoolBuffer,
     /// Arbitrary values that can be passed from one filter to another.
     pub metadata: DynamicMetadata,
 }
 
 impl ReadContext {
     /// Creates a new [`ReadContext`].
-    pub fn new(endpoints: Arc<ClusterMap>, source: EndpointAddress, contents: Vec<u8>) -> Self {
+    #[inline]
+    pub fn new(endpoints: Arc<ClusterMap>, source: EndpointAddress, contents: PoolBuffer) -> Self {
         Self {
             endpoints,
             destinations: Vec::new(),
