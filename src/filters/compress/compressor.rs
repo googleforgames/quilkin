@@ -24,7 +24,7 @@ use snap::raw;
 /// A trait that provides a compression and decompression strategy for this filter.
 /// Conversion takes place on a mutable Vec, to ensure the most performant compression or
 /// decompression operation can occur.
-pub(crate) enum Compressor {
+pub enum Compressor {
     Snappy(SnappyImpl),
     Lz4,
 }

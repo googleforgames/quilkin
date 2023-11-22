@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 pub use std::{
     net::{Ipv4Addr, SocketAddr, SocketAddrV4, UdpSocket},
     sync::{atomic, mpsc, Arc},
@@ -293,7 +295,6 @@ impl<const N: usize> Writer<N> {
     }
 }
 
-#[allow(dead_code)]
 pub struct QuilkinLoop {
     shutdown: Option<quilkin::ShutdownTx>,
     thread: Option<std::thread::JoinHandle<()>>,

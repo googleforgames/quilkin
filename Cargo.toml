@@ -66,6 +66,11 @@ name = "read_write"
 harness = false
 test = false
 
+[[bench]]
+name = "compression"
+harness = false
+test = false
+
 [dependencies]
 # Local
 quilkin-macros = { version = "0.8.0-dev", path = "./macros" }
