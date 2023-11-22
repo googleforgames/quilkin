@@ -71,7 +71,10 @@ impl ServiceClient for AdsGrpcClient {
     async fn connect(
         endpoint: tonic::transport::Endpoint,
     ) -> Result<Self, tonic::transport::Error> {
-        AdsGrpcClient::connect(endpoint).await
+        Ok(AdsGrpcClient::connect(endpoint)
+            .await?
+            .max_decoding_message_size(256 * 1024 * 1024)
+            .max_encoding_message_size(256 * 1024 * 1024))
     }
 
     async fn stream_requests<S: tonic::IntoStreamingRequest<Message = Self::Request> + Send>(
@@ -90,7 +93,10 @@ impl ServiceClient for MdsGrpcClient {
     async fn connect(
         endpoint: tonic::transport::Endpoint,
     ) -> Result<Self, tonic::transport::Error> {
-        MdsGrpcClient::connect(endpoint).await
+        Ok(MdsGrpcClient::connect(endpoint)
+            .await?
+            .max_decoding_message_size(256 * 1024 * 1024)
+            .max_encoding_message_size(256 * 1024 * 1024))
     }
 
     async fn stream_requests<S: tonic::IntoStreamingRequest<Message = Self::Request> + Send>(

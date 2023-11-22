@@ -44,7 +44,8 @@ pub fn spawn(
     mode: Admin,
     config: std::sync::Arc<crate::Config>,
 ) -> impl std::future::Future<Output = crate::Result<()>> {
-    let server = AggregatedDiscoveryServiceServer::new(ControlPlane::from_arc(config, mode));
+    let server = AggregatedDiscoveryServiceServer::new(ControlPlane::from_arc(config, mode))
+        .max_encoding_message_size(256 * 1024 * 1024);
     let server = tonic::transport::Server::builder().add_service(server);
     tracing::info!("serving management server on port `{port}`");
     server
@@ -58,7 +59,8 @@ pub(crate) fn control_plane_discovery_server(
     config: Arc<Config>,
 ) -> impl std::future::Future<Output = crate::Result<()>> {
     let server =
-        AggregatedControlPlaneDiscoveryServiceServer::new(ControlPlane::from_arc(config, mode));
+        AggregatedControlPlaneDiscoveryServiceServer::new(ControlPlane::from_arc(config, mode))
+            .max_encoding_message_size(256 * 1024 * 1024);
     let server = tonic::transport::Server::builder().add_service(server);
     tracing::info!("serving relay server on port `{port}`");
     server
