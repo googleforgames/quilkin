@@ -83,14 +83,15 @@ pub use self::chain::FilterChain;
 ///
 /// struct Greet;
 ///
+/// /// Prepends data on each packet
 /// #[async_trait::async_trait]
 /// impl Filter for Greet {
 ///     async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
-///         ctx.contents.splice(0..0, b"Hello ".into_iter().copied());
+///         ctx.contents.prepend_from_slice(b"Hello ");
 ///         Ok(())
 ///     }
 ///     async fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
-///         ctx.contents.splice(0..0, b"Goodbye ".into_iter().copied());
+///         ctx.contents.prepend_from_slice(b"Goodbye ");
 ///         Ok(())
 ///     }
 /// }
