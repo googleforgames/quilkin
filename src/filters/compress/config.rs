@@ -32,6 +32,8 @@ pub enum Mode {
     #[serde(rename = "SNAPPY")]
     #[default]
     Snappy,
+    #[serde(rename = "LZ4")]
+    Lz4,
 }
 
 impl Mode {
@@ -44,6 +46,7 @@ impl From<Mode> for ProtoMode {
     fn from(mode: Mode) -> Self {
         match mode {
             Mode::Snappy => Self::Snappy,
+            Mode::Lz4 => Self::Lz4,
         }
     }
 }
@@ -52,6 +55,7 @@ impl From<ProtoMode> for Mode {
     fn from(mode: ProtoMode) -> Self {
         match mode {
             ProtoMode::Snappy => Self::Snappy,
+            ProtoMode::Lz4 => Self::Lz4,
         }
     }
 }

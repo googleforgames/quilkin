@@ -23,7 +23,7 @@ crate::include_proto!("quilkin.filters.compress.v1alpha1");
 use crate::{filters::prelude::*, pool::BufferPool};
 
 use self::quilkin::filters::compress::v1alpha1 as proto;
-use compressor::Compressor;
+pub use compressor::Compressor;
 use metrics::Metrics;
 use std::sync::Arc;
 
@@ -148,7 +148,9 @@ impl StaticFilter for Compress {
 #[cfg(test)]
 mod tests {
     use crate::{
-        filters::compress::compressor::Compressor, net::endpoint::Endpoint, test::alloc_buffer,
+        filters::compress::compressor::Compressor,
+        net::endpoint::Endpoint,
+        test::{alloc_buffer, BUFFER_POOL},
     };
 
     use super::*;
@@ -165,9 +167,21 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn config_factory() {
+    async fn config_factory_snappy() {
         let config = serde_json::json!({
             "mode": "SNAPPY".to_string(),
+            "on_read": "DECOMPRESS".to_string(),
+            "on_write": "COMPRESS".to_string(),
+
+        });
+        let filter = Compress::from_config(Some(serde_json::from_value(config).unwrap()));
+        assert_downstream(&filter).await;
+    }
+
+    #[tokio::test]
+    async fn config_factory_lz4() {
+        let config = serde_json::json!({
+            "mode": "LZ4".to_string(),
             "on_read": "DECOMPRESS".to_string(),
             "on_write": "COMPRESS".to_string(),
 
@@ -300,15 +314,13 @@ mod tests {
         assert_eq!(b"hello".to_vec(), &*write_context.contents)
     }
 
-    #[test]
-    fn snappy() {
+    fn roundtrip_compression(compressor: Compressor) {
         let expected = contents_fixture();
         let mut contents = alloc_buffer(&expected);
-        let compressor: Compressor = Mode::Snappy.into();
 
-        let compression_pool = Arc::new(BufferPool::new(1, 64 * 1024));
-        let ok = compressor.encode(compression_pool.clone(), &mut contents);
-        assert!(ok.is_ok());
+        compressor
+            .encode(BUFFER_POOL.clone(), &mut contents)
+            .expect("failed to compress");
         assert!(
             !contents.is_empty(),
             "compressed array should be greater than 0"
@@ -324,12 +336,23 @@ mod tests {
             contents.len()
         ); // 45000 bytes uncompressed, 276 bytes compressed
 
-        let ok = compressor.decode(compression_pool.clone(), &mut contents);
-        assert!(ok.is_ok());
+        compressor
+            .decode(BUFFER_POOL.clone(), &mut contents)
+            .expect("failed to decompress");
         assert_eq!(
             expected, &*contents,
             "should be equal, as decompressed state should go back to normal"
         );
+    }
+
+    #[test]
+    fn snappy() {
+        roundtrip_compression(Mode::Snappy.into());
+    }
+
+    #[test]
+    fn lz4() {
+        roundtrip_compression(Mode::Lz4.into());
     }
 
     /// At small data packets, compression will add data, so let's give a bigger data packet!

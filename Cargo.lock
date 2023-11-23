@@ -1442,6 +1442,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "lz4_flex"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3ea9b256699eda7b0387ffbc776dd625e28bde3918446381781245b7a50349d8"
+
+[[package]]
 name = "match_cfg"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1891,6 +1897,7 @@ dependencies = [
  "k8s-openapi",
  "kube",
  "lasso",
+ "lz4_flex",
  "maxminddb",
  "nom",
  "notify",

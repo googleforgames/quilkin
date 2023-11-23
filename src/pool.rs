@@ -107,6 +107,11 @@ impl PoolBuffer {
     }
 
     #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.inner.is_empty()
+    }
+
+    #[inline]
     pub fn extend_from_slice(&mut self, slice: &[u8]) {
         self.inner.extend_from_slice(slice);
     }
@@ -275,6 +280,11 @@ impl FrozenPoolBuffer {
     #[inline]
     pub fn len(&self) -> usize {
         self.inner.len()
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.inner.is_empty()
     }
 }
 
