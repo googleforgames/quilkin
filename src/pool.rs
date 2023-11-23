@@ -56,7 +56,8 @@ impl BufferPool {
             inner,
             owner: self,
             index,
-            split: None,
+            prefix: None,
+            suffix: None,
         }
     }
 
@@ -94,7 +95,8 @@ impl fmt::Debug for BufferPool {
 pub struct PoolBuffer {
     inner: BytesMut,
     owner: Arc<BufferPool>,
-    split: Option<(BytesMut, bool)>,
+    prefix: Option<BytesMut>,
+    suffix: Option<BytesMut>,
     index: usize,
 }
 
@@ -141,24 +143,37 @@ impl PoolBuffer {
         self.inner.truncate(len);
     }
 
+    /// Splits a suffix of the specified length from the buffer and returns it
+    ///
+    /// The suffix will be [len - length, len) and this buffer will now be [0, len - length)
     #[inline]
-    pub fn split_off(&mut self, at: usize) -> &mut BytesMut {
-        assert!(self.split.is_none());
-
-        let split = self.inner.split_off(at);
-        self.split = Some((split, true));
-
-        self.split.as_mut().map(|(b, _)| b).unwrap()
+    pub fn split_suffix(&mut self, length: usize) -> &[u8] {
+        if let Some(current) = self.suffix.take() {
+            let prev_len = current.len();
+            self.inner.unsplit(current);
+            self.suffix = Some(self.inner.split_off(self.inner.len() - length - prev_len));
+            self.suffix.as_deref().map(|b| &b[..length]).unwrap()
+        } else {
+            self.suffix = Some(self.inner.split_off(self.inner.len() - length));
+            self.suffix.as_deref().unwrap()
+        }
     }
 
+    /// Splits a prefix of the specified length from the buffer and returns it.
+    ///
+    /// The prefix will be [0, at) and this buffer will now be [at, len)
     #[inline]
-    pub fn split_to(&mut self, at: usize) -> &mut BytesMut {
-        assert!(self.split.is_none());
-
-        let split = self.inner.split_to(at);
-        self.split = Some((split, false));
-
-        self.split.as_mut().map(|(b, _)| b).unwrap()
+    pub fn split_prefix(&mut self, at: usize) -> &[u8] {
+        if let Some(mut current) = self.prefix.take() {
+            let len = current.len();
+            current.unsplit(std::mem::replace(&mut self.inner, BytesMut::new()));
+            self.inner = current.split_off(at + len);
+            self.prefix = Some(current);
+            self.prefix.as_deref().map(|b| &b[..at]).unwrap()
+        } else {
+            self.prefix = Some(self.inner.split_to(at));
+            self.prefix.as_deref().unwrap()
+        }
     }
 
     #[inline]
@@ -173,6 +188,8 @@ impl fmt::Debug for PoolBuffer {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("PoolBuffer")
             .field("len", &self.inner.len())
+            .field("prefix_len", &self.prefix.as_ref().map(|p| p.len()))
+            .field("suffix_len", &self.suffix.as_ref().map(|p| p.len()))
             .finish_non_exhaustive()
     }
 }
@@ -234,19 +251,18 @@ unsafe impl tokio_uring::buf::IoBuf for PoolBuffer {
 impl Drop for PoolBuffer {
     #[inline]
     fn drop(&mut self) {
-        if let Some((mut b, which)) = self.split.take() {
-            if which {
-                self.inner.unsplit(b);
-            } else {
-                b.unsplit(std::mem::replace(&mut self.inner, BytesMut::new()));
-                self.inner = b;
-            }
+        let mut inner = std::mem::replace(&mut self.inner, BytesMut::new());
+
+        if let Some(mut prefix) = self.prefix.take() {
+            prefix.unsplit(inner);
+            inner = prefix;
         }
 
-        if self.inner.capacity() != 0 {
-            let inner = std::mem::replace(&mut self.inner, BytesMut::new());
-            self.owner.absorb(inner, self.index)
+        if let Some(suffix) = self.suffix.take() {
+            inner.unsplit(suffix);
         }
+
+        self.owner.absorb(inner, self.index)
     }
 }
 
@@ -286,5 +302,28 @@ impl std::ops::Deref for FrozenPoolBuffer {
     #[inline]
     fn deref(&self) -> &Self::Target {
         &self.inner
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn splits() {
+        let pool = Arc::new(BufferPool::new(1, 10));
+
+        let full_slice = &[9, 9, 9, 1, 1, 1, 1, 8, 8, 8];
+
+        let mut buf = pool.alloc_slice(full_slice);
+
+        assert_eq!(&[8], buf.split_suffix(1));
+        assert_eq!(&full_slice[..9], buf.as_ref());
+        assert_eq!(&[9, 9], buf.split_prefix(2));
+        assert_eq!(&full_slice[2..9], buf.as_ref());
+        assert_eq!(&[8, 8], buf.split_suffix(2));
+        assert_eq!(&full_slice[2..7], buf.as_ref());
+        assert_eq!(&[9], buf.split_prefix(1));
+        assert_eq!(&[1, 1, 1, 1], buf.as_ref());
     }
 }

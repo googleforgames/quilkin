@@ -21,7 +21,9 @@ impl super::CaptureStrategy for Prefix {
     fn capture(&self, contents: &mut PoolBuffer) -> Option<Value> {
         is_valid_size(contents, self.size).then(|| {
             if self.remove {
-                Value::Bytes(Bytes::copy_from_slice(contents.split_to(self.size as _)))
+                Value::Bytes(Bytes::copy_from_slice(
+                    contents.split_prefix(self.size as _),
+                ))
             } else {
                 Value::Bytes(Bytes::copy_from_slice(&contents[..self.size as _]))
             }
@@ -42,11 +44,12 @@ pub struct Suffix {
 impl super::CaptureStrategy for Suffix {
     fn capture(&self, contents: &mut PoolBuffer) -> Option<Value> {
         is_valid_size(contents, self.size).then(|| {
-            let index = contents.len() - self.size as usize;
-
             if self.remove {
-                Value::Bytes(Bytes::copy_from_slice(contents.split_off(index)))
+                Value::Bytes(Bytes::copy_from_slice(
+                    contents.split_suffix(self.size as _),
+                ))
             } else {
+                let index = contents.len() - self.size as usize;
                 Value::Bytes(Bytes::copy_from_slice(&contents[index..]))
             }
         })
