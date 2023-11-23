@@ -107,7 +107,7 @@ impl PoolBuffer {
     }
 
     #[inline]
-    pub fn is_empty(&self) -> usize {
+    pub fn is_empty(&self) -> bool {
         self.inner.is_empty()
     }
 
@@ -283,7 +283,7 @@ impl FrozenPoolBuffer {
     }
 
     #[inline]
-    pub fn is_empty(&self) -> usize {
+    pub fn is_empty(&self) -> bool {
         self.inner.is_empty()
     }
 }
