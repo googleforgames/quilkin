@@ -384,6 +384,29 @@
 <a href="#384" id="384">384</a>
 <a href="#385" id="385">385</a>
 <a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -409,7 +432,7 @@
 <span class="kw">use crate</span>::{filters::prelude::<span class="kw-2">*</span>, pool::BufferPool};
 
 <span class="kw">use </span><span class="self">self</span>::quilkin::filters::compress::v1alpha1 <span class="kw">as </span>proto;
-<span class="kw">use </span>compressor::Compressor;
+<span class="kw">pub use </span>compressor::Compressor;
 <span class="kw">use </span>metrics::Metrics;
 <span class="kw">use </span>std::sync::Arc;
 
@@ -534,7 +557,9 @@
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
     <span class="kw">use crate</span>::{
-        filters::compress::compressor::Compressor, net::endpoint::Endpoint, test::alloc_buffer,
+        filters::compress::compressor::Compressor,
+        net::endpoint::Endpoint,
+        test::{alloc_buffer, BUFFER_POOL},
     };
 
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
@@ -551,9 +576,21 @@
     }
 
     <span class="attr">#[tokio::test]
-    </span><span class="kw">async fn </span>config_factory() {
+    </span><span class="kw">async fn </span>config_factory_snappy() {
         <span class="kw">let </span>config = <span class="macro">serde_json::json!</span>({
             <span class="string">&quot;mode&quot;</span>: <span class="string">&quot;SNAPPY&quot;</span>.to_string(),
+            <span class="string">&quot;on_read&quot;</span>: <span class="string">&quot;DECOMPRESS&quot;</span>.to_string(),
+            <span class="string">&quot;on_write&quot;</span>: <span class="string">&quot;COMPRESS&quot;</span>.to_string(),
+
+        });
+        <span class="kw">let </span>filter = Compress::from_config(<span class="prelude-val">Some</span>(serde_json::from_value(config).unwrap()));
+        assert_downstream(<span class="kw-2">&amp;</span>filter).<span class="kw">await</span>;
+    }
+
+    <span class="attr">#[tokio::test]
+    </span><span class="kw">async fn </span>config_factory_lz4() {
+        <span class="kw">let </span>config = <span class="macro">serde_json::json!</span>({
+            <span class="string">&quot;mode&quot;</span>: <span class="string">&quot;LZ4&quot;</span>.to_string(),
             <span class="string">&quot;on_read&quot;</span>: <span class="string">&quot;DECOMPRESS&quot;</span>.to_string(),
             <span class="string">&quot;on_write&quot;</span>: <span class="string">&quot;COMPRESS&quot;</span>.to_string(),
 
@@ -686,15 +723,13 @@
         <span class="macro">assert_eq!</span>(<span class="string">b&quot;hello&quot;</span>.to_vec(), <span class="kw-2">&amp;*</span>write_context.contents)
     }
 
-    <span class="attr">#[test]
-    </span><span class="kw">fn </span>snappy() {
+    <span class="kw">fn </span>roundtrip_compression(compressor: Compressor) {
         <span class="kw">let </span>expected = contents_fixture();
         <span class="kw">let </span><span class="kw-2">mut </span>contents = alloc_buffer(<span class="kw-2">&amp;</span>expected);
-        <span class="kw">let </span>compressor: Compressor = Mode::Snappy.into();
 
-        <span class="kw">let </span>compression_pool = Arc::new(BufferPool::new(<span class="number">1</span>, <span class="number">64 </span>* <span class="number">1024</span>));
-        <span class="kw">let </span>ok = compressor.encode(compression_pool.clone(), <span class="kw-2">&amp;mut </span>contents);
-        <span class="macro">assert!</span>(ok.is_ok());
+        compressor
+            .encode(BUFFER_POOL.clone(), <span class="kw-2">&amp;mut </span>contents)
+            .expect(<span class="string">&quot;failed to compress&quot;</span>);
         <span class="macro">assert!</span>(
             !contents.is_empty(),
             <span class="string">&quot;compressed array should be greater than 0&quot;
@@ -710,12 +745,23 @@
             contents.len()
         ); <span class="comment">// 45000 bytes uncompressed, 276 bytes compressed
 
-        </span><span class="kw">let </span>ok = compressor.decode(compression_pool.clone(), <span class="kw-2">&amp;mut </span>contents);
-        <span class="macro">assert!</span>(ok.is_ok());
+        </span>compressor
+            .decode(BUFFER_POOL.clone(), <span class="kw-2">&amp;mut </span>contents)
+            .expect(<span class="string">&quot;failed to decompress&quot;</span>);
         <span class="macro">assert_eq!</span>(
             expected, <span class="kw-2">&amp;*</span>contents,
             <span class="string">&quot;should be equal, as decompressed state should go back to normal&quot;
         </span>);
+    }
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>snappy() {
+        roundtrip_compression(Mode::Snappy.into());
+    }
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>lz4() {
+        roundtrip_compression(Mode::Lz4.into());
     }
 
     <span class="doccomment">/// At small data packets, compression will add data, so let&#39;s give a bigger data packet!

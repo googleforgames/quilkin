@@ -93,6 +93,84 @@
 <a href="#93" id="93">93</a>
 <a href="#94" id="94">94</a>
 <a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -113,13 +191,15 @@
 <span class="kw">use </span>parking_lot::Mutex;
 <span class="kw">use </span>std::{io, sync::Arc};
 
+<span class="kw">use </span>lz4_flex::block;
 <span class="kw">use </span>snap::raw;
 
 <span class="doccomment">/// A trait that provides a compression and decompression strategy for this filter.
 /// Conversion takes place on a mutable Vec, to ensure the most performant compression or
 /// decompression operation can occur.
-</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">enum </span>Compressor {
+</span><span class="kw">pub enum </span>Compressor {
     Snappy(SnappyImpl),
+    Lz4,
 }
 
 <span class="kw">impl </span>Compressor {
@@ -136,6 +216,24 @@
 
                 <span class="kw">let </span>compressed = res<span class="question-mark">?</span>;
                 encoded.truncate(compressed);
+                encoded
+            }
+            <span class="self">Self</span>::Lz4 =&gt; {
+                <span class="kw">let </span>size = block::get_maximum_output_size(contents.len()) + <span class="number">3</span>;
+                <span class="kw">let </span><span class="kw-2">mut </span>encoded = pool.alloc_sized(size);
+
+                <span class="kw">let </span>slen = size::write(encoded.as_mut_slice(<span class="number">0</span>..size), contents.len() <span class="kw">as </span>u16);
+
+                <span class="kw">let </span>compressed = block::compress_into(contents, encoded.as_mut_slice(slen..size))
+                    .map_err(|_e| {
+                    <span class="comment">// This should be impossible
+                    </span>io::Error::new(
+                        io::ErrorKind::OutOfMemory,
+                        <span class="string">&quot;not enough space allocated for compressed output&quot;</span>,
+                    )
+                })<span class="question-mark">?</span>;
+
+                encoded.truncate(compressed + slen);
                 encoded
             }
         };
@@ -156,6 +254,23 @@
                 decoded.truncate(decompressed);
                 decoded
             }
+            <span class="self">Self</span>::Lz4 =&gt; {
+                <span class="kw">let </span>(size, slen) = size::read(contents);
+                <span class="kw">let </span><span class="kw-2">mut </span>decoded = pool.alloc_sized(size <span class="kw">as _</span>);
+
+                <span class="kw">let </span>decompressed =
+                    block::decompress_into(<span class="kw-2">&amp;</span>contents[slen..], decoded.as_mut_slice(<span class="number">0</span>..size <span class="kw">as _</span>))
+                        .map_err(|_e| {
+                        <span class="comment">// This should be impossible
+                        </span>io::Error::new(
+                            io::ErrorKind::OutOfMemory,
+                            <span class="string">&quot;not enough space allocated for decompressed output&quot;</span>,
+                        )
+                    })<span class="question-mark">?</span>;
+
+                decoded.truncate(decompressed);
+                decoded
+            }
         };
 
         <span class="kw-2">*</span>contents = decoded;
@@ -169,6 +284,7 @@
             <span class="kw">super</span>::Mode::Snappy =&gt; <span class="self">Self</span>::Snappy(SnappyImpl {
                 encoders: Mutex::new(Vec::new()),
             }),
+            <span class="kw">super</span>::Mode::Lz4 =&gt; <span class="self">Self</span>::Lz4,
         }
     }
 }
@@ -186,6 +302,46 @@
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>absorb(<span class="kw-2">&amp;</span><span class="self">self</span>, enc: raw::Encoder) {
         <span class="self">self</span>.encoders.lock().push(enc);
+    }
+}
+
+<span class="doccomment">/// Sadly lz4_flex only has prepends the size when compressing to its own
+/// allocated vector, so we can&#39;t use it, so we just implement our own based
+/// on &lt;https://developers.google.com/protocol-buffers/docs/encoding#varints&gt;,
+/// and bonus points, we have up to 3 bytes from the payload since lz4_flex always
+/// encodes a full 4 byte u32, regardless of the actual length (which in our case
+/// will always be &lt;64k
+</span><span class="kw">mod </span>size {
+    <span class="attr">#[inline]
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>write(data: <span class="kw-2">&amp;mut </span>[u8], <span class="kw-2">mut </span>n: u16) -&gt; usize {
+        <span class="kw">let </span><span class="kw-2">mut </span>i = <span class="number">0</span>;
+        <span class="kw">while </span>n &gt;= <span class="number">0b1000_0000 </span>{
+            data[i] = (n <span class="kw">as </span>u8) | <span class="number">0b1000_0000</span>;
+            n &gt;&gt;= <span class="number">7</span>;
+            i += <span class="number">1</span>;
+        }
+        data[i] = n <span class="kw">as </span>u8;
+        i + <span class="number">1
+    </span>}
+
+    <span class="attr">#[inline]
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>read(data: <span class="kw-2">&amp;</span>[u8]) -&gt; (u16, usize) {
+        <span class="kw">let </span><span class="kw-2">mut </span>n: u16 = <span class="number">0</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>shift: u32 = <span class="number">0</span>;
+        <span class="kw">for </span>(i, <span class="kw-2">&amp;</span>b) <span class="kw">in </span>data.iter().enumerate() {
+            <span class="kw">if </span>b &lt; <span class="number">0b1000_0000 </span>{
+                <span class="kw">return match </span>(b <span class="kw">as </span>u16).checked_shl(shift) {
+                    <span class="prelude-val">None </span>=&gt; (<span class="number">0</span>, <span class="number">0</span>),
+                    <span class="prelude-val">Some</span>(b) =&gt; (n | b, i + <span class="number">1</span>),
+                };
+            }
+            <span class="kw">match </span>((b <span class="kw">as </span>u16) &amp; <span class="number">0b0111_1111</span>).checked_shl(shift) {
+                <span class="prelude-val">None </span>=&gt; <span class="kw">return </span>(<span class="number">0</span>, <span class="number">0</span>),
+                <span class="prelude-val">Some</span>(b) =&gt; n |= b,
+            }
+            shift += <span class="number">7</span>;
+        }
+        (<span class="number">0</span>, <span class="number">0</span>)
     }
 }
 </code></pre></div></section></main></body></html>

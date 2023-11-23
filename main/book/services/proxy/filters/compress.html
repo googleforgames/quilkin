@@ -232,6 +232,7 @@ definitions:
     type: string
     enum:
     - SNAPPY
+    - LZ4
 </code></pre>
 <h2 id="compression-modes"><a class="header" href="#compression-modes">Compression Modes</a></h2>
 <h3 id="snappy"><a class="header" href="#snappy">Snappy</a></h3>
@@ -239,10 +240,31 @@ definitions:
 <p>Snappy is a compression/decompression library. It does not aim for maximum compression, or compatibility with any
 other compression library; instead, it aims for very high speeds and reasonable compression.</p>
 </blockquote>
-<p>Currently, this filter only provides the <a href="https://github.com/google/snappy/">Snappy</a> compression format via the
-<a href="https://github.com/BurntSushi/rust-snappy">rust-snappy</a> crate, but more will be
-provided in the future.</p>
-<h3 id="metrics"><a class="header" href="#metrics">Metrics</a></h3>
+<p>This compression method is provided by <a href="https://github.com/BurntSushi/rust-snappy">rust-snappy</a>.</p>
+<p>Due to the small size of packets, this only encodes and decodes the non-streaming version of the format described <a href="https://github.com/google/snappy/blob/main/format_description.txt">here</a>.</p>
+<pre><code class="language-yaml">- name: quilkin.filters.compress.v1alpha1.Compress
+    config:
+        on_read: COMPRESS
+        on_write: DECOMPRESS
+        mode: SNAPPY
+</code></pre>
+<h3 id="lz4"><a class="header" href="#lz4">LZ4</a></h3>
+<blockquote>
+<p>LZ4 is lossless compression algorithm, providing compression speed &gt; 500 MB/s per core, scalable with multi-cores CPU.
+It features an extremely fast decoder, with speed in multiple GB/s per core, typically reaching RAM speed limits on
+multi-core systems.</p>
+</blockquote>
+<p>This compression method is provided by <a href="https://github.com/PSeitz/lz4_flex">lz4_flex</a>.</p>
+<p>Due to the small size of packets, this only encodes and decodes the block version of the format described. If your game client/server itself is performing LZ4 de/compression it needs to encode or
+decode a varint of the uncompressed packet size (maximum 2^16) since that is not part of the LZ4 block
+format. The varint is of the same exact form as that used by <a href="https://github.com/google/snappy/blob/27f34a580be4a3becf5f8c0cba13433f53c21337/format_description.txt#L20-L25">snappy</a>.</p>
+<pre><code class="language-yaml">- name: quilkin.filters.compress.v1alpha1.Compress
+    config:
+        on_read: COMPRESS
+        on_write: DECOMPRESS
+        mode: LZ4
+</code></pre>
+<h2 id="metrics"><a class="header" href="#metrics">Metrics</a></h2>
 <ul>
 <li><code>quilkin_filter_int_counter{label=&quot;compressed_bytes_total&quot;}</code>
 Total number of compressed bytes either received or sent.</li>

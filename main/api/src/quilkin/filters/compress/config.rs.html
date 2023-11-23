@@ -150,6 +150,10 @@
 <a href="#150" id="150">150</a>
 <a href="#151" id="151">151</a>
 <a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -184,6 +188,8 @@
     </span><span class="attr">#[serde(rename = <span class="string">&quot;SNAPPY&quot;</span>)]
     #[default]
     </span>Snappy,
+    <span class="attr">#[serde(rename = <span class="string">&quot;LZ4&quot;</span>)]
+    </span>Lz4,
 }
 
 <span class="kw">impl </span>Mode {
@@ -196,6 +202,7 @@
     <span class="kw">fn </span>from(mode: Mode) -&gt; <span class="self">Self </span>{
         <span class="kw">match </span>mode {
             Mode::Snappy =&gt; <span class="self">Self</span>::Snappy,
+            Mode::Lz4 =&gt; <span class="self">Self</span>::Lz4,
         }
     }
 }
@@ -204,6 +211,7 @@
     <span class="kw">fn </span>from(mode: ProtoMode) -&gt; <span class="self">Self </span>{
         <span class="kw">match </span>mode {
             ProtoMode::Snappy =&gt; <span class="self">Self</span>::Snappy,
+            ProtoMode::Lz4 =&gt; <span class="self">Self</span>::Lz4,
         }
     }
 }

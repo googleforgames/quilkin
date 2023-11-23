@@ -95,6 +95,9 @@
 <a href="#95" id="95">95</a>
 <a href="#96" id="96">96</a>
 <a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
 </pre></div><pre class="rust"><code><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>Compress {
@@ -133,6 +136,7 @@
     #[repr(i32)]
     </span><span class="kw">pub enum </span>Mode {
         Snappy = <span class="number">0</span>,
+        Lz4 = <span class="number">1</span>,
     }
     <span class="kw">impl </span>Mode {
         <span class="doccomment">/// String value of the enum field names used in the ProtoBuf definition.
@@ -142,12 +146,14 @@
         </span><span class="kw">pub fn </span>as_str_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
             <span class="kw">match </span><span class="self">self </span>{
                 Mode::Snappy =&gt; <span class="string">&quot;Snappy&quot;</span>,
+                Mode::Lz4 =&gt; <span class="string">&quot;Lz4&quot;</span>,
             }
         }
         <span class="doccomment">/// Creates an enum from field names used in the ProtoBuf definition.
         </span><span class="kw">pub fn </span>from_str_name(value: <span class="kw-2">&amp;</span>str) -&gt; ::core::option::Option&lt;<span class="self">Self</span>&gt; {
             <span class="kw">match </span>value {
                 <span class="string">&quot;Snappy&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Snappy),
+                <span class="string">&quot;Lz4&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Lz4),
                 <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
             }
         }
