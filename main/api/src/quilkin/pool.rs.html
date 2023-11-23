@@ -288,6 +288,45 @@
 <a href="#288" id="288">288</a>
 <a href="#289" id="289">289</a>
 <a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>bytes::BytesMut;
 <span class="kw">use </span>parking_lot::Mutex;
 <span class="kw">use </span>std::{
@@ -346,7 +385,8 @@
             inner,
             owner: <span class="self">self</span>,
             index,
-            split: <span class="prelude-val">None</span>,
+            prefix: <span class="prelude-val">None</span>,
+            suffix: <span class="prelude-val">None</span>,
         }
     }
 
@@ -384,7 +424,8 @@
 <span class="kw">pub struct </span>PoolBuffer {
     inner: BytesMut,
     owner: Arc&lt;BufferPool&gt;,
-    split: <span class="prelude-ty">Option</span>&lt;(BytesMut, bool)&gt;,
+    prefix: <span class="prelude-ty">Option</span>&lt;BytesMut&gt;,
+    suffix: <span class="prelude-ty">Option</span>&lt;BytesMut&gt;,
     index: usize,
 }
 
@@ -431,24 +472,37 @@
         <span class="self">self</span>.inner.truncate(len);
     }
 
-    <span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>split_off(<span class="kw-2">&amp;mut </span><span class="self">self</span>, at: usize) -&gt; <span class="kw-2">&amp;mut </span>BytesMut {
-        <span class="macro">assert!</span>(<span class="self">self</span>.split.is_none());
-
-        <span class="kw">let </span>split = <span class="self">self</span>.inner.split_off(at);
-        <span class="self">self</span>.split = <span class="prelude-val">Some</span>((split, <span class="bool-val">true</span>));
-
-        <span class="self">self</span>.split.as_mut().map(|(b, <span class="kw">_</span>)| b).unwrap()
+    <span class="doccomment">/// Splits a suffix of the specified length from the buffer and returns it
+    ///
+    /// The suffix will be [len - length, len) and this buffer will now be [0, len - length)
+    </span><span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>split_suffix(<span class="kw-2">&amp;mut </span><span class="self">self</span>, length: usize) -&gt; <span class="kw-2">&amp;</span>[u8] {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(current) = <span class="self">self</span>.suffix.take() {
+            <span class="kw">let </span>prev_len = current.len();
+            <span class="self">self</span>.inner.unsplit(current);
+            <span class="self">self</span>.suffix = <span class="prelude-val">Some</span>(<span class="self">self</span>.inner.split_off(<span class="self">self</span>.inner.len() - length - prev_len));
+            <span class="self">self</span>.suffix.as_deref().map(|b| <span class="kw-2">&amp;</span>b[..length]).unwrap()
+        } <span class="kw">else </span>{
+            <span class="self">self</span>.suffix = <span class="prelude-val">Some</span>(<span class="self">self</span>.inner.split_off(<span class="self">self</span>.inner.len() - length));
+            <span class="self">self</span>.suffix.as_deref().unwrap()
+        }
     }
 
-    <span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>split_to(<span class="kw-2">&amp;mut </span><span class="self">self</span>, at: usize) -&gt; <span class="kw-2">&amp;mut </span>BytesMut {
-        <span class="macro">assert!</span>(<span class="self">self</span>.split.is_none());
-
-        <span class="kw">let </span>split = <span class="self">self</span>.inner.split_to(at);
-        <span class="self">self</span>.split = <span class="prelude-val">Some</span>((split, <span class="bool-val">false</span>));
-
-        <span class="self">self</span>.split.as_mut().map(|(b, <span class="kw">_</span>)| b).unwrap()
+    <span class="doccomment">/// Splits a prefix of the specified length from the buffer and returns it.
+    ///
+    /// The prefix will be [0, at) and this buffer will now be [at, len)
+    </span><span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>split_prefix(<span class="kw-2">&amp;mut </span><span class="self">self</span>, at: usize) -&gt; <span class="kw-2">&amp;</span>[u8] {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>current) = <span class="self">self</span>.prefix.take() {
+            <span class="kw">let </span>len = current.len();
+            current.unsplit(std::mem::replace(<span class="kw-2">&amp;mut </span><span class="self">self</span>.inner, BytesMut::new()));
+            <span class="self">self</span>.inner = current.split_off(at + len);
+            <span class="self">self</span>.prefix = <span class="prelude-val">Some</span>(current);
+            <span class="self">self</span>.prefix.as_deref().map(|b| <span class="kw-2">&amp;</span>b[..at]).unwrap()
+        } <span class="kw">else </span>{
+            <span class="self">self</span>.prefix = <span class="prelude-val">Some</span>(<span class="self">self</span>.inner.split_to(at));
+            <span class="self">self</span>.prefix.as_deref().unwrap()
+        }
     }
 
     <span class="attr">#[inline]
@@ -463,6 +517,8 @@
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
         f.debug_struct(<span class="string">&quot;PoolBuffer&quot;</span>)
             .field(<span class="string">&quot;len&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.inner.len())
+            .field(<span class="string">&quot;prefix_len&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.prefix.as_ref().map(|p| p.len()))
+            .field(<span class="string">&quot;suffix_len&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.suffix.as_ref().map(|p| p.len()))
             .finish_non_exhaustive()
     }
 }
@@ -524,19 +580,18 @@
 <span class="kw">impl </span>Drop <span class="kw">for </span>PoolBuffer {
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>((<span class="kw-2">mut </span>b, which)) = <span class="self">self</span>.split.take() {
-            <span class="kw">if </span>which {
-                <span class="self">self</span>.inner.unsplit(b);
-            } <span class="kw">else </span>{
-                b.unsplit(std::mem::replace(<span class="kw-2">&amp;mut </span><span class="self">self</span>.inner, BytesMut::new()));
-                <span class="self">self</span>.inner = b;
-            }
+        <span class="kw">let </span><span class="kw-2">mut </span>inner = std::mem::replace(<span class="kw-2">&amp;mut </span><span class="self">self</span>.inner, BytesMut::new());
+
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>prefix) = <span class="self">self</span>.prefix.take() {
+            prefix.unsplit(inner);
+            inner = prefix;
         }
 
-        <span class="kw">if </span><span class="self">self</span>.inner.capacity() != <span class="number">0 </span>{
-            <span class="kw">let </span>inner = std::mem::replace(<span class="kw-2">&amp;mut </span><span class="self">self</span>.inner, BytesMut::new());
-            <span class="self">self</span>.owner.absorb(inner, <span class="self">self</span>.index)
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(suffix) = <span class="self">self</span>.suffix.take() {
+            inner.unsplit(suffix);
         }
+
+        <span class="self">self</span>.owner.absorb(inner, <span class="self">self</span>.index)
     }
 }
 
@@ -576,6 +631,29 @@
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
         <span class="kw-2">&amp;</span><span class="self">self</span>.inner
+    }
+}
+
+<span class="attr">#[cfg(test)]
+</span><span class="kw">mod </span>test {
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>splits() {
+        <span class="kw">let </span>pool = Arc::new(BufferPool::new(<span class="number">1</span>, <span class="number">10</span>));
+
+        <span class="kw">let </span>full_slice = <span class="kw-2">&amp;</span>[<span class="number">9</span>, <span class="number">9</span>, <span class="number">9</span>, <span class="number">1</span>, <span class="number">1</span>, <span class="number">1</span>, <span class="number">1</span>, <span class="number">8</span>, <span class="number">8</span>, <span class="number">8</span>];
+
+        <span class="kw">let </span><span class="kw-2">mut </span>buf = pool.alloc_slice(full_slice);
+
+        <span class="macro">assert_eq!</span>(<span class="kw-2">&amp;</span>[<span class="number">8</span>], buf.split_suffix(<span class="number">1</span>));
+        <span class="macro">assert_eq!</span>(<span class="kw-2">&amp;</span>full_slice[..<span class="number">9</span>], buf.as_ref());
+        <span class="macro">assert_eq!</span>(<span class="kw-2">&amp;</span>[<span class="number">9</span>, <span class="number">9</span>], buf.split_prefix(<span class="number">2</span>));
+        <span class="macro">assert_eq!</span>(<span class="kw-2">&amp;</span>full_slice[<span class="number">2</span>..<span class="number">9</span>], buf.as_ref());
+        <span class="macro">assert_eq!</span>(<span class="kw-2">&amp;</span>[<span class="number">8</span>, <span class="number">8</span>], buf.split_suffix(<span class="number">2</span>));
+        <span class="macro">assert_eq!</span>(<span class="kw-2">&amp;</span>full_slice[<span class="number">2</span>..<span class="number">7</span>], buf.as_ref());
+        <span class="macro">assert_eq!</span>(<span class="kw-2">&amp;</span>[<span class="number">9</span>], buf.split_prefix(<span class="number">1</span>));
+        <span class="macro">assert_eq!</span>(<span class="kw-2">&amp;</span>[<span class="number">1</span>, <span class="number">1</span>, <span class="number">1</span>, <span class="number">1</span>], buf.as_ref());
     }
 }
 </code></pre></div></section></main></body></html>
