@@ -27,8 +27,9 @@ use crate::{
     filters::prelude::*,
     net::cluster::ClusterMap,
     net::xds::{
-        config::listener::v3::Listener, service::discovery::v3::DiscoveryResponse, Resource,
-        ResourceType,
+        config::listener::v3::Listener,
+        service::discovery::v3::{DeltaDiscoveryResponse, DiscoveryResponse},
+        Resource, ResourceType,
     },
 };
 
@@ -162,6 +163,13 @@ impl Config {
             type_url: resource_type.type_url().into(),
             ..<_>::default()
         })
+    }
+
+    pub fn delta_discovery_request(
+        &self,
+        resource_type: ResourceType,
+    ) -> Result<DeltaDiscoveryResponse, eyre::Error> {
+        unimplemented!();
     }
 
     #[tracing::instrument(skip_all, fields(response = response.type_url()))]
