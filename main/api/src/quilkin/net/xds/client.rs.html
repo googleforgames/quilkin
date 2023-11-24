@@ -598,6 +598,12 @@
 <a href="#598" id="598">598</a>
 <a href="#599" id="599">599</a>
 <a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a>
+<a href="#603" id="603">603</a>
+<a href="#604" id="604">604</a>
+<a href="#605" id="605">605</a>
+<a href="#606" id="606">606</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -671,8 +677,11 @@
     <span class="kw">async fn </span>connect(
         endpoint: tonic::transport::Endpoint,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, tonic::transport::Error&gt; {
-        AdsGrpcClient::connect(endpoint).<span class="kw">await
-    </span>}
+        <span class="prelude-val">Ok</span>(AdsGrpcClient::connect(endpoint)
+            .<span class="kw">await</span><span class="question-mark">?
+            </span>.max_decoding_message_size(<span class="kw">crate</span>::config::max_grpc_message_size())
+            .max_encoding_message_size(<span class="kw">crate</span>::config::max_grpc_message_size()))
+    }
 
     <span class="kw">async fn </span>stream_requests&lt;S: tonic::IntoStreamingRequest&lt;Message = <span class="self">Self</span>::Request&gt; + Send&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
@@ -690,8 +699,11 @@
     <span class="kw">async fn </span>connect(
         endpoint: tonic::transport::Endpoint,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, tonic::transport::Error&gt; {
-        MdsGrpcClient::connect(endpoint).<span class="kw">await
-    </span>}
+        <span class="prelude-val">Ok</span>(MdsGrpcClient::connect(endpoint)
+            .<span class="kw">await</span><span class="question-mark">?
+            </span>.max_decoding_message_size(<span class="kw">crate</span>::config::max_grpc_message_size())
+            .max_encoding_message_size(<span class="kw">crate</span>::config::max_grpc_message_size()))
+    }
 
     <span class="kw">async fn </span>stream_requests&lt;S: tonic::IntoStreamingRequest&lt;Message = <span class="self">Self</span>::Request&gt; + Send&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,

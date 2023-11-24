@@ -535,6 +535,17 @@
 <a href="#535" id="535">535</a>
 <a href="#536" id="536">536</a>
 <a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a>
+<a href="#543" id="543">543</a>
+<a href="#544" id="544">544</a>
+<a href="#545" id="545">545</a>
+<a href="#546" id="546">546</a>
+<a href="#547" id="547">547</a>
+<a href="#548" id="548">548</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -585,6 +596,17 @@
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>BACKOFF_MAX_DELAY_SECONDS: u64 = <span class="number">30</span>;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>BACKOFF_MAX_JITTER_MILLISECONDS: u64 = <span class="number">2000</span>;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>CONNECTION_TIMEOUT: u64 = <span class="number">5</span>;
+
+<span class="doccomment">/// Returns the configured maximum allowed message size for gRPC messages.
+/// When using State Of The World xDS, the message size can get large enough
+/// that it can exceed the default limits.
+</span><span class="kw">pub fn </span>max_grpc_message_size() -&gt; usize {
+    std::env::var(<span class="string">&quot;QUILKIN_MAX_GRPC_MESSAGE_SIZE&quot;</span>)
+        .as_deref()
+        .ok()
+        .and_then(|var| var.parse().ok())
+        .unwrap_or(<span class="number">256 </span>* <span class="number">1024 </span>* <span class="number">1024</span>)
+}
 
 <span class="doccomment">/// Config is the configuration of a proxy
 </span><span class="attr">#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema, PartialEq)]

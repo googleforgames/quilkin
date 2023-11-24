@@ -500,6 +500,8 @@
 <a href="#500" id="500">500</a>
 <a href="#501" id="501">501</a>
 <a href="#502" id="502">502</a>
+<a href="#503" id="503">503</a>
+<a href="#504" id="504">504</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -548,7 +550,8 @@
     <span class="kw">let </span>server = AggregatedDiscoveryServiceServer::new(ControlPlane::from_arc(
         config,
         <span class="kw">crate</span>::cli::admin::IDLE_REQUEST_INTERVAL_SECS,
-    ));
+    ))
+    .max_encoding_message_size(<span class="kw">crate</span>::config::max_grpc_message_size());
     <span class="kw">let </span>server = tonic::transport::Server::builder().add_service(server);
     <span class="macro">tracing::info!</span>(<span class="string">&quot;serving management server on port `{port}`&quot;</span>);
     server
@@ -564,7 +567,8 @@
     <span class="kw">let </span>server = AggregatedControlPlaneDiscoveryServiceServer::new(ControlPlane::from_arc(
         config,
         idle_request_interval_secs,
-    ));
+    ))
+    .max_encoding_message_size(<span class="kw">crate</span>::config::max_grpc_message_size());
     <span class="kw">let </span>server = tonic::transport::Server::builder().add_service(server);
     <span class="macro">tracing::info!</span>(<span class="string">&quot;serving relay server on port `{port}`&quot;</span>);
     server
