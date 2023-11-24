@@ -46,7 +46,8 @@ pub fn spawn(
     let server = AggregatedDiscoveryServiceServer::new(ControlPlane::from_arc(
         config,
         crate::cli::admin::IDLE_REQUEST_INTERVAL_SECS,
-    ));
+    ))
+    .max_encoding_message_size(crate::config::max_grpc_message_size());
     let server = tonic::transport::Server::builder().add_service(server);
     tracing::info!("serving management server on port `{port}`");
     server
@@ -62,7 +63,8 @@ pub(crate) fn control_plane_discovery_server(
     let server = AggregatedControlPlaneDiscoveryServiceServer::new(ControlPlane::from_arc(
         config,
         idle_request_interval_secs,
-    ));
+    ))
+    .max_encoding_message_size(crate::config::max_grpc_message_size());
     let server = tonic::transport::Server::builder().add_service(server);
     tracing::info!("serving relay server on port `{port}`");
     server

@@ -49,6 +49,17 @@ pub(crate) const BACKOFF_MAX_DELAY_SECONDS: u64 = 30;
 pub(crate) const BACKOFF_MAX_JITTER_MILLISECONDS: u64 = 2000;
 pub(crate) const CONNECTION_TIMEOUT: u64 = 5;
 
+/// Returns the configured maximum allowed message size for gRPC messages.
+/// When using State Of The World xDS, the message size can get large enough
+/// that it can exceed the default limits.
+pub fn max_grpc_message_size() -> usize {
+    std::env::var("QUILKIN_MAX_GRPC_MESSAGE_SIZE")
+        .as_deref()
+        .ok()
+        .and_then(|var| var.parse().ok())
+        .unwrap_or(256 * 1024 * 1024)
+}
+
 /// Config is the configuration of a proxy
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema, PartialEq)]
 #[serde(deny_unknown_fields)]
