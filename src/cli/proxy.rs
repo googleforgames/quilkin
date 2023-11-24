@@ -157,32 +157,47 @@ impl Proxy {
             shutdown_rx.clone(),
         );
 
-        let _xds_stream = if !self.management_server.is_empty() {
+        if !self.management_server.is_empty() {
             {
                 let mut lock = runtime_config.xds_is_healthy.write();
                 let check: Arc<AtomicBool> = <_>::default();
                 *lock = Some(check.clone());
             }
 
-            let client = crate::net::xds::AdsClient::connect(
-                String::clone(&id),
-                mode.clone(),
-                self.management_server.clone(),
-            )
-            .await?;
-            let mut stream =
-                client.xds_client_stream(config.clone(), self.idle_request_interval_secs);
+            std::thread::spawn({
+                let config = config.clone();
+                let mut shutdown_rx = shutdown_rx.clone();
+                let idle_request_interval_secs = self.idle_request_interval_secs;
+                let management_server = self.management_server.clone();
+                let mode = mode.clone();
+                move || {
+                    let runtime = tokio::runtime::Builder::new_multi_thread()
+                        .enable_all()
+                        .build()
+                        .unwrap();
 
-            tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
-            stream.discovery_request(ResourceType::Cluster, &[]).await?;
-            tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
-            stream
-                .discovery_request(ResourceType::Listener, &[])
-                .await?;
-            Some((client, stream))
-        } else {
-            None
-        };
+                    runtime.block_on(async move {
+                        let client = crate::net::xds::AdsClient::connect(
+                            String::clone(&id),
+                            mode,
+                            management_server,
+                        )
+                        .await?;
+                        let mut stream =
+                            client.xds_client_stream(config, idle_request_interval_secs);
+
+                        tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
+                        stream.discovery_request(ResourceType::Cluster, &[]).await?;
+                        tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
+                        stream
+                            .discovery_request(ResourceType::Listener, &[])
+                            .await?;
+                        let _ = shutdown_rx.changed().await;
+                        Ok::<_, eyre::Error>(())
+                    })
+                }
+            });
+        }
 
         // Generally only for testing purposes, if port is 0 we bind to an ephemeral
         // port and return that to the caller
