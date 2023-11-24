@@ -778,6 +778,21 @@
 <a href="#778" id="778">778</a>
 <a href="#779" id="779">779</a>
 <a href="#780" id="780">780</a>
+<a href="#781" id="781">781</a>
+<a href="#782" id="782">782</a>
+<a href="#783" id="783">783</a>
+<a href="#784" id="784">784</a>
+<a href="#785" id="785">785</a>
+<a href="#786" id="786">786</a>
+<a href="#787" id="787">787</a>
+<a href="#788" id="788">788</a>
+<a href="#789" id="789">789</a>
+<a href="#790" id="790">790</a>
+<a href="#791" id="791">791</a>
+<a href="#792" id="792">792</a>
+<a href="#793" id="793">793</a>
+<a href="#794" id="794">794</a>
+<a href="#795" id="795">795</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -937,32 +952,47 @@
             shutdown_rx.clone(),
         );
 
-        <span class="kw">let </span>_xds_stream = <span class="kw">if </span>!<span class="self">self</span>.management_server.is_empty() {
+        <span class="kw">if </span>!<span class="self">self</span>.management_server.is_empty() {
             {
                 <span class="kw">let </span><span class="kw-2">mut </span>lock = runtime_config.xds_is_healthy.write();
                 <span class="kw">let </span>check: Arc&lt;AtomicBool&gt; = &lt;<span class="kw">_</span>&gt;::default();
                 <span class="kw-2">*</span>lock = <span class="prelude-val">Some</span>(check.clone());
             }
 
-            <span class="kw">let </span>client = <span class="kw">crate</span>::net::xds::AdsClient::connect(
-                String::clone(<span class="kw-2">&amp;</span>id),
-                mode.clone(),
-                <span class="self">self</span>.management_server.clone(),
-            )
-            .<span class="kw">await</span><span class="question-mark">?</span>;
-            <span class="kw">let </span><span class="kw-2">mut </span>stream =
-                client.xds_client_stream(config.clone(), <span class="self">self</span>.idle_request_interval_secs);
+            std::thread::spawn({
+                <span class="kw">let </span>config = config.clone();
+                <span class="kw">let </span><span class="kw-2">mut </span>shutdown_rx = shutdown_rx.clone();
+                <span class="kw">let </span>idle_request_interval_secs = <span class="self">self</span>.idle_request_interval_secs;
+                <span class="kw">let </span>management_server = <span class="self">self</span>.management_server.clone();
+                <span class="kw">let </span>mode = mode.clone();
+                <span class="kw">move </span>|| {
+                    <span class="kw">let </span>runtime = tokio::runtime::Builder::new_multi_thread()
+                        .enable_all()
+                        .build()
+                        .unwrap();
 
-            tokio::time::sleep(std::time::Duration::from_nanos(<span class="number">1</span>)).<span class="kw">await</span>;
-            stream.discovery_request(ResourceType::Cluster, <span class="kw-2">&amp;</span>[]).<span class="kw">await</span><span class="question-mark">?</span>;
-            tokio::time::sleep(std::time::Duration::from_nanos(<span class="number">1</span>)).<span class="kw">await</span>;
-            stream
-                .discovery_request(ResourceType::Listener, <span class="kw-2">&amp;</span>[])
-                .<span class="kw">await</span><span class="question-mark">?</span>;
-            <span class="prelude-val">Some</span>((client, stream))
-        } <span class="kw">else </span>{
-            <span class="prelude-val">None
-        </span>};
+                    runtime.block_on(<span class="kw">async move </span>{
+                        <span class="kw">let </span>client = <span class="kw">crate</span>::net::xds::AdsClient::connect(
+                            String::clone(<span class="kw-2">&amp;</span>id),
+                            mode,
+                            management_server,
+                        )
+                        .<span class="kw">await</span><span class="question-mark">?</span>;
+                        <span class="kw">let </span><span class="kw-2">mut </span>stream =
+                            client.xds_client_stream(config, idle_request_interval_secs);
+
+                        tokio::time::sleep(std::time::Duration::from_nanos(<span class="number">1</span>)).<span class="kw">await</span>;
+                        stream.discovery_request(ResourceType::Cluster, <span class="kw-2">&amp;</span>[]).<span class="kw">await</span><span class="question-mark">?</span>;
+                        tokio::time::sleep(std::time::Duration::from_nanos(<span class="number">1</span>)).<span class="kw">await</span>;
+                        stream
+                            .discovery_request(ResourceType::Listener, <span class="kw-2">&amp;</span>[])
+                            .<span class="kw">await</span><span class="question-mark">?</span>;
+                        <span class="kw">let _ </span>= shutdown_rx.changed().<span class="kw">await</span>;
+                        <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, eyre::Error&gt;(())
+                    })
+                }
+            });
+        }
 
         <span class="comment">// Generally only for testing purposes, if port is 0 we bind to an ephemeral
         // port and return that to the caller
