@@ -556,6 +556,7 @@ pub fn handle_discovery_responses(
 ) -> std::pin::Pin<Box<dyn futures::Stream<Item = Result<DiscoveryRequest>> + Send>> {
     Box::pin(async_stream::try_stream! {
         let _stream_metrics = super::metrics::StreamConnectionMetrics::new(identifier.clone());
+        let mut version_cache = super::resource::ResourceMap::default();
         tracing::debug!("awaiting response");
         for await response in stream
         {
@@ -577,6 +578,16 @@ pub fn handle_discovery_responses(
                 "received response"
             );
 
+            let version =response.version_info.clone();
+            let ty = response.type_url.parse::<ResourceType>()?;
+
+            let mut request = DiscoveryRequest::try_from(&response)?;
+            if version_cache[ty] == version {
+                tracing::trace!(%version, "version has already been applied");
+                yield request;
+                continue;
+            }
+
             let result = response
                 .resources
                 .iter()
@@ -588,7 +599,6 @@ pub fn handle_discovery_responses(
                     (on_new_resource)(&resource)
                 });
 
-            let mut request = DiscoveryRequest::try_from(response)?;
             if let Err(error) = result {
                 super::metrics::nacks(&control_plane_identifier, &request.type_url).inc();
                 request.error_detail = Some(crate::net::xds::google::rpc::Status {
@@ -597,6 +607,7 @@ pub fn handle_discovery_responses(
                     ..<_>::default()
                 });
             } else {
+                version_cache[ty] = version;
                 super::metrics::acks(&control_plane_identifier, &request.type_url).inc();
             }
 
