@@ -101,6 +101,7 @@ impl Admin {
         std::thread::spawn(move || {
             let runtime = tokio::runtime::Builder::new_current_thread()
                 .enable_io()
+                .enable_time()
                 .build()
                 .expect("couldn't create tokio runtime in thread");
             runtime.block_on(async move {
@@ -116,7 +117,9 @@ impl Admin {
                             let config = config.clone();
                             let health = health.clone();
                             let mode = mode.clone();
-                            async move { Ok::<_, Infallible>(mode.handle_request(req, config, health)) }
+                            async move {
+                                Ok::<_, Infallible>(mode.handle_request(req, config, health).await)
+                            }
                         }))
                     }
                 });
@@ -135,7 +138,7 @@ impl Admin {
         }
     }
 
-    fn handle_request(
+    async fn handle_request(
         &self,
         request: Request<Body>,
         config: Arc<Config>,
@@ -144,6 +147,26 @@ impl Admin {
         match (request.method(), request.uri().path()) {
             (&Method::GET, "/metrics") => collect_metrics(),
             (&Method::GET, "/live" | "/livez") => health.check_liveness(),
+            #[cfg(target_os = "linux")]
+            (&Method::GET, "/debug/pprof/profile") => {
+                let duration = request.uri().query().and_then(|query| {
+                    form_urlencoded::parse(query.as_bytes())
+                        .find(|(k, _)| k == "seconds")
+                        .and_then(|(_, v)| v.parse().ok())
+                        .map(std::time::Duration::from_secs)
+                });
+
+                match collect_pprof(duration).await {
+                    Ok(value) => value,
+                    Err(error) => {
+                        tracing::warn!(%error, "admin http server error");
+                        Response::builder()
+                            .status(StatusCode::INTERNAL_SERVER_ERROR)
+                            .body(Body::from("internal error"))
+                            .unwrap()
+                    }
+                }
+            }
             (&Method::GET, "/ready" | "/readyz") => check_readiness(|| self.is_ready(&config)),
             (&Method::GET, "/config") => match serde_json::to_string(&config) {
                 Ok(body) => Response::builder()
@@ -203,6 +226,39 @@ fn collect_metrics() -> Response<Body> {
     response
 }
 
+/// Collects profiling information using `prof` for an optional `duration` or
+/// the default if `None`.
+#[cfg(target_os = "linux")]
+async fn collect_pprof(
+    duration: Option<std::time::Duration>,
+) -> Result<Response<Body>, eyre::Error> {
+    let duration = duration.unwrap_or_else(|| std::time::Duration::from_secs(2));
+    tracing::debug!(duration_seconds = duration.as_secs(), "profiling");
+
+    let guard = pprof::ProfilerGuardBuilder::default()
+        .frequency(1000)
+        // From the pprof docs, this blocklist helps prevent deadlock with
+        // libgcc's unwind.
+        .blocklist(&["libc", "libgcc", "pthread", "vdso"])
+        .build()?;
+
+    tokio::time::sleep(duration).await;
+
+    let encoded_profile = crate::codec::prost::encode(&guard.report().build()?.pprof()?)?;
+
+    // gzip profile
+    let mut encoder = libflate::gzip::Encoder::new(Vec::new())?;
+    std::io::copy(&mut &encoded_profile[..], &mut encoder)?;
+    let gzip_body = encoder.finish().into_result()?;
+    tracing::debug!("profile encoded to gzip");
+
+    Response::builder()
+        .header(hyper::header::CONTENT_LENGTH, gzip_body.len() as u64)
+        .header(hyper::header::CONTENT_TYPE, "application/octet-stream")
+        .body(Body::from(gzip_body))
+        .map_err(From::from)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -212,6 +268,14 @@ mod tests {
     async fn collect_metrics() {
         let response = super::collect_metrics();
         assert_eq!(response.status(), hyper::StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn collect_pprof() {
+        // Custom time to make the test fast.
+        super::collect_pprof(Some(std::time::Duration::from_millis(1)))
+            .await
+            .unwrap();
     }
 
     #[test]
