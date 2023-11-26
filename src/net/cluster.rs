@@ -16,7 +16,10 @@
 
 use std::{
     collections::BTreeSet,
-    sync::atomic::{AtomicUsize, Ordering::Relaxed},
+    sync::atomic::{
+        AtomicU64, AtomicUsize,
+        Ordering::{self, Relaxed},
+    },
 };
 
 use dashmap::DashMap;
@@ -65,6 +68,7 @@ pub(crate) fn active_endpoints() -> &'static prometheus::IntGauge {
 pub struct ClusterMap {
     map: DashMap<Option<Locality>, BTreeSet<Endpoint>>,
     num_endpoints: AtomicUsize,
+    hash: AtomicU64,
 }
 
 type DashMapRef<'inner> = dashmap::mapref::one::Ref<'inner, Option<Locality>, BTreeSet<Endpoint>>;
@@ -83,13 +87,15 @@ impl ClusterMap {
         cluster: BTreeSet<Endpoint>,
     ) -> Option<BTreeSet<Endpoint>> {
         let new_len = cluster.len();
-        if let Some(old) = self.map.insert(locality, cluster) {
+        self.update_hash(&locality, &cluster, true);
+        if let Some(old) = self.map.insert(locality.clone(), cluster) {
             let old_len = old.len();
             if new_len >= old_len {
                 self.num_endpoints.fetch_add(new_len - old_len, Relaxed);
             } else {
                 self.num_endpoints.fetch_sub(old_len - new_len, Relaxed);
             }
+            self.update_hash(&locality, &old, false);
             Some(old)
         } else {
             self.num_endpoints.fetch_add(new_len, Relaxed);
@@ -127,13 +133,27 @@ impl ClusterMap {
         self.remove_endpoint_if(|endpoint| endpoint.address == needle.address)
     }
 
+    pub fn remove(&self, locality: &Option<Locality>) {
+        if let Some((_, value)) = self.map.remove(locality) {
+            self.update_hash(locality, &value, false);
+        }
+    }
+
+    pub fn contains(&self, locality: &Option<Locality>) -> bool {
+        self.map.contains_key(locality)
+    }
+
     #[inline]
     pub fn remove_endpoint_if(&self, closure: impl Fn(&Endpoint) -> bool) -> bool {
         for mut entry in self.map.iter_mut() {
+            let key = entry.key().clone();
             let set = entry.value_mut();
             if let Some(endpoint) = set.iter().find(|endpoint| (closure)(endpoint)).cloned() {
                 self.num_endpoints.fetch_sub(1, Relaxed);
-                return set.remove(&endpoint);
+                self.update_hash(&key, set, false);
+                let removed = set.remove(&endpoint);
+                self.update_hash(&key, set, true);
+                return removed;
             }
         }
 
@@ -143,14 +163,20 @@ impl ClusterMap {
     #[inline]
     pub fn replace(&self, locality: Option<Locality>, endpoint: Endpoint) -> Option<Endpoint> {
         if let Some(mut set) = self.map.get_mut(&locality) {
+            self.update_hash(&locality, &set, false);
+
             let replaced = set.replace(endpoint);
             if replaced.is_none() {
                 self.num_endpoints.fetch_add(1, Relaxed);
             }
 
+            self.update_hash(&locality, &set, true);
+
             replaced
         } else {
-            self.insert(locality, [endpoint].into());
+            let set = [endpoint].into();
+            self.update_hash(&locality, &set, true);
+            self.insert(locality, set);
             self.num_endpoints.fetch_add(1, Relaxed);
             None
         }
@@ -203,8 +229,41 @@ impl ClusterMap {
 
     pub fn update_unlocated_endpoints(&self, locality: Locality) {
         if let Some((_, set)) = self.map.remove(&None) {
-            self.map.insert(Some(locality), set);
+            let key = Some(locality);
+            self.update_hash(&None, &set, false);
+            self.update_hash(&key, &set, true);
+            self.map.insert(key, set);
         }
+    }
+
+    fn initial_hash(map: &DashMap<Option<Locality>, BTreeSet<Endpoint>>) -> u64 {
+        use std::hash::{Hash, Hasher};
+
+        let mut hash = 0;
+        for entry in map.iter() {
+            let mut hasher = std::collections::hash_map::DefaultHasher::new();
+            (entry.key(), entry.value()).hash(&mut hasher);
+            hash += hasher.finish();
+        }
+        hash
+    }
+
+    fn update_hash(&self, key: &Option<Locality>, value: &BTreeSet<Endpoint>, add: bool) {
+        use std::hash::{Hash, Hasher};
+
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        (key, value).hash(&mut hasher);
+        let item_hash = hasher.finish();
+
+        self.hash
+            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |current_hash| {
+                Some(if add {
+                    current_hash.wrapping_add(item_hash)
+                } else {
+                    current_hash.wrapping_sub(item_hash)
+                })
+            })
+            .unwrap();
     }
 }
 
@@ -217,14 +276,7 @@ impl Clone for ClusterMap {
 
 impl PartialEq for ClusterMap {
     fn eq(&self, rhs: &Self) -> bool {
-        for a in self.iter() {
-            match rhs.get(a.key()).filter(|b| *a.value() == **b) {
-                Some(_) => {}
-                None => return false,
-            }
-        }
-
-        true
+        self.hash.load(Ordering::SeqCst) == rhs.hash.load(Ordering::SeqCst)
     }
 }
 
@@ -301,7 +353,12 @@ impl Serialize for ClusterMap {
 impl From<DashMap<Option<Locality>, BTreeSet<Endpoint>>> for ClusterMap {
     fn from(map: DashMap<Option<Locality>, BTreeSet<Endpoint>>) -> Self {
         let num_endpoints = AtomicUsize::new(map.iter().map(|kv| kv.value().len()).sum());
-        Self { map, num_endpoints }
+        let hash = AtomicU64::from(Self::initial_hash(&map));
+        Self {
+            map,
+            num_endpoints,
+            hash,
+        }
     }
 }
 
@@ -376,5 +433,107 @@ mod tests {
 
         assert_eq!(cluster1.get(&Some(nl1.clone())).unwrap().len(), 1);
         assert!(cluster1.get(&Some(de1.clone())).unwrap().is_empty());
+    }
+
+    fn create_test_locality_and_endpoint() -> (Option<Locality>, BTreeSet<Endpoint>) {
+        let nl1 = Locality::region("nl-1");
+        let mut endpoints = BTreeSet::new();
+        let endpoint = Endpoint::new((Ipv4Addr::LOCALHOST, 7777).into());
+        endpoints.insert(endpoint);
+
+        (Some(nl1), endpoints)
+    }
+
+    #[test]
+    fn insert_affects_hash() {
+        let map = ClusterMap::default();
+        let initial_hash = map.hash.load(Ordering::SeqCst);
+        let (locality, endpoints) = create_test_locality_and_endpoint();
+        map.insert(locality, endpoints);
+        assert_ne!(initial_hash, map.hash.load(Ordering::SeqCst));
+    }
+
+    #[test]
+    fn remove_affects_hash() {
+        let map = ClusterMap::default();
+        let (locality, endpoints) = create_test_locality_and_endpoint();
+        map.insert(locality.clone(), endpoints.clone());
+        let hash_after_insert = map.hash.load(Ordering::SeqCst);
+        map.remove_endpoint(endpoints.first().unwrap());
+        assert_ne!(hash_after_insert, map.hash.load(Ordering::SeqCst));
+    }
+
+    #[test]
+    fn same_data_equal_hashes() {
+        let map1 = ClusterMap::default();
+        let map2 = ClusterMap::default();
+        let (locality1, endpoints1) = create_test_locality_and_endpoint();
+        let (locality2, endpoints2) = create_test_locality_and_endpoint();
+        map1.insert(locality1, endpoints1);
+        map2.insert(locality2, endpoints2);
+        assert_eq!(
+            map1.hash.load(Ordering::SeqCst),
+            map2.hash.load(Ordering::SeqCst)
+        );
+    }
+
+    #[test]
+    fn different_data_different_hashes() {
+        let map1 = ClusterMap::default();
+        let map2 = ClusterMap::default();
+        let (locality1, endpoints1) = create_test_locality_and_endpoint();
+        let (locality2, endpoints2) = create_test_locality_and_endpoint();
+        map1.insert(locality1, endpoints1);
+        map2.insert(locality2, endpoints2);
+        map2.insert(Some(Locality::region("de-1")), BTreeSet::new());
+        assert_ne!(
+            map1.hash.load(Ordering::SeqCst),
+            map2.hash.load(Ordering::SeqCst)
+        );
+    }
+
+    #[test]
+    fn removal_and_replace() {
+        let map = ClusterMap::default();
+        let (locality, endpoints) = create_test_locality_and_endpoint();
+        map.insert(locality.clone(), endpoints.clone());
+        let initial_hash = map.hash.load(Ordering::SeqCst);
+        let endpoint = endpoints.first().unwrap().clone();
+        map.remove_endpoint(&endpoint);
+        map.replace(locality, endpoint);
+        assert_eq!(initial_hash, map.hash.load(Ordering::SeqCst));
+    }
+
+    #[test]
+    fn removal_and_insert() {
+        let map = ClusterMap::default();
+        let (locality, endpoints) = create_test_locality_and_endpoint();
+        map.insert(locality.clone(), endpoints.clone());
+        let initial_hash = map.hash.load(Ordering::SeqCst);
+        map.remove(&locality);
+        map.insert(locality, endpoints);
+        assert_eq!(initial_hash, map.hash.load(Ordering::SeqCst));
+    }
+
+    #[test]
+    fn empty_map_hash() {
+        let map = ClusterMap::default();
+        assert_eq!(map.hash.load(Ordering::SeqCst), 0);
+    }
+
+    #[test]
+    fn order_independence() {
+        let map1 = ClusterMap::default();
+        let map2 = ClusterMap::default();
+        let (locality1, endpoints1) = create_test_locality_and_endpoint();
+        let (locality2, endpoints2) = (Some(Locality::region("de-1")), BTreeSet::new());
+        map1.insert(locality1.clone(), endpoints1.clone());
+        map1.insert(locality2.clone(), endpoints2.clone());
+        map2.insert(locality2, endpoints2);
+        map2.insert(locality1, endpoints1);
+        assert_eq!(
+            map1.hash.load(Ordering::SeqCst),
+            map2.hash.load(Ordering::SeqCst)
+        );
     }
 }
