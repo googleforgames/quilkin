@@ -16,7 +16,7 @@
 
 use std::{
     collections::BTreeSet,
-    sync::atomic::{AtomicUsize, Ordering::Relaxed},
+    sync::atomic::{AtomicU64, AtomicUsize, Ordering::Relaxed},
 };
 
 use dashmap::DashMap;
@@ -90,6 +90,7 @@ impl EndpointSet {
 pub struct ClusterMap {
     map: DashMap<Option<Locality>, EndpointSet>,
     num_endpoints: AtomicUsize,
+    version: AtomicU64,
 }
 
 type DashMapRef<'inner> = dashmap::mapref::one::Ref<'inner, Option<Locality>, EndpointSet>;
@@ -121,16 +122,19 @@ impl ClusterMap {
             } else {
                 self.num_endpoints.fetch_sub(old_len - new_len, Relaxed);
             }
+
+            self.version.fetch_add(1, Relaxed);
             Some(old)
         } else {
             self.map.insert(
                 locality,
                 EndpointSet {
                     endpoints: cluster,
-                    version: 0,
+                    version: 1,
                 },
             );
             self.num_endpoints.fetch_add(new_len, Relaxed);
+            self.version.fetch_add(1, Relaxed);
             None
         }
     }
@@ -168,6 +172,7 @@ impl ClusterMap {
             if set.endpoints.remove(needle) {
                 set.version += 1;
                 self.num_endpoints.fetch_sub(1, Relaxed);
+                self.version.fetch_add(1, Relaxed);
                 return true;
             }
         }
@@ -189,6 +194,7 @@ impl ClusterMap {
                 let removed = set.endpoints.remove(&endpoint);
                 if removed {
                     self.num_endpoints.fetch_sub(1, Relaxed);
+                    self.version.fetch_add(1, Relaxed);
                     set.version += 1;
                 }
                 return removed;
@@ -203,6 +209,8 @@ impl ClusterMap {
         if let Some(mut set) = self.map.get_mut(&locality) {
             let replaced = set.endpoints.replace(endpoint);
             set.version += 1;
+            self.version.fetch_add(1, Relaxed);
+
             if replaced.is_none() {
                 self.num_endpoints.fetch_add(1, Relaxed);
             }
@@ -265,10 +273,31 @@ impl ClusterMap {
         self.num_of_endpoints() != 0
     }
 
+    #[inline]
+    pub fn version(&self) -> u64 {
+        self.version.load(Relaxed)
+    }
+
     pub fn update_unlocated_endpoints(&self, locality: Locality) {
         if let Some((_, set)) = self.map.remove(&None) {
             self.map.insert(Some(locality), set);
         }
+    }
+}
+
+impl crate::config::watch::Watchable for ClusterMap {
+    #[inline]
+    fn mark(&self) -> crate::config::watch::Marker {
+        crate::config::watch::Marker::Version(self.version())
+    }
+
+    #[inline]
+    #[allow(irrefutable_let_patterns)]
+    fn has_changed(&self, marker: crate::config::watch::Marker) -> bool {
+        let crate::config::watch::Marker::Version(marked) = marker else {
+            return false;
+        };
+        self.version() != marked
     }
 }
 
@@ -279,10 +308,14 @@ impl Clone for ClusterMap {
     }
 }
 
+#[cfg(test)]
 impl PartialEq for ClusterMap {
     fn eq(&self, rhs: &Self) -> bool {
         for a in self.iter() {
-            match rhs.get(a.key()).filter(|b| a.value().version == b.version) {
+            match rhs
+                .get(a.key())
+                .filter(|b| a.value().endpoints == b.endpoints)
+            {
                 Some(_) => {}
                 None => return false,
             }
@@ -394,7 +427,11 @@ impl From<ClusterMapDeser> for ClusterMap {
 impl From<DashMap<Option<Locality>, EndpointSet>> for ClusterMap {
     fn from(map: DashMap<Option<Locality>, EndpointSet>) -> Self {
         let num_endpoints = AtomicUsize::new(map.iter().map(|kv| kv.value().len()).sum());
-        Self { map, num_endpoints }
+        Self {
+            map,
+            num_endpoints,
+            version: AtomicU64::new(1),
+        }
     }
 }
 
