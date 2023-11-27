@@ -60,14 +60,39 @@ pub(crate) fn active_endpoints() -> &'static prometheus::IntGauge {
     &ACTIVE_ENDPOINTS
 }
 
+#[derive(Debug, Clone)]
+pub struct EndpointSet {
+    pub endpoints: BTreeSet<Endpoint>,
+    /// Version of this set of endpoints. Any mutatation of the endpoints
+    /// set monotonically increases this number
+    pub version: u64,
+}
+
+impl EndpointSet {
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.endpoints.len()
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.endpoints.is_empty()
+    }
+
+    #[inline]
+    pub fn contains(&self, ep: &Endpoint) -> bool {
+        self.endpoints.contains(ep)
+    }
+}
+
 /// Represents a full snapshot of all clusters.
 #[derive(Default, Debug)]
 pub struct ClusterMap {
-    map: DashMap<Option<Locality>, BTreeSet<Endpoint>>,
+    map: DashMap<Option<Locality>, EndpointSet>,
     num_endpoints: AtomicUsize,
 }
 
-type DashMapRef<'inner> = dashmap::mapref::one::Ref<'inner, Option<Locality>, BTreeSet<Endpoint>>;
+type DashMapRef<'inner> = dashmap::mapref::one::Ref<'inner, Option<Locality>, EndpointSet>;
 
 impl ClusterMap {
     pub fn new_default(cluster: BTreeSet<Endpoint>) -> Self {
@@ -83,8 +108,14 @@ impl ClusterMap {
         cluster: BTreeSet<Endpoint>,
     ) -> Option<BTreeSet<Endpoint>> {
         let new_len = cluster.len();
-        if let Some(old) = self.map.insert(locality, cluster) {
+        if let Some(mut current) = self.map.get_mut(&locality) {
+            let current = current.value_mut();
+
+            let old = std::mem::replace(&mut current.endpoints, cluster);
+            current.version += 1;
+
             let old_len = old.len();
+
             if new_len >= old_len {
                 self.num_endpoints.fetch_add(new_len - old_len, Relaxed);
             } else {
@@ -92,6 +123,13 @@ impl ClusterMap {
             }
             Some(old)
         } else {
+            self.map.insert(
+                locality,
+                EndpointSet {
+                    endpoints: cluster,
+                    version: 0,
+                },
+            );
             self.num_endpoints.fetch_add(new_len, Relaxed);
             None
         }
@@ -124,16 +162,36 @@ impl ClusterMap {
 
     #[inline]
     pub fn remove_endpoint(&self, needle: &Endpoint) -> bool {
-        self.remove_endpoint_if(|endpoint| endpoint.address == needle.address)
+        for mut entry in self.map.iter_mut() {
+            let set = entry.value_mut();
+
+            if set.endpoints.remove(needle) {
+                set.version += 1;
+                self.num_endpoints.fetch_sub(1, Relaxed);
+                return true;
+            }
+        }
+
+        false
     }
 
     #[inline]
     pub fn remove_endpoint_if(&self, closure: impl Fn(&Endpoint) -> bool) -> bool {
         for mut entry in self.map.iter_mut() {
             let set = entry.value_mut();
-            if let Some(endpoint) = set.iter().find(|endpoint| (closure)(endpoint)).cloned() {
-                self.num_endpoints.fetch_sub(1, Relaxed);
-                return set.remove(&endpoint);
+            if let Some(endpoint) = set
+                .endpoints
+                .iter()
+                .find(|endpoint| (closure)(endpoint))
+                .cloned()
+            {
+                // This will always be true, but....
+                let removed = set.endpoints.remove(&endpoint);
+                if removed {
+                    self.num_endpoints.fetch_sub(1, Relaxed);
+                    set.version += 1;
+                }
+                return removed;
             }
         }
 
@@ -143,7 +201,8 @@ impl ClusterMap {
     #[inline]
     pub fn replace(&self, locality: Option<Locality>, endpoint: Endpoint) -> Option<Endpoint> {
         if let Some(mut set) = self.map.get_mut(&locality) {
-            let replaced = set.replace(endpoint);
+            let replaced = set.endpoints.replace(endpoint);
+            set.version += 1;
             if replaced.is_none() {
                 self.num_endpoints.fetch_add(1, Relaxed);
             }
@@ -151,26 +210,31 @@ impl ClusterMap {
             replaced
         } else {
             self.insert(locality, [endpoint].into());
-            self.num_endpoints.fetch_add(1, Relaxed);
             None
         }
     }
 
     #[inline]
-    pub fn iter(&self) -> dashmap::iter::Iter<Option<Locality>, BTreeSet<Endpoint>> {
+    pub fn iter(&self) -> dashmap::iter::Iter<Option<Locality>, EndpointSet> {
         self.map.iter()
     }
 
-    pub fn endpoints(&self) -> impl Iterator<Item = Endpoint> + '_ {
-        self.map
-            .iter()
-            .flat_map(|entry| entry.value().iter().cloned().collect::<Vec<_>>())
+    #[inline]
+    pub fn endpoints(&self) -> Vec<Endpoint> {
+        let mut endpoints = Vec::with_capacity(self.num_of_endpoints());
+
+        for set in self.map.iter() {
+            endpoints.extend(set.value().endpoints.iter().cloned());
+        }
+
+        endpoints
     }
 
     pub fn nth_endpoint(&self, mut index: usize) -> Option<Endpoint> {
         for set in self.iter() {
+            let set = &set.value().endpoints;
             if index < set.len() {
-                return set.value().iter().nth(index).cloned();
+                return set.iter().nth(index).cloned();
             } else {
                 index -= set.len();
             }
@@ -183,7 +247,7 @@ impl ClusterMap {
         let mut endpoints = Vec::new();
 
         for set in self.iter() {
-            for endpoint in set.iter().filter(|e| (f)(e)) {
+            for endpoint in set.endpoints.iter().filter(|e| (f)(e)) {
                 endpoints.push(endpoint.clone());
             }
         }
@@ -218,7 +282,7 @@ impl Clone for ClusterMap {
 impl PartialEq for ClusterMap {
     fn eq(&self, rhs: &Self) -> bool {
         for a in self.iter() {
-            match rhs.get(a.key()).filter(|b| *a.value() == **b) {
+            match rhs.get(a.key()).filter(|b| a.value().version == b.version) {
                 Some(_) => {}
                 None => return false,
             }
@@ -256,32 +320,38 @@ impl schemars::JsonSchema for ClusterMap {
     }
 }
 
+pub struct ClusterMapDeser {
+    pub endpoints: Vec<EndpointWithLocality>,
+}
+
+impl<'de> Deserialize<'de> for ClusterMapDeser {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut endpoints = Vec::<EndpointWithLocality>::deserialize(deserializer)?;
+
+        endpoints.sort_by(|a, b| a.locality.cmp(&b.locality));
+
+        for window in endpoints.windows(2) {
+            if &window[0] == &window[1] {
+                return Err(serde::de::Error::custom(
+                    "duplicate localities found in cluster map",
+                ));
+            }
+        }
+
+        Ok(Self { endpoints })
+    }
+}
+
 impl<'de> Deserialize<'de> for ClusterMap {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
-        let vec = Vec::<EndpointWithLocality>::deserialize(deserializer)?;
-        if vec
-            .iter()
-            .map(|le| &le.locality)
-            .collect::<BTreeSet<_>>()
-            .len()
-            != vec.len()
-        {
-            return Err(serde::de::Error::custom(
-                "duplicate localities found in cluster map",
-            ));
-        }
-
-        let map = DashMap::from_iter(vec.into_iter().map(
-            |EndpointWithLocality {
-                 locality,
-                 endpoints,
-             }| (locality, endpoints),
-        ));
-
-        Ok(Self::from(map))
+        let cmd = ClusterMapDeser::deserialize(deserializer)?;
+        Ok(Self::from(cmd))
     }
 }
 
@@ -292,14 +362,37 @@ impl Serialize for ClusterMap {
     {
         self.map
             .iter()
-            .map(|entry| EndpointWithLocality::from((entry.key().clone(), entry.value().clone())))
+            .map(|entry| {
+                EndpointWithLocality::from((entry.key().clone(), entry.value().endpoints.clone()))
+            })
             .collect::<Vec<_>>()
             .serialize(ser)
     }
 }
 
-impl From<DashMap<Option<Locality>, BTreeSet<Endpoint>>> for ClusterMap {
-    fn from(map: DashMap<Option<Locality>, BTreeSet<Endpoint>>) -> Self {
+impl From<ClusterMapDeser> for ClusterMap {
+    fn from(cmd: ClusterMapDeser) -> Self {
+        let map = DashMap::from_iter(cmd.endpoints.into_iter().map(
+            |EndpointWithLocality {
+                 locality,
+                 endpoints,
+             }| {
+                (
+                    locality,
+                    EndpointSet {
+                        version: 0,
+                        endpoints,
+                    },
+                )
+            },
+        ));
+
+        Self::from(map)
+    }
+}
+
+impl From<DashMap<Option<Locality>, EndpointSet>> for ClusterMap {
+    fn from(map: DashMap<Option<Locality>, EndpointSet>) -> Self {
         let num_endpoints = AtomicUsize::new(map.iter().map(|kv| kv.value().len()).sum());
         Self { map, num_endpoints }
     }

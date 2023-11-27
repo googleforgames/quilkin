@@ -145,21 +145,25 @@ impl ControlPlane {
         resource_type: ResourceType,
         names: &[String],
     ) -> Result<DiscoveryResponse, tonic::Status> {
-        let mut response = self
+        let resources = self
             .config
             .discovery_request(id, resource_type, names)
             .map_err(|error| tonic::Status::internal(error.to_string()))?;
         let watchers = &self.watchers[resource_type];
 
-        let nonce = uuid::Uuid::new_v4();
-        response.version_info = watchers
-            .version
-            .load(std::sync::atomic::Ordering::Relaxed)
-            .to_string();
-        response.control_plane = Some(crate::net::xds::config::core::v3::ControlPlane {
-            identifier: (*self.config.id.load()).clone(),
-        });
-        response.nonce = nonce.to_string();
+        let response = DiscoveryResponse {
+            resources,
+            nonce: uuid::Uuid::new_v4().to_string(),
+            version_info: watchers
+                .version
+                .load(std::sync::atomic::Ordering::Relaxed)
+                .to_string(),
+            control_plane: Some(crate::net::xds::config::core::v3::ControlPlane {
+                identifier: (*self.config.id.load()).clone(),
+            }),
+            type_url: resource_type.type_url().to_owned(),
+            canary: false,
+        };
 
         tracing::trace!(
             id = &*response.version_info,
@@ -284,6 +288,7 @@ impl AggregatedDiscoveryService for ControlPlane {
         )))
     }
 
+    #[tracing::instrument(skip_all)]
     async fn delta_aggregated_resources(
         &self,
         _request: tonic::Request<tonic::Streaming<DeltaDiscoveryRequest>>,

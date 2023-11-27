@@ -577,29 +577,39 @@ pub fn handle_discovery_responses(
                 "received response"
             );
 
+            let mut resource_names = Vec::with_capacity(response.resources.len());
             let result = response
                 .resources
-                .iter()
-                .cloned()
+                .into_iter()
                 .map(Resource::try_from)
                 .try_for_each(|resource| {
                     let resource = resource?;
+                    resource_names.push(resource.name().to_owned());
+
                     tracing::debug!("applying resource");
                     (on_new_resource)(&resource)
                 });
 
-            let mut request = DiscoveryRequest::try_from(response)?;
-            if let Err(error) = result {
-                super::metrics::nacks(&control_plane_identifier, &request.type_url).inc();
-                request.error_detail = Some(crate::net::xds::google::rpc::Status {
+            let error_detail = if let Err(error) = result {
+                super::metrics::nacks(&control_plane_identifier, &response.type_url).inc();
+                Some(crate::net::xds::google::rpc::Status {
                     code: 3,
                     message: error.to_string(),
-                    ..<_>::default()
-                });
+                    ..Default::default()
+                })
             } else {
-                super::metrics::acks(&control_plane_identifier, &request.type_url).inc();
-            }
+                super::metrics::acks(&control_plane_identifier, &response.type_url).inc();
+                None
+            };
 
+            let request = DiscoveryRequest {
+                resource_names,
+                version_info: response.version_info,
+                type_url: response.type_url,
+                response_nonce: response.nonce,
+                error_detail,
+                ..Default::default()
+            };
             yield request;
         }
     })

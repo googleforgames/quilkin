@@ -25,11 +25,10 @@ use uuid::Uuid;
 
 use crate::{
     filters::prelude::*,
-    net::cluster::ClusterMap,
+    net::cluster::{self, ClusterMap},
     net::xds::{
-        config::listener::v3::Listener,
-        service::discovery::v3::{DeltaDiscoveryResponse, DiscoveryResponse},
-        Resource, ResourceType,
+        config::listener::v3::Listener, service::discovery::v3::DeltaDiscoveryResponse, Resource,
+        ResourceType,
     },
 };
 
@@ -102,10 +101,10 @@ impl Config {
 
         if let Some(value) = map.get("clusters").cloned() {
             tracing::debug!(%value, "replacing clusters");
-            let value: ClusterMap = serde_json::from_value(value)?;
+            let cmd: cluster::ClusterMapDeser = serde_json::from_value(value)?;
             self.clusters.modify(|clusters| {
-                for cluster in value.iter() {
-                    clusters.insert(cluster.key().clone(), cluster.value().clone());
+                for cluster in cmd.endpoints {
+                    clusters.insert(cluster.locality, cluster.endpoints);
                 }
 
                 if let Some(locality) = locality {
@@ -121,11 +120,12 @@ impl Config {
 
     pub fn discovery_request(
         &self,
-        _node_id: &str,
+        _id: &str,
         resource_type: ResourceType,
         names: &[String],
-    ) -> Result<DiscoveryResponse, eyre::Error> {
+    ) -> Result<Vec<prost_types::Any>, eyre::Error> {
         let mut resources = Vec::new();
+
         match resource_type {
             ResourceType::Listener => {
                 resources.push(resource_type.encode_to_any(&Listener {
@@ -139,7 +139,7 @@ impl Config {
                         resources.push(resource_type.encode_to_any(
                             &crate::net::cluster::proto::Cluster::try_from((
                                 cluster.key(),
-                                cluster.value(),
+                                &cluster.value().endpoints,
                             ))?,
                         )?);
                     }
@@ -149,25 +149,22 @@ impl Config {
                             resources.push(resource_type.encode_to_any(
                                 &crate::net::cluster::proto::Cluster::try_from((
                                     cluster.key(),
-                                    cluster.value(),
+                                    &cluster.value().endpoints,
                                 ))?,
                             )?);
                         }
                     }
                 };
             }
-        };
+        }
 
-        Ok(DiscoveryResponse {
-            resources,
-            type_url: resource_type.type_url().into(),
-            ..<_>::default()
-        })
+        Ok(resources)
     }
 
     pub fn delta_discovery_request(
         &self,
-        resource_type: ResourceType,
+        _resource_type: ResourceType,
+        _names: &[String],
     ) -> Result<DeltaDiscoveryResponse, eyre::Error> {
         unimplemented!();
     }

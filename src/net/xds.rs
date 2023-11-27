@@ -89,25 +89,6 @@ mod xds {
         pub mod discovery {
             pub mod v3 {
                 tonic::include_proto!("envoy.service.discovery.v3");
-
-                impl TryFrom<DiscoveryResponse> for DiscoveryRequest {
-                    type Error = eyre::Error;
-
-                    fn try_from(response: DiscoveryResponse) -> Result<Self, Self::Error> {
-                        Ok(Self {
-                            version_info: response.version_info,
-                            resource_names: response
-                                .resources
-                                .into_iter()
-                                .map(crate::net::xds::Resource::try_from)
-                                .map(|result| result.map(|resource| resource.name().to_owned()))
-                                .collect::<Result<Vec<_>, _>>()?,
-                            type_url: response.type_url,
-                            response_nonce: response.nonce,
-                            ..<_>::default()
-                        })
-                    }
-                }
             }
         }
         pub mod cluster {
@@ -355,6 +336,7 @@ mod tests {
                     .read()
                     .get_default()
                     .unwrap()
+                    .endpoints
                     .iter()
                     .next()
                     .unwrap()
