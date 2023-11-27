@@ -674,21 +674,21 @@
         })
     }
 
-    <span class="kw">pub fn </span>tokens(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; std::collections::BTreeSet&lt;Vec&lt;u8&gt;&gt; {
-        <span class="kw">match </span><span class="self">self</span>.metadata.annotations.as_ref() {
-            <span class="prelude-val">Some</span>(annotations) =&gt; annotations
-                .get(QUILKIN_TOKEN_LABEL)
-                .map(|value| {
+    <span class="attr">#[inline]
+    </span><span class="kw">fn </span>tokens(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; std::collections::BTreeSet&lt;Vec&lt;u8&gt;&gt; {
+        <span class="self">self</span>.metadata
+            .annotations
+            .as_ref()
+            .and_then(|anno| {
+                anno.get(QUILKIN_TOKEN_LABEL).map(|value| {
                     value
                         .split(<span class="string">&#39;,&#39;</span>)
-                        .map(String::from)
                         .map(<span class="kw">crate</span>::codec::base64::decode)
                         .filter_map(Result::ok)
                         .collect()
                 })
-                .unwrap_or_default(),
-            <span class="prelude-val">None </span>=&gt; &lt;<span class="kw">_</span>&gt;::default(),
-        }
+            })
+            .unwrap_or_default()
     }
 }
 

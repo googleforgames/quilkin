@@ -439,7 +439,7 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>check_proxy_readiness() {
         <span class="kw">let </span>config = <span class="kw">crate</span>::Config::default();
-        <span class="macro">assert_eq!</span>(config.clusters.read().endpoints().count(), <span class="number">0</span>);
+        <span class="macro">assert_eq!</span>(config.clusters.read().endpoints().len(), <span class="number">0</span>);
 
         <span class="kw">let </span>admin = Admin::Proxy(&lt;<span class="kw">_</span>&gt;::default());
         <span class="macro">assert!</span>(!admin.is_ready(<span class="kw-2">&amp;</span>config));

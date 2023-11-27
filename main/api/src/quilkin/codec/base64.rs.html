@@ -23,6 +23,8 @@
 <a href="#23" id="23">23</a>
 <a href="#24" id="24">24</a>
 <a href="#25" id="25">25</a>
+<a href="#26" id="26">26</a>
+<a href="#27" id="27">27</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -41,11 +43,13 @@
 
 </span><span class="kw">use </span>base64::Engine;
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>encode&lt;A: AsRef&lt;[u8]&gt;&gt;(bytes: A) -&gt; String {
+<span class="attr">#[inline]
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>encode&lt;A: AsRef&lt;[u8]&gt;&gt;(bytes: A) -&gt; String {
     base64::engine::general_purpose::STANDARD.encode(bytes.as_ref())
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>decode&lt;A: AsRef&lt;str&gt;&gt;(input: A) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, base64::DecodeError&gt; {
+<span class="attr">#[inline]
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>decode&lt;A: AsRef&lt;[u8]&gt;&gt;(input: A) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, base64::DecodeError&gt; {
     base64::engine::general_purpose::STANDARD.decode(input.as_ref())
 }
 </code></pre></div></section></main></body></html>

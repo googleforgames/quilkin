@@ -604,6 +604,16 @@
 <a href="#604" id="604">604</a>
 <a href="#605" id="605">605</a>
 <a href="#606" id="606">606</a>
+<a href="#607" id="607">607</a>
+<a href="#608" id="608">608</a>
+<a href="#609" id="609">609</a>
+<a href="#610" id="610">610</a>
+<a href="#611" id="611">611</a>
+<a href="#612" id="612">612</a>
+<a href="#613" id="613">613</a>
+<a href="#614" id="614">614</a>
+<a href="#615" id="615">615</a>
+<a href="#616" id="616">616</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -1183,29 +1193,39 @@
                 <span class="string">&quot;received response&quot;
             </span>);
 
+            <span class="kw">let </span><span class="kw-2">mut </span>resource_names = Vec::with_capacity(response.resources.len());
             <span class="kw">let </span>result = response
                 .resources
-                .iter()
-                .cloned()
+                .into_iter()
                 .map(Resource::try_from)
                 .try_for_each(|resource| {
                     <span class="kw">let </span>resource = resource<span class="question-mark">?</span>;
+                    resource_names.push(resource.name().to_owned());
+
                     <span class="macro">tracing::debug!</span>(<span class="string">&quot;applying resource&quot;</span>);
                     (on_new_resource)(<span class="kw-2">&amp;</span>resource)
                 });
 
-            <span class="kw">let </span><span class="kw-2">mut </span>request = DiscoveryRequest::try_from(response)<span class="question-mark">?</span>;
-            <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = result {
-                <span class="kw">super</span>::metrics::nacks(<span class="kw-2">&amp;</span>control_plane_identifier, <span class="kw-2">&amp;</span>request.type_url).inc();
-                request.error_detail = <span class="prelude-val">Some</span>(<span class="kw">crate</span>::net::xds::google::rpc::Status {
+            <span class="kw">let </span>error_detail = <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = result {
+                <span class="kw">super</span>::metrics::nacks(<span class="kw-2">&amp;</span>control_plane_identifier, <span class="kw-2">&amp;</span>response.type_url).inc();
+                <span class="prelude-val">Some</span>(<span class="kw">crate</span>::net::xds::google::rpc::Status {
                     code: <span class="number">3</span>,
                     message: error.to_string(),
-                    ..&lt;<span class="kw">_</span>&gt;::default()
-                });
+                    ..Default::default()
+                })
             } <span class="kw">else </span>{
-                <span class="kw">super</span>::metrics::acks(<span class="kw-2">&amp;</span>control_plane_identifier, <span class="kw-2">&amp;</span>request.type_url).inc();
-            }
+                <span class="kw">super</span>::metrics::acks(<span class="kw-2">&amp;</span>control_plane_identifier, <span class="kw-2">&amp;</span>response.type_url).inc();
+                <span class="prelude-val">None
+            </span>};
 
+            <span class="kw">let </span>request = DiscoveryRequest {
+                resource_names,
+                version_info: response.version_info,
+                type_url: response.type_url,
+                response_nonce: response.nonce,
+                error_detail,
+                ..Default::default()
+            };
             <span class="kw">yield </span>request;
         }
     })
