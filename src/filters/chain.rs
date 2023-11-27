@@ -432,15 +432,20 @@ mod tests {
         );
 
         let mut context = WriteContext::new(
-            endpoints_fixture.endpoints().pop().unwrap().address.clone(),
+            endpoints_fixture
+                .endpoints()
+                .first()
+                .unwrap()
+                .address
+                .clone(),
             "127.0.0.1:70".parse().unwrap(),
             alloc_buffer(b"hello"),
         );
 
         chain.write(&mut context).await.unwrap();
         assert_eq!(
-            b"hello:our:127.0.0.1:80:127.0.0.1:70:our:127.0.0.1:80:127.0.0.1:70",
-            &*context.contents,
+            "hello:our:127.0.0.1:80:127.0.0.1:70:our:127.0.0.1:80:127.0.0.1:70",
+            std::str::from_utf8(&context.contents).unwrap(),
         );
         assert_eq!(
             "receive:receive",
