@@ -327,6 +327,7 @@ pub fn alloc_buffer(data: impl AsRef<[u8]>) -> crate::pool::PoolBuffer {
 }
 
 /// assert that read makes no changes
+#[cfg(test)]
 pub async fn assert_filter_read_no_change<F>(filter: &F)
 where
     F: Filter,
