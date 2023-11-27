@@ -61,7 +61,8 @@ pub fn max_grpc_message_size() -> usize {
 }
 
 /// Config is the configuration of a proxy
-#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+#[cfg_attr(test, derive(PartialEq))]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct Config {
@@ -83,15 +84,15 @@ impl Config {
 
     fn update_from_json(
         &self,
-        map: serde_json::Map<String, serde_json::Value>,
+        mut map: serde_json::Map<String, serde_json::Value>,
         locality: Option<crate::net::endpoint::Locality>,
     ) -> Result<(), eyre::Error> {
         macro_rules! replace_if_present {
             ($($field:ident),+) => {
                 $(
-                    if let Some(value) = map.get(stringify!($field)) {
+                    if let Some(value) = map.remove(stringify!($field)) {
                         tracing::debug!(%value, "replacing {}", stringify!($field));
-                        self.$field.try_replace(serde_json::from_value(value.clone())?);
+                        self.$field.try_replace(serde_json::from_value(value)?);
                     }
                 )+
             }
@@ -99,7 +100,7 @@ impl Config {
 
         replace_if_present!(filters, id);
 
-        if let Some(value) = map.get("clusters").cloned() {
+        if let Some(value) = map.remove("clusters") {
             tracing::debug!(%value, "replacing clusters");
             let cmd: cluster::ClusterMapDeser = serde_json::from_value(value)?;
             self.clusters.modify(|clusters| {

@@ -321,7 +321,7 @@ impl schemars::JsonSchema for ClusterMap {
 }
 
 pub struct ClusterMapDeser {
-    pub endpoints: Vec<EndpointWithLocality>,
+    pub(crate) endpoints: Vec<EndpointWithLocality>,
 }
 
 impl<'de> Deserialize<'de> for ClusterMapDeser {
@@ -334,7 +334,7 @@ impl<'de> Deserialize<'de> for ClusterMapDeser {
         endpoints.sort_by(|a, b| a.locality.cmp(&b.locality));
 
         for window in endpoints.windows(2) {
-            if &window[0] == &window[1] {
+            if window[0] == window[1] {
                 return Err(serde::de::Error::custom(
                     "duplicate localities found in cluster map",
                 ));
