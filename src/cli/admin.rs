@@ -212,7 +212,7 @@ mod tests {
     #[test]
     fn check_proxy_readiness() {
         let config = crate::Config::default();
-        assert_eq!(config.clusters.read().endpoints().count(), 0);
+        assert_eq!(config.clusters.read().endpoints().len(), 0);
 
         let admin = Admin::Proxy(<_>::default());
         assert!(!admin.is_ready(&config));

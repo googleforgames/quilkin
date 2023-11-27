@@ -25,9 +25,9 @@ use uuid::Uuid;
 
 use crate::{
     filters::prelude::*,
-    net::cluster::ClusterMap,
+    net::cluster::{self, ClusterMap},
     net::xds::{
-        config::listener::v3::Listener, service::discovery::v3::DiscoveryResponse, Resource,
+        config::listener::v3::Listener, service::discovery::v3::DeltaDiscoveryResponse, Resource,
         ResourceType,
     },
 };
@@ -61,7 +61,8 @@ pub fn max_grpc_message_size() -> usize {
 }
 
 /// Config is the configuration of a proxy
-#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+#[cfg_attr(test, derive(PartialEq))]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct Config {
@@ -83,15 +84,15 @@ impl Config {
 
     fn update_from_json(
         &self,
-        map: serde_json::Map<String, serde_json::Value>,
+        mut map: serde_json::Map<String, serde_json::Value>,
         locality: Option<crate::net::endpoint::Locality>,
     ) -> Result<(), eyre::Error> {
         macro_rules! replace_if_present {
             ($($field:ident),+) => {
                 $(
-                    if let Some(value) = map.get(stringify!($field)) {
+                    if let Some(value) = map.remove(stringify!($field)) {
                         tracing::debug!(%value, "replacing {}", stringify!($field));
-                        self.$field.try_replace(serde_json::from_value(value.clone())?);
+                        self.$field.try_replace(serde_json::from_value(value)?);
                     }
                 )+
             }
@@ -99,12 +100,12 @@ impl Config {
 
         replace_if_present!(filters, id);
 
-        if let Some(value) = map.get("clusters").cloned() {
+        if let Some(value) = map.remove("clusters") {
             tracing::debug!(%value, "replacing clusters");
-            let value: ClusterMap = serde_json::from_value(value)?;
+            let cmd: cluster::ClusterMapDeser = serde_json::from_value(value)?;
             self.clusters.modify(|clusters| {
-                for cluster in value.iter() {
-                    clusters.insert(cluster.key().clone(), cluster.value().clone());
+                for cluster in cmd.endpoints {
+                    clusters.insert(cluster.locality, cluster.endpoints);
                 }
 
                 if let Some(locality) = locality {
@@ -120,11 +121,12 @@ impl Config {
 
     pub fn discovery_request(
         &self,
-        _node_id: &str,
+        _id: &str,
         resource_type: ResourceType,
         names: &[String],
-    ) -> Result<DiscoveryResponse, eyre::Error> {
+    ) -> Result<Vec<prost_types::Any>, eyre::Error> {
         let mut resources = Vec::new();
+
         match resource_type {
             ResourceType::Listener => {
                 resources.push(resource_type.encode_to_any(&Listener {
@@ -138,7 +140,7 @@ impl Config {
                         resources.push(resource_type.encode_to_any(
                             &crate::net::cluster::proto::Cluster::try_from((
                                 cluster.key(),
-                                cluster.value(),
+                                &cluster.value().endpoints,
                             ))?,
                         )?);
                     }
@@ -148,20 +150,24 @@ impl Config {
                             resources.push(resource_type.encode_to_any(
                                 &crate::net::cluster::proto::Cluster::try_from((
                                     cluster.key(),
-                                    cluster.value(),
+                                    &cluster.value().endpoints,
                                 ))?,
                             )?);
                         }
                     }
                 };
             }
-        };
+        }
 
-        Ok(DiscoveryResponse {
-            resources,
-            type_url: resource_type.type_url().into(),
-            ..<_>::default()
-        })
+        Ok(resources)
+    }
+
+    pub fn delta_discovery_request(
+        &self,
+        _resource_type: ResourceType,
+        _names: &[String],
+    ) -> Result<DeltaDiscoveryResponse, eyre::Error> {
+        unimplemented!();
     }
 
     #[tracing::instrument(skip_all, fields(response = response.type_url()))]
