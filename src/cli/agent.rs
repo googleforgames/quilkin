@@ -128,7 +128,7 @@ impl RuntimeConfig {
     pub fn is_ready(&self) -> bool {
         let provider_healthy = self.provider_is_healthy.load(Ordering::SeqCst);
         let relay_healthy = self.relay_is_healthy.load(Ordering::SeqCst);
-        tracing::trace!(?provider_healthy, ?relay_healthy, "Agent readiness check");
+        tracing::trace!(?provider_healthy, ?relay_healthy, "agent readiness check");
 
         provider_healthy && relay_healthy
     }

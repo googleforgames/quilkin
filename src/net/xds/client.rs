@@ -425,6 +425,7 @@ impl MdsStream {
                         mode.idle_request_interval_secs(),
                     );
                     let mut stream = control_plane.stream_aggregated_resources(stream).await?;
+                    tracing::trace!("relay marked as healthy");
                     mode.unwrap_agent()
                         .relay_is_healthy
                         .store(true, Ordering::SeqCst);
