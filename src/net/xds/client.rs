@@ -143,7 +143,7 @@ impl<C: ServiceClient> Client<C> {
         let max_delay = Duration::from_secs(BACKOFF_MAX_DELAY_SECONDS);
 
         let retry_config = RetryFutureConfig::new(u32::MAX).custom_backoff(|attempt, error: &_| {
-            tracing::info!(attempt, "Retrying to connect");
+            tracing::info!(attempt, "retrying to connect");
             // reset after success
             if attempt <= 1 {
                 backoff = ExponentialBackoff::new(Duration::from_millis(
@@ -162,16 +162,16 @@ impl<C: ServiceClient> Client<C> {
 
             match error {
                 RpcSessionError::InvalidEndpoint(ref error) => {
-                    tracing::error!(?error, "Error creating endpoint");
+                    tracing::error!(?error, "error creating endpoint");
                     // Do not retry if this is an invalid URL error that we cannot recover from.
                     RetryPolicy::Break
                 }
                 RpcSessionError::InitialConnect(ref error) => {
-                    tracing::warn!(?error, "Unable to connect to the XDS server");
+                    tracing::warn!(?error, "unable to connect to the xDS server");
                     RetryPolicy::Delay(delay)
                 }
                 RpcSessionError::Receive(ref status) => {
-                    tracing::warn!(status = ?status, "Failed to receive response from XDS server");
+                    tracing::warn!(status = ?status, "failed to receive response from xDS server");
                     RetryPolicy::Delay(delay)
                 }
             }
@@ -217,7 +217,7 @@ impl<C: ServiceClient> Client<C> {
         let client = connect_to_server
             .instrument(tracing::trace_span!("client_connect"))
             .await?;
-        tracing::info!("Connected to management server");
+        tracing::info!("connected to management server");
         Ok(client)
     }
 }
@@ -325,7 +325,7 @@ impl AdsStream {
                                 continue;
                             }
                             Ok(Some(Err(error))) => {
-                                tracing::warn!(%error, "xds stream error");
+                                tracing::warn!(%error, "xDS stream error");
                                 break;
                             }
                             Ok(None) => {
