@@ -282,11 +282,7 @@ impl Filter for FilterChain {
         // has rejected, and the destinations is empty, we passthrough to all.
         // Which mimics the old behaviour while avoid clones in most cases.
         if ctx.destinations.is_empty() {
-            ctx.destinations = ctx
-                .endpoints
-                .iter()
-                .flat_map(|e| e.value().iter().cloned().collect::<Vec<_>>())
-                .collect();
+            ctx.destinations = ctx.endpoints.endpoints();
         }
 
         Ok(())
@@ -376,10 +372,7 @@ mod tests {
         config.filters.read(&mut context).await.unwrap();
         let expected = endpoints_fixture.clone();
 
-        assert_eq!(
-            &*expected.endpoints().collect::<Vec<_>>(),
-            &*context.destinations
-        );
+        assert_eq!(&*expected.endpoints(), &*context.destinations);
         assert_eq!(b"hello:odr:127.0.0.1:70", &*context.contents);
         assert_eq!(
             "receive",
@@ -389,7 +382,7 @@ mod tests {
         let mut context = WriteContext::new(
             endpoints_fixture
                 .endpoints()
-                .next()
+                .first()
                 .unwrap()
                 .address
                 .clone(),
@@ -428,10 +421,7 @@ mod tests {
 
         chain.read(&mut context).await.unwrap();
         let expected = endpoints_fixture.clone();
-        assert_eq!(
-            expected.endpoints().collect::<Vec<_>>(),
-            context.destinations
-        );
+        assert_eq!(expected.endpoints(), context.destinations);
         assert_eq!(
             b"hello:odr:127.0.0.1:70:odr:127.0.0.1:70",
             &*context.contents
@@ -444,7 +434,7 @@ mod tests {
         let mut context = WriteContext::new(
             endpoints_fixture
                 .endpoints()
-                .next()
+                .first()
                 .unwrap()
                 .address
                 .clone(),
@@ -454,8 +444,8 @@ mod tests {
 
         chain.write(&mut context).await.unwrap();
         assert_eq!(
-            b"hello:our:127.0.0.1:80:127.0.0.1:70:our:127.0.0.1:80:127.0.0.1:70",
-            &*context.contents,
+            "hello:our:127.0.0.1:80:127.0.0.1:70:our:127.0.0.1:80:127.0.0.1:70",
+            std::str::from_utf8(&context.contents).unwrap(),
         );
         assert_eq!(
             "receive:receive",

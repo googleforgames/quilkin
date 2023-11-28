@@ -68,21 +68,21 @@ impl GameServer {
         })
     }
 
-    pub fn tokens(&self) -> std::collections::BTreeSet<Vec<u8>> {
-        match self.metadata.annotations.as_ref() {
-            Some(annotations) => annotations
-                .get(QUILKIN_TOKEN_LABEL)
-                .map(|value| {
+    #[inline]
+    fn tokens(&self) -> std::collections::BTreeSet<Vec<u8>> {
+        self.metadata
+            .annotations
+            .as_ref()
+            .and_then(|anno| {
+                anno.get(QUILKIN_TOKEN_LABEL).map(|value| {
                     value
                         .split(',')
-                        .map(String::from)
                         .map(crate::codec::base64::decode)
                         .filter_map(Result::ok)
                         .collect()
                 })
-                .unwrap_or_default(),
-            None => <_>::default(),
-        }
+            })
+            .unwrap_or_default()
     }
 }
 

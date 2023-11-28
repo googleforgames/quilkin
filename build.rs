@@ -32,7 +32,11 @@ fn git_path(path: &str) -> IoResult<String> {
     if !output.status.success() {
         return Err(Error::new(
             ErrorKind::Other,
-            format!("`git` failed with status {}", output.status),
+            format!(
+                "`git` failed with status {}: {}",
+                output.status,
+                std::str::from_utf8(&output.stderr).unwrap_or("no output")
+            ),
         ));
     }
 
