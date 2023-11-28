@@ -90,7 +90,7 @@ impl Admin {
     ) -> std::thread::JoinHandle<Result<(), hyper::Error>> {
         let address = address.unwrap_or_else(|| (std::net::Ipv6Addr::UNSPECIFIED, PORT).into());
         let health = Health::new();
-        tracing::info!(address = %address, "Starting admin endpoint");
+        tracing::info!(address = %address, "starting admin endpoint");
 
         let mode = self.clone();
         std::thread::spawn(move || {

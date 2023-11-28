@@ -159,7 +159,7 @@ impl Cli {
         tracing::info!(
             version = crate_version!(),
             commit = crate::net::endpoint::metadata::build::GIT_COMMIT_HASH,
-            "Starting Quilkin"
+            "starting Quilkin"
         );
 
         // Non-long running commands (e.g. ones with no administration server)
