@@ -407,7 +407,9 @@ impl MdsStream {
                         }),
                         ..<_>::default()
                     };
+                    tracing::trace!("sending request");
                     let _ = requests.send(initial_response);
+                    tracing::trace!("streaming requests");
                     let stream = client
                         .stream_requests(
                             // Errors only happen if the stream is behind, which
@@ -419,11 +421,12 @@ impl MdsStream {
                         .in_current_span()
                         .await?
                         .into_inner();
-
+                    tracing::trace!("control plane: creating from config");
                     let control_plane = super::server::ControlPlane::from_arc(
                         config.clone(),
                         mode.idle_request_interval_secs(),
                     );
+                    tracing::trace!("control plane: streaming aggregated resources");
                     let mut stream = control_plane.stream_aggregated_resources(stream).await?;
                     tracing::trace!("relay marked as healthy");
                     mode.unwrap_agent()
