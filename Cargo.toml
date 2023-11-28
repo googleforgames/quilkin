@@ -162,3 +162,8 @@ protobuf-src = { version = "1.1.0", optional = true }
 default = ["vendor-protoc"]
 instrument = []
 vendor-protoc = ["dep:protobuf-src"]
+
+# We want debug information when doing benchmarks for debugging purposes as well
+# as better (correct) callstacks in perf
+[profile.bench]
+debug = true
