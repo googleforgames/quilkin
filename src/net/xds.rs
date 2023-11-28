@@ -303,7 +303,7 @@ mod tests {
                 );
             });
 
-            let filters = crate::filters::FilterChain::try_create([
+            let filters = FilterChain::try_create([
                 Concatenate::as_filter_config(concatenate::Config {
                     on_read: concatenate::Strategy::Append,
                     on_write: <_>::default(),
