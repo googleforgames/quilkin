@@ -44,6 +44,7 @@ pub enum Resource {
 }
 
 impl Resource {
+    #[inline]
     pub fn name(&self) -> String {
         match self {
             Self::Cluster(cluster) => cluster
