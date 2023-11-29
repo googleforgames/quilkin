@@ -262,6 +262,8 @@ mod tests {
         // agent deployment
         let args = [
             "agent",
+            "--idle-request-interval-secs",
+            "5",
             "--relay",
             "http://quilkin-relay-agones:7900",
             "agones",
