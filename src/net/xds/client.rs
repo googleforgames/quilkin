@@ -427,7 +427,24 @@ impl MdsStream {
                         mode.idle_request_interval_secs(),
                     );
                     tracing::trace!("control plane: streaming aggregated resources");
-                    let mut stream = control_plane.stream_aggregated_resources(stream).await?;
+
+                    let timeout = tokio::time::timeout(
+                        std::time::Duration::from_secs(mode.idle_request_interval_secs()),
+                        control_plane.stream_aggregated_resources(stream),
+                    );
+
+                    let mut stream = match timeout.await {
+                        Ok(result) => result?,
+                        _ => {
+                            tracing::warn!("initial connection to relay server failed, retrying");
+                            client = MdsClient::connect_with_backoff(&management_servers)
+                                .await
+                                .unwrap();
+                            rx = requests.subscribe();
+                            continue;
+                        }
+                    };
+
                     tracing::trace!("relay marked as healthy");
                     mode.unwrap_agent()
                         .relay_is_healthy

@@ -405,7 +405,7 @@ mod tests {
 
             assert_eq!(
                 "hello",
-                timeout(Duration::from_millis(100), rx.recv())
+                timeout(Duration::from_secs(5), rx.recv())
                     .await
                     .expect("should have received a packet")
                     .unwrap()
