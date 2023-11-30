@@ -40,7 +40,7 @@ pub(crate) mod metrics;
 pub type SessionMap = crate::collections::ttl::TtlMap<SessionKey, Session>;
 type ChannelData = (PoolBuffer, Option<IpNetEntry>, SocketAddr);
 type UpstreamChannelData = (FrozenPoolBuffer, Option<IpNetEntry>, SocketAddr);
-type UpstreamSender = mpsc::UnboundedSender<UpstreamChannelData>;
+type UpstreamSender = mpsc::Sender<UpstreamChannelData>;
 type DownstreamSender = async_channel::Sender<ChannelData>;
 pub type DownstreamReceiver = async_channel::Receiver<ChannelData>;
 
@@ -109,7 +109,7 @@ impl SessionPool {
             .ok_or_else(|| eyre::eyre!("couldn't get socket address from raw socket"))
             .map_err(super::PipelineError::Session)?
             .port();
-        let (tx, mut downstream_receiver) = mpsc::unbounded_channel::<UpstreamChannelData>();
+        let (tx, mut downstream_receiver) = mpsc::channel::<UpstreamChannelData>(5);
 
         let pool = self.clone();
 
@@ -380,9 +380,11 @@ impl SessionPool {
         let packet = context.contents;
         tracing::trace!(%source, %dest, length = packet.len(), "sending packet downstream");
         downstream_sender
-            .send((packet, asn_info.cloned(), dest))
-            .await
-            .map_err(|_| Error::ChannelClosed)?;
+            .try_send((packet, asn_info.cloned(), dest))
+            .map_err(|error| match error {
+                async_channel::TrySendError::Closed(_) => Error::ChannelClosed,
+                async_channel::TrySendError::Full(_) => Error::ChannelFull,
+            })?;
         Ok(())
     }
 
@@ -398,10 +400,15 @@ impl SessionPool {
         asn_info: Option<IpNetEntry>,
         packet: FrozenPoolBuffer,
     ) -> Result<(), super::PipelineError> {
+        use tokio::sync::mpsc::error::TrySendError;
+
         self.get(key, asn_info.clone())
             .await?
-            .send((packet, asn_info, key.dest))
-            .map_err(|_| super::PipelineError::ChannelClosed)
+            .try_send((packet, asn_info, key.dest))
+            .map_err(|error| match error {
+                TrySendError::Closed(_) => super::PipelineError::ChannelClosed,
+                TrySendError::Full(_) => super::PipelineError::ChannelFull,
+            })
     }
 
     /// Returns whether the pool contains any sockets allocated to a destination.
@@ -554,6 +561,8 @@ impl From<(SocketAddr, SocketAddr)> for SessionKey {
 pub enum Error {
     #[error("downstream channel closed")]
     ChannelClosed,
+    #[error("downstream channel full")]
+    ChannelFull,
     #[error("filter {0}")]
     Filter(#[from] crate::filters::FilterError),
 }
@@ -577,7 +586,7 @@ mod tests {
         config: impl Into<Option<Config>>,
     ) -> (Arc<SessionPool>, ShutdownTx, DownstreamReceiver) {
         let (tx, rx) = crate::make_shutdown_channel(crate::ShutdownKind::Testing);
-        let (sender, receiver) = async_channel::unbounded();
+        let (sender, receiver) = async_channel::bounded(250);
         (
             SessionPool::new(
                 Arc::new(config.into().unwrap_or_default()),
