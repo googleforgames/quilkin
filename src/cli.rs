@@ -354,9 +354,6 @@ mod tests {
             icao_code,
         };
 
-        let relay_datacenters = relay_config.datacenters.read();
-        let proxy_datacenters = proxy_config.datacenters.read();
-
         assert!(agent_config.datacenters.read().is_empty());
         assert!(!relay_config.datacenters.read().is_empty());
         assert!(!proxy_config.datacenters.read().is_empty());
