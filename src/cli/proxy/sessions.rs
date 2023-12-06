@@ -586,7 +586,7 @@ mod tests {
         config: impl Into<Option<Config>>,
     ) -> (Arc<SessionPool>, ShutdownTx, DownstreamReceiver) {
         let (tx, rx) = crate::make_shutdown_channel(crate::ShutdownKind::Testing);
-        let (sender, receiver) = async_channel::bounded(250);
+        let (sender, receiver) = async_channel::bounded(2500);
         (
             SessionPool::new(
                 Arc::new(config.into().unwrap_or_default()),

@@ -328,7 +328,8 @@ pub struct Builder<M> {
 impl<M: Measurement> Builder<M> {
     const DEFAULT_STABILITY_THRESHOLD: Duration = Duration::from_millis(50);
     const DEFAULT_ADJUSTMENT_DURATION: Duration = Duration::from_millis(5);
-    const DEFAULT_INTERVAL_RANGE: Range<Duration> = Duration::from_secs(3)..Duration::from_secs(10);
+    const DEFAULT_INTERVAL_RANGE: Range<Duration> =
+        Duration::from_secs(60)..Duration::from_secs(10 * 60);
     const DEFAULT_SUBSET: f64 = 0.5;
 
     /// Constructs a new [`Phoenix`] builder.
