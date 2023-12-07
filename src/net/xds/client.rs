@@ -412,7 +412,7 @@ impl MdsStream {
                         config.clone(),
                         mode.idle_request_interval(),
                     );
-                    let mut stream = control_plane.stream_aggregated_resources(stream).await?;
+                    let mut stream = control_plane.stream_resources(stream).await?;
                     mode.unwrap_agent()
                         .relay_is_healthy
                         .store(true, Ordering::SeqCst);

@@ -176,7 +176,7 @@ impl ControlPlane {
         Ok(response)
     }
 
-    pub async fn stream_aggregated_resources<S>(
+    pub async fn stream_resources<S>(
         &self,
         mut streaming: S,
     ) -> Result<impl Stream<Item = Result<DiscoveryResponse, tonic::Status>> + Send, tonic::Status>
@@ -283,7 +283,7 @@ impl AggregatedDiscoveryService for ControlPlane {
         request: tonic::Request<tonic::Streaming<DiscoveryRequest>>,
     ) -> Result<tonic::Response<Self::StreamAggregatedResourcesStream>, tonic::Status> {
         Ok(tonic::Response::new(Box::pin(
-            self.stream_aggregated_resources(request.into_inner())
+            self.stream_resources(request.into_inner())
                 .in_current_span()
                 .await?,
         )))
@@ -457,9 +457,7 @@ mod tests {
 
         let mut stream = timeout(
             TIMEOUT_DURATION,
-            client.stream_aggregated_resources(Box::pin(
-                tokio_stream::wrappers::ReceiverStream::new(rx),
-            )),
+            client.stream_resources(Box::pin(tokio_stream::wrappers::ReceiverStream::new(rx))),
         )
         .await
         .unwrap()
