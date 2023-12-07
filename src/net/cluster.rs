@@ -63,12 +63,39 @@ pub(crate) fn active_endpoints() -> &'static prometheus::IntGauge {
 #[derive(Debug, Clone)]
 pub struct EndpointSet {
     pub endpoints: BTreeSet<Endpoint>,
+    /// The hash of all of the endpoints in this set
+    pub version: u64,
     /// Version of this set of endpoints. Any mutatation of the endpoints
     /// set monotonically increases this number
-    pub version: u64,
+    pub mono_version: u64,
 }
 
 impl EndpointSet {
+    /// Creates a new endpoint set, calculating a unique version hash for it
+    pub fn new(endpoints: BTreeSet<Endpoint>) -> Self {
+        let mut this = Self {
+            endpoints,
+            version: 0,
+            mono_version: 0,
+        };
+
+        this.update();
+        this
+    }
+
+    /// Creates a new endpoint set with the provided version hash, skipping
+    /// calculation of it
+    ///
+    /// This hash _must_ be calculated with [`Self::calc_version`] to be consistent
+    /// across machines
+    pub fn with_version(endpoints: BTreeSet<Endpoint>, version: u64) -> Self {
+        Self {
+            endpoints,
+            version,
+            mono_version: 1,
+        }
+    }
+
     #[inline]
     pub fn len(&self) -> usize {
         self.endpoints.len()
@@ -82,6 +109,22 @@ impl EndpointSet {
     #[inline]
     pub fn contains(&self, ep: &Endpoint) -> bool {
         self.endpoints.contains(ep)
+    }
+
+    /// Bumps the version, calculating a hash for the entire endpoint set
+    ///
+    /// This is extremely expensive
+    #[inline]
+    pub fn update(&mut self) {
+        use std::hash::{Hash, Hasher};
+        let mut hasher = seahash::SeaHasher::with_seeds(0, 1, 2, 3);
+
+        for ep in &self.endpoints {
+            ep.hash(&mut hasher);
+        }
+
+        self.version = hasher.finish();
+        self.mono_version += 1;
     }
 }
 
@@ -108,12 +151,21 @@ impl ClusterMap {
         locality: Option<Locality>,
         cluster: BTreeSet<Endpoint>,
     ) -> Option<BTreeSet<Endpoint>> {
+        self.apply(locality, EndpointSet::new(cluster))
+    }
+
+    pub fn apply(
+        &self,
+        locality: Option<Locality>,
+        cluster: EndpointSet,
+    ) -> Option<BTreeSet<Endpoint>> {
         let new_len = cluster.len();
         if let Some(mut current) = self.map.get_mut(&locality) {
             let current = current.value_mut();
 
-            let old = std::mem::replace(&mut current.endpoints, cluster);
-            current.version += 1;
+            let old = std::mem::replace(&mut current.endpoints, cluster.endpoints);
+            current.version = cluster.version;
+            current.mono_version += 1;
 
             let old_len = old.len();
 
@@ -126,13 +178,7 @@ impl ClusterMap {
             self.version.fetch_add(1, Relaxed);
             Some(old)
         } else {
-            self.map.insert(
-                locality,
-                EndpointSet {
-                    endpoints: cluster,
-                    version: 1,
-                },
-            );
+            self.map.insert(locality, cluster);
             self.num_endpoints.fetch_add(new_len, Relaxed);
             self.version.fetch_add(1, Relaxed);
             None
@@ -170,7 +216,7 @@ impl ClusterMap {
             let set = entry.value_mut();
 
             if set.endpoints.remove(needle) {
-                set.version += 1;
+                set.update();
                 self.num_endpoints.fetch_sub(1, Relaxed);
                 self.version.fetch_add(1, Relaxed);
                 return true;
@@ -193,9 +239,9 @@ impl ClusterMap {
                 // This will always be true, but....
                 let removed = set.endpoints.remove(&endpoint);
                 if removed {
+                    set.update();
                     self.num_endpoints.fetch_sub(1, Relaxed);
                     self.version.fetch_add(1, Relaxed);
-                    set.version += 1;
                 }
                 return removed;
             }
@@ -208,7 +254,7 @@ impl ClusterMap {
     pub fn replace(&self, locality: Option<Locality>, endpoint: Endpoint) -> Option<Endpoint> {
         if let Some(mut set) = self.map.get_mut(&locality) {
             let replaced = set.endpoints.replace(endpoint);
-            set.version += 1;
+            set.update();
             self.version.fetch_add(1, Relaxed);
 
             if replaced.is_none() {
@@ -278,10 +324,25 @@ impl ClusterMap {
         self.version.load(Relaxed)
     }
 
+    #[inline]
     pub fn update_unlocated_endpoints(&self, locality: Locality) {
         if let Some((_, set)) = self.map.remove(&None) {
-            self.map.insert(Some(locality), set);
+            self.version.fetch_add(1, Relaxed);
+            if let Some(replaced) = self.map.insert(Some(locality), set) {
+                self.num_endpoints.fetch_sub(replaced.len(), Relaxed);
+            }
         }
+    }
+
+    #[inline]
+    pub fn remove_locality(&self, locality: &Option<Locality>) -> Option<EndpointSet> {
+        let ret = self.map.remove(locality).map(|(_k, v)| v);
+        if let Some(ret) = &ret {
+            self.version.fetch_add(1, Relaxed);
+            self.num_endpoints.fetch_sub(ret.len(), Relaxed);
+        }
+
+        ret
     }
 }
 
@@ -413,8 +474,9 @@ impl From<ClusterMapDeser> for ClusterMap {
                 (
                     locality,
                     EndpointSet {
-                        version: 0,
                         endpoints,
+                        mono_version: 1,
+                        version: 0,
                     },
                 )
             },

@@ -92,6 +92,7 @@ impl ResourceType {
     pub const VARIANTS: &'static [Self] = &[Self::Cluster, Self::Listener];
 
     /// Returns the corresponding type URL for the response type.
+    #[inline]
     pub const fn type_url(&self) -> &'static str {
         match self {
             Self::Cluster => CLUSTER_TYPE,
