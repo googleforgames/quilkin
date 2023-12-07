@@ -326,6 +326,7 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
         tracing::info!(%identifier, "new control plane discovery stream");
         let config = self.config.clone();
         let idle_request_interval = self.idle_request_interval;
+
         let stream = super::client::AdsStream::connect(
             Arc::from(&*identifier),
             move |(mut requests, _rx), _subscribed_resources| async move {
