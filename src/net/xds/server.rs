@@ -116,6 +116,7 @@ impl ControlPlane {
                     this.push_update(ResourceType::Cluster);
                 }
             }
+            .instrument(tracing::debug_span!("control_plane_watch_cluster"))
         });
 
         this.config.filters.watch({
