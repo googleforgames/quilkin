@@ -299,7 +299,7 @@ mod tests {
         const TOKEN_KEY: &str = "quilkin.dev/load_balancer/token";
 
         xds_config.filters.store(Arc::new(
-            FilterChain::try_create([
+            FilterChain::try_create(&[
                 Capture::as_filter_config(capture::Config {
                     metadata_key: VERSION_KEY.into(),
                     strategy: capture::Suffix {
@@ -406,7 +406,7 @@ mod tests {
                 );
             });
 
-            let filters = FilterChain::try_create([
+            let filters = FilterChain::try_create(&[
                 Concatenate::as_filter_config(concatenate::Config {
                     on_read: concatenate::Strategy::Append,
                     on_write: <_>::default(),

@@ -155,7 +155,7 @@ impl Relay {
 
 #[derive(Clone, Debug, Default)]
 pub struct RuntimeConfig {
-    pub idle_request_interval: std::time::Duration,
+    pub idle_request_interval_secs: u64,
     pub provider_is_healthy: Arc<AtomicBool>,
 }
 

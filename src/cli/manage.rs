@@ -53,7 +53,6 @@ pub struct Manage {
 }
 
 impl Manage {
-    #[tracing::instrument(skip_all)]
     pub async fn manage(
         &self,
         config: std::sync::Arc<crate::Config>,

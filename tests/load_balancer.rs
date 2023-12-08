@@ -51,7 +51,7 @@ policy: ROUND_ROBIN
         clusters.insert_default(echo_addresses.iter().cloned().map(Endpoint::new).collect())
     });
     server_config.filters.store(
-        quilkin::filters::FilterChain::try_create([Filter {
+        quilkin::filters::FilterChain::try_from(vec![Filter {
             name: LoadBalancer::factory().name().into(),
             label: None,
             config: serde_yaml::from_str(yaml).unwrap(),

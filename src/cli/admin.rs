@@ -18,7 +18,6 @@ mod health;
 
 use std::convert::Infallible;
 use std::sync::Arc;
-use std::time::Duration;
 
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Method, Request, Response, Server as HyperServer, StatusCode};
@@ -79,7 +78,7 @@ impl Admin {
         }
     }
 
-    pub fn idle_request_interval(&self) -> Duration {
+    pub fn idle_request_interval_secs(&self) -> u64 {
         match self {
             Self::Proxy(config) => config.idle_request_interval,
             Self::Agent(config) => config.idle_request_interval,

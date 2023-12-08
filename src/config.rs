@@ -19,7 +19,6 @@
 use std::{
     collections::{BTreeSet, HashMap},
     sync::Arc,
-    time::Duration,
 };
 
 use base64_serde::base64_serde_type;
@@ -49,10 +48,10 @@ pub(crate) mod xds;
 
 base64_serde_type!(pub Base64Standard, base64::engine::general_purpose::STANDARD);
 
-pub(crate) const BACKOFF_INITIAL_DELAY: Duration = Duration::from_millis(500);
-pub(crate) const BACKOFF_MAX_DELAY: Duration = Duration::from_secs(30);
-pub(crate) const BACKOFF_MAX_JITTER: Duration = Duration::from_millis(2000);
-pub(crate) const CONNECTION_TIMEOUT: Duration = Duration::from_secs(5);
+pub(crate) const BACKOFF_INITIAL_DELAY_MILLISECONDS: u64 = 500;
+pub(crate) const BACKOFF_MAX_DELAY_SECONDS: u64 = 30;
+pub(crate) const BACKOFF_MAX_JITTER_MILLISECONDS: u64 = 2000;
+pub(crate) const CONNECTION_TIMEOUT: u64 = 5;
 
 /// Returns the configured maximum allowed message size for gRPC messages.
 /// When using State Of The World xDS, the message size can get large enough
@@ -102,7 +101,7 @@ impl Config {
             ($($field:ident),+) => {
                 $(
                     if let Some(value) = map.remove(stringify!($field)) {
-                        tracing::trace!(%value, "replacing {}", stringify!($field));
+                        tracing::debug!(%value, "replacing {}", stringify!($field));
                         self.$field.try_replace(serde_json::from_value(value)?);
                     }
                 )+
@@ -112,8 +111,8 @@ impl Config {
         replace_if_present!(filters, id);
 
         if let Some(value) = map.remove("clusters") {
+            tracing::debug!(%value, "replacing clusters");
             let cmd: cluster::ClusterMapDeser = serde_json::from_value(value)?;
-            tracing::trace!(len = cmd.endpoints.len(), "replacing clusters");
             self.clusters.modify(|clusters| {
                 for cluster in cmd.endpoints {
                     clusters.insert(cluster.locality, cluster.endpoints);

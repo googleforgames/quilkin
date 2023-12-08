@@ -46,7 +46,7 @@ period: 1
         .clusters
         .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
     server_config.filters.store(
-        quilkin::filters::FilterChain::try_create([Filter {
+        quilkin::filters::FilterChain::try_from(vec![Filter {
             name: LocalRateLimit::factory().name().into(),
             label: None,
             config: serde_yaml::from_str(yaml).unwrap(),

@@ -91,14 +91,18 @@ impl FilterChain {
         })
     }
 
-    #[inline]
+    /// Validates the filter configurations in the provided config and constructs
+    /// a FilterChain if all configurations are valid.
+    pub fn try_create(filter_configs: &[FilterConfig]) -> Result<Self, CreationError> {
+        Self::try_from(filter_configs)
+    }
+
     pub fn len(&self) -> usize {
         self.filters.len()
     }
 
-    #[inline]
     pub fn is_empty(&self) -> bool {
-        self.filters.is_empty()
+        self.len() == 0
     }
 
     pub fn iter(&self) -> impl Iterator<Item = crate::config::Filter> + '_ {
@@ -127,25 +131,6 @@ impl FilterChain {
 
         for filter_config in filter_configs {
             let filter_config = filter_config.try_into()?;
-            let filter = FilterRegistry::get(
-                &filter_config.name,
-                CreateFilterArgs::fixed(filter_config.config),
-            )?;
-
-            filters.push((filter_config.name, filter));
-        }
-
-        Self::new(filters)
-    }
-
-    /// Validates the filter configurations in the provided config and constructs
-    /// a FilterChain if all configurations are valid.
-    pub fn try_create(
-        filter_configs: impl IntoIterator<Item = FilterConfig>,
-    ) -> Result<Self, CreationError> {
-        let mut filters = Vec::new();
-
-        for filter_config in filter_configs {
             let filter = FilterRegistry::get(
                 &filter_config.name,
                 CreateFilterArgs::fixed(filter_config.config),
@@ -186,6 +171,49 @@ impl PartialEq for FilterChain {
     }
 }
 
+impl<const N: usize> TryFrom<&[FilterConfig; N]> for FilterChain {
+    type Error = CreationError;
+
+    fn try_from(filter_configs: &[FilterConfig; N]) -> Result<Self, Self::Error> {
+        Self::try_from(&filter_configs[..])
+    }
+}
+
+impl<const N: usize> TryFrom<[FilterConfig; N]> for FilterChain {
+    type Error = CreationError;
+
+    fn try_from(filter_configs: [FilterConfig; N]) -> Result<Self, Self::Error> {
+        Self::try_from(&filter_configs[..])
+    }
+}
+
+impl TryFrom<Vec<FilterConfig>> for FilterChain {
+    type Error = CreationError;
+
+    fn try_from(filter_configs: Vec<FilterConfig>) -> Result<Self, Self::Error> {
+        Self::try_from(&filter_configs[..])
+    }
+}
+
+impl TryFrom<&[FilterConfig]> for FilterChain {
+    type Error = CreationError;
+
+    fn try_from(filter_configs: &[FilterConfig]) -> Result<Self, Self::Error> {
+        let mut filters = Vec::new();
+
+        for filter_config in filter_configs {
+            let filter = FilterRegistry::get(
+                &filter_config.name,
+                CreateFilterArgs::fixed(filter_config.config.clone()),
+            )?;
+
+            filters.push((filter_config.name.clone(), filter));
+        }
+
+        Self::new(filters)
+    }
+}
+
 impl TryFrom<FilterChain> for crate::net::xds::config::listener::v3::FilterChain {
     type Error = CreationError;
 
@@ -220,7 +248,7 @@ impl<'de> serde::Deserialize<'de> for FilterChain {
     fn deserialize<D: serde::Deserializer<'de>>(de: D) -> Result<Self, D::Error> {
         let filters = <Vec<FilterConfig>>::deserialize(de)?;
 
-        Self::try_create(filters).map_err(serde::de::Error::custom)
+        Self::try_from(filters).map_err(serde::de::Error::custom)
     }
 }
 
@@ -314,7 +342,7 @@ mod tests {
         config,
         filters::Debug,
         net::endpoint::Endpoint,
-        test::{alloc_buffer, TestConfig, TestFilter},
+        test::{alloc_buffer, new_test_config, TestFilter},
     };
 
     use super::*;
@@ -324,7 +352,7 @@ mod tests {
         let provider = Debug::factory();
 
         // everything is fine
-        let filter_configs = [config::Filter {
+        let filter_configs = &[config::Filter {
             name: provider.name().into(),
             label: None,
             config: Some(serde_json::Map::default().into()),
@@ -334,7 +362,7 @@ mod tests {
         assert_eq!(1, chain.filters.len());
 
         // uh oh, something went wrong
-        let filter_configs = [config::Filter {
+        let filter_configs = &[config::Filter {
             name: "this is so wrong".into(),
             label: None,
             config: Default::default(),
@@ -357,7 +385,7 @@ mod tests {
     #[tokio::test]
     async fn chain_single_test_filter() {
         crate::test::load_test_filters();
-        let config = TestConfig::new();
+        let config = new_test_config();
         let endpoints_fixture = endpoints();
         let mut context = ReadContext::new(
             endpoints_fixture.clone(),

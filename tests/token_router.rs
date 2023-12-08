@@ -56,7 +56,7 @@ quilkin.dev:
     });
 
     server_config.filters.store(
-        quilkin::filters::FilterChain::try_create([
+        quilkin::filters::FilterChain::try_from(vec![
             Filter {
                 name: Capture::factory().name().into(),
                 label: None,
