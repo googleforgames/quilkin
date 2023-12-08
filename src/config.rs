@@ -16,7 +16,7 @@
 
 //! Quilkin configuration.
 
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use base64_serde::base64_serde_type;
 use schemars::JsonSchema;
@@ -44,10 +44,10 @@ pub mod watch;
 
 base64_serde_type!(pub Base64Standard, base64::engine::general_purpose::STANDARD);
 
-pub(crate) const BACKOFF_INITIAL_DELAY_MILLISECONDS: u64 = 500;
-pub(crate) const BACKOFF_MAX_DELAY_SECONDS: u64 = 30;
-pub(crate) const BACKOFF_MAX_JITTER_MILLISECONDS: u64 = 2000;
-pub(crate) const CONNECTION_TIMEOUT: u64 = 5;
+pub(crate) const BACKOFF_INITIAL_DELAY: Duration = Duration::from_millis(500);
+pub(crate) const BACKOFF_MAX_DELAY: Duration = Duration::from_secs(30);
+pub(crate) const BACKOFF_MAX_JITTER: Duration = Duration::from_millis(2000);
+pub(crate) const CONNECTION_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// Returns the configured maximum allowed message size for gRPC messages.
 /// When using State Of The World xDS, the message size can get large enough

@@ -53,7 +53,7 @@ pub struct Agent {
     pub provider: Option<crate::config::Providers>,
     /// The interval in seconds at which the agent will wait for a discovery
     /// request from a relay server before restarting the connection.
-    #[clap(long, env = "QUILKIN_IDLE_REQUEST_INTERVAL_SECS", default_value_t = super::admin::IDLE_REQUEST_INTERVAL_SECS)]
+    #[clap(long, env = "QUILKIN_IDLE_REQUEST_INTERVAL_SECS", default_value_t = super::admin::idle_request_interval_secs())]
     pub idle_request_interval_secs: u64,
 }
 
@@ -66,7 +66,7 @@ impl Default for Agent {
             zone: <_>::default(),
             sub_zone: <_>::default(),
             provider: <_>::default(),
-            idle_request_interval_secs: super::admin::IDLE_REQUEST_INTERVAL_SECS,
+            idle_request_interval_secs: super::admin::idle_request_interval_secs(),
         }
     }
 }
@@ -119,7 +119,7 @@ impl Agent {
 
 #[derive(Clone, Debug, Default)]
 pub struct RuntimeConfig {
-    pub idle_request_interval_secs: u64,
+    pub idle_request_interval: std::time::Duration,
     pub provider_is_healthy: Arc<AtomicBool>,
     pub relay_is_healthy: Arc<AtomicBool>,
 }

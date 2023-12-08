@@ -73,11 +73,11 @@ pub struct Cli {
     #[clap(subcommand)]
     pub command: Commands,
     #[clap(
-    long,
-    default_value_t = LogFormats::Auto,
-    value_parser = clap::builder::PossibleValuesParser::new(["auto", "json", "plain", "pretty"])
-    .map(|s| s.parse::<LogFormats>().unwrap()),
-    )]
+     long,
+     default_value_t = LogFormats::Auto,
+     value_parser = clap::builder::PossibleValuesParser::new(["auto", "json", "plain", "pretty"])
+     .map(|s| s.parse::<LogFormats>().unwrap()),
+     )]
     pub log_format: LogFormats,
 }
 
@@ -111,15 +111,21 @@ impl Commands {
     pub fn admin_mode(&self) -> Option<Admin> {
         match self {
             Self::Proxy(proxy) => Some(Admin::Proxy(proxy::RuntimeConfig {
-                idle_request_interval_secs: proxy.idle_request_interval_secs,
+                idle_request_interval: std::time::Duration::from_secs(
+                    proxy.idle_request_interval_secs,
+                ),
                 ..<_>::default()
             })),
             Self::Agent(agent) => Some(Admin::Agent(agent::RuntimeConfig {
-                idle_request_interval_secs: agent.idle_request_interval_secs,
+                idle_request_interval: std::time::Duration::from_secs(
+                    agent.idle_request_interval_secs,
+                ),
                 ..<_>::default()
             })),
             Self::Relay(relay) => Some(Admin::Relay(relay::RuntimeConfig {
-                idle_request_interval_secs: relay.idle_request_interval_secs,
+                idle_request_interval: std::time::Duration::from_secs(
+                    relay.idle_request_interval_secs,
+                ),
                 ..<_>::default()
             })),
             Self::Manage(_) => Some(Admin::Manage(<_>::default())),
@@ -339,7 +345,7 @@ mod tests {
                 region: None,
                 sub_zone: None,
                 zone: None,
-                idle_request_interval_secs: admin::IDLE_REQUEST_INTERVAL_SECS,
+                idle_request_interval_secs: admin::idle_request_interval_secs(),
                 qcmp_port: crate::test::available_addr(&AddressType::Random)
                     .await
                     .port(),

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use cached::Cached;
 use futures::{Stream, TryFutureExt, TryStreamExt};
@@ -45,7 +45,7 @@ pub fn spawn(
 ) -> impl std::future::Future<Output = crate::Result<()>> {
     let server = AggregatedDiscoveryServiceServer::new(ControlPlane::from_arc(
         config,
-        crate::cli::admin::IDLE_REQUEST_INTERVAL_SECS,
+        crate::cli::admin::IDLE_REQUEST_INTERVAL,
     ))
     .max_encoding_message_size(crate::config::max_grpc_message_size());
     let server = tonic::transport::Server::builder().add_service(server);
@@ -57,12 +57,12 @@ pub fn spawn(
 
 pub(crate) fn control_plane_discovery_server(
     port: u16,
-    idle_request_interval_secs: u64,
+    idle_request_interval: Duration,
     config: Arc<Config>,
 ) -> impl std::future::Future<Output = crate::Result<()>> {
     let server = AggregatedControlPlaneDiscoveryServiceServer::new(ControlPlane::from_arc(
         config,
-        idle_request_interval_secs,
+        idle_request_interval,
     ))
     .max_encoding_message_size(crate::config::max_grpc_message_size());
     let server = tonic::transport::Server::builder().add_service(server);
@@ -75,7 +75,7 @@ pub(crate) fn control_plane_discovery_server(
 #[derive(Clone)]
 pub struct ControlPlane {
     config: Arc<Config>,
-    idle_request_interval_secs: u64,
+    idle_request_interval: Duration,
     watchers: Arc<crate::net::xds::resource::ResourceMap<Watchers>>,
 }
 
@@ -97,10 +97,10 @@ impl Default for Watchers {
 }
 
 impl ControlPlane {
-    pub fn from_arc(config: Arc<Config>, idle_request_interval_secs: u64) -> Self {
+    pub fn from_arc(config: Arc<Config>, idle_request_interval: Duration) -> Self {
         let this = Self {
             config,
-            idle_request_interval_secs,
+            idle_request_interval,
             watchers: <_>::default(),
         };
 
@@ -325,7 +325,7 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
 
         tracing::info!(%identifier, "new control plane discovery stream");
         let config = self.config.clone();
-        let idle_request_interval_secs = self.idle_request_interval_secs;
+        let idle_request_interval = self.idle_request_interval;
         let stream = super::client::AdsStream::connect(
             Arc::from(&*identifier),
             move |(mut requests, _rx), _subscribed_resources| async move {
@@ -345,10 +345,8 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
                 );
 
                 loop {
-                    let next_response = tokio::time::timeout(
-                        std::time::Duration::from_secs(idle_request_interval_secs),
-                        response_handler.next(),
-                    );
+                    let next_response =
+                        tokio::time::timeout(idle_request_interval, response_handler.next());
 
                     if let Ok(Some(ack)) = next_response.await {
                         tracing::debug!("sending ack request");
@@ -424,10 +422,8 @@ mod tests {
         };
 
         let config = Arc::new(Config::default());
-        let client = ControlPlane::from_arc(
-            config.clone(),
-            crate::cli::admin::IDLE_REQUEST_INTERVAL_SECS,
-        );
+        let client =
+            ControlPlane::from_arc(config.clone(), crate::cli::admin::IDLE_REQUEST_INTERVAL);
         let (tx, rx) = tokio::sync::mpsc::channel(256);
 
         let mut request = DiscoveryRequest {

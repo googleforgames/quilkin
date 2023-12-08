@@ -39,7 +39,7 @@ pub struct Relay {
     pub xds_port: u16,
     /// The interval in seconds at which the relay will send a discovery request
     /// to an management server after receiving no updates.
-    #[clap(long, env = "QUILKIN_IDLE_REQUEST_INTERVAL_SECS", default_value_t = super::admin::IDLE_REQUEST_INTERVAL_SECS)]
+    #[clap(long, env = "QUILKIN_IDLE_REQUEST_INTERVAL_SECS", default_value_t = super::admin::idle_request_interval_secs())]
     pub idle_request_interval_secs: u64,
     #[clap(subcommand)]
     pub providers: Option<Providers>,
@@ -50,7 +50,7 @@ impl Default for Relay {
         Self {
             mds_port: PORT,
             xds_port: super::manage::PORT,
-            idle_request_interval_secs: super::admin::IDLE_REQUEST_INTERVAL_SECS,
+            idle_request_interval_secs: super::admin::idle_request_interval_secs(),
             providers: None,
         }
     }
@@ -66,7 +66,7 @@ impl Relay {
         let xds_server = crate::net::xds::server::spawn(self.xds_port, config.clone());
         let mds_server = tokio::spawn(crate::net::xds::server::control_plane_discovery_server(
             self.mds_port,
-            self.idle_request_interval_secs,
+            std::time::Duration::from_secs(self.idle_request_interval_secs),
             config.clone(),
         ));
         let runtime_config = mode.unwrap_relay();
@@ -154,7 +154,7 @@ impl Relay {
 
 #[derive(Clone, Debug, Default)]
 pub struct RuntimeConfig {
-    pub idle_request_interval_secs: u64,
+    pub idle_request_interval: std::time::Duration,
     pub provider_is_healthy: Arc<AtomicBool>,
 }
 
