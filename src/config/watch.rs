@@ -73,7 +73,8 @@ impl<T: Watchable + std::fmt::Debug> Watch<T> {
         }
     }
 
-    pub fn modify(&self, func: impl FnOnce(&WatchGuard<T>)) {
+    #[inline]
+    pub fn modify<R>(&self, func: impl FnOnce(&WatchGuard<T>) -> R) -> R {
         (func)(&WatchGuard {
             inner: self,
             marker: self.value.mark(),
