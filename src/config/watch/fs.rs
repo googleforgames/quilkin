@@ -32,37 +32,23 @@ pub async fn watch(
 ) -> crate::Result<()> {
     let path = path.into();
     let span = tracing::info_span!("config_provider", path = %path.display());
+    tracing::info!("discovering configuration through filesystem");
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+    let mut watcher = notify::RecommendedWatcher::new(
+        move |res| {
+            tx.send(res).unwrap();
+        },
+        <_>::default(),
+    )
+    .unwrap();
 
-    async fn watch_inner(
-        config: &Config,
-        path: &std::path::Path,
-        locality: Option<crate::net::endpoint::Locality>,
-        tx: tokio::sync::mpsc::UnboundedSender<Result<notify::Event, notify::Error>>,
-    ) -> crate::Result<notify::RecommendedWatcher> {
-        tracing::info!("discovering configuration through filesystem");
-        let mut watcher = notify::RecommendedWatcher::new(
-            move |res| {
-                tx.send(res).unwrap();
-            },
-            Default::default(),
-        )
-        .unwrap();
-
-        tracing::trace!("reading file");
-        let buf = tokio::fs::read(path).await?;
-        tracing::info!("applying initial configuration");
-        config.update_from_json(serde_yaml::from_slice(&buf)?, locality)?;
-        watcher.watch(path, notify::RecursiveMode::Recursive)?;
-        tracing::info!("watching file");
-        Ok(watcher)
-    }
-
-    let _watcher = watch_inner(&config, &path, locality.clone(), tx)
-        .instrument(span.clone())
-        .await?;
-
+    tracing::trace!("reading file");
+    let buf = tokio::fs::read(&path).await?;
+    tracing::info!("applying initial configuration");
+    config.update_from_json(serde_yaml::from_slice(&buf)?, locality.clone())?;
     health_check.store(true, Ordering::SeqCst);
+    watcher.watch(&path, notify::RecursiveMode::Recursive)?;
+    tracing::info!("watching file");
 
     while let Some(event) = rx.recv().instrument(span.clone()).await.transpose()? {
         tracing::trace!(event = ?event.kind, "new file event");
