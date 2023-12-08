@@ -60,23 +60,50 @@ pub(crate) fn active_endpoints() -> &'static prometheus::IntGauge {
     &ACTIVE_ENDPOINTS
 }
 
+use std::fmt;
+
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub struct EndpointSetVersion(u64);
+
+impl fmt::Display for EndpointSetVersion {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::LowerHex::fmt(&self.0, f)
+    }
+}
+
+impl fmt::Debug for EndpointSetVersion {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::LowerHex::fmt(&self.0, f)
+    }
+}
+
+impl std::str::FromStr for EndpointSetVersion {
+    type Err = eyre::Error;
+
+    #[inline]
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(u64::from_str_radix(s, 16)?))
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct EndpointSet {
     pub endpoints: BTreeSet<Endpoint>,
     /// The hash of all of the endpoints in this set
-    pub version: u64,
+    hash: u64,
     /// Version of this set of endpoints. Any mutatation of the endpoints
     /// set monotonically increases this number
-    pub mono_version: u64,
+    version: u64,
 }
 
 impl EndpointSet {
     /// Creates a new endpoint set, calculating a unique version hash for it
+    #[inline]
     pub fn new(endpoints: BTreeSet<Endpoint>) -> Self {
         let mut this = Self {
             endpoints,
+            hash: 0,
             version: 0,
-            mono_version: 0,
         };
 
         this.update();
@@ -88,11 +115,12 @@ impl EndpointSet {
     ///
     /// This hash _must_ be calculated with [`Self::calc_version`] to be consistent
     /// across machines
-    pub fn with_version(endpoints: BTreeSet<Endpoint>, version: u64) -> Self {
+    #[inline]
+    pub fn with_version(endpoints: BTreeSet<Endpoint>, hash: EndpointSetVersion) -> Self {
         Self {
             endpoints,
-            version,
-            mono_version: 1,
+            hash: hash.0,
+            version: 1,
         }
     }
 
@@ -111,6 +139,13 @@ impl EndpointSet {
         self.endpoints.contains(ep)
     }
 
+    /// Unique version for this endpoint set
+    #[inline]
+    pub fn version(&self) -> EndpointSetVersion {
+        debug_assert!(self.hash != 0, "the hash should already be calculated");
+        EndpointSetVersion(self.hash)
+    }
+
     /// Bumps the version, calculating a hash for the entire endpoint set
     ///
     /// This is extremely expensive
@@ -123,8 +158,22 @@ impl EndpointSet {
             ep.hash(&mut hasher);
         }
 
-        self.version = hasher.finish();
-        self.mono_version += 1;
+        self.hash = hasher.finish();
+        self.version += 1;
+    }
+
+    #[inline]
+    pub fn replace(&mut self, replacement: Self) -> BTreeSet<Endpoint> {
+        let old = std::mem::replace(&mut self.endpoints, replacement.endpoints);
+
+        if replacement.hash == 0 {
+            self.update();
+        } else {
+            self.hash = replacement.hash;
+            self.version += 1;
+        }
+
+        old
     }
 }
 
@@ -163,10 +212,7 @@ impl ClusterMap {
         if let Some(mut current) = self.map.get_mut(&locality) {
             let current = current.value_mut();
 
-            let old = std::mem::replace(&mut current.endpoints, cluster.endpoints);
-            current.version = cluster.version;
-            current.mono_version += 1;
-
+            let old = current.replace(cluster);
             let old_len = old.len();
 
             if new_len >= old_len {
@@ -470,16 +516,7 @@ impl From<ClusterMapDeser> for ClusterMap {
             |EndpointWithLocality {
                  locality,
                  endpoints,
-             }| {
-                (
-                    locality,
-                    EndpointSet {
-                        endpoints,
-                        mono_version: 1,
-                        version: 0,
-                    },
-                )
-            },
+             }| { (locality, EndpointSet::new(endpoints)) },
         ));
 
         Self::from(map)

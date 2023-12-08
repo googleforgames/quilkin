@@ -115,7 +115,7 @@ pub(crate) mod server;
 
 pub(crate) use self::quilkin::relay::v1alpha1 as relay;
 use self::xds as envoy;
-use crate::net::endpoint::Locality;
+use crate::net::{cluster::EndpointSetVersion, endpoint::Locality};
 
 pub use self::{
     client::{AdsClient, Client},
@@ -129,7 +129,7 @@ use std::collections::HashMap;
 /// Keeps track of what resource versions a particular client has
 pub enum ClientVersions {
     Listener,
-    Cluster(HashMap<Option<Locality>, u64>),
+    Cluster(HashMap<Option<Locality>, EndpointSetVersion>),
 }
 
 /// The resources and versions that were sent in a delta response, when acked
@@ -138,7 +138,7 @@ pub enum ClientVersions {
 pub enum AwaitingAck {
     Listener,
     Cluster {
-        updated: Vec<(Option<Locality>, u64)>,
+        updated: Vec<(Option<Locality>, EndpointSetVersion)>,
         remove_none: bool,
     },
 }

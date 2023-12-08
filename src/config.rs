@@ -81,7 +81,7 @@ pub struct Config {
     pub version: Slot<Version>,
 }
 
-pub struct DeltaDiscoveryReq {
+pub struct DeltaDiscoveryRes {
     pub resources: Vec<XdsResource>,
     pub awaiting_ack: crate::net::xds::AwaitingAck,
     pub removed: Vec<String>,
@@ -173,11 +173,14 @@ impl Config {
         Ok(resources)
     }
 
+    /// Given a list of subscriptions and the current state of the calling client,
+    /// construct a response with the current state of our resources that differ
+    /// from those of the client
     pub fn delta_discovery_request(
         &self,
         subscribed: &BTreeSet<String>,
         client_versions: &crate::net::xds::ClientVersions,
-    ) -> crate::Result<DeltaDiscoveryReq> {
+    ) -> crate::Result<DeltaDiscoveryRes> {
         let mut resources = Vec::new();
 
         let (awaiting_ack, removed) = match client_versions {
@@ -202,15 +205,16 @@ impl Config {
                 let mut push = |key: &Option<crate::net::endpoint::Locality>,
                                 value: &crate::net::cluster::EndpointSet|
                  -> crate::Result<()> {
+                    let current_version = value.version();
                     if let Some(client_version) = map.get(key) {
-                        if value.version == *client_version {
+                        if current_version == *client_version {
                             return Ok(());
                         }
                     }
 
                     resources.push(XdsResource {
                         name: key.as_ref().map(|k| k.to_string()).unwrap_or_default(),
-                        version: value.version.to_string(),
+                        version: current_version.to_string(),
                         resource: Some(resource_type.encode_to_any(
                             &crate::net::cluster::proto::Cluster::try_from((
                                 key,
@@ -219,7 +223,7 @@ impl Config {
                         )?),
                         ..Default::default()
                     });
-                    to_ack.push((key.clone(), value.version));
+                    to_ack.push((key.clone(), current_version));
 
                     Ok(())
                 };
@@ -255,7 +259,7 @@ impl Config {
             }
         };
 
-        Ok(DeltaDiscoveryReq {
+        Ok(DeltaDiscoveryRes {
             resources,
             awaiting_ack,
             removed,
@@ -303,8 +307,6 @@ impl Config {
         removed_resources: Vec<String>,
         local_versions: &mut HashMap<String, String>,
     ) -> crate::Result<()> {
-        tracing::trace!("applying resources");
-
         // Remove any resources the upstream server has removed/doesn't have,
         // we do this before applying any new/updated resources in case a
         // resource is in both lists, though really that would be a bug in
