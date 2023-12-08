@@ -291,8 +291,24 @@ impl DeltaClientStream {
     #[inline]
     async fn connect(
         mut client: AdsGrpcClient,
+        identifier: String,
     ) -> Result<(Self, tonic::Streaming<DeltaDiscoveryResponse>)> {
         let (req_tx, requests_rx) = tokio::sync::mpsc::channel(ResourceType::VARIANTS.len());
+
+        // Since we are doing exploratory requests to see if the remote endpoint supports delta streams, we unfortunately
+        // need to actually send something before the full roundtrip occurs. This can be removed once delta discovery
+        // is fully rolled out
+        req_tx
+            .send(DeltaDiscoveryRequest {
+                node: Some(Node {
+                    id: identifier,
+                    user_agent_name: "quilkin".into(),
+                    ..Default::default()
+                }),
+                type_url: "ignore-me".to_owned(),
+                ..Default::default()
+            })
+            .await?;
 
         let stream = client
             .delta_aggregated_resources(tokio_stream::wrappers::ReceiverStream::new(requests_rx))
@@ -414,7 +430,12 @@ impl AdsClient {
 
         let identifier = String::from(&*self.identifier);
 
-        let (mut ds, stream) = match DeltaClientStream::connect(self.client.clone()).await {
+        let (mut ds, stream) = match DeltaClientStream::connect(
+            self.client.clone(),
+            identifier.clone(),
+        )
+        .await
+        {
             Ok(ds) => ds,
             Err(err) => {
                 tracing::error!(error = ?err, "failed to acquire aggregated delta stream from management server");
@@ -497,7 +518,8 @@ impl AdsClient {
                     let (new_client, _new_endpoint) =
                         Self::connect_with_backoff(&self.management_servers).await?;
 
-                    (ds, stream) = DeltaClientStream::connect(new_client).await?;
+                    (ds, stream) =
+                        DeltaClientStream::connect(new_client, identifier.clone()).await?;
                     ds.refresh(&identifier, &resource_subscriptions, &local)
                         .await?;
                 }

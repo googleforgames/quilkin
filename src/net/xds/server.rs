@@ -436,6 +436,10 @@ impl ControlPlane {
                             }
                         };
 
+                        if client_request.type_url == "ignore-me" {
+                            continue;
+                        }
+
                         let id = client_request.node.as_ref().map(|node| node.id.as_str()).unwrap_or(node_id.as_str());
                         let resource_type: ResourceType = match client_request.type_url.parse() {
                             Ok(value) => value,
