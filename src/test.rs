@@ -445,6 +445,36 @@ pub fn load_test_filters() {
     FilterRegistry::register([TestFilter::factory()]);
 }
 
+/// Macro that can get the function name of the function the macro is invoked
+/// within
+#[macro_export]
+macro_rules! __func_name {
+    () => {{
+        fn f() {}
+        fn type_name_of<T>(_: T) -> &'static str {
+            std::any::type_name::<T>()
+        }
+        let name = type_name_of(f);
+        &name[..name.len() - 3]
+    }};
+}
+
+/// Creates a temporary file with the specified prefix in a directory named
+/// after the calling function, ie using it within a test will place it in a
+/// temporary directory named after the test
+#[macro_export]
+macro_rules! temp_file {
+    ($prefix:expr) => {{
+        let name = $crate::__func_name!();
+        let name = name.strip_suffix("::{{closure}}").unwrap_or(name);
+        let mut name = name.replace("::", ".");
+        name.push('-');
+        name.push_str($prefix);
+        name.push('-');
+        tempfile::NamedTempFile::with_prefix(name).unwrap()
+    }};
+}
+
 #[cfg(test)]
 mod tests {
     use std::time::Duration;
