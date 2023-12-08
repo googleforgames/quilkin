@@ -108,8 +108,8 @@ impl ControlPlane {
             let this = this.clone();
             async move {
                 let mut watcher = this.config.clusters.watch();
+                tracing::debug!("waiting for cluster changes");
                 loop {
-                    tracing::debug!(?watcher, "waiting for changes");
                     if let Err(error) = watcher.changed().await {
                         tracing::error!(%error, "error watching changes");
                     }
@@ -236,7 +236,7 @@ impl ControlPlane {
                         let resource_type = match new_message.type_url.parse::<ResourceType>() {
                             Ok(value) => value,
                             Err(error) => {
-                                tracing::error!(%error, url=%new_message.type_url, "unknown resource type");
+                                tracing::error!(%error, url = %new_message.type_url, "unknown resource type");
                                 continue;
                             }
                         };

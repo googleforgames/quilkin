@@ -261,7 +261,7 @@ impl MdsClient {
                             match timeout.await {
                                 Ok(Some(result)) => {
                                     let response = result?;
-                                    tracing::debug!("received discovery response");
+                                    tracing::debug!("received delta discovery response");
                                     ds.send_response(response).await?;
                                 }
                                 _ => break,
