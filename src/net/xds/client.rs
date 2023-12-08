@@ -538,7 +538,7 @@ enum RpcSessionError {
 pub fn handle_discovery_responses(
     identifier: String,
     stream: impl futures::Stream<Item = tonic::Result<DiscoveryResponse>> + 'static + Send,
-    on_new_resource: impl Fn(&Resource) -> crate::Result<()> + Send + Sync + 'static,
+    on_new_resource: impl Fn(Resource) -> crate::Result<()> + Send + Sync + 'static,
 ) -> std::pin::Pin<Box<dyn futures::Stream<Item = Result<DiscoveryRequest>> + Send>> {
     Box::pin(async_stream::try_stream! {
         let _stream_metrics = super::metrics::StreamConnectionMetrics::new(identifier.clone());
@@ -573,7 +573,7 @@ pub fn handle_discovery_responses(
                     resource_names.push(resource.name().to_owned());
 
                     tracing::debug!("applying resource");
-                    (on_new_resource)(&resource)
+                    (on_new_resource)(resource)
                 });
 
             let error_detail = if let Err(error) = result {

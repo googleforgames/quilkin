@@ -171,28 +171,27 @@ impl Config {
     }
 
     #[tracing::instrument(skip_all, fields(response = response.type_url()))]
-    pub fn apply(&self, response: &Resource) -> crate::Result<()> {
+    pub fn apply(&self, response: Resource) -> crate::Result<()> {
         tracing::trace!(resource=?response, "applying resource");
 
         match response {
-            Resource::Listener(listener) => {
-                let chain = listener
-                    .filter_chains
-                    .get(0)
-                    .map(|chain| chain.filters.clone())
-                    .unwrap_or_default()
-                    .into_iter()
-                    .map(Filter::try_from)
-                    .collect::<Result<Vec<_>, _>>()?;
-                self.filters.store(Arc::new(chain.try_into()?));
+            Resource::Listener(mut listener) => {
+                let chain: crate::filters::FilterChain = if listener.filter_chains.is_empty() {
+                    Default::default()
+                } else {
+                    crate::filters::FilterChain::try_create_fallible(
+                        listener.filter_chains.swap_remove(0).filters.into_iter(),
+                    )?
+                };
+
+                self.filters.store(Arc::new(chain));
             }
             Resource::Cluster(cluster) => {
                 self.clusters.write().insert(
-                    cluster.locality.clone().map(From::from),
+                    cluster.locality.map(From::from),
                     cluster
                         .endpoints
-                        .iter()
-                        .cloned()
+                        .into_iter()
                         .map(crate::net::endpoint::Endpoint::try_from)
                         .collect::<Result<_, _>>()?,
                 );
@@ -204,6 +203,7 @@ impl Config {
         Ok(())
     }
 
+    #[inline]
     pub fn apply_metrics(&self) {
         let clusters = self.clusters.read();
         crate::net::cluster::active_clusters().set(clusters.len() as i64);

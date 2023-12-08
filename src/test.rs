@@ -381,39 +381,62 @@ pub async fn create_socket() -> DualStackLocalSocket {
     DualStackLocalSocket::new(0).unwrap()
 }
 
-pub fn config_with_dummy_endpoint() -> Config {
-    let config = Config::default();
-
-    config.clusters.write().insert(
-        None,
-        [Endpoint {
-            address: (std::net::Ipv4Addr::LOCALHOST, 8080).into(),
-            ..<_>::default()
-        }]
-        .into(),
-    );
-
-    config
+fn test_proxy_id() -> String {
+    "test-proxy-id".to_owned()
 }
+
+/// Copy of [`crate::config::Config`] without all of the watcher things making
+/// debugging tests confusing
+#[derive(serde::Serialize, serde::Deserialize, Default)]
+pub struct TestConfig {
+    #[serde(default)]
+    pub clusters: crate::net::ClusterMap,
+    #[serde(default)]
+    pub filters: crate::filters::FilterChain,
+    #[serde(default = "test_proxy_id")]
+    pub id: String,
+    #[serde(default)]
+    pub version: crate::config::Version,
+}
+
+impl TestConfig {
+    pub fn with_dummy_endpoint() -> Self {
+        let config = Self::default();
+        config.clusters.insert(
+            None,
+            [Endpoint::new((std::net::Ipv4Addr::LOCALHOST, 8080).into())].into(),
+        );
+        config
+    }
+
+    #[track_caller]
+    pub fn new() -> Self {
+        Self {
+            filters: crate::filters::FilterChain::try_create(std::iter::once(
+                crate::config::Filter {
+                    name: "TestFilter".into(),
+                    label: None,
+                    config: None,
+                },
+            ))
+            .unwrap(),
+            ..Default::default()
+        }
+    }
+
+    pub fn write_to_file(&self, path: impl AsRef<std::path::Path>) {
+        std::fs::write(
+            path,
+            serde_yaml::to_string(self).expect("failed to serialize TestConfig"),
+        )
+        .expect("failed to write TestConfig to path");
+    }
+}
+
 /// Creates a dummy endpoint with `id` as a suffix.
 pub fn ep(id: u8) -> Endpoint {
     Endpoint {
         address: ([127, 0, 0, id], 8080).into(),
-        ..<_>::default()
-    }
-}
-
-#[track_caller]
-pub fn new_test_config() -> crate::Config {
-    crate::Config {
-        filters: crate::config::Slot::new(
-            crate::filters::FilterChain::try_from(vec![crate::config::Filter {
-                name: "TestFilter".into(),
-                label: None,
-                config: None,
-            }])
-            .unwrap(),
-        ),
         ..<_>::default()
     }
 }
