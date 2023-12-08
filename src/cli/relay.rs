@@ -57,6 +57,7 @@ impl Default for Relay {
 }
 
 impl Relay {
+    #[tracing::instrument(skip_all)]
     pub async fn relay(
         &self,
         config: Arc<Config>,

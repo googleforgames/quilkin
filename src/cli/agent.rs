@@ -72,6 +72,7 @@ impl Default for Agent {
 }
 
 impl Agent {
+    #[tracing::instrument(skip_all)]
     pub async fn run(
         &self,
         config: Arc<Config>,

@@ -91,6 +91,7 @@ impl Default for Proxy {
 
 impl Proxy {
     /// Start and run a proxy.
+    #[tracing::instrument(skip_all)]
     pub async fn run(
         &self,
         config: std::sync::Arc<crate::Config>,
@@ -285,7 +286,7 @@ impl Proxy {
                 tokio::select! {
                     _ = log_task.tick() => {
                         for (error, instances) in &pipeline_errors {
-                            tracing::info!(%error, %instances, "pipeline report");
+                            tracing::warn!(%error, %instances, "pipeline report");
                         }
                         pipeline_errors.clear();
                     }
@@ -505,6 +506,7 @@ impl DownstreamReceiveWorkerConfig {
         sessions: &Arc<SessionPool>,
     ) -> Result<(), PipelineError> {
         if !config.clusters.read().has_endpoints() {
+            tracing::trace!("no upstream endpoints");
             return Err(PipelineError::NoUpstreamEndpoints);
         }
 
@@ -668,7 +670,7 @@ mod tests {
         crate::test::map_addr_to_localhost(&mut dest);
         let config = Arc::new(Config::default());
         config.filters.store(
-            crate::filters::FilterChain::try_from(vec![config::Filter {
+            crate::filters::FilterChain::try_create([config::Filter {
                 name: "TestFilter".to_string(),
                 label: None,
                 config: None,

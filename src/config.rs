@@ -91,7 +91,7 @@ impl Config {
             ($($field:ident),+) => {
                 $(
                     if let Some(value) = map.remove(stringify!($field)) {
-                        tracing::debug!(%value, "replacing {}", stringify!($field));
+                        tracing::trace!(%value, "replacing {}", stringify!($field));
                         self.$field.try_replace(serde_json::from_value(value)?);
                     }
                 )+
@@ -101,8 +101,8 @@ impl Config {
         replace_if_present!(filters, id);
 
         if let Some(value) = map.remove("clusters") {
-            tracing::debug!(%value, "replacing clusters");
             let cmd: cluster::ClusterMapDeser = serde_json::from_value(value)?;
+            tracing::trace!(len = cmd.endpoints.len(), "replacing clusters");
             self.clusters.modify(|clusters| {
                 for cluster in cmd.endpoints {
                     clusters.insert(cluster.locality, cluster.endpoints);

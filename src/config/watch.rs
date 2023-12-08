@@ -88,14 +88,11 @@ impl<T: Watchable + std::fmt::Debug> Watch<T> {
 
     fn check_for_changes(&self, marker: Marker) {
         if self.has_changed(marker) {
-            tracing::debug!(
-                watchers = self.watchers.receiver_count(),
-                "changed detected"
-            );
+            tracing::trace!(watchers = self.watchers.receiver_count(), "change detected");
             self.watchers
                 .send_modify(|value| *value = self.value.clone());
         } else {
-            tracing::debug!("no change detected");
+            tracing::trace!("no change detected");
         }
     }
 }
