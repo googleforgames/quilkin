@@ -405,14 +405,13 @@ mod tests {
             tracing::info!(%token, "sending packet");
             socket.send_to(&msg, &proxy_address).await.unwrap();
 
-            assert_eq!(rx.recv().await.unwrap(), "hello");
-            // assert_eq!(
-            //     "hello",
-            //     timeout(Duration::from_millis(100), rx.recv())
-            //         .await
-            //         .expect("should have received a packet")
-            //         .unwrap()
-            // );
+            assert_eq!(
+                "hello",
+                timeout(Duration::from_millis(100), rx.recv())
+                    .await
+                    .expect("should have received a packet")
+                    .unwrap()
+            );
 
             tracing::info!(%token, "received packet");
 
