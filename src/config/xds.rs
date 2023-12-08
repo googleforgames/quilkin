@@ -23,6 +23,7 @@ impl LocalVersions {
 }
 
 /// Processes responses from management servers, applying resources to the proxy
+#[tracing::instrument(skip_all, fields(identifier))]
 pub fn handle_delta_discovery_responses(
     identifier: String,
     stream: impl futures::Stream<Item = tonic::Result<DeltaDiscoveryResponse>> + 'static + Send,
@@ -55,8 +56,8 @@ pub fn handle_delta_discovery_responses(
             let resource_type = ResourceType::try_from(&response.type_url)?;
             let map = &local.versions[resource_type.into_usize()];
 
-            let apply_resources = || -> crate::Result<()> {
-                tracing::debug!("applying delta resources");
+            let result = {
+                tracing::debug!(num_resources = response.resources.len(), kind = %resource_type, "applying delta resources");
                 let mut lock = map.lock();
 
                 config.apply_delta(
@@ -69,8 +70,6 @@ pub fn handle_delta_discovery_responses(
                     }), response.removed_resources, &mut lock)
             };
 
-            let result = apply_resources();
-
             let error_detail = if let Err(error) = result {
                 metrics::nacks(control_plane_identifier, &response.type_url).inc();
                 Some(crate::net::xds::google::rpc::Status {
@@ -80,11 +79,11 @@ pub fn handle_delta_discovery_responses(
                 })
             } else {
                 metrics::acks(control_plane_identifier, &response.type_url).inc();
-
                 None
             };
 
             yield DeltaDiscoveryRequest {
+                type_url: response.type_url,
                 response_nonce: response.nonce,
                 error_detail,
                 ..Default::default()

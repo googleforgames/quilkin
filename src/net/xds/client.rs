@@ -182,7 +182,7 @@ impl<C: ServiceClient> Client<C> {
                         "Failed initial connection",
                     ))),
                     Some(endpoint) => {
-                        tracing::info!("attempting to connect to `{}`", endpoint.uri());
+                        tracing::debug!(endpoint = %endpoint.uri(), "attempting to connect to endpoint");
                         let cendpoint = endpoint.clone();
                         let endpoint = endpoint.clone().connect_timeout(CONNECTION_TIMEOUT);
 
@@ -210,11 +210,11 @@ impl<C: ServiceClient> Client<C> {
         })
         .with_config(retry_config);
 
-        let client = connect_to_server
+        let (client, endpoint) = connect_to_server
             .instrument(tracing::trace_span!("client_connect"))
             .await?;
-        tracing::info!("Connected to management server");
-        Ok(client)
+        tracing::info!(endpoint = %endpoint.uri(), "Connected to management server");
+        Ok((client, endpoint))
     }
 }
 
@@ -226,13 +226,17 @@ impl MdsClient {
     pub async fn delta_stream(self, config: Arc<Config>) -> Result<DeltaSubscription, Self> {
         let identifier = String::from(&*self.identifier);
 
-        let (mut ds, mut stream) = match DeltaServerStream::connect(self.client.clone()).await {
-            Ok(ds) => ds,
-            Err(err) => {
-                tracing::error!(error = ?err, "failed to acquire aggregated delta stream");
-                return Err(self);
-            }
-        };
+        let (mut ds, mut stream) =
+            match DeltaServerStream::connect(self.client.clone(), identifier.clone()).await {
+                Ok(ds) => {
+                    tracing::debug!("acquired aggregated delta stream");
+                    ds
+                }
+                Err(err) => {
+                    tracing::error!(error = ?err, "failed to acquire aggregated delta stream");
+                    return Err(self);
+                }
+            };
 
         let handle = tokio::task::spawn(
             async move {
@@ -241,14 +245,6 @@ impl MdsClient {
                 let interval = agent.idle_request_interval;
 
                 loop {
-                    ds.send_response(DeltaDiscoveryResponse {
-                        control_plane: Some(crate::net::xds::config::core::v3::ControlPlane {
-                            identifier: identifier.clone(),
-                        }),
-                        ..<_>::default()
-                    })
-                    .await?;
-
                     {
                         let control_plane =
                             super::server::ControlPlane::from_arc(config.clone(), interval);
@@ -276,7 +272,8 @@ impl MdsClient {
                         .await
                         .unwrap()
                         .0;
-                    (ds, stream) = DeltaServerStream::connect(new_client).await?;
+                    (ds, stream) =
+                        DeltaServerStream::connect(new_client, identifier.clone()).await?;
                 }
             }
             .instrument(tracing::trace_span!("handle_delta_discovery_response")),
@@ -358,8 +355,16 @@ impl DeltaServerStream {
     #[inline]
     async fn connect(
         mut client: MdsGrpcClient,
+        identifier: String,
     ) -> Result<(Self, tonic::Streaming<DeltaDiscoveryRequest>)> {
         let (res_tx, responses_rx) = tokio::sync::mpsc::channel(ResourceType::VARIANTS.len());
+
+        res_tx
+            .send(DeltaDiscoveryResponse {
+                control_plane: Some(crate::net::xds::config::core::v3::ControlPlane { identifier }),
+                ..Default::default()
+            })
+            .await?;
 
         let stream = client
             .delta_aggregated_resources(tokio_stream::wrappers::ReceiverStream::new(responses_rx))
