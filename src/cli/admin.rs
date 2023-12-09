@@ -18,6 +18,7 @@ mod health;
 
 use std::convert::Infallible;
 use std::sync::Arc;
+use std::time::Duration;
 
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Method, Request, Response, Server as HyperServer, StatusCode};
@@ -29,7 +30,11 @@ use super::{agent, manage, proxy, relay};
 
 pub const PORT: u16 = 8000;
 
-pub(crate) const IDLE_REQUEST_INTERVAL_SECS: u64 = 30;
+pub(crate) const IDLE_REQUEST_INTERVAL: Duration = Duration::from_secs(30);
+
+pub(crate) const fn idle_request_interval_secs() -> u64 {
+    IDLE_REQUEST_INTERVAL.as_secs()
+}
 
 /// The runtime mode of Quilkin, which contains various runtime configurations
 /// specific to a mode.
@@ -74,12 +79,12 @@ impl Admin {
         }
     }
 
-    pub fn idle_request_interval_secs(&self) -> u64 {
+    pub fn idle_request_interval(&self) -> Duration {
         match self {
-            Self::Proxy(config) => config.idle_request_interval_secs,
-            Self::Agent(config) => config.idle_request_interval_secs,
-            Self::Relay(config) => config.idle_request_interval_secs,
-            _ => IDLE_REQUEST_INTERVAL_SECS,
+            Self::Proxy(config) => config.idle_request_interval,
+            Self::Agent(config) => config.idle_request_interval,
+            Self::Relay(config) => config.idle_request_interval,
+            _ => IDLE_REQUEST_INTERVAL,
         }
     }
 

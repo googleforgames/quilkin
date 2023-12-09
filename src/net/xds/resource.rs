@@ -39,8 +39,8 @@ type_urls! {
 
 #[derive(Clone, Debug)]
 pub enum Resource {
-    Cluster(Box<crate::net::cluster::proto::Cluster>),
-    Listener(Box<Listener>),
+    Cluster(crate::net::cluster::proto::Cluster),
+    Listener(Listener),
 }
 
 impl Resource {
@@ -55,6 +55,7 @@ impl Resource {
         }
     }
 
+    #[inline]
     pub fn resource_type(&self) -> ResourceType {
         match self {
             Self::Cluster(_) => ResourceType::Cluster,
@@ -62,6 +63,7 @@ impl Resource {
         }
     }
 
+    #[inline]
     pub fn type_url(&self) -> &str {
         self.resource_type().type_url()
     }

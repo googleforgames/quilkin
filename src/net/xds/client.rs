@@ -134,30 +134,22 @@ impl<C: ServiceClient> Client<C> {
 
     async fn connect_with_backoff(management_servers: &[Endpoint]) -> Result<C> {
         use crate::config::{
-            BACKOFF_INITIAL_DELAY_MILLISECONDS, BACKOFF_MAX_DELAY_SECONDS,
-            BACKOFF_MAX_JITTER_MILLISECONDS, CONNECTION_TIMEOUT,
+            BACKOFF_INITIAL_DELAY, BACKOFF_MAX_DELAY, BACKOFF_MAX_JITTER, CONNECTION_TIMEOUT,
         };
 
-        let mut backoff =
-            ExponentialBackoff::new(Duration::from_millis(BACKOFF_INITIAL_DELAY_MILLISECONDS));
-        let max_delay = Duration::from_secs(BACKOFF_MAX_DELAY_SECONDS);
+        let mut backoff = ExponentialBackoff::new(BACKOFF_INITIAL_DELAY);
 
         let retry_config = RetryFutureConfig::new(u32::MAX).custom_backoff(|attempt, error: &_| {
             tracing::info!(attempt, "Retrying to connect");
             // reset after success
             if attempt <= 1 {
-                backoff = ExponentialBackoff::new(Duration::from_millis(
-                    BACKOFF_INITIAL_DELAY_MILLISECONDS,
-                ));
+                backoff = ExponentialBackoff::new(BACKOFF_INITIAL_DELAY);
             }
 
             // max delay + jitter of up to 2 seconds
-            let mut delay = backoff.delay(attempt, &error);
-            if delay > max_delay {
-                delay = max_delay;
-            }
+            let mut delay = backoff.delay(attempt, &error).min(BACKOFF_MAX_DELAY);
             delay += Duration::from_millis(
-                rand::thread_rng().gen_range(0..BACKOFF_MAX_JITTER_MILLISECONDS),
+                rand::thread_rng().gen_range(0..BACKOFF_MAX_JITTER.as_millis() as u64),
             );
 
             match error {
@@ -187,9 +179,7 @@ impl<C: ServiceClient> Client<C> {
                     ))),
                     Some(endpoint) => {
                         tracing::info!("attempting to connect to `{}`", endpoint.uri());
-                        let endpoint = endpoint
-                            .clone()
-                            .connect_timeout(Duration::from_secs(CONNECTION_TIMEOUT));
+                        let endpoint = endpoint.clone().connect_timeout(CONNECTION_TIMEOUT);
 
                         // make sure that we have everything we will need in our URI
                         if endpoint.uri().scheme().is_none() {
@@ -233,9 +223,9 @@ impl AdsClient {
     pub fn xds_client_stream(
         &self,
         config: Arc<Config>,
-        idle_request_interval_secs: u64,
+        idle_request_interval: Duration,
     ) -> AdsStream {
-        AdsStream::xds_client_stream(self, config, idle_request_interval_secs)
+        AdsStream::xds_client_stream(self, config, idle_request_interval)
     }
 }
 
@@ -256,7 +246,7 @@ impl AdsStream {
             mode,
         }: &AdsClient,
         config: Arc<Config>,
-        idle_request_interval_secs: u64,
+        idle_request_interval: Duration,
     ) -> Self {
         let mut client = client.clone();
         let identifier = identifier.clone();
@@ -306,10 +296,8 @@ impl AdsStream {
                     let runtime_config = mode.unwrap_proxy();
 
                     loop {
-                        let next_response = tokio::time::timeout(
-                            std::time::Duration::from_secs(idle_request_interval_secs),
-                            stream.next(),
-                        );
+                        let next_response =
+                            tokio::time::timeout(idle_request_interval, stream.next());
 
                         match next_response.await {
                             Ok(Some(Ok(ack))) => {
@@ -422,7 +410,7 @@ impl MdsStream {
 
                     let control_plane = super::server::ControlPlane::from_arc(
                         config.clone(),
-                        mode.idle_request_interval_secs(),
+                        mode.idle_request_interval(),
                     );
                     let mut stream = control_plane.stream_aggregated_resources(stream).await?;
                     mode.unwrap_agent()
@@ -430,10 +418,8 @@ impl MdsStream {
                         .store(true, Ordering::SeqCst);
 
                     loop {
-                        let timeout = tokio::time::timeout(
-                            std::time::Duration::from_secs(mode.idle_request_interval_secs()),
-                            stream.next(),
-                        );
+                        let timeout =
+                            tokio::time::timeout(mode.idle_request_interval(), stream.next());
 
                         match timeout.await {
                             Ok(Some(result)) => {
@@ -552,7 +538,7 @@ enum RpcSessionError {
 pub fn handle_discovery_responses(
     identifier: String,
     stream: impl futures::Stream<Item = tonic::Result<DiscoveryResponse>> + 'static + Send,
-    on_new_resource: impl Fn(&Resource) -> crate::Result<()> + Send + Sync + 'static,
+    on_new_resource: impl Fn(Resource) -> crate::Result<()> + Send + Sync + 'static,
 ) -> std::pin::Pin<Box<dyn futures::Stream<Item = Result<DiscoveryRequest>> + Send>> {
     Box::pin(async_stream::try_stream! {
         let _stream_metrics = super::metrics::StreamConnectionMetrics::new(identifier.clone());
@@ -587,7 +573,7 @@ pub fn handle_discovery_responses(
                     resource_names.push(resource.name().to_owned());
 
                     tracing::debug!("applying resource");
-                    (on_new_resource)(&resource)
+                    (on_new_resource)(resource)
                 });
 
             let error_detail = if let Err(error) = result {

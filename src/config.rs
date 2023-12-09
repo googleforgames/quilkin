@@ -16,7 +16,7 @@
 
 //! Quilkin configuration.
 
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use base64_serde::base64_serde_type;
 use schemars::JsonSchema;
@@ -44,10 +44,10 @@ pub mod watch;
 
 base64_serde_type!(pub Base64Standard, base64::engine::general_purpose::STANDARD);
 
-pub(crate) const BACKOFF_INITIAL_DELAY_MILLISECONDS: u64 = 500;
-pub(crate) const BACKOFF_MAX_DELAY_SECONDS: u64 = 30;
-pub(crate) const BACKOFF_MAX_JITTER_MILLISECONDS: u64 = 2000;
-pub(crate) const CONNECTION_TIMEOUT: u64 = 5;
+pub(crate) const BACKOFF_INITIAL_DELAY: Duration = Duration::from_millis(500);
+pub(crate) const BACKOFF_MAX_DELAY: Duration = Duration::from_secs(30);
+pub(crate) const BACKOFF_MAX_JITTER: Duration = Duration::from_millis(2000);
+pub(crate) const CONNECTION_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// Returns the configured maximum allowed message size for gRPC messages.
 /// When using State Of The World xDS, the message size can get large enough
@@ -91,7 +91,7 @@ impl Config {
             ($($field:ident),+) => {
                 $(
                     if let Some(value) = map.remove(stringify!($field)) {
-                        tracing::debug!(%value, "replacing {}", stringify!($field));
+                        tracing::trace!(%value, "replacing {}", stringify!($field));
                         self.$field.try_replace(serde_json::from_value(value)?);
                     }
                 )+
@@ -101,8 +101,8 @@ impl Config {
         replace_if_present!(filters, id);
 
         if let Some(value) = map.remove("clusters") {
-            tracing::debug!(%value, "replacing clusters");
             let cmd: cluster::ClusterMapDeser = serde_json::from_value(value)?;
+            tracing::trace!(len = cmd.endpoints.len(), "replacing clusters");
             self.clusters.modify(|clusters| {
                 for cluster in cmd.endpoints {
                     clusters.insert(cluster.locality, cluster.endpoints);
@@ -171,28 +171,27 @@ impl Config {
     }
 
     #[tracing::instrument(skip_all, fields(response = response.type_url()))]
-    pub fn apply(&self, response: &Resource) -> crate::Result<()> {
+    pub fn apply(&self, response: Resource) -> crate::Result<()> {
         tracing::trace!(resource=?response, "applying resource");
 
         match response {
-            Resource::Listener(listener) => {
-                let chain = listener
-                    .filter_chains
-                    .get(0)
-                    .map(|chain| chain.filters.clone())
-                    .unwrap_or_default()
-                    .into_iter()
-                    .map(Filter::try_from)
-                    .collect::<Result<Vec<_>, _>>()?;
-                self.filters.store(Arc::new(chain.try_into()?));
+            Resource::Listener(mut listener) => {
+                let chain: crate::filters::FilterChain = if listener.filter_chains.is_empty() {
+                    Default::default()
+                } else {
+                    crate::filters::FilterChain::try_create_fallible(
+                        listener.filter_chains.swap_remove(0).filters.into_iter(),
+                    )?
+                };
+
+                self.filters.store(Arc::new(chain));
             }
             Resource::Cluster(cluster) => {
                 self.clusters.write().insert(
-                    cluster.locality.clone().map(From::from),
+                    cluster.locality.map(From::from),
                     cluster
                         .endpoints
-                        .iter()
-                        .cloned()
+                        .into_iter()
                         .map(crate::net::endpoint::Endpoint::try_from)
                         .collect::<Result<_, _>>()?,
                 );
@@ -204,6 +203,7 @@ impl Config {
         Ok(())
     }
 
+    #[inline]
     pub fn apply_metrics(&self) {
         let clusters = self.clusters.read();
         crate::net::cluster::active_clusters().set(clusters.len() as i64);

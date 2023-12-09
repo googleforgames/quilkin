@@ -196,7 +196,7 @@ mod tests {
         const TOKEN_KEY: &str = "quilkin.dev/load_balancer/token";
 
         xds_config.filters.store(Arc::new(
-            [
+            FilterChain::try_create([
                 Capture::as_filter_config(capture::Config {
                     metadata_key: VERSION_KEY.into(),
                     strategy: capture::Suffix {
@@ -241,8 +241,7 @@ mod tests {
                     }),
                 })
                 .unwrap(),
-            ]
-            .try_into()
+            ])
             .unwrap(),
         ));
 
@@ -284,10 +283,8 @@ mod tests {
         )
         .await
         .unwrap();
-        let mut stream = client.xds_client_stream(
-            config.clone(),
-            crate::cli::admin::IDLE_REQUEST_INTERVAL_SECS,
-        );
+        let mut stream =
+            client.xds_client_stream(config.clone(), crate::cli::admin::IDLE_REQUEST_INTERVAL);
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
         // Each time, we create a new upstream endpoint and send a cluster update for it.
@@ -306,7 +303,7 @@ mod tests {
                 );
             });
 
-            let filters = crate::filters::FilterChain::try_from(vec![
+            let filters = crate::filters::FilterChain::try_create([
                 Concatenate::as_filter_config(concatenate::Config {
                     on_read: concatenate::Strategy::Append,
                     on_write: <_>::default(),

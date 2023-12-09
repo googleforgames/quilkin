@@ -62,7 +62,7 @@ on_read:
         .clusters
         .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
     server_config.filters.store(
-        quilkin::filters::FilterChain::try_from(vec![
+        quilkin::filters::FilterChain::try_create([
             Filter {
                 name: Capture::NAME.into(),
                 label: None,
