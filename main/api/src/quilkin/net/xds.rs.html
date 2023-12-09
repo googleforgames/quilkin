@@ -355,9 +355,6 @@
 <a href="#355" id="355">355</a>
 <a href="#356" id="356">356</a>
 <a href="#357" id="357">357</a>
-<a href="#358" id="358">358</a>
-<a href="#359" id="359">359</a>
-<a href="#360" id="360">360</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -556,7 +553,7 @@
         <span class="kw">const </span>TOKEN_KEY: <span class="kw-2">&amp;</span>str = <span class="string">&quot;quilkin.dev/load_balancer/token&quot;</span>;
 
         xds_config.filters.store(Arc::new(
-            [
+            FilterChain::try_create([
                 Capture::as_filter_config(capture::Config {
                     metadata_key: VERSION_KEY.into(),
                     strategy: capture::Suffix {
@@ -601,8 +598,7 @@
                     }),
                 })
                 .unwrap(),
-            ]
-            .try_into()
+            ])
             .unwrap(),
         ));
 
@@ -644,10 +640,8 @@
         )
         .<span class="kw">await
         </span>.unwrap();
-        <span class="kw">let </span><span class="kw-2">mut </span>stream = client.xds_client_stream(
-            config.clone(),
-            <span class="kw">crate</span>::cli::admin::IDLE_REQUEST_INTERVAL_SECS,
-        );
+        <span class="kw">let </span><span class="kw-2">mut </span>stream =
+            client.xds_client_stream(config.clone(), <span class="kw">crate</span>::cli::admin::IDLE_REQUEST_INTERVAL);
         tokio::time::sleep(std::time::Duration::from_millis(<span class="number">50</span>)).<span class="kw">await</span>;
 
         <span class="comment">// Each time, we create a new upstream endpoint and send a cluster update for it.
@@ -666,7 +660,7 @@
                 );
             });
 
-            <span class="kw">let </span>filters = <span class="kw">crate</span>::filters::FilterChain::try_from(<span class="macro">vec!</span>[
+            <span class="kw">let </span>filters = <span class="kw">crate</span>::filters::FilterChain::try_create([
                 Concatenate::as_filter_config(concatenate::Config {
                     on_read: concatenate::Strategy::Append,
                     on_write: &lt;<span class="kw">_</span>&gt;::default(),

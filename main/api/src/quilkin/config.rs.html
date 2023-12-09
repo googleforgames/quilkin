@@ -570,7 +570,7 @@
 
 </span><span class="doccomment">//! Quilkin configuration.
 
-</span><span class="kw">use </span>std::sync::Arc;
+</span><span class="kw">use </span>std::{sync::Arc, time::Duration};
 
 <span class="kw">use </span>base64_serde::base64_serde_type;
 <span class="kw">use </span>schemars::JsonSchema;
@@ -598,10 +598,10 @@
 
 <span class="macro">base64_serde_type!</span>(<span class="kw">pub </span>Base64Standard, base64::engine::general_purpose::STANDARD);
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>BACKOFF_INITIAL_DELAY_MILLISECONDS: u64 = <span class="number">500</span>;
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>BACKOFF_MAX_DELAY_SECONDS: u64 = <span class="number">30</span>;
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>BACKOFF_MAX_JITTER_MILLISECONDS: u64 = <span class="number">2000</span>;
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>CONNECTION_TIMEOUT: u64 = <span class="number">5</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>BACKOFF_INITIAL_DELAY: Duration = Duration::from_millis(<span class="number">500</span>);
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>BACKOFF_MAX_DELAY: Duration = Duration::from_secs(<span class="number">30</span>);
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>BACKOFF_MAX_JITTER: Duration = Duration::from_millis(<span class="number">2000</span>);
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>CONNECTION_TIMEOUT: Duration = Duration::from_secs(<span class="number">5</span>);
 
 <span class="doccomment">/// Returns the configured maximum allowed message size for gRPC messages.
 /// When using State Of The World xDS, the message size can get large enough
@@ -645,7 +645,7 @@
             ($(<span class="macro-nonterminal">$field</span>:ident),+) =&gt; {
                 $(
                     <span class="kw">if let </span><span class="prelude-val">Some</span>(value) = map.remove(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$field</span>)) {
-                        <span class="macro">tracing::debug!</span>(%value, <span class="string">&quot;replacing {}&quot;</span>, <span class="macro">stringify!</span>(<span class="macro-nonterminal">$field</span>));
+                        <span class="macro">tracing::trace!</span>(%value, <span class="string">&quot;replacing {}&quot;</span>, <span class="macro">stringify!</span>(<span class="macro-nonterminal">$field</span>));
                         <span class="self">self</span>.<span class="macro-nonterminal">$field</span>.try_replace(serde_json::from_value(value)<span class="question-mark">?</span>);
                     }
                 )+
@@ -655,8 +655,8 @@
         <span class="macro">replace_if_present!</span>(filters, id);
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(value) = map.remove(<span class="string">&quot;clusters&quot;</span>) {
-            <span class="macro">tracing::debug!</span>(%value, <span class="string">&quot;replacing clusters&quot;</span>);
             <span class="kw">let </span>cmd: cluster::ClusterMapDeser = serde_json::from_value(value)<span class="question-mark">?</span>;
+            <span class="macro">tracing::trace!</span>(len = cmd.endpoints.len(), <span class="string">&quot;replacing clusters&quot;</span>);
             <span class="self">self</span>.clusters.modify(|clusters| {
                 <span class="kw">for </span>cluster <span class="kw">in </span>cmd.endpoints {
                     clusters.insert(cluster.locality, cluster.endpoints);
@@ -725,28 +725,27 @@
     }
 
     <span class="attr">#[tracing::instrument(skip_all, fields(response = response.type_url()))]
-    </span><span class="kw">pub fn </span>apply(<span class="kw-2">&amp;</span><span class="self">self</span>, response: <span class="kw-2">&amp;</span>Resource) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
+    </span><span class="kw">pub fn </span>apply(<span class="kw-2">&amp;</span><span class="self">self</span>, response: Resource) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
         <span class="macro">tracing::trace!</span>(resource=<span class="question-mark">?</span>response, <span class="string">&quot;applying resource&quot;</span>);
 
         <span class="kw">match </span>response {
-            Resource::Listener(listener) =&gt; {
-                <span class="kw">let </span>chain = listener
-                    .filter_chains
-                    .get(<span class="number">0</span>)
-                    .map(|chain| chain.filters.clone())
-                    .unwrap_or_default()
-                    .into_iter()
-                    .map(Filter::try_from)
-                    .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>;
-                <span class="self">self</span>.filters.store(Arc::new(chain.try_into()<span class="question-mark">?</span>));
+            Resource::Listener(<span class="kw-2">mut </span>listener) =&gt; {
+                <span class="kw">let </span>chain: <span class="kw">crate</span>::filters::FilterChain = <span class="kw">if </span>listener.filter_chains.is_empty() {
+                    Default::default()
+                } <span class="kw">else </span>{
+                    <span class="kw">crate</span>::filters::FilterChain::try_create_fallible(
+                        listener.filter_chains.swap_remove(<span class="number">0</span>).filters.into_iter(),
+                    )<span class="question-mark">?
+                </span>};
+
+                <span class="self">self</span>.filters.store(Arc::new(chain));
             }
             Resource::Cluster(cluster) =&gt; {
                 <span class="self">self</span>.clusters.write().insert(
-                    cluster.locality.clone().map(From::from),
+                    cluster.locality.map(From::from),
                     cluster
                         .endpoints
-                        .iter()
-                        .cloned()
+                        .into_iter()
                         .map(<span class="kw">crate</span>::net::endpoint::Endpoint::try_from)
                         .collect::&lt;<span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>,
                 );
@@ -758,7 +757,8 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">pub fn </span>apply_metrics(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+    <span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>apply_metrics(<span class="kw-2">&amp;</span><span class="self">self</span>) {
         <span class="kw">let </span>clusters = <span class="self">self</span>.clusters.read();
         <span class="kw">crate</span>::net::cluster::active_clusters().set(clusters.len() <span class="kw">as </span>i64);
         <span class="kw">crate</span>::net::cluster::active_endpoints().set(clusters.num_of_endpoints() <span class="kw">as </span>i64);

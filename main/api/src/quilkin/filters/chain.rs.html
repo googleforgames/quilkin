@@ -490,10 +490,6 @@
 <a href="#490" id="490">490</a>
 <a href="#491" id="491">491</a>
 <a href="#492" id="492">492</a>
-<a href="#493" id="493">493</a>
-<a href="#494" id="494">494</a>
-<a href="#495" id="495">495</a>
-<a href="#496" id="496">496</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -587,19 +583,15 @@
         })
     }
 
-    <span class="doccomment">/// Validates the filter configurations in the provided config and constructs
-    /// a FilterChain if all configurations are valid.
-    </span><span class="kw">pub fn </span>try_create(filter_configs: <span class="kw-2">&amp;</span>[FilterConfig]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, CreationError&gt; {
-        <span class="self">Self</span>::try_from(filter_configs)
-    }
-
-    <span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+    <span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.filters.len()
     }
 
-    <span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
-        <span class="self">self</span>.len() == <span class="number">0
-    </span>}
+    <span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.filters.is_empty()
+    }
 
     <span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl </span>Iterator&lt;Item = <span class="kw">crate</span>::config::Filter&gt; + <span class="lifetime">&#39;_ </span>{
         <span class="self">self</span>.filters
@@ -612,6 +604,49 @@
                     value =&gt; <span class="prelude-val">Some</span>(value.clone()),
                 },
             })
+    }
+
+    <span class="doccomment">/// Validates the filter configurations in the provided config and constructs
+    /// a FilterChain if all configurations are valid, including the conversion
+    /// into a [`Filter`]
+    </span><span class="kw">pub fn </span>try_create_fallible&lt;Item&gt;(
+        filter_configs: <span class="kw">impl </span>IntoIterator&lt;Item = Item&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, CreationError&gt;
+    <span class="kw">where
+        </span>Item: TryInto&lt;FilterConfig, Error = CreationError&gt;,
+    {
+        <span class="kw">let </span><span class="kw-2">mut </span>filters = Vec::new();
+
+        <span class="kw">for </span>filter_config <span class="kw">in </span>filter_configs {
+            <span class="kw">let </span>filter_config = filter_config.try_into()<span class="question-mark">?</span>;
+            <span class="kw">let </span>filter = FilterRegistry::get(
+                <span class="kw-2">&amp;</span>filter_config.name,
+                CreateFilterArgs::fixed(filter_config.config),
+            )<span class="question-mark">?</span>;
+
+            filters.push((filter_config.name, filter));
+        }
+
+        <span class="self">Self</span>::new(filters)
+    }
+
+    <span class="doccomment">/// Validates the filter configurations in the provided config and constructs
+    /// a FilterChain if all configurations are valid.
+    </span><span class="kw">pub fn </span>try_create(
+        filter_configs: <span class="kw">impl </span>IntoIterator&lt;Item = FilterConfig&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, CreationError&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>filters = Vec::new();
+
+        <span class="kw">for </span>filter_config <span class="kw">in </span>filter_configs {
+            <span class="kw">let </span>filter = FilterRegistry::get(
+                <span class="kw-2">&amp;</span>filter_config.name,
+                CreateFilterArgs::fixed(filter_config.config),
+            )<span class="question-mark">?</span>;
+
+            filters.push((filter_config.name, filter));
+        }
+
+        <span class="self">Self</span>::new(filters)
     }
 }
 
@@ -640,49 +675,6 @@
                     &amp;&amp; lhs_instance.label() == rhs_instance.label()
             },
         )
-    }
-}
-
-<span class="kw">impl</span>&lt;<span class="kw">const </span>N: usize&gt; TryFrom&lt;<span class="kw-2">&amp;</span>[FilterConfig; N]&gt; <span class="kw">for </span>FilterChain {
-    <span class="kw">type </span>Error = CreationError;
-
-    <span class="kw">fn </span>try_from(filter_configs: <span class="kw-2">&amp;</span>[FilterConfig; N]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
-        <span class="self">Self</span>::try_from(<span class="kw-2">&amp;</span>filter_configs[..])
-    }
-}
-
-<span class="kw">impl</span>&lt;<span class="kw">const </span>N: usize&gt; TryFrom&lt;[FilterConfig; N]&gt; <span class="kw">for </span>FilterChain {
-    <span class="kw">type </span>Error = CreationError;
-
-    <span class="kw">fn </span>try_from(filter_configs: [FilterConfig; N]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
-        <span class="self">Self</span>::try_from(<span class="kw-2">&amp;</span>filter_configs[..])
-    }
-}
-
-<span class="kw">impl </span>TryFrom&lt;Vec&lt;FilterConfig&gt;&gt; <span class="kw">for </span>FilterChain {
-    <span class="kw">type </span>Error = CreationError;
-
-    <span class="kw">fn </span>try_from(filter_configs: Vec&lt;FilterConfig&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
-        <span class="self">Self</span>::try_from(<span class="kw-2">&amp;</span>filter_configs[..])
-    }
-}
-
-<span class="kw">impl </span>TryFrom&lt;<span class="kw-2">&amp;</span>[FilterConfig]&gt; <span class="kw">for </span>FilterChain {
-    <span class="kw">type </span>Error = CreationError;
-
-    <span class="kw">fn </span>try_from(filter_configs: <span class="kw-2">&amp;</span>[FilterConfig]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>filters = Vec::new();
-
-        <span class="kw">for </span>filter_config <span class="kw">in </span>filter_configs {
-            <span class="kw">let </span>filter = FilterRegistry::get(
-                <span class="kw-2">&amp;</span>filter_config.name,
-                CreateFilterArgs::fixed(filter_config.config.clone()),
-            )<span class="question-mark">?</span>;
-
-            filters.push((filter_config.name.clone(), filter));
-        }
-
-        <span class="self">Self</span>::new(filters)
     }
 }
 
@@ -720,7 +712,7 @@
     <span class="kw">fn </span>deserialize&lt;D: serde::Deserializer&lt;<span class="lifetime">&#39;de</span>&gt;&gt;(de: D) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, D::Error&gt; {
         <span class="kw">let </span>filters = &lt;Vec&lt;FilterConfig&gt;&gt;::deserialize(de)<span class="question-mark">?</span>;
 
-        <span class="self">Self</span>::try_from(filters).map_err(serde::de::Error::custom)
+        <span class="self">Self</span>::try_create(filters).map_err(serde::de::Error::custom)
     }
 }
 
@@ -814,7 +806,7 @@
         config,
         filters::Debug,
         net::endpoint::Endpoint,
-        test::{alloc_buffer, new_test_config, TestFilter},
+        test::{alloc_buffer, TestConfig, TestFilter},
     };
 
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
@@ -824,7 +816,7 @@
         <span class="kw">let </span>provider = Debug::factory();
 
         <span class="comment">// everything is fine
-        </span><span class="kw">let </span>filter_configs = <span class="kw-2">&amp;</span>[config::Filter {
+        </span><span class="kw">let </span>filter_configs = [config::Filter {
             name: provider.name().into(),
             label: <span class="prelude-val">None</span>,
             config: <span class="prelude-val">Some</span>(serde_json::Map::default().into()),
@@ -834,7 +826,7 @@
         <span class="macro">assert_eq!</span>(<span class="number">1</span>, chain.filters.len());
 
         <span class="comment">// uh oh, something went wrong
-        </span><span class="kw">let </span>filter_configs = <span class="kw-2">&amp;</span>[config::Filter {
+        </span><span class="kw">let </span>filter_configs = [config::Filter {
             name: <span class="string">&quot;this is so wrong&quot;</span>.into(),
             label: <span class="prelude-val">None</span>,
             config: Default::default(),
@@ -857,7 +849,7 @@
     <span class="attr">#[tokio::test]
     </span><span class="kw">async fn </span>chain_single_test_filter() {
         <span class="kw">crate</span>::test::load_test_filters();
-        <span class="kw">let </span>config = new_test_config();
+        <span class="kw">let </span>config = TestConfig::new();
         <span class="kw">let </span>endpoints_fixture = endpoints();
         <span class="kw">let </span><span class="kw-2">mut </span>context = ReadContext::new(
             endpoints_fixture.clone(),

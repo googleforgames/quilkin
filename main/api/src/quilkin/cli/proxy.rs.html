@@ -792,7 +792,6 @@
 <a href="#792" id="792">792</a>
 <a href="#793" id="793">793</a>
 <a href="#794" id="794">794</a>
-<a href="#795" id="795">795</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -862,7 +861,7 @@
     </span><span class="kw">pub </span>to: Vec&lt;SocketAddr&gt;,
     <span class="doccomment">/// The interval in seconds at which the relay will send a discovery request
     /// to an management server after receiving no updates.
-    </span><span class="attr">#[clap(long, env = <span class="string">&quot;QUILKIN_IDLE_REQUEST_INTERVAL_SECS&quot;</span>, default_value_t = <span class="kw">super</span>::admin::IDLE_REQUEST_INTERVAL_SECS)]
+    </span><span class="attr">#[clap(long, env = <span class="string">&quot;QUILKIN_IDLE_REQUEST_INTERVAL_SECS&quot;</span>, default_value_t = <span class="kw">super</span>::admin::idle_request_interval_secs())]
     </span><span class="kw">pub </span>idle_request_interval_secs: u64,
     <span class="doccomment">/// Number of worker threads used to process packets. If not specified defaults
     /// to number of cpus.
@@ -878,7 +877,7 @@
             port: PORT,
             qcmp_port: QCMP_PORT,
             to: &lt;<span class="kw">_</span>&gt;::default(),
-            idle_request_interval_secs: <span class="kw">super</span>::admin::IDLE_REQUEST_INTERVAL_SECS,
+            idle_request_interval_secs: <span class="kw">super</span>::admin::idle_request_interval_secs(),
             workers: <span class="prelude-val">None</span>,
         }
     }
@@ -886,6 +885,7 @@
 
 <span class="kw">impl </span>Proxy {
     <span class="doccomment">/// Start and run a proxy.
+    </span><span class="attr">#[tracing::instrument(skip_all)]
     </span><span class="kw">pub async fn </span>run(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         config: std::sync::Arc&lt;<span class="kw">crate</span>::Config&gt;,
@@ -895,13 +895,10 @@
     ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
         <span class="kw">let </span>_mmdb_task = <span class="self">self</span>.mmdb.clone().map(|source| {
             tokio::spawn(<span class="kw">async move </span>{
-                <span class="kw">use </span><span class="kw">crate</span>::config::BACKOFF_INITIAL_DELAY_MILLISECONDS;
                 <span class="kw">while let </span><span class="prelude-val">Err</span>(error) =
                     tryhard::retry_fn(|| <span class="kw">crate</span>::MaxmindDb::update(source.clone()))
                         .retries(<span class="number">10</span>)
-                        .exponential_backoff(std::time::Duration::from_millis(
-                            BACKOFF_INITIAL_DELAY_MILLISECONDS,
-                        ))
+                        .exponential_backoff(<span class="kw">crate</span>::config::BACKOFF_INITIAL_DELAY)
                         .<span class="kw">await
                 </span>{
                     <span class="macro">tracing::warn!</span>(%error, <span class="string">&quot;error updating maxmind database&quot;</span>);
@@ -924,8 +921,8 @@
 
         <span class="kw">if </span>!config.clusters.read().has_endpoints() &amp;&amp; <span class="self">self</span>.management_server.is_empty() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(
-                <span class="string">&quot;`quilkin proxy` requires at least one `to` address or `management_server` endpoint.&quot;
-            </span>));
+                 <span class="string">&quot;`quilkin proxy` requires at least one `to` address or `management_server` endpoint.&quot;
+             </span>));
         }
 
         <span class="kw">let </span>id = config.id.load();
@@ -962,7 +959,8 @@
             std::thread::spawn({
                 <span class="kw">let </span>config = config.clone();
                 <span class="kw">let </span><span class="kw-2">mut </span>shutdown_rx = shutdown_rx.clone();
-                <span class="kw">let </span>idle_request_interval_secs = <span class="self">self</span>.idle_request_interval_secs;
+                <span class="kw">let </span>idle_request_interval =
+                    std::time::Duration::from_secs(<span class="self">self</span>.idle_request_interval_secs);
                 <span class="kw">let </span>management_server = <span class="self">self</span>.management_server.clone();
                 <span class="kw">let </span>mode = mode.clone();
                 <span class="kw">move </span>|| {
@@ -978,8 +976,7 @@
                             management_server,
                         )
                         .<span class="kw">await</span><span class="question-mark">?</span>;
-                        <span class="kw">let </span><span class="kw-2">mut </span>stream =
-                            client.xds_client_stream(config, idle_request_interval_secs);
+                        <span class="kw">let </span><span class="kw-2">mut </span>stream = client.xds_client_stream(config, idle_request_interval);
 
                         tokio::time::sleep(std::time::Duration::from_nanos(<span class="number">1</span>)).<span class="kw">await</span>;
                         stream.discovery_request(ResourceType::Cluster, <span class="kw-2">&amp;</span>[]).<span class="kw">await</span><span class="question-mark">?</span>;
@@ -1083,7 +1080,7 @@
                 <span class="macro">tokio::select! </span>{
                     <span class="kw">_ </span>= log_task.tick() =&gt; {
                         <span class="kw">for </span>(error, instances) <span class="kw">in </span><span class="kw-2">&amp;</span>pipeline_errors {
-                            <span class="macro">tracing::info!</span>(%error, %instances, <span class="string">&quot;pipeline report&quot;</span>);
+                            <span class="macro">tracing::warn!</span>(%error, %instances, <span class="string">&quot;pipeline report&quot;</span>);
                         }
                         pipeline_errors.clear();
                     }
@@ -1106,7 +1103,7 @@
 
 <span class="attr">#[derive(Clone, Debug, Default)]
 </span><span class="kw">pub struct </span>RuntimeConfig {
-    <span class="kw">pub </span>idle_request_interval_secs: u64,
+    <span class="kw">pub </span>idle_request_interval: std::time::Duration,
     <span class="comment">// RwLock as this check is conditional on the proxy using xDS.
     </span><span class="kw">pub </span>xds_is_healthy: Arc&lt;parking_lot::RwLock&lt;<span class="prelude-ty">Option</span>&lt;Arc&lt;AtomicBool&gt;&gt;&gt;&gt;,
 }
@@ -1303,6 +1300,7 @@
         sessions: <span class="kw-2">&amp;</span>Arc&lt;SessionPool&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), PipelineError&gt; {
         <span class="kw">if </span>!config.clusters.read().has_endpoints() {
+            <span class="macro">tracing::trace!</span>(<span class="string">&quot;no upstream endpoints&quot;</span>);
             <span class="kw">return </span><span class="prelude-val">Err</span>(PipelineError::NoUpstreamEndpoints);
         }
 
@@ -1466,7 +1464,7 @@
         <span class="kw">crate</span>::test::map_addr_to_localhost(<span class="kw-2">&amp;mut </span>dest);
         <span class="kw">let </span>config = Arc::new(Config::default());
         config.filters.store(
-            <span class="kw">crate</span>::filters::FilterChain::try_from(<span class="macro">vec!</span>[config::Filter {
+            <span class="kw">crate</span>::filters::FilterChain::try_create([config::Filter {
                 name: <span class="string">&quot;TestFilter&quot;</span>.to_string(),
                 label: <span class="prelude-val">None</span>,
                 config: <span class="prelude-val">None</span>,

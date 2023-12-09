@@ -503,10 +503,6 @@
 <a href="#503" id="503">503</a>
 <a href="#504" id="504">504</a>
 <a href="#505" id="505">505</a>
-<a href="#506" id="506">506</a>
-<a href="#507" id="507">507</a>
-<a href="#508" id="508">508</a>
-<a href="#509" id="509">509</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -523,7 +519,7 @@
  * limitations under the License.
  */
 
-</span><span class="kw">use </span>std::sync::Arc;
+</span><span class="kw">use </span>std::{sync::Arc, time::Duration};
 
 <span class="kw">use </span>cached::Cached;
 <span class="kw">use </span>futures::{Stream, TryFutureExt, TryStreamExt};
@@ -554,7 +550,7 @@
 ) -&gt; <span class="kw">impl </span>std::future::Future&lt;Output = <span class="kw">crate</span>::Result&lt;()&gt;&gt; {
     <span class="kw">let </span>server = AggregatedDiscoveryServiceServer::new(ControlPlane::from_arc(
         config,
-        <span class="kw">crate</span>::cli::admin::IDLE_REQUEST_INTERVAL_SECS,
+        <span class="kw">crate</span>::cli::admin::IDLE_REQUEST_INTERVAL,
     ))
     .max_encoding_message_size(<span class="kw">crate</span>::config::max_grpc_message_size());
     <span class="kw">let </span>server = tonic::transport::Server::builder().add_service(server);
@@ -566,12 +562,12 @@
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>control_plane_discovery_server(
     port: u16,
-    idle_request_interval_secs: u64,
+    idle_request_interval: Duration,
     config: Arc&lt;Config&gt;,
 ) -&gt; <span class="kw">impl </span>std::future::Future&lt;Output = <span class="kw">crate</span>::Result&lt;()&gt;&gt; {
     <span class="kw">let </span>server = AggregatedControlPlaneDiscoveryServiceServer::new(ControlPlane::from_arc(
         config,
-        idle_request_interval_secs,
+        idle_request_interval,
     ))
     .max_encoding_message_size(<span class="kw">crate</span>::config::max_grpc_message_size());
     <span class="kw">let </span>server = tonic::transport::Server::builder().add_service(server);
@@ -584,7 +580,7 @@
 <span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>ControlPlane {
     config: Arc&lt;Config&gt;,
-    idle_request_interval_secs: u64,
+    idle_request_interval: Duration,
     watchers: Arc&lt;<span class="kw">crate</span>::net::xds::resource::ResourceMap&lt;Watchers&gt;&gt;,
 }
 
@@ -606,10 +602,10 @@
 }
 
 <span class="kw">impl </span>ControlPlane {
-    <span class="kw">pub fn </span>from_arc(config: Arc&lt;Config&gt;, idle_request_interval_secs: u64) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>from_arc(config: Arc&lt;Config&gt;, idle_request_interval: Duration) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>this = <span class="self">Self </span>{
             config,
-            idle_request_interval_secs,
+            idle_request_interval,
             watchers: &lt;<span class="kw">_</span>&gt;::default(),
         };
 
@@ -834,7 +830,7 @@
 
         <span class="macro">tracing::info!</span>(%identifier, <span class="string">&quot;new control plane discovery stream&quot;</span>);
         <span class="kw">let </span>config = <span class="self">self</span>.config.clone();
-        <span class="kw">let </span>idle_request_interval_secs = <span class="self">self</span>.idle_request_interval_secs;
+        <span class="kw">let </span>idle_request_interval = <span class="self">self</span>.idle_request_interval;
         <span class="kw">let </span>stream = <span class="kw">super</span>::client::AdsStream::connect(
             Arc::from(<span class="kw-2">&amp;*</span>identifier),
             <span class="kw">move </span>|(<span class="kw-2">mut </span>requests, _rx), _subscribed_resources| <span class="kw">async move </span>{
@@ -854,10 +850,8 @@
                 );
 
                 <span class="kw">loop </span>{
-                    <span class="kw">let </span>next_response = tokio::time::timeout(
-                        std::time::Duration::from_secs(idle_request_interval_secs),
-                        response_handler.next(),
-                    );
+                    <span class="kw">let </span>next_response =
+                        tokio::time::timeout(idle_request_interval, response_handler.next());
 
                     <span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(ack)) = next_response.<span class="kw">await </span>{
                         <span class="macro">tracing::debug!</span>(<span class="string">&quot;sending ack request&quot;</span>);
@@ -933,10 +927,8 @@
         };
 
         <span class="kw">let </span>config = Arc::new(Config::default());
-        <span class="kw">let </span>client = ControlPlane::from_arc(
-            config.clone(),
-            <span class="kw">crate</span>::cli::admin::IDLE_REQUEST_INTERVAL_SECS,
-        );
+        <span class="kw">let </span>client =
+            ControlPlane::from_arc(config.clone(), <span class="kw">crate</span>::cli::admin::IDLE_REQUEST_INTERVAL);
         <span class="kw">let </span>(tx, rx) = tokio::sync::mpsc::channel(<span class="number">256</span>);
 
         <span class="kw">let </span><span class="kw-2">mut </span>request = DiscoveryRequest {

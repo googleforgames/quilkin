@@ -225,6 +225,11 @@
 <a href="#225" id="225">225</a>
 <a href="#226" id="226">226</a>
 <a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2023 Google LLC
  *
@@ -245,6 +250,7 @@
 
 <span class="kw">use </span>std::convert::Infallible;
 <span class="kw">use </span>std::sync::Arc;
+<span class="kw">use </span>std::time::Duration;
 
 <span class="kw">use </span>hyper::service::{make_service_fn, service_fn};
 <span class="kw">use </span>hyper::{Body, Method, Request, Response, Server <span class="kw">as </span>HyperServer, StatusCode};
@@ -256,7 +262,11 @@
 
 <span class="kw">pub const </span>PORT: u16 = <span class="number">8000</span>;
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>IDLE_REQUEST_INTERVAL_SECS: u64 = <span class="number">30</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>IDLE_REQUEST_INTERVAL: Duration = Duration::from_secs(<span class="number">30</span>);
+
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const fn </span>idle_request_interval_secs() -&gt; u64 {
+    IDLE_REQUEST_INTERVAL.as_secs()
+}
 
 <span class="doccomment">/// The runtime mode of Quilkin, which contains various runtime configurations
 /// specific to a mode.
@@ -301,12 +311,12 @@
         }
     }
 
-    <span class="kw">pub fn </span>idle_request_interval_secs(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
+    <span class="kw">pub fn </span>idle_request_interval(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Duration {
         <span class="kw">match </span><span class="self">self </span>{
-            <span class="self">Self</span>::Proxy(config) =&gt; config.idle_request_interval_secs,
-            <span class="self">Self</span>::Agent(config) =&gt; config.idle_request_interval_secs,
-            <span class="self">Self</span>::Relay(config) =&gt; config.idle_request_interval_secs,
-            <span class="kw">_ </span>=&gt; IDLE_REQUEST_INTERVAL_SECS,
+            <span class="self">Self</span>::Proxy(config) =&gt; config.idle_request_interval,
+            <span class="self">Self</span>::Agent(config) =&gt; config.idle_request_interval,
+            <span class="self">Self</span>::Relay(config) =&gt; config.idle_request_interval,
+            <span class="kw">_ </span>=&gt; IDLE_REQUEST_INTERVAL,
         }
     }
 

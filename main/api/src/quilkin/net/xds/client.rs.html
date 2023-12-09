@@ -600,20 +600,6 @@
 <a href="#600" id="600">600</a>
 <a href="#601" id="601">601</a>
 <a href="#602" id="602">602</a>
-<a href="#603" id="603">603</a>
-<a href="#604" id="604">604</a>
-<a href="#605" id="605">605</a>
-<a href="#606" id="606">606</a>
-<a href="#607" id="607">607</a>
-<a href="#608" id="608">608</a>
-<a href="#609" id="609">609</a>
-<a href="#610" id="610">610</a>
-<a href="#611" id="611">611</a>
-<a href="#612" id="612">612</a>
-<a href="#613" id="613">613</a>
-<a href="#614" id="614">614</a>
-<a href="#615" id="615">615</a>
-<a href="#616" id="616">616</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -750,30 +736,22 @@
 
     <span class="kw">async fn </span>connect_with_backoff(management_servers: <span class="kw-2">&amp;</span>[Endpoint]) -&gt; <span class="prelude-ty">Result</span>&lt;C&gt; {
         <span class="kw">use </span><span class="kw">crate</span>::config::{
-            BACKOFF_INITIAL_DELAY_MILLISECONDS, BACKOFF_MAX_DELAY_SECONDS,
-            BACKOFF_MAX_JITTER_MILLISECONDS, CONNECTION_TIMEOUT,
+            BACKOFF_INITIAL_DELAY, BACKOFF_MAX_DELAY, BACKOFF_MAX_JITTER, CONNECTION_TIMEOUT,
         };
 
-        <span class="kw">let </span><span class="kw-2">mut </span>backoff =
-            ExponentialBackoff::new(Duration::from_millis(BACKOFF_INITIAL_DELAY_MILLISECONDS));
-        <span class="kw">let </span>max_delay = Duration::from_secs(BACKOFF_MAX_DELAY_SECONDS);
+        <span class="kw">let </span><span class="kw-2">mut </span>backoff = ExponentialBackoff::new(BACKOFF_INITIAL_DELAY);
 
         <span class="kw">let </span>retry_config = RetryFutureConfig::new(u32::MAX).custom_backoff(|attempt, error: <span class="kw-2">&amp;</span><span class="kw">_</span>| {
             <span class="macro">tracing::info!</span>(attempt, <span class="string">&quot;Retrying to connect&quot;</span>);
             <span class="comment">// reset after success
             </span><span class="kw">if </span>attempt &lt;= <span class="number">1 </span>{
-                backoff = ExponentialBackoff::new(Duration::from_millis(
-                    BACKOFF_INITIAL_DELAY_MILLISECONDS,
-                ));
+                backoff = ExponentialBackoff::new(BACKOFF_INITIAL_DELAY);
             }
 
             <span class="comment">// max delay + jitter of up to 2 seconds
-            </span><span class="kw">let </span><span class="kw-2">mut </span>delay = backoff.delay(attempt, <span class="kw-2">&amp;</span>error);
-            <span class="kw">if </span>delay &gt; max_delay {
-                delay = max_delay;
-            }
+            </span><span class="kw">let </span><span class="kw-2">mut </span>delay = backoff.delay(attempt, <span class="kw-2">&amp;</span>error).min(BACKOFF_MAX_DELAY);
             delay += Duration::from_millis(
-                rand::thread_rng().gen_range(<span class="number">0</span>..BACKOFF_MAX_JITTER_MILLISECONDS),
+                rand::thread_rng().gen_range(<span class="number">0</span>..BACKOFF_MAX_JITTER.as_millis() <span class="kw">as </span>u64),
             );
 
             <span class="kw">match </span>error {
@@ -803,9 +781,7 @@
                     ))),
                     <span class="prelude-val">Some</span>(endpoint) =&gt; {
                         <span class="macro">tracing::info!</span>(<span class="string">&quot;attempting to connect to `{}`&quot;</span>, endpoint.uri());
-                        <span class="kw">let </span>endpoint = endpoint
-                            .clone()
-                            .connect_timeout(Duration::from_secs(CONNECTION_TIMEOUT));
+                        <span class="kw">let </span>endpoint = endpoint.clone().connect_timeout(CONNECTION_TIMEOUT);
 
                         <span class="comment">// make sure that we have everything we will need in our URI
                         </span><span class="kw">if </span>endpoint.uri().scheme().is_none() {
@@ -849,9 +825,9 @@
     </span><span class="kw">pub fn </span>xds_client_stream(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         config: Arc&lt;Config&gt;,
-        idle_request_interval_secs: u64,
+        idle_request_interval: Duration,
     ) -&gt; AdsStream {
-        AdsStream::xds_client_stream(<span class="self">self</span>, config, idle_request_interval_secs)
+        AdsStream::xds_client_stream(<span class="self">self</span>, config, idle_request_interval)
     }
 }
 
@@ -872,7 +848,7 @@
             mode,
         }: <span class="kw-2">&amp;</span>AdsClient,
         config: Arc&lt;Config&gt;,
-        idle_request_interval_secs: u64,
+        idle_request_interval: Duration,
     ) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>client = client.clone();
         <span class="kw">let </span>identifier = identifier.clone();
@@ -922,10 +898,8 @@
                     <span class="kw">let </span>runtime_config = mode.unwrap_proxy();
 
                     <span class="kw">loop </span>{
-                        <span class="kw">let </span>next_response = tokio::time::timeout(
-                            std::time::Duration::from_secs(idle_request_interval_secs),
-                            stream.next(),
-                        );
+                        <span class="kw">let </span>next_response =
+                            tokio::time::timeout(idle_request_interval, stream.next());
 
                         <span class="kw">match </span>next_response.<span class="kw">await </span>{
                             <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(ack))) =&gt; {
@@ -1038,7 +1012,7 @@
 
                     <span class="kw">let </span>control_plane = <span class="kw">super</span>::server::ControlPlane::from_arc(
                         config.clone(),
-                        mode.idle_request_interval_secs(),
+                        mode.idle_request_interval(),
                     );
                     <span class="kw">let </span><span class="kw-2">mut </span>stream = control_plane.stream_aggregated_resources(stream).<span class="kw">await</span><span class="question-mark">?</span>;
                     mode.unwrap_agent()
@@ -1046,10 +1020,8 @@
                         .store(<span class="bool-val">true</span>, Ordering::SeqCst);
 
                     <span class="kw">loop </span>{
-                        <span class="kw">let </span>timeout = tokio::time::timeout(
-                            std::time::Duration::from_secs(mode.idle_request_interval_secs()),
-                            stream.next(),
-                        );
+                        <span class="kw">let </span>timeout =
+                            tokio::time::timeout(mode.idle_request_interval(), stream.next());
 
                         <span class="kw">match </span>timeout.<span class="kw">await </span>{
                             <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(result)) =&gt; {
@@ -1168,7 +1140,7 @@
 <span class="kw">pub fn </span>handle_discovery_responses(
     identifier: String,
     stream: <span class="kw">impl </span>futures::Stream&lt;Item = tonic::Result&lt;DiscoveryResponse&gt;&gt; + <span class="lifetime">&#39;static </span>+ Send,
-    on_new_resource: <span class="kw">impl </span>Fn(<span class="kw-2">&amp;</span>Resource) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; + Send + Sync + <span class="lifetime">&#39;static</span>,
+    on_new_resource: <span class="kw">impl </span>Fn(Resource) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; + Send + Sync + <span class="lifetime">&#39;static</span>,
 ) -&gt; std::pin::Pin&lt;Box&lt;<span class="kw">dyn </span>futures::Stream&lt;Item = <span class="prelude-ty">Result</span>&lt;DiscoveryRequest&gt;&gt; + Send&gt;&gt; {
     Box::pin(<span class="macro">async_stream::try_stream! </span>{
         <span class="kw">let </span>_stream_metrics = <span class="kw">super</span>::metrics::StreamConnectionMetrics::new(identifier.clone());
@@ -1203,7 +1175,7 @@
                     resource_names.push(resource.name().to_owned());
 
                     <span class="macro">tracing::debug!</span>(<span class="string">&quot;applying resource&quot;</span>);
-                    (on_new_resource)(<span class="kw-2">&amp;</span>resource)
+                    (on_new_resource)(resource)
                 });
 
             <span class="kw">let </span>error_detail = <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = result {

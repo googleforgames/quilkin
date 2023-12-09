@@ -432,6 +432,32 @@
 <a href="#432" id="432">432</a>
 <a href="#433" id="433">433</a>
 <a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -507,11 +533,11 @@
     <span class="attr">#[clap(subcommand)]
     </span><span class="kw">pub </span>command: Commands,
     <span class="attr">#[clap(
-    long,
-    default_value_t = LogFormats::Auto,
-    value_parser = clap::builder::PossibleValuesParser::new([<span class="string">&quot;auto&quot;</span>, <span class="string">&quot;json&quot;</span>, <span class="string">&quot;plain&quot;</span>, <span class="string">&quot;pretty&quot;</span>]</span>)
-    .map(|s| s.parse::&lt;LogFormats&gt;().unwrap()),
-    )]
+     long,
+     default_value_t = LogFormats::Auto,
+     value_parser = clap::builder::PossibleValuesParser::new([<span class="string">&quot;auto&quot;</span>, <span class="string">&quot;json&quot;</span>, <span class="string">&quot;plain&quot;</span>, <span class="string">&quot;pretty&quot;</span>]</span>)
+     .map(|s| s.parse::&lt;LogFormats&gt;().unwrap()),
+     )]
     <span class="kw">pub </span>log_format: LogFormats,
 }
 
@@ -545,15 +571,21 @@
     <span class="kw">pub fn </span>admin_mode(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Admin&gt; {
         <span class="kw">match </span><span class="self">self </span>{
             <span class="self">Self</span>::Proxy(proxy) =&gt; <span class="prelude-val">Some</span>(Admin::Proxy(proxy::RuntimeConfig {
-                idle_request_interval_secs: proxy.idle_request_interval_secs,
+                idle_request_interval: std::time::Duration::from_secs(
+                    proxy.idle_request_interval_secs,
+                ),
                 ..&lt;<span class="kw">_</span>&gt;::default()
             })),
             <span class="self">Self</span>::Agent(agent) =&gt; <span class="prelude-val">Some</span>(Admin::Agent(agent::RuntimeConfig {
-                idle_request_interval_secs: agent.idle_request_interval_secs,
+                idle_request_interval: std::time::Duration::from_secs(
+                    agent.idle_request_interval_secs,
+                ),
                 ..&lt;<span class="kw">_</span>&gt;::default()
             })),
             <span class="self">Self</span>::Relay(relay) =&gt; <span class="prelude-val">Some</span>(Admin::Relay(relay::RuntimeConfig {
-                idle_request_interval_secs: relay.idle_request_interval_secs,
+                idle_request_interval: std::time::Duration::from_secs(
+                    relay.idle_request_interval_secs,
+                ),
                 ..&lt;<span class="kw">_</span>&gt;::default()
             })),
             <span class="self">Self</span>::Manage(<span class="kw">_</span>) =&gt; <span class="prelude-val">Some</span>(Admin::Manage(&lt;<span class="kw">_</span>&gt;::default())),
@@ -689,59 +721,55 @@
         config::{Filter, Providers},
         filters::{Capture, StaticFilter, TokenRouter},
         net::endpoint::Endpoint,
-        test::{create_socket, AddressType, TestHelper},
+        temp_file,
+        test::{create_socket, AddressType, TestConfig, TestHelper},
     };
 
     <span class="attr">#[tokio::test]
     </span><span class="kw">async fn </span>relay_routing() {
         <span class="kw">let </span><span class="kw-2">mut </span>t = TestHelper::default();
         <span class="kw">let </span>(<span class="kw-2">mut </span>rx, server_socket) = t.open_socket_and_recv_multiple_packets().<span class="kw">await</span>;
-        <span class="kw">let </span>filters_file = tempfile::NamedTempFile::new().unwrap();
-        <span class="kw">let </span>config = Config::default();
+        <span class="kw">let </span>filters_file = <span class="macro">temp_file!</span>(<span class="string">&quot;filters&quot;</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>config = TestConfig::default();
 
-        std::fs::write(filters_file.path(), {
-            config.filters.store(
-                <span class="macro">vec!</span>[
-                    Filter {
-                        name: Capture::factory().name().into(),
-                        label: <span class="prelude-val">None</span>,
-                        config: <span class="prelude-val">Some</span>(<span class="macro">serde_json::json!</span>({
-                            <span class="string">&quot;suffix&quot;</span>: {
-                                <span class="string">&quot;size&quot;</span>: <span class="number">3</span>,
-                                <span class="string">&quot;remove&quot;</span>: <span class="bool-val">true</span>,
-                            }
-                        })),
-                    },
-                    Filter {
-                        name: TokenRouter::factory().name().into(),
-                        label: <span class="prelude-val">None</span>,
-                        config: <span class="prelude-val">None</span>,
-                    },
-                ]
-                .try_into()
-                .map(Arc::new)
-                .unwrap(),
-            );
-            serde_yaml::to_string(<span class="kw-2">&amp;</span>config).unwrap()
-        })
-        .unwrap();
+        {
+            config.filters = <span class="kw">crate</span>::filters::FilterChain::try_create([
+                Filter {
+                    name: Capture::factory().name().into(),
+                    label: <span class="prelude-val">None</span>,
+                    config: <span class="prelude-val">Some</span>(<span class="macro">serde_json::json!</span>({
+                        <span class="string">&quot;suffix&quot;</span>: {
+                            <span class="string">&quot;size&quot;</span>: <span class="number">3</span>,
+                            <span class="string">&quot;remove&quot;</span>: <span class="bool-val">true</span>,
+                        }
+                    })),
+                },
+                Filter {
+                    name: TokenRouter::factory().name().into(),
+                    label: <span class="prelude-val">None</span>,
+                    config: <span class="prelude-val">None</span>,
+                },
+            ])
+            .unwrap();
+            config.write_to_file(filters_file.path());
+        }
 
-        <span class="kw">let </span>endpoints_file = tempfile::NamedTempFile::new().unwrap();
-        <span class="kw">let </span>config = Config::default();
+        <span class="kw">let </span>endpoints_file = <span class="macro">temp_file!</span>(<span class="string">&quot;endpoints&quot;</span>);
+        <span class="kw">let </span>config = TestConfig::default();
         <span class="kw">let </span>server_port = server_socket.local_addr().unwrap().port();
-        std::fs::write(endpoints_file.path(), {
-            config.clusters.write().insert_default(
+
+        {
+            config.clusters.insert_default(
                 [Endpoint::with_metadata(
                     (std::net::Ipv4Addr::LOCALHOST, server_port).into(),
                     <span class="kw">crate</span>::net::endpoint::Metadata {
-                        tokens: <span class="macro">vec!</span>[<span class="string">&quot;abc&quot;</span>.into()].into_iter().collect(),
+                        tokens: <span class="prelude-val">Some</span>(<span class="string">b&quot;abc&quot;</span>.to_vec()).into_iter().collect(),
                     },
                 )]
                 .into(),
             );
-            serde_yaml::to_string(<span class="kw-2">&amp;</span>config).unwrap()
-        })
-        .unwrap();
+            config.write_to_file(endpoints_file.path());
+        }
 
         <span class="kw">let </span>relay_admin_port = <span class="kw">crate</span>::test::available_addr(<span class="kw-2">&amp;</span>AddressType::Random)
             .<span class="kw">await
@@ -773,7 +801,7 @@
                 region: <span class="prelude-val">None</span>,
                 sub_zone: <span class="prelude-val">None</span>,
                 zone: <span class="prelude-val">None</span>,
-                idle_request_interval_secs: admin::IDLE_REQUEST_INTERVAL_SECS,
+                idle_request_interval_secs: admin::idle_request_interval_secs(),
                 qcmp_port: <span class="kw">crate</span>::test::available_addr(<span class="kw-2">&amp;</span>AddressType::Random)
                     .<span class="kw">await
                     </span>.port(),
@@ -810,31 +838,31 @@
         proxy_init.<span class="kw">await</span>.unwrap();
 
         <span class="kw">let </span>socket = create_socket().<span class="kw">await</span>;
-        <span class="kw">let </span>config = Config::default();
+        <span class="kw">let </span>config = TestConfig::default();
         <span class="kw">let </span>proxy_address: SocketAddr = (std::net::Ipv4Addr::LOCALHOST, <span class="number">7777</span>).into();
 
         <span class="kw">let </span>server_port = server_socket.local_addr().unwrap().port();
         <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">5 </span>{
-            <span class="kw">let </span>token = random_three_characters();
+            <span class="kw">let </span>token = Token::new();
 
-            <span class="macro">tracing::info!</span>(<span class="question-mark">?</span>token, <span class="string">&quot;writing new config&quot;</span>);
-            std::fs::write(endpoints_file.path(), {
-                config.clusters.write().insert_default(
+            {
+                <span class="macro">tracing::info!</span>(%token, <span class="string">&quot;writing new config&quot;</span>);
+                config.clusters.insert_default(
                     [Endpoint::with_metadata(
                         (std::net::Ipv6Addr::LOCALHOST, server_port).into(),
                         <span class="kw">crate</span>::net::endpoint::Metadata {
-                            tokens: <span class="macro">vec!</span>[token.clone()].into_iter().collect(),
+                            tokens: <span class="prelude-val">Some</span>(token.inner.to_vec()).into_iter().collect(),
                         },
                     )]
                     .into(),
                 );
-                serde_yaml::to_string(<span class="kw-2">&amp;</span>config).unwrap()
-            })
-            .unwrap();
+                config.write_to_file(endpoints_file.path());
+            }
+
             tokio::time::sleep(Duration::from_millis(<span class="number">80</span>)).<span class="kw">await</span>;
-            <span class="kw">let </span><span class="kw-2">mut </span>msg = Vec::from(<span class="kw-2">*</span><span class="string">b&quot;hello&quot;</span>);
-            msg.extend_from_slice(<span class="kw-2">&amp;</span>token);
-            <span class="macro">tracing::info!</span>(<span class="question-mark">?</span>token, <span class="string">&quot;sending packet&quot;</span>);
+            <span class="kw">let </span><span class="kw-2">mut </span>msg = <span class="string">b&quot;hello&quot;</span>.to_vec();
+            msg.extend_from_slice(<span class="kw-2">&amp;</span>token.inner);
+            <span class="macro">tracing::info!</span>(%token, <span class="string">&quot;sending packet&quot;</span>);
             socket.send_to(<span class="kw-2">&amp;</span>msg, <span class="kw-2">&amp;</span>proxy_address).<span class="kw">await</span>.unwrap();
 
             <span class="macro">assert_eq!</span>(
@@ -845,25 +873,49 @@
                     .unwrap()
             );
 
-            <span class="macro">tracing::info!</span>(<span class="question-mark">?</span>token, <span class="string">&quot;received packet&quot;</span>);
+            <span class="macro">tracing::info!</span>(%token, <span class="string">&quot;received packet&quot;</span>);
 
-            <span class="macro">tracing::info!</span>(<span class="question-mark">?</span>token, <span class="string">&quot;sending bad packet&quot;</span>);
+            <span class="macro">tracing::info!</span>(%token, <span class="string">&quot;sending bad packet&quot;</span>);
             <span class="comment">// send an invalid packet
-            </span><span class="kw">let </span>msg = <span class="string">b&quot;hello\xFF\xFF\xFF&quot;</span>;
-            socket.send_to(msg, <span class="kw-2">&amp;</span>proxy_address).<span class="kw">await</span>.unwrap();
+            </span>socket
+                .send_to(<span class="string">b&quot;hello\xFF\xFF\xFF&quot;</span>, <span class="kw-2">&amp;</span>proxy_address)
+                .<span class="kw">await
+                </span>.unwrap();
 
             <span class="kw">let </span>result = timeout(Duration::from_millis(<span class="number">50</span>), rx.recv()).<span class="kw">await</span>;
             <span class="macro">assert!</span>(result.is_err(), <span class="string">&quot;should not have received a packet&quot;</span>);
-            <span class="macro">tracing::info!</span>(<span class="question-mark">?</span>token, <span class="string">&quot;didn&#39;t receive bad packet&quot;</span>);
+            <span class="macro">tracing::info!</span>(%token, <span class="string">&quot;didn&#39;t receive bad packet&quot;</span>);
         }
     }
 
-    <span class="kw">fn </span>random_three_characters() -&gt; Vec&lt;u8&gt; {
-        <span class="kw">use </span>rand::prelude::SliceRandom;
-        <span class="kw">let </span>chars: Vec&lt;u8&gt; = (<span class="kw-2">*</span><span class="string">b&quot;abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ&quot;</span>).into();
-        <span class="kw">let </span><span class="kw-2">mut </span>rng = rand::thread_rng();
+    <span class="kw">struct </span>Token {
+        inner: [u8; <span class="number">3</span>],
+    }
 
-        (<span class="number">0</span>..<span class="number">3</span>).map(|<span class="kw">_</span>| <span class="kw-2">*</span>chars.choose(<span class="kw-2">&amp;mut </span>rng).unwrap()).collect()
+    <span class="kw">impl </span>Token {
+        <span class="kw">fn </span>new() -&gt; <span class="self">Self </span>{
+            <span class="kw">const </span>CHARS: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ&quot;</span>;
+
+            <span class="kw">use </span>rand::prelude::SliceRandom;
+            <span class="kw">let </span><span class="kw-2">mut </span>rng = rand::thread_rng();
+
+            <span class="kw">let </span><span class="kw-2">mut </span>inner = [<span class="number">0</span>; <span class="number">3</span>];
+            <span class="kw">for </span>(v, slot) <span class="kw">in </span>CHARS
+                .choose_multiple(<span class="kw-2">&amp;mut </span>rng, inner.len())
+                .zip(inner.iter_mut())
+            {
+                <span class="kw-2">*</span>slot = <span class="kw-2">*</span>v;
+            }
+
+            <span class="self">Self </span>{ inner }
+        }
+    }
+
+    <span class="kw">use </span>std::fmt;
+    <span class="kw">impl </span>fmt::Display <span class="kw">for </span>Token {
+        <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+            f.write_str(std::str::from_utf8(<span class="kw-2">&amp;</span><span class="self">self</span>.inner).unwrap())
+        }
     }
 }
 </code></pre></div></section></main></body></html>

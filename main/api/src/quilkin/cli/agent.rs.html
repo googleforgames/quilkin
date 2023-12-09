@@ -130,6 +130,7 @@
 <a href="#130" id="130">130</a>
 <a href="#131" id="131">131</a>
 <a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2023 Google LLC
  *
@@ -185,7 +186,7 @@
     </span><span class="kw">pub </span>provider: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::config::Providers&gt;,
     <span class="doccomment">/// The interval in seconds at which the agent will wait for a discovery
     /// request from a relay server before restarting the connection.
-    </span><span class="attr">#[clap(long, env = <span class="string">&quot;QUILKIN_IDLE_REQUEST_INTERVAL_SECS&quot;</span>, default_value_t = <span class="kw">super</span>::admin::IDLE_REQUEST_INTERVAL_SECS)]
+    </span><span class="attr">#[clap(long, env = <span class="string">&quot;QUILKIN_IDLE_REQUEST_INTERVAL_SECS&quot;</span>, default_value_t = <span class="kw">super</span>::admin::idle_request_interval_secs())]
     </span><span class="kw">pub </span>idle_request_interval_secs: u64,
 }
 
@@ -198,13 +199,14 @@
             zone: &lt;<span class="kw">_</span>&gt;::default(),
             sub_zone: &lt;<span class="kw">_</span>&gt;::default(),
             provider: &lt;<span class="kw">_</span>&gt;::default(),
-            idle_request_interval_secs: <span class="kw">super</span>::admin::IDLE_REQUEST_INTERVAL_SECS,
+            idle_request_interval_secs: <span class="kw">super</span>::admin::idle_request_interval_secs(),
         }
     }
 }
 
 <span class="kw">impl </span>Agent {
-    <span class="kw">pub async fn </span>run(
+    <span class="attr">#[tracing::instrument(skip_all)]
+    </span><span class="kw">pub async fn </span>run(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         config: Arc&lt;Config&gt;,
         mode: Admin,
@@ -251,7 +253,7 @@
 
 <span class="attr">#[derive(Clone, Debug, Default)]
 </span><span class="kw">pub struct </span>RuntimeConfig {
-    <span class="kw">pub </span>idle_request_interval_secs: u64,
+    <span class="kw">pub </span>idle_request_interval: std::time::Duration,
     <span class="kw">pub </span>provider_is_healthy: Arc&lt;AtomicBool&gt;,
     <span class="kw">pub </span>relay_is_healthy: Arc&lt;AtomicBool&gt;,
 }

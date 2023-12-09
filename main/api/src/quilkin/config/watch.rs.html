@@ -178,8 +178,6 @@
 <a href="#178" id="178">178</a>
 <a href="#179" id="179">179</a>
 <a href="#180" id="180">180</a>
-<a href="#181" id="181">181</a>
-<a href="#182" id="182">182</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -255,7 +253,8 @@
         }
     }
 
-    <span class="kw">pub fn </span>modify(<span class="kw-2">&amp;</span><span class="self">self</span>, func: <span class="kw">impl </span>FnOnce(<span class="kw-2">&amp;</span>WatchGuard&lt;T&gt;)) {
+    <span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>modify&lt;R&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, func: <span class="kw">impl </span>FnOnce(<span class="kw-2">&amp;</span>WatchGuard&lt;T&gt;) -&gt; R) -&gt; R {
         (func)(<span class="kw-2">&amp;</span>WatchGuard {
             inner: <span class="self">self</span>,
             marker: <span class="self">self</span>.value.mark(),
@@ -269,14 +268,11 @@
 
     <span class="kw">fn </span>check_for_changes(<span class="kw-2">&amp;</span><span class="self">self</span>, marker: Marker) {
         <span class="kw">if </span><span class="self">self</span>.has_changed(marker) {
-            <span class="macro">tracing::debug!</span>(
-                watchers = <span class="self">self</span>.watchers.receiver_count(),
-                <span class="string">&quot;changed detected&quot;
-            </span>);
+            <span class="macro">tracing::trace!</span>(watchers = <span class="self">self</span>.watchers.receiver_count(), <span class="string">&quot;change detected&quot;</span>);
             <span class="self">self</span>.watchers
                 .send_modify(|value| <span class="kw-2">*</span>value = <span class="self">self</span>.value.clone());
         } <span class="kw">else </span>{
-            <span class="macro">tracing::debug!</span>(<span class="string">&quot;no change detected&quot;</span>);
+            <span class="macro">tracing::trace!</span>(<span class="string">&quot;no change detected&quot;</span>);
         }
     }
 }
