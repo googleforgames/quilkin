@@ -138,27 +138,22 @@ impl<C: ServiceClient> Client<C> {
 
     async fn connect_with_backoff(management_servers: &[Endpoint]) -> Result<(C, Endpoint)> {
         use crate::config::{
-            BACKOFF_INITIAL_DELAY_MILLISECONDS, BACKOFF_MAX_DELAY_SECONDS,
-            BACKOFF_MAX_JITTER_MILLISECONDS, CONNECTION_TIMEOUT,
+            BACKOFF_INITIAL_DELAY, BACKOFF_MAX_DELAY, BACKOFF_MAX_JITTER, CONNECTION_TIMEOUT,
         };
 
-        let mut backoff =
-            ExponentialBackoff::new(Duration::from_millis(BACKOFF_INITIAL_DELAY_MILLISECONDS));
-        let max_delay = Duration::from_secs(BACKOFF_MAX_DELAY_SECONDS);
+        let mut backoff = ExponentialBackoff::new(BACKOFF_INITIAL_DELAY);
 
         let retry_config = RetryFutureConfig::new(u32::MAX).custom_backoff(|attempt, error: &_| {
             tracing::info!(attempt, "Retrying to connect");
             // reset after success
             if attempt <= 1 {
-                backoff = ExponentialBackoff::new(Duration::from_millis(
-                    BACKOFF_INITIAL_DELAY_MILLISECONDS,
-                ));
+                backoff = ExponentialBackoff::new(BACKOFF_INITIAL_DELAY);
             }
 
             // max delay + jitter of up to 2 seconds
             let mut delay = backoff.delay(attempt, &error).min(BACKOFF_MAX_DELAY);
             delay += Duration::from_millis(
-                rand::thread_rng().gen_range(0..BACKOFF_MAX_JITTER_MILLISECONDS),
+                rand::thread_rng().gen_range(0..BACKOFF_MAX_JITTER.as_millis() as _),
             );
 
             match error {
@@ -189,9 +184,7 @@ impl<C: ServiceClient> Client<C> {
                     Some(endpoint) => {
                         tracing::info!("attempting to connect to `{}`", endpoint.uri());
                         let cendpoint = endpoint.clone();
-                        let endpoint = endpoint
-                            .clone()
-                            .connect_timeout(Duration::from_secs(CONNECTION_TIMEOUT));
+                        let endpoint = endpoint.clone().connect_timeout(CONNECTION_TIMEOUT);
 
                         // make sure that we have everything we will need in our URI
                         if endpoint.uri().scheme().is_none() {
@@ -249,7 +242,7 @@ impl MdsClient {
             async move {
                 tracing::trace!("starting relay client delta stream task");
                 let agent = self.mode.unwrap_agent();
-                let interval = Duration::from_secs(agent.idle_request_interval_secs);
+                let interval = agent.idle_request_interval;
 
                 loop {
                     {
@@ -420,9 +413,9 @@ impl AdsClient {
     pub fn xds_client_stream(
         &self,
         config: Arc<Config>,
-        idle_request_interval_secs: u64,
+        idle_request_interval: Duration,
     ) -> AdsStream {
-        AdsStream::xds_client_stream(self, config, idle_request_interval_secs)
+        AdsStream::xds_client_stream(self, config, idle_request_interval)
     }
 
     /// Attempts to start a new delta stream to the xDS management server, if the
@@ -556,13 +549,13 @@ impl AdsStream {
             ..
         }: &AdsClient,
         config: Arc<Config>,
-        idle_request_interval_secs: u64,
+        idle_interval: Duration,
     ) -> Self {
         let mut client = client.clone();
         let identifier = identifier.clone();
         let management_servers = management_servers.clone();
         let mode = mode.clone();
-        let idle_interval = Duration::from_secs(idle_request_interval_secs);
+
         Self::connect(
             identifier.clone(),
             move |(mut requests, mut rx), subscribed_resources| async move {
@@ -703,7 +696,7 @@ impl MdsStream {
             identifier.clone(),
             move |(requests, mut rx), _| async move {
                 tracing::trace!("starting relay client stream task");
-                let idle_interval = Duration::from_secs(mode.idle_request_interval_secs());
+                let idle_interval = mode.idle_request_interval();
 
                 loop {
                     let initial_response = DiscoveryResponse {

@@ -111,15 +111,21 @@ impl Commands {
     pub fn admin_mode(&self) -> Option<Admin> {
         match self {
             Self::Proxy(proxy) => Some(Admin::Proxy(proxy::RuntimeConfig {
-                idle_request_interval_secs: proxy.idle_request_interval_secs,
+                idle_request_interval: std::time::Duration::from_secs(
+                    proxy.idle_request_interval_secs,
+                ),
                 ..<_>::default()
             })),
             Self::Agent(agent) => Some(Admin::Agent(agent::RuntimeConfig {
-                idle_request_interval_secs: agent.idle_request_interval_secs,
+                idle_request_interval: std::time::Duration::from_secs(
+                    agent.idle_request_interval_secs,
+                ),
                 ..<_>::default()
             })),
             Self::Relay(relay) => Some(Admin::Relay(relay::RuntimeConfig {
-                idle_request_interval_secs: relay.idle_request_interval_secs,
+                idle_request_interval: std::time::Duration::from_secs(
+                    relay.idle_request_interval_secs,
+                ),
                 ..<_>::default()
             })),
             Self::Manage(_) => Some(Admin::Manage(<_>::default())),
@@ -255,59 +261,55 @@ mod tests {
         config::{Filter, Providers},
         filters::{Capture, StaticFilter, TokenRouter},
         net::endpoint::Endpoint,
-        test::{create_socket, AddressType, TestHelper},
+        temp_file,
+        test::{create_socket, AddressType, TestConfig, TestHelper},
     };
 
     #[tokio::test]
     async fn relay_routing() {
         let mut t = TestHelper::default();
         let (mut rx, server_socket) = t.open_socket_and_recv_multiple_packets().await;
-        let filters_file = tempfile::NamedTempFile::new().unwrap();
-        let config = Config::default();
+        let filters_file = temp_file!("filters");
+        let mut config = TestConfig::default();
 
-        std::fs::write(filters_file.path(), {
-            config.filters.store(
-                vec![
-                    Filter {
-                        name: Capture::factory().name().into(),
-                        label: None,
-                        config: Some(serde_json::json!({
-                            "suffix": {
-                                "size": 3,
-                                "remove": true,
-                            }
-                        })),
-                    },
-                    Filter {
-                        name: TokenRouter::factory().name().into(),
-                        label: None,
-                        config: None,
-                    },
-                ]
-                .try_into()
-                .map(Arc::new)
-                .unwrap(),
-            );
-            serde_yaml::to_string(&config).unwrap()
-        })
-        .unwrap();
+        {
+            config.filters = crate::filters::FilterChain::try_create([
+                Filter {
+                    name: Capture::factory().name().into(),
+                    label: None,
+                    config: Some(serde_json::json!({
+                        "suffix": {
+                            "size": 3,
+                            "remove": true,
+                        }
+                    })),
+                },
+                Filter {
+                    name: TokenRouter::factory().name().into(),
+                    label: None,
+                    config: None,
+                },
+            ])
+            .unwrap();
+            config.write_to_file(filters_file.path());
+        }
 
-        let endpoints_file = tempfile::NamedTempFile::new().unwrap();
-        let config = Config::default();
+        let endpoints_file = temp_file!("endpoints");
+        let config = TestConfig::default();
         let server_port = server_socket.local_addr().unwrap().port();
-        std::fs::write(endpoints_file.path(), {
-            config.clusters.write().insert_default(
+
+        {
+            config.clusters.insert_default(
                 [Endpoint::with_metadata(
                     (std::net::Ipv4Addr::LOCALHOST, server_port).into(),
                     crate::net::endpoint::Metadata {
-                        tokens: vec!["abc".into()].into_iter().collect(),
+                        tokens: Some(b"abc".to_vec()).into_iter().collect(),
                     },
                 )]
                 .into(),
             );
-            serde_yaml::to_string(&config).unwrap()
-        })
-        .unwrap();
+            config.write_to_file(endpoints_file.path());
+        }
 
         let relay_admin_port = crate::test::available_addr(&AddressType::Random)
             .await
@@ -376,31 +378,31 @@ mod tests {
         proxy_init.await.unwrap();
 
         let socket = create_socket().await;
-        let config = Config::default();
+        let config = TestConfig::default();
         let proxy_address: SocketAddr = (std::net::Ipv4Addr::LOCALHOST, 7777).into();
 
         let server_port = server_socket.local_addr().unwrap().port();
         for _ in 0..5 {
-            let token = random_three_characters();
+            let token = Token::new();
 
-            tracing::info!(?token, "writing new config");
-            std::fs::write(endpoints_file.path(), {
-                config.clusters.write().insert_default(
+            {
+                tracing::info!(%token, "writing new config");
+                config.clusters.insert_default(
                     [Endpoint::with_metadata(
                         (std::net::Ipv6Addr::LOCALHOST, server_port).into(),
                         crate::net::endpoint::Metadata {
-                            tokens: vec![token.clone()].into_iter().collect(),
+                            tokens: Some(token.inner.to_vec()).into_iter().collect(),
                         },
                     )]
                     .into(),
                 );
-                serde_yaml::to_string(&config).unwrap()
-            })
-            .unwrap();
+                config.write_to_file(endpoints_file.path());
+            }
+
             tokio::time::sleep(Duration::from_millis(80)).await;
-            let mut msg = Vec::from(*b"hello");
-            msg.extend_from_slice(&token);
-            tracing::info!(?token, "sending packet");
+            let mut msg = b"hello".to_vec();
+            msg.extend_from_slice(&token.inner);
+            tracing::info!(%token, "sending packet");
             socket.send_to(&msg, &proxy_address).await.unwrap();
 
             assert_eq!(
@@ -411,24 +413,48 @@ mod tests {
                     .unwrap()
             );
 
-            tracing::info!(?token, "received packet");
+            tracing::info!(%token, "received packet");
 
-            tracing::info!(?token, "sending bad packet");
+            tracing::info!(%token, "sending bad packet");
             // send an invalid packet
-            let msg = b"hello\xFF\xFF\xFF";
-            socket.send_to(msg, &proxy_address).await.unwrap();
+            socket
+                .send_to(b"hello\xFF\xFF\xFF", &proxy_address)
+                .await
+                .unwrap();
 
             let result = timeout(Duration::from_millis(50), rx.recv()).await;
             assert!(result.is_err(), "should not have received a packet");
-            tracing::info!(?token, "didn't receive bad packet");
+            tracing::info!(%token, "didn't receive bad packet");
         }
     }
 
-    fn random_three_characters() -> Vec<u8> {
-        use rand::prelude::SliceRandom;
-        let chars: Vec<u8> = (*b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ").into();
-        let mut rng = rand::thread_rng();
+    struct Token {
+        inner: [u8; 3],
+    }
 
-        (0..3).map(|_| *chars.choose(&mut rng).unwrap()).collect()
+    impl Token {
+        fn new() -> Self {
+            const CHARS: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+            use rand::prelude::SliceRandom;
+            let mut rng = rand::thread_rng();
+
+            let mut inner = [0; 3];
+            for (v, slot) in CHARS
+                .choose_multiple(&mut rng, inner.len())
+                .zip(inner.iter_mut())
+            {
+                *slot = *v;
+            }
+
+            Self { inner }
+        }
+    }
+
+    use std::fmt;
+    impl fmt::Display for Token {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.write_str(std::str::from_utf8(&self.inner).unwrap())
+        }
     }
 }

@@ -72,6 +72,7 @@ impl Default for Agent {
 }
 
 impl Agent {
+    #[tracing::instrument(skip_all)]
     pub async fn run(
         &self,
         config: Arc<Config>,
@@ -135,7 +136,7 @@ impl Agent {
 
 #[derive(Clone, Debug, Default)]
 pub struct RuntimeConfig {
-    pub idle_request_interval_secs: u64,
+    pub idle_request_interval: std::time::Duration,
     pub provider_is_healthy: Arc<AtomicBool>,
     pub relay_is_healthy: Arc<AtomicBool>,
 }

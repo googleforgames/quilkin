@@ -39,7 +39,7 @@ bytes: YWJj #abc
         .clusters
         .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
     server_config.filters.store(
-        quilkin::filters::FilterChain::try_from(vec![Filter {
+        quilkin::filters::FilterChain::try_create([Filter {
             name: Concatenate::factory().name().into(),
             label: None,
             config: serde_yaml::from_str(yaml).unwrap(),

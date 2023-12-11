@@ -91,6 +91,7 @@ impl Default for Proxy {
 
 impl Proxy {
     /// Start and run a proxy.
+    #[tracing::instrument(skip_all)]
     pub async fn run(
         &self,
         config: std::sync::Arc<crate::Config>,
@@ -100,13 +101,10 @@ impl Proxy {
     ) -> crate::Result<()> {
         let _mmdb_task = self.mmdb.clone().map(|source| {
             tokio::spawn(async move {
-                use crate::config::BACKOFF_INITIAL_DELAY_MILLISECONDS;
                 while let Err(error) =
                     tryhard::retry_fn(|| crate::MaxmindDb::update(source.clone()))
                         .retries(10)
-                        .exponential_backoff(std::time::Duration::from_millis(
-                            BACKOFF_INITIAL_DELAY_MILLISECONDS,
-                        ))
+                        .exponential_backoff(crate::config::BACKOFF_INITIAL_DELAY)
                         .await
                 {
                     tracing::warn!(%error, "error updating maxmind database");
@@ -167,7 +165,7 @@ impl Proxy {
             std::thread::spawn({
                 let config = config.clone();
                 let mut shutdown_rx = shutdown_rx.clone();
-                let idle_request_interval_secs = self.idle_request_interval_secs;
+                let idle_request_interval = Duration::from_secs(self.idle_request_interval_secs);
                 let management_server = self.management_server.clone();
                 let mode = mode.clone();
                 move || {
@@ -190,7 +188,7 @@ impl Proxy {
                         match client
                             .delta_subscribe(
                                 config.clone(),
-                                Duration::from_secs(idle_request_interval_secs),
+                                idle_request_interval,
                                 [
                                     (ResourceType::Cluster, Vec::new()),
                                     (ResourceType::Listener, Vec::new()),
@@ -201,7 +199,7 @@ impl Proxy {
                             Ok(ds) => delta_sub = Some(ds),
                             Err(client) => {
                                 let mut stream =
-                                    client.xds_client_stream(config, idle_request_interval_secs);
+                                    client.xds_client_stream(config, idle_request_interval);
 
                                 tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
                                 stream
@@ -314,7 +312,7 @@ impl Proxy {
                 tokio::select! {
                     _ = log_task.tick() => {
                         for (error, instances) in &pipeline_errors {
-                            tracing::info!(%error, %instances, "pipeline report");
+                            tracing::warn!(%error, %instances, "pipeline report");
                         }
                         pipeline_errors.clear();
                     }
@@ -337,7 +335,7 @@ impl Proxy {
 
 #[derive(Clone, Debug, Default)]
 pub struct RuntimeConfig {
-    pub idle_request_interval_secs: u64,
+    pub idle_request_interval: std::time::Duration,
     // RwLock as this check is conditional on the proxy using xDS.
     pub xds_is_healthy: Arc<parking_lot::RwLock<Option<Arc<AtomicBool>>>>,
 }
@@ -534,6 +532,7 @@ impl DownstreamReceiveWorkerConfig {
         sessions: &Arc<SessionPool>,
     ) -> Result<(), PipelineError> {
         if !config.clusters.read().has_endpoints() {
+            tracing::trace!("no upstream endpoints");
             return Err(PipelineError::NoUpstreamEndpoints);
         }
 
@@ -697,7 +696,7 @@ mod tests {
         crate::test::map_addr_to_localhost(&mut dest);
         let config = Arc::new(Config::default());
         config.filters.store(
-            crate::filters::FilterChain::try_from(vec![config::Filter {
+            crate::filters::FilterChain::try_create([config::Filter {
                 name: "TestFilter".to_string(),
                 label: None,
                 config: None,

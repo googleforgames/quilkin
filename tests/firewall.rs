@@ -219,7 +219,7 @@ async fn test(
     };
     let server_config = std::sync::Arc::new(quilkin::Config::default());
     server_config.filters.store(
-        quilkin::filters::FilterChain::try_from(vec![Filter {
+        quilkin::filters::FilterChain::try_create([Filter {
             name: Firewall::factory().name().into(),
             label: None,
             config: serde_yaml::from_str(yaml.as_str()).unwrap(),
