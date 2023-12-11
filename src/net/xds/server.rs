@@ -190,11 +190,13 @@ impl ControlPlane {
             tracing::error!("No message found");
             tonic::Status::invalid_argument("No message found")
         })??;
+        tracing::trace!("message received: checking");
 
         if message.node.is_none() {
             tracing::error!("Node identifier was not found");
             return Err(tonic::Status::invalid_argument("Node identifier required"));
         }
+        tracing::trace!("message received: success");
 
         let node = message.node.clone().unwrap();
         let resource_type: ResourceType = message.type_url.parse()?;
@@ -212,6 +214,7 @@ impl ControlPlane {
             yield response;
 
             loop {
+                tracing::trace!("LOOPING!");
                 tokio::select! {
                     _ = rx.changed() => {
                         tracing::trace!("sending new discovery response");

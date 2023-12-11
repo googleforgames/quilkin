@@ -140,7 +140,7 @@ impl<C: ServiceClient> Client<C> {
         let mut backoff = ExponentialBackoff::new(BACKOFF_INITIAL_DELAY);
 
         let retry_config = RetryFutureConfig::new(u32::MAX).custom_backoff(|attempt, error: &_| {
-            tracing::info!(attempt, "Retrying to connect");
+            tracing::info!(attempt, "retrying to connect");
             // reset after success
             if attempt <= 1 {
                 backoff = ExponentialBackoff::new(BACKOFF_INITIAL_DELAY);
@@ -154,16 +154,16 @@ impl<C: ServiceClient> Client<C> {
 
             match error {
                 RpcSessionError::InvalidEndpoint(ref error) => {
-                    tracing::error!(?error, "Error creating endpoint");
+                    tracing::error!(?error, "error creating endpoint");
                     // Do not retry if this is an invalid URL error that we cannot recover from.
                     RetryPolicy::Break
                 }
                 RpcSessionError::InitialConnect(ref error) => {
-                    tracing::warn!(?error, "Unable to connect to the XDS server");
+                    tracing::warn!(?error, "unable to connect to the xDS server");
                     RetryPolicy::Delay(delay)
                 }
                 RpcSessionError::Receive(ref status) => {
-                    tracing::warn!(status = ?status, "Failed to receive response from XDS server");
+                    tracing::warn!(status = ?status, "failed to receive response from xDS server");
                     RetryPolicy::Delay(delay)
                 }
             }
@@ -207,7 +207,7 @@ impl<C: ServiceClient> Client<C> {
         let client = connect_to_server
             .instrument(tracing::trace_span!("client_connect"))
             .await?;
-        tracing::info!("Connected to management server");
+        tracing::info!("connected to management server");
         Ok(client)
     }
 }
@@ -313,7 +313,7 @@ impl AdsStream {
                                 continue;
                             }
                             Ok(Some(Err(error))) => {
-                                tracing::warn!(%error, "xds stream error");
+                                tracing::warn!(%error, "xDS stream error");
                                 break;
                             }
                             Ok(None) => {
@@ -395,7 +395,9 @@ impl MdsStream {
                         }),
                         ..<_>::default()
                     };
+                    tracing::trace!("sending request");
                     let _ = requests.send(initial_response);
+                    tracing::trace!("streaming requests");
                     let stream = client
                         .stream_requests(
                             // Errors only happen if the stream is behind, which
@@ -407,12 +409,31 @@ impl MdsStream {
                         .in_current_span()
                         .await?
                         .into_inner();
-
+                    tracing::trace!("control plane: creating from config");
                     let control_plane = super::server::ControlPlane::from_arc(
                         config.clone(),
                         mode.idle_request_interval(),
                     );
-                    let mut stream = control_plane.stream_aggregated_resources(stream).await?;
+                    tracing::trace!("control plane: streaming aggregated resources");
+
+                    let timeout = tokio::time::timeout(
+                        std::time::Duration::from_secs(mode.idle_request_interval_secs()),
+                        control_plane.stream_aggregated_resources(stream),
+                    );
+
+                    let mut stream = match timeout.await {
+                        Ok(result) => result?,
+                        _ => {
+                            tracing::warn!("initial connection to relay server failed, retrying");
+                            client = MdsClient::connect_with_backoff(&management_servers)
+                                .await
+                                .unwrap();
+                            rx = requests.subscribe();
+                            continue;
+                        }
+                    };
+
+                    tracing::trace!("relay marked as healthy");
                     mode.unwrap_agent()
                         .relay_is_healthy
                         .store(true, Ordering::SeqCst);

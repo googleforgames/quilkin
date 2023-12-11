@@ -165,7 +165,7 @@ impl Cli {
         tracing::info!(
             version = crate_version!(),
             commit = crate::net::endpoint::metadata::build::GIT_COMMIT_HASH,
-            "Starting Quilkin"
+            "starting Quilkin"
         );
 
         // Non-long running commands (e.g. ones with no administration server)
@@ -407,7 +407,7 @@ mod tests {
 
             assert_eq!(
                 "hello",
-                timeout(Duration::from_millis(100), rx.recv())
+                timeout(Duration::from_secs(5), rx.recv())
                     .await
                     .expect("should have received a packet")
                     .unwrap()

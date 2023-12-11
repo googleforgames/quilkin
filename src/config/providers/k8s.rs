@@ -143,7 +143,7 @@ pub fn update_endpoints_from_gameservers(
 
                     tracing::trace!(
                         endpoints=%serde_json::to_value(servers.clone()).unwrap(),
-                        "Restarting with endpoints"
+                        "restarting with endpoints"
                     );
 
                     config.clusters.write().insert(locality.clone(), servers);

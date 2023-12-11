@@ -46,7 +46,7 @@ impl<T> Slot<T> {
     /// Adds a watcher to to the slot. The watcher will fire whenever slot's
     /// value changes.
     pub fn watch(&self, watcher: impl Fn(&T) + Send + Sync + 'static) {
-        tracing::trace!("Adding new watcher");
+        tracing::trace!("adding new watcher");
         self.watcher.store(Some(Arc::new(Box::new(watcher))));
     }
 
