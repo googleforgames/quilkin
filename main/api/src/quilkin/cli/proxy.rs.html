@@ -792,6 +792,32 @@
 <a href="#792" id="792">792</a>
 <a href="#793" id="793">793</a>
 <a href="#794" id="794">794</a>
+<a href="#795" id="795">795</a>
+<a href="#796" id="796">796</a>
+<a href="#797" id="797">797</a>
+<a href="#798" id="798">798</a>
+<a href="#799" id="799">799</a>
+<a href="#800" id="800">800</a>
+<a href="#801" id="801">801</a>
+<a href="#802" id="802">802</a>
+<a href="#803" id="803">803</a>
+<a href="#804" id="804">804</a>
+<a href="#805" id="805">805</a>
+<a href="#806" id="806">806</a>
+<a href="#807" id="807">807</a>
+<a href="#808" id="808">808</a>
+<a href="#809" id="809">809</a>
+<a href="#810" id="810">810</a>
+<a href="#811" id="811">811</a>
+<a href="#812" id="812">812</a>
+<a href="#813" id="813">813</a>
+<a href="#814" id="814">814</a>
+<a href="#815" id="815">815</a>
+<a href="#816" id="816">816</a>
+<a href="#817" id="817">817</a>
+<a href="#818" id="818">818</a>
+<a href="#819" id="819">819</a>
+<a href="#820" id="820">820</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -959,8 +985,7 @@
             std::thread::spawn({
                 <span class="kw">let </span>config = config.clone();
                 <span class="kw">let </span><span class="kw-2">mut </span>shutdown_rx = shutdown_rx.clone();
-                <span class="kw">let </span>idle_request_interval =
-                    std::time::Duration::from_secs(<span class="self">self</span>.idle_request_interval_secs);
+                <span class="kw">let </span>idle_request_interval = Duration::from_secs(<span class="self">self</span>.idle_request_interval_secs);
                 <span class="kw">let </span>management_server = <span class="self">self</span>.management_server.clone();
                 <span class="kw">let </span>mode = mode.clone();
                 <span class="kw">move </span>|| {
@@ -976,15 +1001,42 @@
                             management_server,
                         )
                         .<span class="kw">await</span><span class="question-mark">?</span>;
-                        <span class="kw">let </span><span class="kw-2">mut </span>stream = client.xds_client_stream(config, idle_request_interval);
 
-                        tokio::time::sleep(std::time::Duration::from_nanos(<span class="number">1</span>)).<span class="kw">await</span>;
-                        stream.discovery_request(ResourceType::Cluster, <span class="kw-2">&amp;</span>[]).<span class="kw">await</span><span class="question-mark">?</span>;
-                        tokio::time::sleep(std::time::Duration::from_nanos(<span class="number">1</span>)).<span class="kw">await</span>;
-                        stream
-                            .discovery_request(ResourceType::Listener, <span class="kw-2">&amp;</span>[])
-                            .<span class="kw">await</span><span class="question-mark">?</span>;
+                        <span class="kw">let </span><span class="kw-2">mut </span>delta_sub = <span class="prelude-val">None</span>;
+                        <span class="kw">let </span><span class="kw-2">mut </span>state_sub = <span class="prelude-val">None</span>;
+
+                        <span class="kw">match </span>client
+                            .delta_subscribe(
+                                config.clone(),
+                                idle_request_interval,
+                                [
+                                    (ResourceType::Cluster, Vec::new()),
+                                    (ResourceType::Listener, Vec::new()),
+                                ],
+                            )
+                            .<span class="kw">await
+                        </span>{
+                            <span class="prelude-val">Ok</span>(ds) =&gt; delta_sub = <span class="prelude-val">Some</span>(ds),
+                            <span class="prelude-val">Err</span>(client) =&gt; {
+                                <span class="kw">let </span><span class="kw-2">mut </span>stream =
+                                    client.xds_client_stream(config, idle_request_interval);
+
+                                tokio::time::sleep(std::time::Duration::from_nanos(<span class="number">1</span>)).<span class="kw">await</span>;
+                                stream
+                                    .aggregated_subscribe(ResourceType::Cluster, <span class="kw-2">&amp;</span>[])
+                                    .<span class="kw">await</span><span class="question-mark">?</span>;
+                                tokio::time::sleep(std::time::Duration::from_nanos(<span class="number">1</span>)).<span class="kw">await</span>;
+                                stream
+                                    .aggregated_subscribe(ResourceType::Listener, <span class="kw-2">&amp;</span>[])
+                                    .<span class="kw">await</span><span class="question-mark">?</span>;
+
+                                state_sub = <span class="prelude-val">Some</span>(stream);
+                            }
+                        }
+
                         <span class="kw">let _ </span>= shutdown_rx.changed().<span class="kw">await</span>;
+                        drop(delta_sub);
+                        drop(state_sub);
                         <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, eyre::Error&gt;(())
                     })
                 }

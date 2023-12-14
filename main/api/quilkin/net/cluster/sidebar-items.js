@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["ClusterMap","ClusterMapDeser","EndpointSet"]};
+window.SIDEBAR_ITEMS = {"struct":["ClusterMap","ClusterMapDeser","EndpointSet","EndpointSetVersion"]};

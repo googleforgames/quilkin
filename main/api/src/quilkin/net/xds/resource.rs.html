@@ -161,6 +161,8 @@
 <a href="#161" id="161">161</a>
 <a href="#162" id="162">162</a>
 <a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -207,7 +209,8 @@
 }
 
 <span class="kw">impl </span>Resource {
-    <span class="kw">pub fn </span>name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+    <span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
         <span class="kw">match </span><span class="self">self </span>{
             <span class="self">Self</span>::Cluster(cluster) =&gt; cluster
                 .locality
@@ -254,6 +257,7 @@
     <span class="kw">pub const </span>VARIANTS: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[<span class="self">Self</span>] = <span class="kw-2">&amp;</span>[<span class="self">Self</span>::Cluster, <span class="self">Self</span>::Listener];
 
     <span class="doccomment">/// Returns the corresponding type URL for the response type.
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub const fn </span>type_url(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
         <span class="kw">match </span><span class="self">self </span>{
             <span class="self">Self</span>::Cluster =&gt; CLUSTER_TYPE,
