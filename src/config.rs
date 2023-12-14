@@ -16,7 +16,11 @@
 
 //! Quilkin configuration.
 
-use std::{sync::Arc, time::Duration};
+use std::{
+    collections::{BTreeSet, HashMap},
+    sync::Arc,
+    time::Duration,
+};
 
 use base64_serde::base64_serde_type;
 use schemars::JsonSchema;
@@ -27,7 +31,7 @@ use crate::{
     filters::prelude::*,
     net::cluster::{self, ClusterMap},
     net::xds::{
-        config::listener::v3::Listener, service::discovery::v3::DeltaDiscoveryResponse, Resource,
+        config::listener::v3::Listener, service::discovery::v3::Resource as XdsResource, Resource,
         ResourceType,
     },
 };
@@ -41,6 +45,7 @@ mod error;
 pub mod providers;
 mod slot;
 pub mod watch;
+pub(crate) mod xds;
 
 base64_serde_type!(pub Base64Standard, base64::engine::general_purpose::STANDARD);
 
@@ -74,6 +79,12 @@ pub struct Config {
     pub id: Slot<String>,
     #[serde(default)]
     pub version: Slot<Version>,
+}
+
+pub struct DeltaDiscoveryRes {
+    pub resources: Vec<XdsResource>,
+    pub awaiting_ack: crate::net::xds::AwaitingAck,
+    pub removed: Vec<String>,
 }
 
 impl Config {
@@ -162,12 +173,97 @@ impl Config {
         Ok(resources)
     }
 
+    /// Given a list of subscriptions and the current state of the calling client,
+    /// construct a response with the current state of our resources that differ
+    /// from those of the client
     pub fn delta_discovery_request(
         &self,
-        _resource_type: ResourceType,
-        _names: &[String],
-    ) -> Result<DeltaDiscoveryResponse, eyre::Error> {
-        unimplemented!();
+        subscribed: &BTreeSet<String>,
+        client_versions: &crate::net::xds::ClientVersions,
+    ) -> crate::Result<DeltaDiscoveryRes> {
+        let mut resources = Vec::new();
+
+        let (awaiting_ack, removed) = match client_versions {
+            crate::net::xds::ClientVersions::Listener => {
+                resources.push(XdsResource {
+                    name: "listener".into(),
+                    version: "0".into(),
+                    resource: Some(ResourceType::Listener.encode_to_any(&Listener {
+                        filter_chains: vec![(&*self.filters.load()).try_into()?],
+                        ..<_>::default()
+                    })?),
+                    aliases: Vec::new(),
+                    ttl: None,
+                    cache_control: None,
+                });
+                (crate::net::xds::AwaitingAck::Listener, Vec::new())
+            }
+            crate::net::xds::ClientVersions::Cluster(map) => {
+                let resource_type = ResourceType::Cluster;
+                let mut to_ack = Vec::new();
+
+                let mut push = |key: &Option<crate::net::endpoint::Locality>,
+                                value: &crate::net::cluster::EndpointSet|
+                 -> crate::Result<()> {
+                    let current_version = value.version();
+                    if let Some(client_version) = map.get(key) {
+                        if current_version == *client_version {
+                            return Ok(());
+                        }
+                    }
+
+                    resources.push(XdsResource {
+                        name: key.as_ref().map(|k| k.to_string()).unwrap_or_default(),
+                        version: current_version.to_string(),
+                        resource: Some(resource_type.encode_to_any(
+                            &crate::net::cluster::proto::Cluster::try_from((
+                                key,
+                                &value.endpoints,
+                            ))?,
+                        )?),
+                        ..Default::default()
+                    });
+                    to_ack.push((key.clone(), current_version));
+
+                    Ok(())
+                };
+
+                if subscribed.is_empty() {
+                    for cluster in self.clusters.read().iter() {
+                        push(cluster.key(), cluster.value())?;
+                    }
+                } else {
+                    for locality in subscribed.iter().filter_map(|name| name.parse().ok()) {
+                        if let Some(cluster) = self.clusters.read().get(&Some(locality)) {
+                            push(cluster.key(), cluster.value())?;
+                        }
+                    }
+                };
+
+                // Currently, we have exactly _one_ special case for removed resources, which
+                // is when ClusterMap::update_unlocated_endpoints is called to move the None
+                // locality endpoints to another one, so we just detect that case manually
+                let removed: Vec<_> = (map.contains_key(&None)
+                    && self.clusters.read().get(&None).is_none())
+                .then_some(String::new())
+                .into_iter()
+                .collect();
+
+                (
+                    crate::net::xds::AwaitingAck::Cluster {
+                        updated: to_ack,
+                        remove_none: !removed.is_empty(),
+                    },
+                    removed,
+                )
+            }
+        };
+
+        Ok(DeltaDiscoveryRes {
+            resources,
+            awaiting_ack,
+            removed,
+        })
     }
 
     #[tracing::instrument(skip_all, fields(response = response.type_url()))]
@@ -200,6 +296,85 @@ impl Config {
 
         self.apply_metrics();
 
+        Ok(())
+    }
+
+    #[tracing::instrument(skip_all, fields(response = resource_type.type_url()))]
+    pub fn apply_delta(
+        &self,
+        resource_type: ResourceType,
+        resources: impl Iterator<Item = crate::Result<(Resource, String)>>,
+        removed_resources: Vec<String>,
+        local_versions: &mut HashMap<String, String>,
+    ) -> crate::Result<()> {
+        // Remove any resources the upstream server has removed/doesn't have,
+        // we do this before applying any new/updated resources in case a
+        // resource is in both lists, though really that would be a bug in
+        // the upstream server
+        for removed in &removed_resources {
+            local_versions.remove(removed);
+        }
+
+        match resource_type {
+            ResourceType::Listener => {
+                for res in resources {
+                    let (resource, _) = res?;
+                    let Resource::Listener(mut listener) = resource else {
+                        return Err(eyre::eyre!("a non-listener resource was present"));
+                    };
+
+                    let chain: crate::filters::FilterChain = if listener.filter_chains.is_empty() {
+                        Default::default()
+                    } else {
+                        crate::filters::FilterChain::try_create_fallible(
+                            listener.filter_chains.swap_remove(0).filters.into_iter(),
+                        )?
+                    };
+
+                    self.filters.store(Arc::new(chain));
+                    local_versions.insert(listener.name, "".into());
+                }
+            }
+            ResourceType::Cluster => self.clusters.modify(|guard| {
+                for removed in removed_resources {
+                    let locality = if removed.is_empty() {
+                        None
+                    } else {
+                        Some(removed.parse()?)
+                    };
+                    guard.remove_locality(&locality);
+                }
+
+                for res in resources {
+                    let (resource, version) = res?;
+
+                    let Resource::Cluster(cluster) = resource else {
+                        return Err(eyre::eyre!("a non-cluster resource was present"));
+                    };
+
+                    let parsed_version = version.parse()?;
+
+                    let endpoints = crate::config::cluster::EndpointSet::with_version(
+                        cluster
+                            .endpoints
+                            .into_iter()
+                            .map(crate::net::endpoint::Endpoint::try_from)
+                            .collect::<Result<_, _>>()?,
+                        parsed_version,
+                    );
+
+                    let locality = cluster.locality.map(crate::net::endpoint::Locality::from);
+                    let name = locality.as_ref().map(|l| l.to_string()).unwrap_or_default();
+
+                    guard.apply(locality, endpoints);
+                    local_versions.insert(name, version);
+                }
+
+                Ok(())
+            })?,
+        }
+
+        self.apply_metrics();
         Ok(())
     }
 

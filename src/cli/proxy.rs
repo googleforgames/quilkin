@@ -165,8 +165,7 @@ impl Proxy {
             std::thread::spawn({
                 let config = config.clone();
                 let mut shutdown_rx = shutdown_rx.clone();
-                let idle_request_interval =
-                    std::time::Duration::from_secs(self.idle_request_interval_secs);
+                let idle_request_interval = Duration::from_secs(self.idle_request_interval_secs);
                 let management_server = self.management_server.clone();
                 let mode = mode.clone();
                 move || {
@@ -182,15 +181,42 @@ impl Proxy {
                             management_server,
                         )
                         .await?;
-                        let mut stream = client.xds_client_stream(config, idle_request_interval);
 
-                        tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
-                        stream.discovery_request(ResourceType::Cluster, &[]).await?;
-                        tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
-                        stream
-                            .discovery_request(ResourceType::Listener, &[])
-                            .await?;
+                        let mut delta_sub = None;
+                        let mut state_sub = None;
+
+                        match client
+                            .delta_subscribe(
+                                config.clone(),
+                                idle_request_interval,
+                                [
+                                    (ResourceType::Cluster, Vec::new()),
+                                    (ResourceType::Listener, Vec::new()),
+                                ],
+                            )
+                            .await
+                        {
+                            Ok(ds) => delta_sub = Some(ds),
+                            Err(client) => {
+                                let mut stream =
+                                    client.xds_client_stream(config, idle_request_interval);
+
+                                tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
+                                stream
+                                    .aggregated_subscribe(ResourceType::Cluster, &[])
+                                    .await?;
+                                tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
+                                stream
+                                    .aggregated_subscribe(ResourceType::Listener, &[])
+                                    .await?;
+
+                                state_sub = Some(stream);
+                            }
+                        }
+
                         let _ = shutdown_rx.changed().await;
+                        drop(delta_sub);
+                        drop(state_sub);
                         Ok::<_, eyre::Error>(())
                     })
                 }
