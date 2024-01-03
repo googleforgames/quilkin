@@ -1,3 +1,3 @@
 (function() {var implementors = {
-"quilkin":[["impl IoBuf for <a class=\"struct\" href=\"quilkin/pool/struct.FrozenPoolBuffer.html\" title=\"struct quilkin::pool::FrozenPoolBuffer\">FrozenPoolBuffer</a>"],["impl IoBuf for <a class=\"struct\" href=\"quilkin/pool/struct.PoolBuffer.html\" title=\"struct quilkin::pool::PoolBuffer\">PoolBuffer</a>"]]
+"quilkin":[["impl IoBuf for <a class=\"struct\" href=\"quilkin/pool/struct.PoolBuffer.html\" title=\"struct quilkin::pool::PoolBuffer\">PoolBuffer</a>"],["impl IoBuf for <a class=\"struct\" href=\"quilkin/pool/struct.FrozenPoolBuffer.html\" title=\"struct quilkin::pool::FrozenPoolBuffer\">FrozenPoolBuffer</a>"]]
 };if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
