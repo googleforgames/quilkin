@@ -186,6 +186,7 @@ impl ControlPlane {
             + 'static,
     {
         tracing::trace!("starting stream");
+        // TOXO should timeout be here?
         let message = streaming.next().await.ok_or_else(|| {
             tracing::error!("No message found");
             tonic::Status::invalid_argument("No message found")

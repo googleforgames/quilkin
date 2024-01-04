@@ -410,6 +410,7 @@ impl MdsStream {
                     tracing::trace!("sending request");
                     let _ = requests.send(initial_response);
                     tracing::trace!("streaming requests");
+                    // TOXO: got an idea - can we timeout up here, and fall into retry loop?
                     let stream = client
                         .stream_requests(
                             // Errors only happen if the stream is behind, which
