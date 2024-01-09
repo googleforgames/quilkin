@@ -402,7 +402,7 @@ impl ControlPlane {
             let resource_type: ResourceType = message.type_url.parse()?;
             tracing::trace!(id = %node_id, %resource_type, "initial delta request");
             responder(
-                Some(message),
+                (client_request.type_url != "ignore-me").then(|| message),
                 &mut trackers[resource_type],
                 &mut pending_acks,
             )?
