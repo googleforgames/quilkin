@@ -43,6 +43,10 @@ pub fn handle_delta_discovery_responses(
                 }
             };
 
+            if response.type_url == "ignore-me" {
+                continue;
+            }
+
             let control_plane_identifier = response.control_plane.as_ref().map(|cp| cp.identifier.as_str()).unwrap_or_default();
 
             metrics::delta_discovery_responses(control_plane_identifier, &response.type_url).inc();
