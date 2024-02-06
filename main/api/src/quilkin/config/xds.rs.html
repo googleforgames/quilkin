@@ -91,6 +91,10 @@
 <a href="#91" id="91">91</a>
 <a href="#92" id="92">92</a>
 <a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::Config;
 <span class="kw">use </span><span class="kw">crate</span>::net::xds::{
     metrics,
@@ -135,6 +139,10 @@
                     <span class="kw">break</span>;
                 }
             };
+
+            <span class="kw">if </span>response.type_url == <span class="string">&quot;ignore-me&quot; </span>{
+                <span class="kw">continue</span>;
+            }
 
             <span class="kw">let </span>control_plane_identifier = response.control_plane.as_ref().map(|cp| cp.identifier.as_str()).unwrap_or_default();
 
