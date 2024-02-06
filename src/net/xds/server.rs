@@ -399,13 +399,25 @@ impl ControlPlane {
             };
 
         let response = {
-            let resource_type: ResourceType = message.type_url.parse()?;
-            tracing::trace!(id = %node_id, %resource_type, "initial delta request");
-            responder(
-                Some(message),
-                &mut trackers[resource_type],
-                &mut pending_acks,
-            )?
+            if message.type_url == "ignore-me" {
+                DeltaDiscoveryResponse {
+                    resources: Vec::new(),
+                    nonce: String::new(),
+                    control_plane: None,
+                    type_url: message.type_url,
+                    removed_resources: Vec::new(),
+                    // Only used for debugging, not really useful
+                    system_version_info: String::new(),
+                }
+            } else {
+                let resource_type: ResourceType = message.type_url.parse()?;
+                tracing::trace!(id = %node_id, %resource_type, "initial delta request");
+                responder(
+                    Some(message),
+                    &mut trackers[resource_type],
+                    &mut pending_acks,
+                )?
+            }
         };
 
         let nid = node_id.clone();
