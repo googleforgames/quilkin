@@ -34,7 +34,11 @@ service AggregatedControlPlaneDiscoveryService {
   // initiated by the management server, after that this behaves
   // the same as the management server xDS protocol, except with
   // DiscoveryRequests initiated by the server rather than the client.
-  rpc StreamAggregatedResources(stream envoy.service.discovery.v3.DiscoveryResponse)
-      returns (stream envoy.service.discovery.v3.DiscoveryRequest) {
-  }
+  rpc StreamAggregatedResources(
+      stream envoy.service.discovery.v3.DiscoveryResponse)
+      returns (stream envoy.service.discovery.v3.DiscoveryRequest) {}
+
+  rpc DeltaAggregatedResources(
+      stream envoy.service.discovery.v3.DeltaDiscoveryResponse)
+      returns (stream envoy.service.discovery.v3.DeltaDiscoveryRequest) {}
 }

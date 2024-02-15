@@ -60,15 +60,70 @@ pub(crate) fn active_endpoints() -> &'static prometheus::IntGauge {
     &ACTIVE_ENDPOINTS
 }
 
+use std::fmt;
+
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub struct EndpointSetVersion(u64);
+
+impl fmt::Display for EndpointSetVersion {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::LowerHex::fmt(&self.0, f)
+    }
+}
+
+impl fmt::Debug for EndpointSetVersion {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::LowerHex::fmt(&self.0, f)
+    }
+}
+
+impl std::str::FromStr for EndpointSetVersion {
+    type Err = eyre::Error;
+
+    #[inline]
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(u64::from_str_radix(s, 16)?))
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct EndpointSet {
     pub endpoints: BTreeSet<Endpoint>,
+    /// The hash of all of the endpoints in this set
+    hash: u64,
     /// Version of this set of endpoints. Any mutatation of the endpoints
     /// set monotonically increases this number
-    pub version: u64,
+    version: u64,
 }
 
 impl EndpointSet {
+    /// Creates a new endpoint set, calculating a unique version hash for it
+    #[inline]
+    pub fn new(endpoints: BTreeSet<Endpoint>) -> Self {
+        let mut this = Self {
+            endpoints,
+            hash: 0,
+            version: 0,
+        };
+
+        this.update();
+        this
+    }
+
+    /// Creates a new endpoint set with the provided version hash, skipping
+    /// calculation of it
+    ///
+    /// This hash _must_ be calculated with [`Self::update`] to be consistent
+    /// across machines
+    #[inline]
+    pub fn with_version(endpoints: BTreeSet<Endpoint>, hash: EndpointSetVersion) -> Self {
+        Self {
+            endpoints,
+            hash: hash.0,
+            version: 1,
+        }
+    }
+
     #[inline]
     pub fn len(&self) -> usize {
         self.endpoints.len()
@@ -82,6 +137,43 @@ impl EndpointSet {
     #[inline]
     pub fn contains(&self, ep: &Endpoint) -> bool {
         self.endpoints.contains(ep)
+    }
+
+    /// Unique version for this endpoint set
+    #[inline]
+    pub fn version(&self) -> EndpointSetVersion {
+        debug_assert!(self.hash != 0, "the hash should already be calculated");
+        EndpointSetVersion(self.hash)
+    }
+
+    /// Bumps the version, calculating a hash for the entire endpoint set
+    ///
+    /// This is extremely expensive
+    #[inline]
+    pub fn update(&mut self) {
+        use std::hash::{Hash, Hasher};
+        let mut hasher = seahash::SeaHasher::with_seeds(0, 1, 2, 3);
+
+        for ep in &self.endpoints {
+            ep.hash(&mut hasher);
+        }
+
+        self.hash = hasher.finish();
+        self.version += 1;
+    }
+
+    #[inline]
+    pub fn replace(&mut self, replacement: Self) -> BTreeSet<Endpoint> {
+        let old = std::mem::replace(&mut self.endpoints, replacement.endpoints);
+
+        if replacement.hash == 0 {
+            self.update();
+        } else {
+            self.hash = replacement.hash;
+            self.version += 1;
+        }
+
+        old
     }
 }
 
@@ -108,13 +200,19 @@ impl ClusterMap {
         locality: Option<Locality>,
         cluster: BTreeSet<Endpoint>,
     ) -> Option<BTreeSet<Endpoint>> {
+        self.apply(locality, EndpointSet::new(cluster))
+    }
+
+    pub fn apply(
+        &self,
+        locality: Option<Locality>,
+        cluster: EndpointSet,
+    ) -> Option<BTreeSet<Endpoint>> {
         let new_len = cluster.len();
         if let Some(mut current) = self.map.get_mut(&locality) {
             let current = current.value_mut();
 
-            let old = std::mem::replace(&mut current.endpoints, cluster);
-            current.version += 1;
-
+            let old = current.replace(cluster);
             let old_len = old.len();
 
             if new_len >= old_len {
@@ -126,13 +224,7 @@ impl ClusterMap {
             self.version.fetch_add(1, Relaxed);
             Some(old)
         } else {
-            self.map.insert(
-                locality,
-                EndpointSet {
-                    endpoints: cluster,
-                    version: 1,
-                },
-            );
+            self.map.insert(locality, cluster);
             self.num_endpoints.fetch_add(new_len, Relaxed);
             self.version.fetch_add(1, Relaxed);
             None
@@ -170,7 +262,7 @@ impl ClusterMap {
             let set = entry.value_mut();
 
             if set.endpoints.remove(needle) {
-                set.version += 1;
+                set.update();
                 self.num_endpoints.fetch_sub(1, Relaxed);
                 self.version.fetch_add(1, Relaxed);
                 return true;
@@ -193,9 +285,9 @@ impl ClusterMap {
                 // This will always be true, but....
                 let removed = set.endpoints.remove(&endpoint);
                 if removed {
+                    set.update();
                     self.num_endpoints.fetch_sub(1, Relaxed);
                     self.version.fetch_add(1, Relaxed);
-                    set.version += 1;
                 }
                 return removed;
             }
@@ -208,7 +300,7 @@ impl ClusterMap {
     pub fn replace(&self, locality: Option<Locality>, endpoint: Endpoint) -> Option<Endpoint> {
         if let Some(mut set) = self.map.get_mut(&locality) {
             let replaced = set.endpoints.replace(endpoint);
-            set.version += 1;
+            set.update();
             self.version.fetch_add(1, Relaxed);
 
             if replaced.is_none() {
@@ -278,10 +370,25 @@ impl ClusterMap {
         self.version.load(Relaxed)
     }
 
+    #[inline]
     pub fn update_unlocated_endpoints(&self, locality: Locality) {
         if let Some((_, set)) = self.map.remove(&None) {
-            self.map.insert(Some(locality), set);
+            self.version.fetch_add(1, Relaxed);
+            if let Some(replaced) = self.map.insert(Some(locality), set) {
+                self.num_endpoints.fetch_sub(replaced.len(), Relaxed);
+            }
         }
+    }
+
+    #[inline]
+    pub fn remove_locality(&self, locality: &Option<Locality>) -> Option<EndpointSet> {
+        let ret = self.map.remove(locality).map(|(_k, v)| v);
+        if let Some(ret) = &ret {
+            self.version.fetch_add(1, Relaxed);
+            self.num_endpoints.fetch_sub(ret.len(), Relaxed);
+        }
+
+        ret
     }
 }
 
@@ -409,15 +516,7 @@ impl From<ClusterMapDeser> for ClusterMap {
             |EndpointWithLocality {
                  locality,
                  endpoints,
-             }| {
-                (
-                    locality,
-                    EndpointSet {
-                        version: 0,
-                        endpoints,
-                    },
-                )
-            },
+             }| { (locality, EndpointSet::new(endpoints)) },
         ));
 
         Self::from(map)

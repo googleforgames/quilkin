@@ -59,7 +59,7 @@ on_write: DECOMPRESS
         .clusters
         .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
     server_config.filters.store(
-        quilkin::filters::FilterChain::try_from(vec![
+        quilkin::filters::FilterChain::try_create([
             Filter {
                 name: Concatenate::factory().name().into(),
                 label: None,
@@ -134,7 +134,7 @@ async fn multiple_mutations() {
         .clusters
         .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
     server_config.filters.store(
-        quilkin::filters::FilterChain::try_from(filters)
+        quilkin::filters::FilterChain::try_create(filters)
             .map(std::sync::Arc::new)
             .unwrap(),
     );

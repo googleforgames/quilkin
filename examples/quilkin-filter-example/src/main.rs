@@ -97,12 +97,11 @@ async fn main() -> quilkin::Result<()> {
     let proxy = quilkin::Proxy::default();
     let config = quilkin::Config::default();
     config.filters.store(std::sync::Arc::new(
-        vec![quilkin::config::Filter {
+        quilkin::filters::FilterChain::try_create([quilkin::config::Filter {
             name: Greet::NAME.into(),
             label: None,
             config: None,
-        }]
-        .try_into()?,
+        }])?,
     ));
     config.clusters.modify(|map| {
         map.insert_default(
