@@ -179,7 +179,7 @@
 <tr><td>QCMP</td><td>7600</td><td>UDP (IPv4 OR IPv6)</td></tr>
 </tbody></table>
 </div>
-<p>&quot;Proxy&quot; is the primary Quilkin service, which acts as a non-transparent UDP
+<p>"Proxy" is the primary Quilkin service, which acts as a non-transparent UDP
 proxy.</p>
 <p>To view all the options for the <code>proxy</code> subcommand, run:</p>
 <pre><code class="language-shell">$ quilkin proxy --help
@@ -240,7 +240,7 @@ Currently, only the <code>tokens</code> key is in use.</p>
 <p>An endpoint's metadata can be specified alongside the endpoint in <a href="./proxy/configuration.html">static configuration</a> or using the <a href="https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint_components.proto#envoy-v3-api-field-config-endpoint-v3-lbendpoint-metadata">xDS endpoint metadata</a> field when using <a href="./xds.html">dynamic configuration</a> via xDS.</p>
 <h2 id="session"><a class="header" href="#session">Session</a></h2>
 <p>A session represents ongoing communication flow between a client on a [Local Port] and an <a href="#endpoints">Endpoint</a>.</p>
-<p>Quilkin uses the &quot;Session&quot; concept to track traffic flowing through the proxy between any client-server pair. A
+<p>Quilkin uses the "Session" concept to track traffic flowing through the proxy between any client-server pair. A
 Session serves the same purpose, and can be thought of as a lightweight version of a <code>TCP</code> session in that, while a
 TCP session requires a protocol to establish and teardown:</p>
 <ul>

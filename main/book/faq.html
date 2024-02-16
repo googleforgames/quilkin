@@ -178,11 +178,11 @@
 <p>Our current testing shows that on Quilkin shows that it process packets <em>quite fast</em>!</p>
 <p>We won't be publishing performance benchmarks, as performance will always
 change depending on the underlying hardware, number of filters, configurations and more.</p>
-<p>We highly recommend you run your own load tests on your platform and configuration, matching your production 
-workload and configuration as close as possible. </p>
+<p>We highly recommend you run your own load tests on your platform and configuration, matching your production
+workload and configuration as close as possible.</p>
 <p>Our <a href="https://iperf.fr/">iperf3</a> based performance test in the
 <a href="https://github.com/googleforgames/quilkin/tree/main/examples/iperf3">examples' folder</a> is a good starting point.</p>
-<p>Since this is still an alpha project, we have plans on investigating further performance improvements in upcoming 
+<p>Since this is still an alpha project, we have plans on investigating further performance improvements in upcoming
 releases, both from an optimisation and observability perspective as well.</p>
 <h2 id="can-i-integrate-quilkin-with-c-code"><a class="header" href="#can-i-integrate-quilkin-with-c-code">Can I integrate Quilkin with C++ code?</a></h2>
 <p>Quilkin is also released as a <a href="https://crates.io/crates/quilkin" data-proofer-ignore>library</a> so it can be
@@ -192,24 +192,24 @@ integrated with an external codebase as necessary.</p>
 <li>Creating a C-friendly API in Rust</li>
 <li>Embedding your Rust project into an external build system</li>
 </ul>
-<p>See <a href="https://docs.rust-embedded.org/book/interoperability/rust-with-c.html">A little Rust with your C</a> for more 
+<p>See <a href="https://docs.rust-embedded.org/book/interoperability/rust-with-c.html">A little Rust with your C</a> for more
 information.</p>
-<p>Over time, we will be expanding documentation on how to integrate with specific engines if running Quilkin as a 
+<p>Over time, we will be expanding documentation on how to integrate with specific engines if running Quilkin as a
 separate binary is not an option.</p>
 <h2 id="i-would-like-to-run-quilkin-as-a-client-side-proxy-on-a-console-can-i-do-that"><a class="header" href="#i-would-like-to-run-quilkin-as-a-client-side-proxy-on-a-console-can-i-do-that">I would like to run Quilkin as a client side proxy on a console? Can I do that?</a></h2>
-<p>This is an ongoing discussion, and since console development is protected by non-disclosure agreements, we can't 
+<p>This is an ongoing discussion, and since console development is protected by non-disclosure agreements, we can't
 comment on this directly.</p>
 <p>That being said, we have an <a href="./sdks/unreal-engine.html">Unreal Engine</a> for games
 in circumstances where compiling Rust or providing a separate Quilkin binary as
 an executable is not an option.</p>
 <h2 id="any-reason-you-didnt-contribute-this-intoextend-envoy"><a class="header" href="#any-reason-you-didnt-contribute-this-intoextend-envoy">Any reason you didn't contribute this into/extend Envoy?</a></h2>
-<p>This is an excellent question! <a href="https://www.envoyproxy.io/">Envoy</a> is an amazing project, and has set many of the 
-standards for how <a href="./services/xds.html">proxies are written and orchestrated</a>, and was an inspiration for many of 
+<p>This is an excellent question! <a href="https://www.envoyproxy.io/">Envoy</a> is an amazing project, and has set many of the
+standards for how <a href="./services/xds.html">proxies are written and orchestrated</a>, and was an inspiration for many of
 the decisions made on Quilkin.</p>
 <p>However, we decided to build this project separately:</p>
 <ul>
-<li>Envoy seems primarily focused on web/mobile network workloads (which makes total sense), whereas we wanted 
-something specialised on gaming UDP communication, so having a leaner, more focused codebase would allow us to move 
+<li>Envoy seems primarily focused on web/mobile network workloads (which makes total sense), whereas we wanted
+something specialised on gaming UDP communication, so having a leaner, more focused codebase would allow us to move
 faster.</li>
 <li>We found the Rust and Cargo ecosystem easier to work with than Bazel and C++, and figured our users would as well.</li>
 </ul>

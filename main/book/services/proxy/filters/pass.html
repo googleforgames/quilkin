@@ -182,7 +182,7 @@ combination with conditional flow filters like <a href="match.html"><code>Matche
 <h2 id="configuration-examples"><a class="header" href="#configuration-examples">Configuration Examples</a></h2>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span><span class="boring">let yaml = &quot;
+</span><span class="boring">let yaml = "
 </span>version: v1alpha1
 clusters: 
   - endpoints:
@@ -204,7 +204,7 @@ filters:
             name: quilkin.filters.pass.v1alpha1.Pass
         fallthrough:
           name: quilkin.filters.drop.v1alpha1.Drop
-<span class="boring">&quot;;
+<span class="boring">";
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 2);
 </span><span class="boring">}</span></code></pre></pre>

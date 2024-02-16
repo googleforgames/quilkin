@@ -818,6 +818,7 @@
 <a href="#818" id="818">818</a>
 <a href="#819" id="819">819</a>
 <a href="#820" id="820">820</a>
+<a href="#821" id="821">821</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -1165,8 +1166,9 @@
         <span class="self">self</span>.xds_is_healthy
             .read()
             .as_ref()
-            .map_or(<span class="bool-val">true</span>, |health| health.load(Ordering::SeqCst))
-            &amp;&amp; config.clusters.read().has_endpoints()
+            .map_or(config.clusters.read().has_endpoints(), |health| {
+                health.load(Ordering::SeqCst)
+            })
     }
 }
 

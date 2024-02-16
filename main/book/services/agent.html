@@ -181,13 +181,13 @@
 <blockquote>
 <p><strong>Note:</strong> This service is currently in active experimentation and development
 so there may be bugs which cause it to be unusable  for production, as always
-all bug reports are welcome and appreciated. </p>
+all bug reports are welcome and appreciated.</p>
 </blockquote>
 <p>For multi-cluster integration, Quilkin provides a <code>agent</code> service, that can be
 deployed to a cluster to act as a beacon for QCMP pings and forward cluster
 configuration information to a <code>relay</code> service</p>
-<p>Agent configuration and functionality matches that of Control Plane Providers, such as 
-<a href="./xds/providers/filesystem.html">Filesystem</a> and <a href="./xds/providers/agones.html">Agones</a>. </p>
+<p>Agent configuration and functionality matches that of Control Plane Providers, such as
+<a href="./xds/providers/filesystem.html">Filesystem</a> and <a href="./xds/providers/agones.html">Agones</a>.</p>
 <p>To view all options for the <code>agent</code> subcommand, run:</p>
 <pre><code class="language-shell">$ quilkin agent --help
 Runs Quilkin as a relay service that runs a Manager Discovery Service (mDS) for accepting cluster and configuration information from xDS management services, and exposing it as a single merged xDS service for proxy services

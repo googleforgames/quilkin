@@ -195,20 +195,20 @@ UDP echo service we just started.</p>
 <p>This configuration will start Quilkin on the <a href="../../services/proxy.html">default proxy port</a>, and it will
 redirect all incoming UDP traffic to a single endpoint of 127.0.0.1, port 8080.</p>
 <p>You should see an output like the following:</p>
-<pre><code class="language-shell">{&quot;timestamp&quot;:&quot;2023-01-19T10:16:23.399277Z&quot;,&quot;level&quot;:&quot;INFO&quot;,&quot;fields&quot;:{&quot;message&quot;:&quot;Starting Quilkin&quot;,&quot;version&quot;:&quot;0.6
-.0-dev&quot;,&quot;commit&quot;:&quot;72176a191ffc3a597e3834ee1d0090b30caf81d4&quot;},&quot;target&quot;:&quot;quilkin::cli&quot;,&quot;filename&quot;:&quot;src/cli.rs&quot;}
-{&quot;timestamp&quot;:&quot;2023-01-19T10:16:23.399771Z&quot;,&quot;level&quot;:&quot;INFO&quot;,&quot;fields&quot;:{&quot;message&quot;:&quot;Starting admin endpoint&quot;,&quot;addres
-s&quot;:&quot;0.0.0.0:8000&quot;},&quot;target&quot;:&quot;quilkin::admin&quot;,&quot;filename&quot;:&quot;src/admin.rs&quot;}
-{&quot;timestamp&quot;:&quot;2023-01-19T10:16:23.400544Z&quot;,&quot;level&quot;:&quot;INFO&quot;,&quot;fields&quot;:{&quot;message&quot;:&quot;Starting&quot;,&quot;port&quot;:7777,&quot;proxy_id&quot;
-:&quot;7e9fc464-6ccc-41fe-afc4-6c97089de9b8&quot;},&quot;target&quot;:&quot;quilkin::proxy&quot;,&quot;filename&quot;:&quot;src/proxy.rs&quot;}
-{&quot;timestamp&quot;:&quot;2023-01-19T10:16:23.401192Z&quot;,&quot;level&quot;:&quot;INFO&quot;,&quot;fields&quot;:{&quot;message&quot;:&quot;Quilkin is ready&quot;},&quot;target&quot;:&quot;qui
+<pre><code class="language-shell">{"timestamp":"2023-01-19T10:16:23.399277Z","level":"INFO","fields":{"message":"Starting Quilkin","version":"0.6
+.0-dev","commit":"72176a191ffc3a597e3834ee1d0090b30caf81d4"},"target":"quilkin::cli","filename":"src/cli.rs"}
+{"timestamp":"2023-01-19T10:16:23.399771Z","level":"INFO","fields":{"message":"Starting admin endpoint","addres
+s":"0.0.0.0:8000"},"target":"quilkin::admin","filename":"src/admin.rs"}
+{"timestamp":"2023-01-19T10:16:23.400544Z","level":"INFO","fields":{"message":"Starting","port":7777,"proxy_id"
+:"7e9fc464-6ccc-41fe-afc4-6c97089de9b8"},"target":"quilkin::proxy","filename":"src/proxy.rs"}
+{"timestamp":"2023-01-19T10:16:23.401192Z","level":"INFO","fields":{"message":"Quilkin is ready"},"target":"qui
 </code></pre>
 <h2 id="3-send-a-packet"><a class="header" href="#3-send-a-packet">3. Send a packet!</a></h2>
 <p>In (yet 😃) another shell, let's use netcat to send an udp packet.</p>
 <p>Run the following to connect netcat to Quilkin's receiving port of 7000 via UDP (<code>-u</code>):</p>
 <pre><code class="language-shell">nc -u 127.0.0.1 7777
 </code></pre>
-<p>Type the word &quot;test&quot; and hit enter, you should see it echoed back to you like so:</p>
+<p>Type the word "test" and hit enter, you should see it echoed back to you like so:</p>
 <pre><code class="language-shell">nc -u 127.0.0.1 7777
 test
 test

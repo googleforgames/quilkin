@@ -208,7 +208,7 @@ A packet received downstream will be fed into <code>append</code> and the result
 </span><span class="boring">// local_rate_limit filter spawns a task on initialization
 </span><span class="boring">#[tokio::main]
 </span><span class="boring">async fn main() {
-</span><span class="boring">let yaml = &quot;
+</span><span class="boring">let yaml = "
 </span>version: v1alpha1
 filters:
   - name: quilkin.filters.debug.v1alpha1.Debug
@@ -221,7 +221,7 @@ filters:
 clusters:
   - endpoints:
     - address: 127.0.0.1:7001
-<span class="boring">&quot;;
+<span class="boring">";
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 2);
 </span><span class="boring">}</span></code></pre></pre>

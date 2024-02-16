@@ -203,10 +203,10 @@ set by adding a comma separated standard base64 encoded strings. This must be ad
    quilkin.dev/tokens: MXg3aWp5Ng==,OGdqM3YyaQ==
 </code></pre>
 <h2 id="filter-configuration"><a class="header" href="#filter-configuration">Filter Configuration</a></h2>
-<p>The Agones provider watches for a singular <a href="https://kubernetes.io/docs/concepts/configuration/configmap/"><code>ConfigMap</code></a> 
-that has the label of <code>quilkin.dev/configmap: &quot;true&quot;</code>, and any changes that happen to it, and use its contents to 
+<p>The Agones provider watches for a singular <a href="https://kubernetes.io/docs/concepts/configuration/configmap/"><code>ConfigMap</code></a>
+that has the label of <code>quilkin.dev/configmap: "true"</code>, and any changes that happen to it, and use its contents to
 send <a href="../../../services/proxy/filters.html">Filter</a> configuration to any connected Quilkin proxies.</p>
-<p>The <code>ConfigMap</code> contents should be a valid Quilkin <a href="../../../services/proxy/configuration.html">file configuration</a>, but with no 
+<p>The <code>ConfigMap</code> contents should be a valid Quilkin <a href="../../../services/proxy/configuration.html">file configuration</a>, but with no
 Endpoint data.</p>
 <p>For example:</p>
 <pre><code class="language-yaml">apiVersion: v1
@@ -214,7 +214,7 @@ kind: ConfigMap
 metadata:
   name: quilkin-xds-filter-config
   labels:
-    quilkin.dev/configmap: &quot;true&quot;
+    quilkin.dev/configmap: "true"
 data:
   quilkin.yaml: |
     version: v1alpha1

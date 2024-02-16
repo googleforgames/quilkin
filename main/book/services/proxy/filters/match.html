@@ -184,7 +184,7 @@ in Rust or <code>switch</code> statements in other languages.</p>
 <!-- ANCHOR: example -->
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span><span class="boring">let yaml = &quot;
+</span><span class="boring">let yaml = "
 </span>version: v1alpha1
 clusters: 
   - endpoints:
@@ -206,7 +206,7 @@ filters:
             name: quilkin.filters.pass.v1alpha1.Pass
         fallthrough:
           name: quilkin.filters.drop.v1alpha1.Drop
-<span class="boring">&quot;;
+<span class="boring">";
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 2);
 </span><span class="boring">}</span></code></pre></pre>
@@ -307,9 +307,9 @@ definitions:
 <p>View the <a href="../../../../api/quilkin/filters/match/struct.Config.html">Match</a> filter documentation for more details.</p>
 <h2 id="metrics"><a class="header" href="#metrics">Metrics</a></h2>
 <ul>
-<li><code>quilkin_filter_int_counter{label=&quot;packets_matched_total&quot;}</code>
+<li><code>quilkin_filter_int_counter{label="packets_matched_total"}</code>
 A counter of the total number of packets where the dynamic metadata matches a branch value.</li>
-<li><code>quilkin_filter_int_counter{label=&quot;packets_fallthrough_total&quot;}</code>
+<li><code>quilkin_filter_int_counter{label="packets_fallthrough_total"}</code>
 A counter of the total number of packets that are processed by the fallthrough configuration.</li>
 </ul>
 

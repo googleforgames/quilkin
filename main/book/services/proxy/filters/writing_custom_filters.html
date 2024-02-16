@@ -191,8 +191,8 @@ a <code>Greet</code> filter that appends <code>Hello</code> to every packet in o
 be a verb, rather than an adjective.</p>
 <p><strong>Examples</strong></p>
 <ul>
-<li><strong>Greet</strong> not &quot;Greets&quot;</li>
-<li><strong>Compress</strong> not &quot;Compressor&quot;.</li>
+<li><strong>Greet</strong> not "Greets"</li>
+<li><strong>Compress</strong> not "Compressor".</li>
 </ul>
 </blockquote>
 <h2 id="filter"><a class="header" href="#filter"><code>Filter</code></a></h2>
@@ -211,11 +211,11 @@ sent to a downstream client.</p>
 #[async_trait::async_trait]
 impl Filter for Greet {
     async fn read(&amp;self, ctx: &amp;mut ReadContext) -&gt; Result&lt;(), FilterError&gt; {
-        ctx.contents.extend_from_slice(b&quot;Hello&quot;);
+        ctx.contents.extend_from_slice(b"Hello");
         Ok(())
     }
     async fn write(&amp;self, ctx: &amp;mut WriteContext) -&gt; Result&lt;(), FilterError&gt; {
-        ctx.contents.extend_from_slice(b&quot;Goodbye&quot;);
+        ctx.contents.extend_from_slice(b"Goodbye");
         Ok(())
     }
 }</code></pre>
@@ -226,7 +226,7 @@ configuration, for now we can use <code>()</code> as we have no configuration cu
 </span><span class="boring">struct Greet;
 </span><span class="boring">impl Filter for Greet {}
 </span>impl StaticFilter for Greet {
-    const NAME: &amp;'static str = &quot;greet.v1&quot;;
+    const NAME: &amp;'static str = "greet.v1";
     type Configuration = ();
     type BinaryConfiguration = ();
 
@@ -241,8 +241,8 @@ runtime, so we need to import that crate and wrap our main function with it.</p>
 <p>We can also register custom filters in quilkin using <a href="../../../../api/quilkin/filters/struct.FilterRegistry.html#method.register"><code>FilterRegistry::register</code></a></p>
 <p>Add Tokio as a dependency in <code>Cargo.toml</code>.</p>
 <pre><code class="language-toml">[dependencies]
-quilkin = &quot;0.2.0&quot;
-tokio = { version = &quot;1&quot;, features = [&quot;full&quot;]}
+quilkin = "0.2.0"
+tokio = { version = "1", features = ["full"]}
 </code></pre>
 <p>Add a main function that starts the proxy.</p>
 <pre><code class="language-rust no_run noplayground ignore">// src/main.rs
@@ -309,8 +309,8 @@ when talking to a <a href="../../xds.html">management server</a>.</p>
 <li>Add the yaml parsing crates to <code>Cargo.toml</code>:</li>
 </ol>
 <pre><code class="language-toml"># [dependencies]
-serde = &quot;1.0&quot;
-serde_yaml = &quot;0.8&quot;
+serde = "1.0"
+serde_yaml = "0.8"
 </code></pre>
 <ol start="2">
 <li>Define a struct representing the config:</li>
@@ -332,12 +332,12 @@ struct Greet {
 impl Filter for Greet {
     async fn read(&amp;self, ctx: &amp;mut ReadContext) -&gt; Result&lt;(), FilterError&gt; {
         ctx.contents
-            .prepend_from_slice(format!(&quot;{} &quot;, self.config.greeting).as_bytes());
+            .prepend_from_slice(format!("{} ", self.config.greeting).as_bytes());
         Ok(())
     }
     async fn write(&amp;self, ctx: &amp;mut WriteContext) -&gt; Result&lt;(), FilterError&gt; {
         ctx.contents
-            .prepend_from_slice(format!(&quot;{} &quot;, self.config.greeting).as_bytes());
+            .prepend_from_slice(format!("{} ", self.config.greeting).as_bytes());
         Ok(())
     }
 }</code></pre>
@@ -351,15 +351,15 @@ of our <code>Greet</code> configuration.</p>
 </ol>
 <pre><code class="language-toml">[dependencies]
 # ...
-tonic = &quot;0.5.0&quot;
-prost = &quot;0.7&quot;
-prost-types = &quot;0.7&quot;
+tonic = "0.5.0"
+prost = "0.7"
+prost-types = "0.7"
 </code></pre>
 <ol start="2">
 <li>Create a <a href="https://protobuf.dev">Protobuf</a> equivalent of our YAML configuration.</li>
 </ol>
 <pre><code class="language-plaintext no_run noplayground ignore">// src/greet.proto
-syntax = &quot;proto3&quot;;
+syntax = "proto3";
 
 package greet;
 
@@ -375,24 +375,24 @@ message Greet {
 <a href="https://doc.rust-lang.org/cargo/reference/build-scripts.html">build script</a> to generate the following Rust code
 during compilation:</p>
 <pre><code class="language-toml"># [dependencies]
-bytes = &quot;1.0&quot;
+bytes = "1.0"
 
 # [build-dependencies]
-prost-build = &quot;0.7&quot;
+prost-build = "0.7"
 </code></pre>
 <pre><code class="language-rust no_run noplayground ignore">// src/build.rs
 fn main() {
     // Remove if you already have `protoc` installed in your system.
-    std::env::set_var(&quot;PROTOC&quot;, protobuf_src::protoc());
+    std::env::set_var("PROTOC", protobuf_src::protoc());
 
-    prost_build::compile_protos(&amp;[&quot;src/greet.proto&quot;], &amp;[&quot;src/&quot;]).unwrap();
+    prost_build::compile_protos(&amp;["src/greet.proto"], &amp;["src/"]).unwrap();
 }</code></pre>
 <p>To include the generated code, we'll use [<code>tonic::include_proto</code>], then we just
 need to implement <a href="https://doc.rust-lang.org/std/convert/trait.TryFrom.html">std::convert::TryFrom</a> for converting the protobuf message to
 equivalvent configuration.</p>
 <pre><code class="language-rust no_run noplayground ignore">// src/main.rs
 mod proto {
-    tonic::include_proto!(&quot;greet&quot;);
+    tonic::include_proto!("greet");
 }
 
 impl TryFrom&lt;proto::Greet&gt; for Config {
@@ -418,7 +418,7 @@ configurations.</p>
 use quilkin::filters::StaticFilter;
 
 impl StaticFilter for Greet {
-    const NAME: &amp;'static str = &quot;greet.v1&quot;;
+    const NAME: &amp;'static str = "greet.v1";
     type Configuration = Config;
     type BinaryConfiguration = proto::Greet;
 

@@ -184,7 +184,7 @@
 <h2 id="configuration-examples"><a class="header" href="#configuration-examples">Configuration Examples</a></h2>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span><span class="boring">let yaml = &quot;
+</span><span class="boring">let yaml = "
 </span>version: v1alpha1
 filters:
   - name: quilkin.filters.token_router.v1alpha1.TokenRouter
@@ -203,7 +203,7 @@ clusters:
         quilkin.dev:
           tokens:
             - bmt1eTcweA==
-<span class="boring">&quot;;
+<span class="boring">";
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
 </span><span class="boring">}</span></code></pre></pre>
@@ -248,7 +248,7 @@ appropriately cryptographically random and sent to each proxy securely.</p>
 <p>For example, a configuration would look like:</p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span><span class="boring">let yaml = &quot;
+</span><span class="boring">let yaml = "
 </span>version: v1alpha1
 filters:
   - name: quilkin.filters.capture.v1alpha1.Capture # Capture and remove the authentication token
@@ -270,7 +270,7 @@ clusters:
         quilkin.dev:
           tokens:
              - bmt1eTcweA==
-<span class="boring">&quot;;
+<span class="boring">";
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 2);
 </span><span class="boring">}</span></code></pre></pre>

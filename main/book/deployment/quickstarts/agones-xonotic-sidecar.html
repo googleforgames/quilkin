@@ -210,7 +210,7 @@ xonotic-sidecar-htc2x-sdp4k   Ready   34.94.107.201   7599   gke-agones-default-
 <a href="https://agones.dev/site/docs/getting-started/create-fleet/#4-allocate-a-game-server-from-the-fleet">Allocate</a> a
 <code>GameServer</code>, but we'll skip this step for this example.</p>
 <p>Choose one of the listed <code>GameServer</code>s from the previous step, and connect to the IP and port of the Xonotic
-server via the &quot;Multiplayer &gt; Address&quot; field in the Xonotic client in the format of {IP}:{PORT}.</p>
+server via the "Multiplayer &gt; Address" field in the Xonotic client in the format of {IP}:{PORT}.</p>
 <p><img src="xonotic-address-v6.png" alt="xonotic-address.png" /></p>
 <p>You should now be playing a game of Xonotic against 4 bots!</p>
 <h2 id="3-check-out-the-metrics"><a class="header" href="#3-check-out-the-metrics">3. Check out the metrics</a></h2>
@@ -256,7 +256,7 @@ replace the <code>${GAMESERVER_IP}</code> and <code>${GAMESERVER_PORT}</code> va
 <p>Run this configuration locally as:</p>
 <pre><code class="language-shell">quilkin -c ./client-compress.yaml proxy
 </code></pre>
-<p>Now we can connect to the local client proxy on &quot;127.0.0.1:7777&quot; via the &quot;Multiplayer &gt; Address&quot; field in the
+<p>Now we can connect to the local client proxy on "127.0.0.1:7777" via the "Multiplayer &gt; Address" field in the
 Xonotic client, and Quilkin will take care of compressing the data for you without having to change the game
 client!</p>
 <p>Congratulations! You are now using Quilkin to manipulate the game client to server connection, without having to

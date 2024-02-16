@@ -182,7 +182,7 @@ and subsequent decompression of UDP data when sent between systems, such as a ga
 <h2 id="configuration-examples"><a class="header" href="#configuration-examples">Configuration Examples</a></h2>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span><span class="boring">let yaml = &quot;
+</span><span class="boring">let yaml = "
 </span>version: v1alpha1
 filters:
   - name: quilkin.filters.compress.v1alpha1.Compress
@@ -193,7 +193,7 @@ filters:
 clusters:
   - endpoints:
     - address: 127.0.0.1:7001
-<span class="boring">&quot;;
+<span class="boring">";
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
 </span><span class="boring">}</span></code></pre></pre>
@@ -268,9 +268,9 @@ format. The varint is of the same exact form as that used by <a href="https://gi
 </code></pre>
 <h2 id="metrics"><a class="header" href="#metrics">Metrics</a></h2>
 <ul>
-<li><code>quilkin_filter_int_counter{label=&quot;compressed_bytes_total&quot;}</code>
+<li><code>quilkin_filter_int_counter{label="compressed_bytes_total"}</code>
 Total number of compressed bytes either received or sent.</li>
-<li><code>quilkin_filter_int_counter{label=&quot;decompressed_bytes_total&quot;}</code>
+<li><code>quilkin_filter_int_counter{label="decompressed_bytes_total"}</code>
 Total number of decompressed bytes either received or sent.</li>
 </ul>
 

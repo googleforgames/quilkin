@@ -181,7 +181,7 @@
 <h2 id="configuration-examples"><a class="header" href="#configuration-examples">Configuration Examples</a></h2>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#[tokio::main]
 </span><span class="boring">async fn main() {
-</span><span class="boring">  let yaml = &quot;
+</span><span class="boring">  let yaml = "
 </span>version: v1alpha1
 filters:
   - name: quilkin.filters.load_balancer.v1alpha1.LoadBalancer
@@ -190,7 +190,7 @@ filters:
 clusters:
   - endpoints:
       - address: 127.0.0.1:7001
-<span class="boring">&quot;;
+<span class="boring">";
 </span><span class="boring">  let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
 </span><span class="boring">}</span></code></pre></pre>
