@@ -48,7 +48,7 @@ a list of the criteria for each service an provider.
 
 | Service | Readiness                                                           |
 |---------|---------------------------------------------------------------------|
-| Proxy   | Management server is connected (or always true if config is static)  AND if there is more than one endpoint configured|
+| Proxy   | Management server is connected (or always true if config is static)  OR if there is more than one endpoint configured|
 | Manage  | Provider is ready                                                   |
 | Relay   | Provider is ready                                                   |
 | Agent   | Provider is ready AND connected to relay                            |
