@@ -66,7 +66,6 @@ check period (e.g.  `periodSeconds=1`) and a low success threshold
 (e.g. `failureThreshold=60`) and `terminationGracePeriodSeconds` to allow for
 backoff attempts and existing player sessions to continue without disruption.
 
-
 #### Proxy Mode
 
 Will return an HTTP status of 200 when there is at least one endpoint to send data to. This is primarily to ensure
@@ -84,6 +83,34 @@ Outputs [Prometheus](https://prometheus.io/) formatted metrics for this instance
 See the [Proxy Metrics](../services/proxy/metrics.md) documentation for what proxy metrics are available.
 
 See the [xDS Metrics](../services/xds/metrics.md) documentation for what xDS metrics are available.
+
+### /debug/pprof/profile
+
+This provides a endpoint to profile Quilkin's performance. You can use with any
+system which supports pprof output such as [Pyroscope](https://pyroscope.io).
+
+This requires setting up a writable `/tmp` directory in the Quilkin container. E.g.
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+spec:
+  template:
+    spec:
+      containers:
+        - name: quilkin
+        # ...Other container configuration...
+          volumeMounts:
+            - mountPath: /tmp
+              name: tmp
+              subPath: tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 64Mi
+```
+
 
 ### /config
 

@@ -24,6 +24,7 @@ accepted = [
     "MPL-2.0",
     "NOASSERTION",
     "Unicode-DFS-2016",
+    "Zlib",
 ]
 workarounds = ["ring"]
 
