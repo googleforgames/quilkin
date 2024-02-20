@@ -238,6 +238,28 @@ until they are fully populated.</p>
 <p>Outputs <a href="https://prometheus.io/">Prometheus</a> formatted metrics for this instance.</p>
 <p>See the <a href="../services/proxy/metrics.html">Proxy Metrics</a> documentation for what proxy metrics are available.</p>
 <p>See the <a href="../services/xds/metrics.html">xDS Metrics</a> documentation for what xDS metrics are available.</p>
+<h3 id="debugpprofprofile"><a class="header" href="#debugpprofprofile">/debug/pprof/profile</a></h3>
+<p>This provides a endpoint to profile Quilkin's performance. You can use with any
+system which supports pprof output such as <a href="https://pyroscope.io">Pyroscope</a>.</p>
+<p>This requires setting up a writable <code>/tmp</code> directory in the Quilkin container. E.g.</p>
+<pre><code class="language-yaml">apiVersion: apps/v1
+kind: Deployment
+spec:
+  template:
+    spec:
+      containers:
+        - name: quilkin
+        # ...Other container configuration...
+          volumeMounts:
+            - mountPath: /tmp
+              name: tmp
+              subPath: tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 64Mi
+</code></pre>
 <h3 id="config"><a class="header" href="#config">/config</a></h3>
 <p>Returns a JSON representation of the cluster and filterchain configuration that the instance is running
 with at the time of invocation.</p>

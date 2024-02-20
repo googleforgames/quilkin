@@ -251,7 +251,7 @@ your local machine through <a href="installation.html#cargo">Cargo</a>.</p>
 <dl>
   <dt><strong>Source / Method</strong></dt>
   <dd>
-<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.8.0-dev-713c135
+<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.8.0-dev-f81b843
 </code></pre>
   </dd>
   <dt><strong>Notes</strong></dt>
@@ -1899,9 +1899,9 @@ definitions:
       fallthrough:
         description: The behaviour for when none of the `branches` match.
         default:
-          name: quilkin.filters.drop.v1alpha1.Drop
-          label: null
           config: null
+          label: null
+          name: quilkin.filters.drop.v1alpha1.Drop
         allOf:
         - $ref: '#/definitions/Filter'
       metadataKey:
@@ -3090,6 +3090,28 @@ until they are fully populated.</p>
 <p>Outputs <a href="https://prometheus.io/">Prometheus</a> formatted metrics for this instance.</p>
 <p>See the <a href="deployment/../services/proxy/metrics.html">Proxy Metrics</a> documentation for what proxy metrics are available.</p>
 <p>See the <a href="deployment/../services/xds/metrics.html">xDS Metrics</a> documentation for what xDS metrics are available.</p>
+<h3 id="debugpprofprofile"><a class="header" href="#debugpprofprofile">/debug/pprof/profile</a></h3>
+<p>This provides a endpoint to profile Quilkin's performance. You can use with any
+system which supports pprof output such as <a href="https://pyroscope.io">Pyroscope</a>.</p>
+<p>This requires setting up a writable <code>/tmp</code> directory in the Quilkin container. E.g.</p>
+<pre><code class="language-yaml">apiVersion: apps/v1
+kind: Deployment
+spec:
+  template:
+    spec:
+      containers:
+        - name: quilkin
+        # ...Other container configuration...
+          volumeMounts:
+            - mountPath: /tmp
+              name: tmp
+              subPath: tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 64Mi
+</code></pre>
 <h3 id="config"><a class="header" href="#config">/config</a></h3>
 <p>Returns a JSON representation of the cluster and filterchain configuration that the instance is running
 with at the time of invocation.</p>
