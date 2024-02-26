@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["Config","Pass"]};
+window.SIDEBAR_ITEMS = {"mod":["quilkin"],"struct":["Config","Pass"]};

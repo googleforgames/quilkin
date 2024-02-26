@@ -321,6 +321,10 @@
 <a href="#321" id="321">321</a>
 <a href="#322" id="322">322</a>
 <a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -345,7 +349,11 @@
 
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 
-<span class="kw">pub use </span><span class="self">self</span>::{address::EndpointAddress, locality::Locality, metadata::DynamicMetadata};
+<span class="kw">pub use </span><span class="self">self</span>::{
+    address::{AddressKind, EndpointAddress},
+    locality::Locality,
+    metadata::DynamicMetadata,
+};
 
 <span class="kw">pub type </span>EndpointMetadata = metadata::MetadataView&lt;Metadata&gt;;
 

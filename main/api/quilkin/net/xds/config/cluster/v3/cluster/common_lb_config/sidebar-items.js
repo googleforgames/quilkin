@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["LocalityConfigSpecifier"],"struct":["ConsistentHashingLbConfig","LocalityWeightedLbConfig","ZoneAwareLbConfig"]};

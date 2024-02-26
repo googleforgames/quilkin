@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["NAME"],"struct":["Config","Drop"]};
+window.SIDEBAR_ITEMS = {"constant":["NAME"],"mod":["quilkin"],"struct":["Config","Drop"]};

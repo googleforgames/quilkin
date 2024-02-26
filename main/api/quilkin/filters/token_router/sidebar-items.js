@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["Error"],"struct":["Config","TokenRouter"]};
+window.SIDEBAR_ITEMS = {"enum":["Error"],"mod":["quilkin"],"struct":["Config","TokenRouter"]};

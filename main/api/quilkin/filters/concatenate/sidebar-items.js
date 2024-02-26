@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["Strategy"],"struct":["Concatenate","Config"]};
+window.SIDEBAR_ITEMS = {"enum":["Strategy"],"mod":["quilkin"],"struct":["Concatenate","Config"]};

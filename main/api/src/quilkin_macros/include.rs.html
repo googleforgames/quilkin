@@ -109,7 +109,7 @@
         <span class="kw">let </span>module = id.split(<span class="string">&#39;.&#39;</span>).rev().fold::&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;(items, |acc, module| {
             <span class="kw">let </span>module = syn::Ident::new(module, Span::mixed_site());
             <span class="kw">let </span>result: syn::ItemMod = <span class="macro">syn::parse_quote! </span>{
-                <span class="attr">#[allow(warnings, clippy::all)] </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>#module { #(#acc)* }
+                <span class="attr">#[allow(warnings, clippy::all)] </span><span class="kw">pub mod </span>#module { #(#acc)* }
             };
 
             <span class="macro">vec!</span>[syn::Item::Mod(result)]

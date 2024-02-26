@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["Policy"],"struct":["Config","LoadBalancer"]};
+window.SIDEBAR_ITEMS = {"enum":["Policy"],"mod":["quilkin"],"struct":["Config","LoadBalancer"]};

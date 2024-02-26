@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["local_rate_limit"]};

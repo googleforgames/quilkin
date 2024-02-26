@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["ClusterMap","ClusterMapDeser","EndpointSet","EndpointSetVersion"]};
+window.SIDEBAR_ITEMS = {"mod":["quilkin"],"struct":["ClusterMap","ClusterMapDeser","EndpointSet","EndpointSetVersion"]};
