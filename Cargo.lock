@@ -814,6 +814,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ce7134b9999ecaf8bcd65542e436736ef32ddca1b3e06094cb6ec5755203b80"
 
 [[package]]
+name = "fixedstr"
+version = "0.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5f4e4dfef7b590ab7d11e531d602fdfb6a3413b09924db1428902bbc4410a9a8"
+
+[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2134,6 +2140,7 @@ dependencies = [
  "either",
  "enum-map",
  "eyre",
+ "fixedstr",
  "form_urlencoded",
  "futures",
  "hyper",
@@ -2188,6 +2195,7 @@ dependencies = [
  "tryhard",
  "url",
  "uuid",
+ "xxhash-rust",
 ]
 
 [[package]]
@@ -3641,6 +3649,12 @@ dependencies = [
  "cfg-if",
  "windows-sys 0.48.0",
 ]
+
+[[package]]
+name = "xxhash-rust"
+version = "0.8.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "927da81e25be1e1a2901d59b81b37dd2efd1fc9c9345a55007f09bf5a2d3ee03"
 
 [[package]]
 name = "yansi"
