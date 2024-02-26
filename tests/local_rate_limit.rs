@@ -46,7 +46,7 @@ period: 1
         .clusters
         .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
     server_config.filters.store(
-        quilkin::filters::FilterChain::try_from(vec![Filter {
+        quilkin::filters::FilterChain::try_create([Filter {
             name: LocalRateLimit::factory().name().into(),
             label: None,
             config: serde_yaml::from_str(yaml).unwrap(),
@@ -55,7 +55,7 @@ period: 1
         .unwrap(),
     );
     tracing::trace!("spawning server");
-    t.run_server(server_config, server_proxy, None);
+    t.run_server(server_config, Some(server_proxy), None).await;
 
     let msg = "hello";
     let (mut rx, socket) = t.open_socket_and_recv_multiple_packets().await;

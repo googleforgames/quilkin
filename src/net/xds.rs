@@ -89,25 +89,6 @@ mod xds {
         pub mod discovery {
             pub mod v3 {
                 tonic::include_proto!("envoy.service.discovery.v3");
-
-                impl TryFrom<DiscoveryResponse> for DiscoveryRequest {
-                    type Error = eyre::Error;
-
-                    fn try_from(response: DiscoveryResponse) -> Result<Self, Self::Error> {
-                        Ok(Self {
-                            version_info: response.version_info,
-                            resource_names: response
-                                .resources
-                                .into_iter()
-                                .map(crate::net::xds::Resource::try_from)
-                                .map(|result| result.map(|resource| resource.name().to_owned()))
-                                .collect::<Result<Vec<_>, _>>()?,
-                            type_url: response.type_url,
-                            response_nonce: response.nonce,
-                            ..<_>::default()
-                        })
-                    }
-                }
             }
         }
         pub mod cluster {
@@ -119,7 +100,7 @@ mod xds {
 }
 
 #[allow(warnings)]
-mod google {
+pub(crate) mod google {
     pub mod rpc {
         tonic::include_proto!("google.rpc");
     }
@@ -128,12 +109,13 @@ mod google {
 crate::include_proto!("quilkin.relay.v1alpha1");
 
 pub(crate) mod client;
-mod metrics;
+pub(crate) mod metrics;
 mod resource;
 pub(crate) mod server;
 
 pub(crate) use self::quilkin::relay::v1alpha1 as relay;
 use self::xds as envoy;
+use crate::net::{cluster::EndpointSetVersion, endpoint::Locality};
 
 pub use self::{
     client::{AdsClient, Client},
@@ -142,6 +124,108 @@ pub use self::{
     service::discovery::v3::aggregated_discovery_service_client::AggregatedDiscoveryServiceClient,
     xds::*,
 };
+use std::collections::HashMap;
+
+/// Keeps track of what resource versions a particular client has
+pub enum ClientVersions {
+    Listener,
+    Cluster(HashMap<Option<Locality>, EndpointSetVersion>),
+}
+
+/// The resources and versions that were sent in a delta response, when acked
+/// this is used with `ClientVersions::ack` to update the set of resources on
+/// the client has
+pub enum AwaitingAck {
+    Listener,
+    Cluster {
+        updated: Vec<(Option<Locality>, EndpointSetVersion)>,
+        remove_none: bool,
+    },
+}
+
+impl ClientVersions {
+    #[inline]
+    pub fn new(rt: ResourceType) -> Self {
+        match rt {
+            ResourceType::Listener => Self::Listener,
+            ResourceType::Cluster => Self::Cluster(HashMap::new()),
+        }
+    }
+
+    #[inline]
+    pub fn typ(&self) -> ResourceType {
+        match self {
+            Self::Listener => ResourceType::Listener,
+            Self::Cluster(_) => ResourceType::Cluster,
+        }
+    }
+
+    /// Updates the versions of the client following an `ACK` by the client for
+    /// a set of resources
+    #[inline]
+    pub fn ack(&mut self, ack: AwaitingAck) {
+        match (self, ack) {
+            (Self::Listener, AwaitingAck::Listener) => {}
+            (
+                Self::Cluster(map),
+                AwaitingAck::Cluster {
+                    updated,
+                    remove_none,
+                },
+            ) => {
+                for (locality, version) in updated {
+                    map.insert(locality, version);
+                }
+
+                if remove_none {
+                    map.remove(&None);
+                }
+            }
+            _ => unreachable!("acking the wrong resource type"),
+        }
+    }
+
+    #[inline]
+    pub fn remove(&mut self, name: String) {
+        match self {
+            Self::Listener => {}
+            Self::Cluster(map) => {
+                let locality = if name.is_empty() {
+                    None
+                } else {
+                    match name.parse() {
+                        Ok(l) => Some(l),
+                        Err(err) => {
+                            tracing::error!(error = %err, name, "Failed to parse locality");
+                            return;
+                        }
+                    }
+                };
+                map.remove(&locality);
+            }
+        }
+    }
+
+    /// Resets the client versions to those specified by the client itself
+    #[inline]
+    pub fn reset(&mut self, versions: HashMap<String, String>) -> crate::Result<()> {
+        match self {
+            Self::Listener => Ok(()),
+            Self::Cluster(map) => {
+                map.clear();
+
+                for (k, v) in versions {
+                    let locality = if k.is_empty() { None } else { Some(k.parse()?) };
+                    let version = v.parse()?;
+
+                    map.insert(locality, version);
+                }
+
+                Ok(())
+            }
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -201,7 +285,7 @@ mod tests {
         let proxy_admin = crate::cli::Admin::Proxy(<_>::default());
         tokio::spawn(async move {
             client_proxy
-                .run(client_config, proxy_admin, shutdown_rx)
+                .run(client_config, proxy_admin, None, shutdown_rx)
                 .await
         });
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
@@ -215,7 +299,7 @@ mod tests {
         const TOKEN_KEY: &str = "quilkin.dev/load_balancer/token";
 
         xds_config.filters.store(Arc::new(
-            [
+            FilterChain::try_create([
                 Capture::as_filter_config(capture::Config {
                     metadata_key: VERSION_KEY.into(),
                     strategy: capture::Suffix {
@@ -260,8 +344,7 @@ mod tests {
                     }),
                 })
                 .unwrap(),
-            ]
-            .try_into()
+            ])
             .unwrap(),
         ));
 
@@ -303,10 +386,8 @@ mod tests {
         )
         .await
         .unwrap();
-        let mut stream = client.xds_client_stream(
-            config.clone(),
-            crate::cli::admin::IDLE_REQUEST_INTERVAL_SECS,
-        );
+        let mut stream =
+            client.xds_client_stream(config.clone(), crate::cli::admin::IDLE_REQUEST_INTERVAL);
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
         // Each time, we create a new upstream endpoint and send a cluster update for it.
@@ -317,12 +398,15 @@ mod tests {
                 socket.local_addr().unwrap().into();
 
             config.clusters.modify(|clusters| {
-                let mut cluster = clusters.default_entry();
-                cluster.clear();
-                cluster.insert(Endpoint::new(local_addr.clone()));
+                clusters.insert(
+                    None,
+                    Some(Endpoint::new(local_addr.clone()))
+                        .into_iter()
+                        .collect(),
+                );
             });
 
-            let filters = crate::filters::FilterChain::try_from(vec![
+            let filters = FilterChain::try_create([
                 Concatenate::as_filter_config(concatenate::Config {
                     on_read: concatenate::Strategy::Append,
                     on_write: <_>::default(),
@@ -341,7 +425,7 @@ mod tests {
             config.filters.modify(|chain| *chain = filters.clone());
 
             stream
-                .discovery_request(ResourceType::Cluster, &[])
+                .aggregated_subscribe(ResourceType::Cluster, &[])
                 .await
                 .unwrap();
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
@@ -352,6 +436,7 @@ mod tests {
                     .read()
                     .get_default()
                     .unwrap()
+                    .endpoints
                     .iter()
                     .next()
                     .unwrap()
@@ -359,7 +444,7 @@ mod tests {
             );
 
             stream
-                .discovery_request(ResourceType::Listener, &[])
+                .aggregated_subscribe(ResourceType::Listener, &[])
                 .await
                 .unwrap();
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;

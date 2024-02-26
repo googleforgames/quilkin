@@ -20,7 +20,7 @@ mod regex;
 
 crate::include_proto!("quilkin.filters.capture.v1alpha1");
 
-use crate::{filters::prelude::*, net::endpoint::metadata};
+use crate::{filters::prelude::*, net::endpoint::metadata, pool::PoolBuffer};
 
 use self::quilkin::filters::capture::v1alpha1 as proto;
 
@@ -34,7 +34,7 @@ pub use self::{
 pub trait CaptureStrategy {
     /// Capture packet data from the contents, and optionally returns a value if
     /// anything was captured.
-    fn capture(&self, contents: &mut Vec<u8>) -> Option<metadata::Value>;
+    fn capture(&self, contents: &mut PoolBuffer) -> Option<metadata::Value>;
 }
 
 pub struct Capture {
@@ -93,7 +93,7 @@ mod tests {
     use crate::{
         filters::metadata::CAPTURED_BYTES,
         net::endpoint::{metadata::Value, Endpoint},
-        test::assert_write_no_change,
+        test::{alloc_buffer, assert_write_no_change},
     };
 
     use super::*;
@@ -159,12 +159,14 @@ mod tests {
             }),
         };
         let filter = Capture::from_config(config.into());
-        let endpoints = vec![Endpoint::new("127.0.0.1:81".parse().unwrap())];
+        let endpoints = crate::net::cluster::ClusterMap::new_default(
+            [Endpoint::new("127.0.0.1:81".parse().unwrap())].into(),
+        );
         assert!(filter
             .read(&mut ReadContext::new(
-                endpoints,
+                endpoints.into(),
                 (std::net::Ipv4Addr::LOCALHOST, 80).into(),
-                "abc".to_string().into_bytes(),
+                alloc_buffer(b"abc"),
             ))
             .await
             .is_err());
@@ -188,10 +190,10 @@ mod tests {
         let end = Regex {
             pattern: ::regex::bytes::Regex::new(".{3}$").unwrap(),
         };
-        let mut contents = b"helloabc".to_vec();
+        let mut contents = alloc_buffer(b"helloabc");
         let result = end.capture(&mut contents).unwrap();
         assert_eq!(Value::Bytes(b"abc".to_vec().into()), result);
-        assert_eq!(b"helloabc".to_vec(), contents);
+        assert_eq!(b"helloabc", &*contents);
     }
 
     #[test]
@@ -200,16 +202,16 @@ mod tests {
             size: 3,
             remove: false,
         };
-        let mut contents = b"helloabc".to_vec();
+        let mut contents = alloc_buffer(b"helloabc");
         let result = end.capture(&mut contents).unwrap();
         assert_eq!(Value::Bytes(b"abc".to_vec().into()), result);
-        assert_eq!(b"helloabc".to_vec(), contents);
+        assert_eq!(b"helloabc", &*contents);
 
         end.remove = true;
 
         let result = end.capture(&mut contents).unwrap();
         assert_eq!(Value::Bytes(b"abc".to_vec().into()), result);
-        assert_eq!(b"hello".to_vec(), contents);
+        assert_eq!(b"hello", &*contents);
     }
 
     #[test]
@@ -218,28 +220,30 @@ mod tests {
             size: 3,
             remove: false,
         };
-        let mut contents = b"abchello".to_vec();
+        let mut contents = alloc_buffer(b"abchello");
 
         let result = beg.capture(&mut contents);
         assert_eq!(Some(Value::Bytes(b"abc".to_vec().into())), result);
-        assert_eq!(b"abchello".to_vec(), contents);
+        assert_eq!(b"abchello", &*contents);
 
         beg.remove = true;
 
         let result = beg.capture(&mut contents);
         assert_eq!(Some(Value::Bytes(b"abc".to_vec().into())), result);
-        assert_eq!(b"hello".to_vec(), contents);
+        assert_eq!(b"hello", &*contents);
     }
 
     async fn assert_end_strategy<F>(filter: &F, key: metadata::Key, remove: bool)
     where
         F: Filter + ?Sized,
     {
-        let endpoints = vec![Endpoint::new("127.0.0.1:81".parse().unwrap())];
+        let endpoints = crate::net::cluster::ClusterMap::new_default(
+            [Endpoint::new("127.0.0.1:81".parse().unwrap())].into(),
+        );
         let mut context = ReadContext::new(
-            endpoints,
+            endpoints.into(),
             "127.0.0.1:80".parse().unwrap(),
-            "helloabc".to_string().into_bytes(),
+            alloc_buffer(b"helloabc"),
         );
 
         filter.read(&mut context).await.unwrap();

@@ -162,16 +162,19 @@ impl TryFrom<proto::Timestamp> for Config {
 mod tests {
     use super::*;
 
-    use crate::filters::capture::{self, Capture};
+    use crate::{
+        filters::capture::{self, Capture},
+        test::alloc_buffer,
+    };
 
     #[tokio::test]
     async fn basic() {
         const TIMESTAMP_KEY: &str = "BASIC";
         let filter = Timestamp::from_config(Config::new(TIMESTAMP_KEY).into());
         let mut ctx = ReadContext::new(
-            vec![],
+            <_>::default(),
             (std::net::Ipv4Addr::UNSPECIFIED, 0).into(),
-            b"hello".to_vec(),
+            alloc_buffer(b"hello"),
         );
         ctx.metadata.insert(
             TIMESTAMP_KEY.into(),
@@ -200,9 +203,9 @@ mod tests {
         let timestamp = Timestamp::from_config(Config::new(TIMESTAMP_KEY).into());
         let source = (std::net::Ipv4Addr::UNSPECIFIED, 0);
         let mut ctx = ReadContext::new(
-            vec![],
+            <_>::default(),
             source.into(),
-            [0, 0, 0, 0, 99, 81, 55, 181].to_vec(),
+            alloc_buffer([0, 0, 0, 0, 99, 81, 55, 181]),
         );
 
         capture.read(&mut ctx).await.unwrap();

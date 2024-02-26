@@ -19,7 +19,7 @@ async fn main() {
     // Unwrap is safe here as it will only fail if called more than once.
     stable_eyre::install().unwrap();
 
-    match <quilkin::Cli as clap::Parser>::parse().drive().await {
+    match <quilkin::Cli as clap::Parser>::parse().drive(None).await {
         Ok(()) => std::process::exit(0),
         Err(error) => {
             tracing::error!(%error, error_debug=?error, "fatal error");

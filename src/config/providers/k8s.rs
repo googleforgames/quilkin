@@ -121,10 +121,7 @@ pub fn update_endpoints_from_gameservers(
                     };
                     tracing::debug!(endpoint=%serde_json::to_value(&endpoint).unwrap(), "Adding endpoint");
                     config.clusters.write()
-                        .entry(locality.clone())
-                        .or_default()
-                        .value_mut()
-                        .replace(endpoint);
+                        .replace(locality.clone(), endpoint);
                 }
 
                 Event::Restarted(servers) => {
@@ -149,7 +146,7 @@ pub fn update_endpoints_from_gameservers(
                         "Restarting with endpoints"
                     );
 
-                    config.clusters.write().merge(locality.clone(), servers);
+                    config.clusters.write().insert(locality.clone(), servers);
                 }
 
                 Event::Deleted(server) => {

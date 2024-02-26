@@ -4,11 +4,13 @@ The `Compress` filter's job is to provide a variety of compression implementatio
 and subsequent decompression of UDP data when sent between systems, such as a game client and game server.
 
 ## Filter name
+
 ```text
 quilkin.filters.compress.v1alpha1.Compress
 ```
 
 ## Configuration Examples
+
 ```rust
 # let yaml = "
 version: v1alpha1
@@ -47,11 +49,40 @@ decompressed when traffic is returned from the dedicated game server before bein
 > Snappy is a compression/decompression library. It does not aim for maximum compression, or compatibility with any
 > other compression library; instead, it aims for very high speeds and reasonable compression.
 
-Currently, this filter only provides the [Snappy](https://github.com/google/snappy/) compression format via the
-[rust-snappy](https://github.com/BurntSushi/rust-snappy) crate, but more will be
-provided in the future.
+This compression method is provided by [rust-snappy](https://github.com/BurntSushi/rust-snappy).
 
-### Metrics
+Due to the small size of packets, this only encodes and decodes the non-streaming version of the format described [here](https://github.com/google/snappy/blob/main/format_description.txt).
+
+```yaml
+- name: quilkin.filters.compress.v1alpha1.Compress
+    config:
+        on_read: COMPRESS
+        on_write: DECOMPRESS
+        mode: SNAPPY
+```
+
+### LZ4
+
+> LZ4 is lossless compression algorithm, providing compression speed > 500 MB/s per core, scalable with multi-cores CPU.
+> It features an extremely fast decoder, with speed in multiple GB/s per core, typically reaching RAM speed limits on
+> multi-core systems.
+
+This compression method is provided by [lz4_flex](https://github.com/PSeitz/lz4_flex).
+
+Due to the small size of packets, this only encodes and decodes the block version of the format described. If your game client/server itself is performing LZ4 de/compression it needs to encode or
+decode a varint of the uncompressed packet size (maximum 2^16) since that is not part of the LZ4 block
+format. The varint is of the same exact form as that used by [snappy](https://github.com/google/snappy/blob/27f34a580be4a3becf5f8c0cba13433f53c21337/format_description.txt#L20-L25).
+
+```yaml
+- name: quilkin.filters.compress.v1alpha1.Compress
+    config:
+        on_read: COMPRESS
+        on_write: DECOMPRESS
+        mode: LZ4
+```
+
+## Metrics
+
 * `quilkin_filter_int_counter{label="compressed_bytes_total"}`
   Total number of compressed bytes either received or sent.
 * `quilkin_filter_int_counter{label="decompressed_bytes_total"}`

@@ -34,17 +34,12 @@ bytes: YWJj #abc
 ";
     let echo = t.run_echo_server(&AddressType::Random).await;
 
-    let server_port = 12346;
-    let server_proxy = quilkin::cli::Proxy {
-        port: server_port,
-        ..<_>::default()
-    };
     let server_config = std::sync::Arc::new(quilkin::Config::default());
     server_config
         .clusters
         .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
     server_config.filters.store(
-        quilkin::filters::FilterChain::try_from(vec![Filter {
+        quilkin::filters::FilterChain::try_create([Filter {
             name: Concatenate::factory().name().into(),
             label: None,
             config: serde_yaml::from_str(yaml).unwrap(),
@@ -52,7 +47,7 @@ bytes: YWJj #abc
         .map(std::sync::Arc::new)
         .unwrap(),
     );
-    t.run_server(server_config, server_proxy, None);
+    let server_port = t.run_server(server_config, None, None).await;
 
     // let's send the packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
@@ -62,7 +57,7 @@ bytes: YWJj #abc
 
     assert_eq!(
         "helloabc",
-        timeout(Duration::from_secs(5), recv_chan.recv())
+        timeout(Duration::from_millis(250), recv_chan.recv())
             .await
             .expect("should have received a packet")
             .unwrap()

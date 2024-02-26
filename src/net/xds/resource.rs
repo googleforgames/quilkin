@@ -39,11 +39,12 @@ type_urls! {
 
 #[derive(Clone, Debug)]
 pub enum Resource {
-    Cluster(Box<crate::net::cluster::proto::Cluster>),
-    Listener(Box<Listener>),
+    Cluster(crate::net::cluster::proto::Cluster),
+    Listener(Listener),
 }
 
 impl Resource {
+    #[inline]
     pub fn name(&self) -> String {
         match self {
             Self::Cluster(cluster) => cluster
@@ -55,6 +56,7 @@ impl Resource {
         }
     }
 
+    #[inline]
     pub fn resource_type(&self) -> ResourceType {
         match self {
             Self::Cluster(_) => ResourceType::Cluster,
@@ -62,6 +64,7 @@ impl Resource {
         }
     }
 
+    #[inline]
     pub fn type_url(&self) -> &str {
         self.resource_type().type_url()
     }
@@ -89,6 +92,7 @@ impl ResourceType {
     pub const VARIANTS: &'static [Self] = &[Self::Cluster, Self::Listener];
 
     /// Returns the corresponding type URL for the response type.
+    #[inline]
     pub const fn type_url(&self) -> &'static str {
         match self {
             Self::Cluster => CLUSTER_TYPE,

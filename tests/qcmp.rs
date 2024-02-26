@@ -35,7 +35,7 @@ async fn proxy_ping() {
         ..<_>::default()
     };
     let server_config = std::sync::Arc::new(quilkin::Config::default());
-    t.run_server(server_config, server_proxy, None);
+    t.run_server(server_config, Some(server_proxy), None).await;
     ping(server_port).await;
 }
 
@@ -61,6 +61,7 @@ async fn agent_ping() {
 }
 
 async fn ping(port: u16) {
+    tokio::time::sleep(std::time::Duration::from_millis(250)).await;
     let socket = tokio::net::UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0))
         .await
         .unwrap();

@@ -19,9 +19,10 @@ struct Greet;
 > As a convention within Quilkin: Filter names are singular, they also tend to
 > be a verb, rather than an adjective.
 >
->  **Examples**
->  - **Greet** not "Greets"
->  - **Compress** not "Compressor".
+> **Examples**
+>
+> - **Greet** not "Greets"
+> - **Compress** not "Compressor".
 
 ## `Filter`
 
@@ -39,14 +40,15 @@ sent to a downstream client.
 # struct Greet;
 use quilkin::filters::prelude::*;
 
+/// Appends data to each packet
 #[async_trait::async_trait]
 impl Filter for Greet {
     async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
-        ctx.contents.extend(b"Hello");
+        ctx.contents.extend_from_slice(b"Hello");
         Ok(())
     }
     async fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
-        ctx.contents.extend(b"Goodbye");
+        ctx.contents.extend_from_slice(b"Goodbye");
         Ok(())
     }
 }
@@ -210,7 +212,6 @@ To include the generated code, we'll use [`tonic::include_proto`], then we just
 need to implement [std::convert::TryFrom] for converting the protobuf message to
 equivalvent configuration.
 
-
 ```rust,no_run,noplayground,ignore
 // src/main.rs
 {{#include ../../../../../examples/quilkin-filter-example/src/main.rs:include_proto}}
@@ -234,30 +235,18 @@ filter. Try it out with the following configuration:
 {{#include ../../../../../examples/quilkin-filter-example/config.yaml:yaml}}
 ```
 
-[FilterInstance]: ../../../../api/quilkin/filters/prelude/struct.FilterInstance.html
-[Filter]: ../../../../api/quilkin/filters/trait.Filter.html
-[FilterFactory]: ../../../../api/quilkin/filters/trait.FilterFactory.html
-[filter-factory-name]: ../../../../api/quilkin/filters/trait.FilterFactory.html#tymethod.name
-[FilterRegistry]: ../../../../api/quilkin/filters/struct.FilterRegistry.html
 [FilterRegistry::register]: ../../../../api/quilkin/filters/struct.FilterRegistry.html#method.register
-[CreateFilterArgs::config]: ../../../api/quilkin/filters/prelude/struct.CreateFilterArgs.html#structfield.config
-[ConfigType::dynamic]: ../../../../api/quilkin/config/enum.ConfigType.html#variant.Dynamic
-[ConfigType::static]: ../../../../api/quilkin/config/enum.ConfigType.html#variant.Static
-[ConfigType::deserialize]: ../../../../api/quilkin/config/enum.ConfigType.html#method.deserialize
 [std::convert::TryFrom]: https://doc.rust-lang.org/std/convert/trait.TryFrom.html
 
 [Filters]: ../filters.md
 [filter chain]: ../filters.md#filters-and-filter-chain
 [built-in-filters]: ../filters.md#built-in-filters
-[filter configuration]: ../filters.md#filter-config
-[proxy-config]: ../../deployment/configuration.md
 [management server]: ../../xds.md
 [tokio]: https://docs.rs/tokio
 [tonic]: https://docs.rs/tonic
 [prost]: https://docs.rs/prost
 [Protobuf]: https://protobuf.dev
 [Serde]: https://docs.serde.rs/serde_yaml/index.html
-[prost-any]: https://docs.rs/prost-types/0.7.0/prost_types/struct.Any.html
 [prost_build]: https://docs.rs/prost-build/0.7.0/prost_build/
 [build-script]: https://doc.rust-lang.org/cargo/reference/build-scripts.html
 [example]: https://github.com/googleforgames/quilkin/tree/{{GITHUB_REF_NAME}}/examples/quilkin-filter-example

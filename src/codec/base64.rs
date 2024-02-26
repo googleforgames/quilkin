@@ -16,10 +16,12 @@
 
 use base64::Engine;
 
+#[inline]
 pub(crate) fn encode<A: AsRef<[u8]>>(bytes: A) -> String {
     base64::engine::general_purpose::STANDARD.encode(bytes.as_ref())
 }
 
-pub(crate) fn decode<A: AsRef<str>>(input: A) -> Result<Vec<u8>, base64::DecodeError> {
+#[inline]
+pub(crate) fn decode<A: AsRef<[u8]>>(input: A) -> Result<Vec<u8>, base64::DecodeError> {
     base64::engine::general_purpose::STANDARD.decode(input.as_ref())
 }

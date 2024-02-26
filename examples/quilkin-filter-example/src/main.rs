@@ -61,12 +61,12 @@ struct Greet {
 impl Filter for Greet {
     async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         ctx.contents
-            .splice(0..0, format!("{} ", self.config.greeting).into_bytes());
+            .prepend_from_slice(format!("{} ", self.config.greeting).as_bytes());
         Ok(())
     }
     async fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
         ctx.contents
-            .splice(0..0, format!("{} ", self.config.greeting).into_bytes());
+            .prepend_from_slice(format!("{} ", self.config.greeting).as_bytes());
         Ok(())
     }
 }
@@ -97,12 +97,11 @@ async fn main() -> quilkin::Result<()> {
     let proxy = quilkin::Proxy::default();
     let config = quilkin::Config::default();
     config.filters.store(std::sync::Arc::new(
-        vec![quilkin::config::Filter {
+        quilkin::filters::FilterChain::try_create([quilkin::config::Filter {
             name: Greet::NAME.into(),
             label: None,
             config: None,
-        }]
-        .try_into()?,
+        }])?,
     ));
     config.clusters.modify(|map| {
         map.insert_default(
@@ -115,6 +114,6 @@ async fn main() -> quilkin::Result<()> {
 
     let admin = quilkin::cli::Admin::Proxy(<_>::default());
 
-    proxy.run(config.into(), admin, shutdown_rx).await
+    proxy.run(config.into(), admin, None, shutdown_rx).await
 }
 // ANCHOR_END: run

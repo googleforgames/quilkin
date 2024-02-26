@@ -64,7 +64,7 @@ impl FilterRegistry {
 mod tests {
     use std::net::Ipv4Addr;
 
-    use crate::test::load_test_filters;
+    use crate::test::{alloc_buffer, load_test_filters};
 
     use super::*;
     use crate::filters::{Filter, FilterError, FilterRegistry, ReadContext, WriteContext};
@@ -104,16 +104,17 @@ mod tests {
         let addr: EndpointAddress = (Ipv4Addr::LOCALHOST, 8080).into();
         let endpoint = Endpoint::new(addr.clone());
 
+        let endpoints = crate::net::cluster::ClusterMap::new_default([endpoint.clone()].into());
         assert!(filter
             .read(&mut ReadContext::new(
-                vec![endpoint.clone()],
+                endpoints.into(),
                 addr.clone(),
-                vec![]
+                alloc_buffer([]),
             ))
             .await
             .is_ok());
         assert!(filter
-            .write(&mut WriteContext::new(addr.clone(), addr, vec![],))
+            .write(&mut WriteContext::new(addr.clone(), addr, alloc_buffer([])))
             .await
             .is_ok());
     }

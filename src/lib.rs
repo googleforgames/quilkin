@@ -18,12 +18,16 @@
 
 pub(crate) mod collections;
 pub(crate) mod metrics;
+pub mod pool;
+
+// Above other modules for thr `uring_spawn` macro.
+#[macro_use]
+pub mod net;
 
 pub mod cli;
 pub mod codec;
 pub mod config;
 pub mod filters;
-pub mod net;
 
 #[doc(hidden)]
 pub mod test;

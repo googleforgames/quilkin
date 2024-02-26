@@ -26,7 +26,8 @@ use crate::{
     filters::{prelude::*, FilterRegistry},
     net::endpoint::metadata::Value,
     net::endpoint::{Endpoint, EndpointAddress},
-    net::DualStackLocalSocket,
+    net::DualStackEpollSocket as DualStackLocalSocket,
+    pool::BufferPool,
     ShutdownKind, ShutdownRx, ShutdownTx,
 };
 
@@ -89,7 +90,7 @@ impl Filter for TestFilter {
             .or_insert_with(|| Value::String("receive".into()));
 
         ctx.contents
-            .append(&mut format!(":odr:{}", ctx.source).into_bytes());
+            .extend_from_slice(format!(":odr:{}", ctx.source).as_bytes());
         Ok(())
     }
 
@@ -101,7 +102,7 @@ impl Filter for TestFilter {
             .or_insert_with(|| Value::String("receive".to_string()));
 
         ctx.contents
-            .append(&mut format!(":our:{}:{}", ctx.source, ctx.dest).into_bytes());
+            .extend_from_slice(format!(":our:{}:{}", ctx.source, ctx.dest).as_bytes());
         Ok(())
     }
 }
@@ -264,16 +265,12 @@ impl TestHelper {
         addr.into()
     }
 
-    pub fn run_server_with_config(&mut self, config: Arc<Config>) {
-        self.run_server(config, crate::cli::Proxy::default(), None)
-    }
-
-    pub fn run_server(
+    pub async fn run_server(
         &mut self,
         config: Arc<Config>,
-        server: crate::cli::Proxy,
+        server: Option<crate::cli::Proxy>,
         with_admin: Option<Option<SocketAddr>>,
-    ) {
+    ) -> u16 {
         let (shutdown_tx, shutdown_rx) = crate::make_shutdown_channel(crate::ShutdownKind::Testing);
         self.server_shutdown_tx.push(Some(shutdown_tx));
         let mode = crate::cli::Admin::Proxy(<_>::default());
@@ -282,9 +279,28 @@ impl TestHelper {
             mode.server(config.clone(), address);
         }
 
-        tokio::spawn(async move {
-            server.run(config, mode, shutdown_rx).await.unwrap();
+        let mut server = server.unwrap_or_else(|| {
+            crate::cli::Proxy {
+                // Use an ephemeral port unless the test specifies otherwise
+                port: 0,
+                ..Default::default()
+            }
         });
+
+        if server.workers.is_none() {
+            server.workers = Some(1.try_into().unwrap());
+        }
+
+        let (prox_tx, prox_rx) = tokio::sync::oneshot::channel();
+
+        tokio::spawn(async move {
+            server
+                .run(config, mode, Some(prox_tx), shutdown_rx)
+                .await
+                .unwrap();
+        });
+
+        prox_rx.await.unwrap()
     }
 
     /// Returns a receiver subscribed to the helper's shutdown event.
@@ -302,18 +318,31 @@ impl TestHelper {
     }
 }
 
+pub static BUFFER_POOL: once_cell::sync::Lazy<Arc<BufferPool>> =
+    once_cell::sync::Lazy::new(|| Arc::new(BufferPool::default()));
+
+#[inline]
+pub fn alloc_buffer(data: impl AsRef<[u8]>) -> crate::pool::PoolBuffer {
+    BUFFER_POOL.clone().alloc_slice(data.as_ref())
+}
+
 /// assert that read makes no changes
+#[cfg(test)]
 pub async fn assert_filter_read_no_change<F>(filter: &F)
 where
     F: Filter,
 {
-    let endpoints = vec!["127.0.0.1:80".parse::<Endpoint>().unwrap()];
+    let endpoints = std::sync::Arc::new(crate::net::cluster::ClusterMap::default());
+    endpoints.insert_default(std::collections::BTreeSet::from(["127.0.0.1:80"
+        .parse::<Endpoint>()
+        .unwrap()]));
     let source = "127.0.0.1:90".parse().unwrap();
-    let contents = "hello".to_string().into_bytes();
-    let mut context = ReadContext::new(endpoints.clone(), source, contents.clone());
+    let contents = b"hello";
+    let mut context = ReadContext::new(endpoints.clone(), source, alloc_buffer(contents));
 
     filter.read(&mut context).await.unwrap();
-    assert_eq!(endpoints, &*context.endpoints);
+    assert!(context.destinations.is_empty());
+    assert_eq!(endpoints, context.endpoints);
     assert_eq!(contents, &*context.contents);
 }
 
@@ -323,11 +352,11 @@ where
     F: Filter,
 {
     let endpoint = "127.0.0.1:90".parse::<Endpoint>().unwrap();
-    let contents = "hello".to_string().into_bytes();
+    let contents = b"hello";
     let mut context = WriteContext::new(
         endpoint.address,
         "127.0.0.1:70".parse().unwrap(),
-        contents.clone(),
+        alloc_buffer(contents),
     );
 
     filter.write(&mut context).await.unwrap();
@@ -352,20 +381,58 @@ pub async fn create_socket() -> DualStackLocalSocket {
     DualStackLocalSocket::new(0).unwrap()
 }
 
-pub fn config_with_dummy_endpoint() -> Config {
-    let config = Config::default();
-
-    config.clusters.write().insert(
-        None,
-        [Endpoint {
-            address: (std::net::Ipv4Addr::LOCALHOST, 8080).into(),
-            ..<_>::default()
-        }]
-        .into(),
-    );
-
-    config
+fn test_proxy_id() -> String {
+    "test-proxy-id".to_owned()
 }
+
+/// Copy of [`crate::config::Config`] without all of the watcher things making
+/// debugging tests confusing
+#[derive(serde::Serialize, serde::Deserialize, Default)]
+pub struct TestConfig {
+    #[serde(default)]
+    pub clusters: crate::net::ClusterMap,
+    #[serde(default)]
+    pub filters: crate::filters::FilterChain,
+    #[serde(default = "test_proxy_id")]
+    pub id: String,
+    #[serde(default)]
+    pub version: crate::config::Version,
+}
+
+impl TestConfig {
+    pub fn with_dummy_endpoint() -> Self {
+        let config = Self::default();
+        config.clusters.insert(
+            None,
+            [Endpoint::new((std::net::Ipv4Addr::LOCALHOST, 8080).into())].into(),
+        );
+        config
+    }
+
+    #[track_caller]
+    pub fn new() -> Self {
+        Self {
+            filters: crate::filters::FilterChain::try_create(std::iter::once(
+                crate::config::Filter {
+                    name: "TestFilter".into(),
+                    label: None,
+                    config: None,
+                },
+            ))
+            .unwrap(),
+            ..Default::default()
+        }
+    }
+
+    pub fn write_to_file(&self, path: impl AsRef<std::path::Path>) {
+        std::fs::write(
+            path,
+            serde_yaml::to_string(self).expect("failed to serialize TestConfig"),
+        )
+        .expect("failed to write TestConfig to path");
+    }
+}
+
 /// Creates a dummy endpoint with `id` as a suffix.
 pub fn ep(id: u8) -> Endpoint {
     Endpoint {
@@ -374,23 +441,38 @@ pub fn ep(id: u8) -> Endpoint {
     }
 }
 
-#[track_caller]
-pub fn new_test_config() -> crate::Config {
-    crate::Config {
-        filters: crate::config::Slot::new(
-            crate::filters::FilterChain::try_from(vec![crate::config::Filter {
-                name: "TestFilter".into(),
-                label: None,
-                config: None,
-            }])
-            .unwrap(),
-        ),
-        ..<_>::default()
-    }
-}
-
 pub fn load_test_filters() {
     FilterRegistry::register([TestFilter::factory()]);
+}
+
+/// Macro that can get the function name of the function the macro is invoked
+/// within
+#[macro_export]
+macro_rules! __func_name {
+    () => {{
+        fn f() {}
+        fn type_name_of<T>(_: T) -> &'static str {
+            std::any::type_name::<T>()
+        }
+        let name = type_name_of(f);
+        &name[..name.len() - 3]
+    }};
+}
+
+/// Creates a temporary file with the specified prefix in a directory named
+/// after the calling function, ie using it within a test will place it in a
+/// temporary directory named after the test
+#[macro_export]
+macro_rules! temp_file {
+    ($prefix:expr) => {{
+        let name = $crate::__func_name!();
+        let name = name.strip_suffix("::{{closure}}").unwrap_or(name);
+        let mut name = name.replace("::", ".");
+        name.push('-');
+        name.push_str($prefix);
+        name.push('-');
+        tempfile::NamedTempFile::with_prefix(name).unwrap()
+    }};
 }
 
 #[cfg(test)]

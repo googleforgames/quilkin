@@ -18,55 +18,81 @@ pub mod agones;
 mod fs;
 
 pub use self::{agones::watch as agones, fs::watch as fs};
+use std::sync::Arc;
 
 use tokio::sync::watch;
 
 #[derive(Clone, Debug)]
 pub struct Watch<T> {
-    value: std::sync::Arc<T>,
-    watchers: std::sync::Arc<watch::Sender<T>>,
+    value: Arc<T>,
+    watchers: Arc<watch::Sender<Arc<T>>>,
 }
 
-impl<T: Clone> Watch<T> {
+impl<T> Watch<T> {
     pub fn new(value: T) -> Self {
+        let value = Arc::new(value);
         Self {
-            watchers: std::sync::Arc::new(watch::channel(value.clone()).0),
-            value: std::sync::Arc::new(value),
+            watchers: Arc::new(watch::channel(value.clone()).0),
+            value,
         }
     }
 
-    pub fn watch(&self) -> watch::Receiver<T> {
+    #[inline]
+    pub fn watch(&self) -> watch::Receiver<Arc<T>> {
         self.watchers.subscribe()
+    }
+
+    #[inline]
+    pub fn clone_value(&self) -> Arc<T> {
+        self.value.clone()
     }
 }
 
-impl<T: Clone + PartialEq + std::fmt::Debug> Watch<T> {
+#[derive(Clone, Copy)]
+pub enum Marker {
+    Version(u64),
+}
+
+pub trait Watchable {
+    fn mark(&self) -> Marker;
+    fn has_changed(&self, marker: Marker) -> bool;
+}
+
+impl<T: Watchable + std::fmt::Debug> Watch<T> {
     pub fn read(&self) -> ReadGuard<T> {
-        ReadGuard { inner: self }
+        ReadGuard {
+            inner: self,
+            marker: self.value.mark(),
+        }
     }
 
     pub fn write(&self) -> WatchGuard<T> {
-        WatchGuard { inner: self }
+        WatchGuard {
+            inner: self,
+            marker: self.value.mark(),
+        }
     }
 
-    pub fn modify(&self, func: impl FnOnce(&WatchGuard<T>)) {
-        (func)(&WatchGuard { inner: self })
+    #[inline]
+    pub fn modify<R>(&self, func: impl FnOnce(&WatchGuard<T>) -> R) -> R {
+        (func)(&WatchGuard {
+            inner: self,
+            marker: self.value.mark(),
+        })
     }
 
-    pub fn has_changed(&self) -> bool {
-        *self.value != *self.watchers.borrow()
+    #[inline]
+    fn has_changed(&self, marker: Marker) -> bool {
+        self.value.has_changed(marker)
     }
 
-    pub fn check_for_changes(&self) {
-        if self.has_changed() {
-            tracing::debug!(
-                watchers = self.watchers.receiver_count(),
-                "changed detected"
-            );
+    fn check_for_changes(&self, marker: Marker) {
+        if self.has_changed(marker) {
+            tracing::trace!(watchers = self.watchers.receiver_count(), "change detected");
             self.watchers
-                .send_modify(|value| *value = (*self.value).clone());
+                .send_modify(|value| *value = self.value.clone());
         } else {
-            tracing::debug!("no change detected");
+            tracing::trace!("no change detected");
         }
     }
 }
@@ -105,17 +131,18 @@ impl<T: schemars::JsonSchema> schemars::JsonSchema for Watch<T> {
     }
 }
 
-pub struct ReadGuard<'inner, T: Clone + PartialEq + std::fmt::Debug> {
+pub struct ReadGuard<'inner, T: Watchable + std::fmt::Debug> {
     inner: &'inner Watch<T>,
+    marker: Marker,
 }
 
-impl<'inner, T: Clone + PartialEq + std::fmt::Debug> Drop for ReadGuard<'inner, T> {
+impl<'inner, T: Watchable + std::fmt::Debug> Drop for ReadGuard<'inner, T> {
     fn drop(&mut self) {
-        debug_assert!(!self.inner.has_changed());
+        debug_assert!(!self.inner.has_changed(self.marker));
     }
 }
 
-impl<'inner, T: Clone + PartialEq + std::fmt::Debug> std::ops::Deref for ReadGuard<'inner, T> {
+impl<'inner, T: Watchable + std::fmt::Debug> std::ops::Deref for ReadGuard<'inner, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -123,17 +150,18 @@ impl<'inner, T: Clone + PartialEq + std::fmt::Debug> std::ops::Deref for ReadGua
     }
 }
 
-pub struct WatchGuard<'inner, T: Clone + PartialEq + std::fmt::Debug> {
+pub struct WatchGuard<'inner, T: Watchable + std::fmt::Debug> {
     inner: &'inner Watch<T>,
+    marker: Marker,
 }
 
-impl<'inner, T: Clone + PartialEq + std::fmt::Debug> Drop for WatchGuard<'inner, T> {
+impl<'inner, T: Watchable + std::fmt::Debug> Drop for WatchGuard<'inner, T> {
     fn drop(&mut self) {
-        self.inner.check_for_changes();
+        self.inner.check_for_changes(self.marker);
     }
 }
 
-impl<'inner, T: Clone + PartialEq + std::fmt::Debug> std::ops::Deref for WatchGuard<'inner, T> {
+impl<'inner, T: Watchable + std::fmt::Debug> std::ops::Deref for WatchGuard<'inner, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -141,10 +169,12 @@ impl<'inner, T: Clone + PartialEq + std::fmt::Debug> std::ops::Deref for WatchGu
     }
 }
 
+#[cfg(test)]
 impl<T: PartialEq> PartialEq for Watch<T> {
     fn eq(&self, rhs: &Self) -> bool {
         self.value.eq(&rhs.value)
     }
 }
 
+#[cfg(test)]
 impl<T: Eq> Eq for Watch<T> {}

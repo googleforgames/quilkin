@@ -170,6 +170,7 @@ mod tests {
     use crate::{
         filters::*,
         net::endpoint::{metadata, Endpoint},
+        test::alloc_buffer,
     };
 
     #[tokio::test]
@@ -189,14 +190,14 @@ mod tests {
         };
         let filter = Match::new(config, metrics).unwrap();
         let endpoint: Endpoint = Default::default();
-        let contents = "hello".to_string().into_bytes();
+        let contents = b"hello";
 
         // no config, so should make no change.
         filter
             .write(&mut WriteContext::new(
                 endpoint.address,
                 "127.0.0.1:70".parse().unwrap(),
-                contents.clone(),
+                alloc_buffer(contents),
             ))
             .await
             .unwrap();
@@ -205,10 +206,13 @@ mod tests {
         assert_eq!(0, filter.metrics.packets_matched_total.get());
 
         // config so we can test match and fallthrough.
+        let endpoints = crate::net::cluster::ClusterMap::new_default(
+            [Endpoint::new("127.0.0.1:81".parse().unwrap())].into(),
+        );
         let mut ctx = ReadContext::new(
-            vec![Default::default()],
+            endpoints.into(),
             ([127, 0, 0, 1], 7000).into(),
-            contents.clone(),
+            alloc_buffer(contents),
         );
         ctx.metadata.insert(key, "abc".into());
 
@@ -216,10 +220,13 @@ mod tests {
         assert_eq!(1, filter.metrics.packets_matched_total.get());
         assert_eq!(0, filter.metrics.packets_fallthrough_total.get());
 
+        let endpoints = crate::net::cluster::ClusterMap::new_default(
+            [Endpoint::new("127.0.0.1:81".parse().unwrap())].into(),
+        );
         let mut ctx = ReadContext::new(
-            vec![Default::default()],
+            endpoints.into(),
             ([127, 0, 0, 1], 7000).into(),
-            contents,
+            alloc_buffer(contents),
         );
         ctx.metadata.insert(key, "xyz".into());
 

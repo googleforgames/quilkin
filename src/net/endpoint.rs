@@ -137,6 +137,7 @@ impl PartialOrd for Endpoint {
 impl std::hash::Hash for Endpoint {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.address.hash(state);
+        self.metadata.known.tokens.hash(state);
     }
 }
 

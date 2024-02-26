@@ -17,7 +17,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use super::compressor::{Compressor, Snappy};
+use super::compressor::Compressor;
 use super::quilkin::filters::compress::v1alpha1::{
     compress::{Action as ProtoAction, ActionValue, Mode as ProtoMode, ModeValue},
     Compress as ProtoConfig,
@@ -32,13 +32,13 @@ pub enum Mode {
     #[serde(rename = "SNAPPY")]
     #[default]
     Snappy,
+    #[serde(rename = "LZ4")]
+    Lz4,
 }
 
 impl Mode {
-    pub(crate) fn as_compressor(&self) -> Box<dyn Compressor + Send + Sync> {
-        match self {
-            Self::Snappy => Box::from(Snappy {}),
-        }
+    pub(crate) fn as_compressor(self) -> Compressor {
+        self.into()
     }
 }
 
@@ -46,6 +46,7 @@ impl From<Mode> for ProtoMode {
     fn from(mode: Mode) -> Self {
         match mode {
             Mode::Snappy => Self::Snappy,
+            Mode::Lz4 => Self::Lz4,
         }
     }
 }
@@ -54,6 +55,7 @@ impl From<ProtoMode> for Mode {
     fn from(mode: ProtoMode) -> Self {
         match mode {
             ProtoMode::Snappy => Self::Snappy,
+            ProtoMode::Lz4 => Self::Lz4,
         }
     }
 }

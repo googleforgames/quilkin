@@ -20,11 +20,12 @@ mod metrics;
 
 crate::include_proto!("quilkin.filters.compress.v1alpha1");
 
-use crate::filters::prelude::*;
+use crate::{filters::prelude::*, pool::BufferPool};
 
 use self::quilkin::filters::compress::v1alpha1 as proto;
-use compressor::Compressor;
+pub use compressor::Compressor;
 use metrics::Metrics;
+use std::sync::Arc;
 
 pub use config::{Action, Config, Mode};
 
@@ -37,7 +38,8 @@ pub struct Compress {
     compression_mode: Mode,
     on_read: Action,
     on_write: Action,
-    compressor: Box<dyn Compressor + Sync + Send>,
+    pool: Arc<BufferPool>,
+    compressor: Compressor,
 }
 
 impl Compress {
@@ -48,6 +50,7 @@ impl Compress {
             compression_mode: config.mode,
             on_read: config.on_read,
             on_write: config.on_write,
+            pool: Arc::new(BufferPool::new(num_cpus::get(), 64 * 1024)),
         }
     }
 }
@@ -59,30 +62,34 @@ impl Filter for Compress {
         let original_size = ctx.contents.len();
 
         match self.on_read {
-            Action::Compress => match self.compressor.encode(&mut ctx.contents) {
-                Ok(()) => {
-                    self.metrics
-                        .read_decompressed_bytes_total
-                        .inc_by(original_size as u64);
-                    self.metrics
-                        .read_compressed_bytes_total
-                        .inc_by(ctx.contents.len() as u64);
-                    Ok(())
+            Action::Compress => {
+                match self.compressor.encode(self.pool.clone(), &mut ctx.contents) {
+                    Ok(()) => {
+                        self.metrics
+                            .read_decompressed_bytes_total
+                            .inc_by(original_size as u64);
+                        self.metrics
+                            .read_compressed_bytes_total
+                            .inc_by(ctx.contents.len() as u64);
+                        Ok(())
+                    }
+                    Err(err) => Err(FilterError::new(err)),
                 }
-                Err(err) => Err(FilterError::new(err)),
-            },
-            Action::Decompress => match self.compressor.decode(&mut ctx.contents) {
-                Ok(()) => {
-                    self.metrics
-                        .read_compressed_bytes_total
-                        .inc_by(original_size as u64);
-                    self.metrics
-                        .read_decompressed_bytes_total
-                        .inc_by(ctx.contents.len() as u64);
-                    Ok(())
+            }
+            Action::Decompress => {
+                match self.compressor.decode(self.pool.clone(), &mut ctx.contents) {
+                    Ok(()) => {
+                        self.metrics
+                            .read_compressed_bytes_total
+                            .inc_by(original_size as u64);
+                        self.metrics
+                            .read_decompressed_bytes_total
+                            .inc_by(ctx.contents.len() as u64);
+                        Ok(())
+                    }
+                    Err(err) => Err(FilterError::new(err)),
                 }
-                Err(err) => Err(FilterError::new(err)),
-            },
+            }
             Action::DoNothing => Ok(()),
         }
     }
@@ -91,31 +98,35 @@ impl Filter for Compress {
     async fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
         let original_size = ctx.contents.len();
         match self.on_write {
-            Action::Compress => match self.compressor.encode(&mut ctx.contents) {
-                Ok(()) => {
-                    self.metrics
-                        .write_decompressed_bytes_total
-                        .inc_by(original_size as u64);
-                    self.metrics
-                        .write_compressed_bytes_total
-                        .inc_by(ctx.contents.len() as u64);
-                    Ok(())
+            Action::Compress => {
+                match self.compressor.encode(self.pool.clone(), &mut ctx.contents) {
+                    Ok(()) => {
+                        self.metrics
+                            .write_decompressed_bytes_total
+                            .inc_by(original_size as u64);
+                        self.metrics
+                            .write_compressed_bytes_total
+                            .inc_by(ctx.contents.len() as u64);
+                        Ok(())
+                    }
+                    Err(err) => Err(FilterError::new(err)),
                 }
-                Err(err) => Err(FilterError::new(err)),
-            },
-            Action::Decompress => match self.compressor.decode(&mut ctx.contents) {
-                Ok(()) => {
-                    self.metrics
-                        .write_compressed_bytes_total
-                        .inc_by(original_size as u64);
-                    self.metrics
-                        .write_decompressed_bytes_total
-                        .inc_by(ctx.contents.len() as u64);
-                    Ok(())
-                }
+            }
+            Action::Decompress => {
+                match self.compressor.decode(self.pool.clone(), &mut ctx.contents) {
+                    Ok(()) => {
+                        self.metrics
+                            .write_compressed_bytes_total
+                            .inc_by(original_size as u64);
+                        self.metrics
+                            .write_decompressed_bytes_total
+                            .inc_by(ctx.contents.len() as u64);
+                        Ok(())
+                    }
 
-                Err(err) => Err(FilterError::new(err)),
-            },
+                    Err(err) => Err(FilterError::new(err)),
+                }
+            }
             Action::DoNothing => Ok(()),
         }
     }
@@ -136,7 +147,11 @@ impl StaticFilter for Compress {
 
 #[cfg(test)]
 mod tests {
-    use crate::{filters::compress::compressor::Snappy, net::endpoint::Endpoint};
+    use crate::{
+        filters::compress::compressor::Compressor,
+        net::endpoint::Endpoint,
+        test::{alloc_buffer, BUFFER_POOL},
+    };
 
     use super::*;
 
@@ -152,9 +167,21 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn config_factory() {
+    async fn config_factory_snappy() {
         let config = serde_json::json!({
             "mode": "SNAPPY".to_string(),
+            "on_read": "DECOMPRESS".to_string(),
+            "on_write": "COMPRESS".to_string(),
+
+        });
+        let filter = Compress::from_config(Some(serde_json::from_value(config).unwrap()));
+        assert_downstream(&filter).await;
+    }
+
+    #[tokio::test]
+    async fn config_factory_lz4() {
+        let config = serde_json::json!({
+            "mode": "LZ4".to_string(),
             "on_read": "DECOMPRESS".to_string(),
             "on_write": "COMPRESS".to_string(),
 
@@ -176,10 +203,13 @@ mod tests {
         let expected = contents_fixture();
 
         // read compress
+        let endpoints = crate::net::cluster::ClusterMap::new_default(
+            [Endpoint::new("127.0.0.1:81".parse().unwrap())].into(),
+        );
         let mut read_context = ReadContext::new(
-            vec![Endpoint::new("127.0.0.1:80".parse().unwrap())],
+            endpoints.into(),
             "127.0.0.1:8080".parse().unwrap(),
-            expected.clone(),
+            alloc_buffer(&expected),
         );
         compress
             .read(&mut read_context)
@@ -198,7 +228,7 @@ mod tests {
         let mut write_context = WriteContext::new(
             "127.0.0.1:8080".parse().unwrap(),
             "127.0.0.1:8081".parse().unwrap(),
-            read_context.contents.clone(),
+            read_context.contents,
         );
 
         compress
@@ -224,7 +254,7 @@ mod tests {
             .write(&mut WriteContext::new(
                 "127.0.0.1:8080".parse().unwrap(),
                 "127.0.0.1:8081".parse().unwrap(),
-                b"hello".to_vec(),
+                alloc_buffer(b"hello"),
             ))
             .await
             .is_err());
@@ -238,11 +268,14 @@ mod tests {
             Metrics::new(),
         );
 
+        let endpoints = crate::net::cluster::ClusterMap::new_default(
+            [Endpoint::new("127.0.0.1:81".parse().unwrap())].into(),
+        );
         assert!(compression
             .read(&mut ReadContext::new(
-                vec![Endpoint::new("127.0.0.1:80".parse().unwrap())],
+                endpoints.into(),
                 "127.0.0.1:8080".parse().unwrap(),
-                b"hello".to_vec(),
+                alloc_buffer(b"hello"),
             ))
             .await
             .is_err());
@@ -259,10 +292,13 @@ mod tests {
             Metrics::new(),
         );
 
+        let endpoints = crate::net::cluster::ClusterMap::new_default(
+            [Endpoint::new("127.0.0.1:81".parse().unwrap())].into(),
+        );
         let mut read_context = ReadContext::new(
-            vec![Endpoint::new("127.0.0.1:80".parse().unwrap())],
+            endpoints.into(),
             "127.0.0.1:8080".parse().unwrap(),
-            b"hello".to_vec(),
+            alloc_buffer(b"hello"),
         );
         compression.read(&mut read_context).await.unwrap();
         assert_eq!(b"hello", &*read_context.contents);
@@ -270,7 +306,7 @@ mod tests {
         let mut write_context = WriteContext::new(
             "127.0.0.1:8080".parse().unwrap(),
             "127.0.0.1:8081".parse().unwrap(),
-            b"hello".to_vec(),
+            alloc_buffer(b"hello"),
         );
 
         compression.write(&mut write_context).await.unwrap();
@@ -278,20 +314,19 @@ mod tests {
         assert_eq!(b"hello".to_vec(), &*write_context.contents)
     }
 
-    #[test]
-    fn snappy() {
+    fn roundtrip_compression(compressor: Compressor) {
         let expected = contents_fixture();
-        let mut contents = expected.clone();
-        let snappy = Snappy {};
+        let mut contents = alloc_buffer(&expected);
 
-        let ok = snappy.encode(&mut contents);
-        assert!(ok.is_ok());
+        compressor
+            .encode(BUFFER_POOL.clone(), &mut contents)
+            .expect("failed to compress");
         assert!(
             !contents.is_empty(),
             "compressed array should be greater than 0"
         );
         assert_ne!(
-            expected, contents,
+            expected, &*contents,
             "should not be equal, as one should be compressed"
         );
         assert!(
@@ -301,25 +336,35 @@ mod tests {
             contents.len()
         ); // 45000 bytes uncompressed, 276 bytes compressed
 
-        let ok = snappy.decode(&mut contents);
-        assert!(ok.is_ok());
+        compressor
+            .decode(BUFFER_POOL.clone(), &mut contents)
+            .expect("failed to decompress");
         assert_eq!(
-            expected, contents,
+            expected, &*contents,
             "should be equal, as decompressed state should go back to normal"
         );
     }
 
+    #[test]
+    fn snappy() {
+        roundtrip_compression(Mode::Snappy.into());
+    }
+
+    #[test]
+    fn lz4() {
+        roundtrip_compression(Mode::Lz4.into());
+    }
+
     /// At small data packets, compression will add data, so let's give a bigger data packet!
     fn contents_fixture() -> Vec<u8> {
-        String::from("hello my name is mark and I like to do things")
+        "hello my name is mark and I like to do things"
             .repeat(100)
-            .as_bytes()
-            .to_vec()
+            .into_bytes()
     }
 
     /// assert compression work with decompress on read and compress on write
     /// Returns the original data packet, and the compressed version
-    async fn assert_downstream<F>(filter: &F) -> (Vec<u8>, Vec<u8>)
+    async fn assert_downstream<F>(filter: &F)
     where
         F: Filter + ?Sized,
     {
@@ -328,7 +373,7 @@ mod tests {
         let mut write_context = WriteContext::new(
             "127.0.0.1:8080".parse().unwrap(),
             "127.0.0.1:8081".parse().unwrap(),
-            expected.clone(),
+            alloc_buffer(&expected),
         );
 
         filter
@@ -345,10 +390,13 @@ mod tests {
         );
 
         // read decompress
+        let endpoints = crate::net::cluster::ClusterMap::new_default(
+            [Endpoint::new("127.0.0.1:81".parse().unwrap())].into(),
+        );
         let mut read_context = ReadContext::new(
-            vec![Endpoint::new("127.0.0.1:80".parse().unwrap())],
+            endpoints.into(),
             "127.0.0.1:8080".parse().unwrap(),
-            write_context.contents.clone(),
+            write_context.contents,
         );
 
         filter
@@ -357,6 +405,5 @@ mod tests {
             .expect("should decompress");
 
         assert_eq!(expected, &*read_context.contents);
-        (expected, write_context.contents.to_vec())
     }
 }

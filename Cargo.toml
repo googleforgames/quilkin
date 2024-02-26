@@ -18,13 +18,13 @@
 members = [".", "./macros", "./agones"]
 
 [workspace.dependencies]
-kube = { version = "0.84.0", features = [
+kube = { version = "0.87.0", features = [
     "derive",
     "runtime",
     "rustls-tls",
     "client",
 ], default-features = false }
-k8s-openapi = { version = "0.18.0", features = ["v1_25", "schemars"] }
+k8s-openapi = { version = "0.20.0", features = ["v1_25", "schemars"] }
 tokio = { version = "1.32.0", features = [
     "rt-multi-thread",
     "fs",
@@ -67,6 +67,11 @@ harness = false
 test = false
 
 [[bench]]
+name = "compression"
+harness = false
+test = false
+
+[[bench]]
 name = "cluster_map"
 harness = false
 test = false
@@ -94,6 +99,7 @@ hyper = { version = "0.14.27", features = ["http2"] }
 hyper-rustls = { version = "0.24.1", features = ["http2", "webpki-roots"] }
 ipnetwork = "0.20.0"
 k8s-openapi.workspace = true
+lz4_flex = { version = "0.11", default-features = false }
 maxminddb = "0.23.0"
 notify = "6.1.1"
 num_cpus = "1.16.0"
@@ -105,6 +111,7 @@ prost-types = "0.12.1"
 rand = "0.8.5"
 regex = "1.9.6"
 schemars = { version = "0.8.15", features = ["chrono", "bytes", "url"] }
+seahash = "4.1"
 serde = { version = "1.0.188", features = ["derive", "rc"] }
 serde_json = "1.0.107"
 serde_regex = "1.1.0"
@@ -134,9 +141,15 @@ async-trait = "0.1.73"
 nom = "7.1.3"
 strum = "0.25.0"
 strum_macros = "0.25.2"
+async-channel = "2.1.0"
+cfg-if = "1.0.0"
+libflate = "2.0.0"
+form_urlencoded = "1.2.1"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 sys-info = "0.9.1"
+tokio-uring = { version = "0.4.0", features = ["bytes"] }
+pprof = { version = "0.13.0", features = ["prost", "prost-codec"] }
 
 [dev-dependencies]
 divan = "0.1.2"
@@ -161,5 +174,7 @@ default = ["vendor-protoc"]
 instrument = []
 vendor-protoc = ["dep:protobuf-src"]
 
-[profile.release]
+# We want debug information when doing benchmarks for debugging purposes as well
+# as better (correct) callstacks in perf
+[profile.bench]
 debug = true

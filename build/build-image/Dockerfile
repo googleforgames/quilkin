@@ -25,7 +25,7 @@ ENV RUSTUP_HOME=/usr/local/rustup \
 # Install packages
 RUN set -eux && \
     apt-get update && \
-    apt-get install -y lsb-release jq curl wget zip build-essential software-properties-common \
+    apt-get install -y lsb-release jq curl wget zip git build-essential software-properties-common \
         libssl-dev pkg-config python3-pip bash-completion g++-x86-64-linux-gnu g++-mingw-w64-x86-64 && \
     pip3 install live-server && \
     echo "source /etc/bash_completion" >> /root/.bashrc
@@ -50,6 +50,9 @@ RUN curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | b
 WORKDIR /tmp
 RUN wget --quiet -O htmltest.tar.gz "https://github.com/wjdp/htmltest/releases/download/v0.16.0/htmltest_0.16.0_linux_$(dpkg --print-architecture).tar.gz" && \
      tar -xf htmltest.tar.gz && mv ./htmltest /usr/local/bin/ && rm htmltest.tar.gz
+
+# Add /workspace as a git safe directory
+RUN git config --global --add safe.directory /workspace
 
 # Install Rust. Inspiration from: https://github.com/rust-lang/docker-rust/blob/master/1.64.0/bullseye/Dockerfile
 RUN set -eux; \

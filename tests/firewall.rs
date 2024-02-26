@@ -203,8 +203,8 @@ async fn test(
     };
 
     let client_addr = match address_type {
-        AddressType::Ipv4 => socket.local_ipv4_addr().unwrap(),
-        AddressType::Ipv6 => socket.local_ipv6_addr().unwrap(),
+        AddressType::Ipv4 => socket.local_addr().unwrap(),
+        AddressType::Ipv6 => socket.local_addr().unwrap(),
         AddressType::Random => unreachable!(),
     };
 
@@ -219,7 +219,7 @@ async fn test(
     };
     let server_config = std::sync::Arc::new(quilkin::Config::default());
     server_config.filters.store(
-        quilkin::filters::FilterChain::try_from(vec![Filter {
+        quilkin::filters::FilterChain::try_create([Filter {
             name: Firewall::factory().name().into(),
             label: None,
             config: serde_yaml::from_str(yaml.as_str()).unwrap(),
@@ -232,7 +232,7 @@ async fn test(
         .clusters
         .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
 
-    t.run_server(server_config, server_proxy, None);
+    t.run_server(server_config, Some(server_proxy), None).await;
 
     let local_addr: SocketAddr = match address_type {
         AddressType::Ipv4 => (std::net::Ipv4Addr::LOCALHOST, server_port).into(),

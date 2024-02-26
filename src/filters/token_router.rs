@@ -54,7 +54,7 @@ impl Filter for TokenRouter {
     async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         match ctx.metadata.get(&self.config.metadata_key) {
             Some(metadata::Value::Bytes(token)) => {
-                ctx.endpoints.retain(|endpoint| {
+                ctx.destinations = ctx.endpoints.filter_endpoints(|endpoint| {
                     if endpoint.metadata.known.tokens.contains(&**token) {
                         tracing::trace!(%endpoint.address, token = &*crate::codec::base64::encode(token), "Endpoint matched");
                         true
@@ -63,7 +63,7 @@ impl Filter for TokenRouter {
                     }
                 });
 
-                if ctx.endpoints.is_empty() {
+                if ctx.destinations.is_empty() {
                     Err(FilterError::new(Error::NoEndpointMatch(
                         self.config.metadata_key,
                         crate::codec::base64::encode(token),
@@ -257,10 +257,14 @@ mod tests {
             },
         );
 
+        let pool = std::sync::Arc::new(crate::pool::BufferPool::new(1, 5));
+
+        let endpoints = crate::net::cluster::ClusterMap::default();
+        endpoints.insert_default([endpoint1, endpoint2].into());
         ReadContext::new(
-            vec![endpoint1, endpoint2],
+            endpoints.into(),
             "127.0.0.1:100".parse().unwrap(),
-            b"hello".to_vec(),
+            pool.alloc_slice(b"hello"),
         )
     }
 
@@ -270,6 +274,6 @@ mod tests {
     {
         filter.read(&mut ctx).await.unwrap();
 
-        assert_eq!(b"hello", &*ctx.contents);
+        assert_eq!(b"hello", ctx.contents.as_ref());
     }
 }

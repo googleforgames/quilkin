@@ -53,6 +53,7 @@ pub struct Manage {
 }
 
 impl Manage {
+    #[tracing::instrument(skip_all)]
     pub async fn manage(
         &self,
         config: std::sync::Arc<crate::Config>,
@@ -88,7 +89,18 @@ impl Manage {
                 self.relay.clone(),
             )
             .await?;
-            Some(client.mds_client_stream(config.clone()))
+
+            enum XdsTask {
+                Delta(crate::net::xds::client::DeltaSubscription),
+                Aggregated(crate::net::xds::client::MdsStream),
+            }
+
+            // Attempt to connect to a delta stream if the relay has one
+            // available, otherwise fallback to the regular aggregated stream
+            Some(match client.delta_stream(config.clone()).await {
+                Ok(ds) => XdsTask::Delta(ds),
+                Err(client) => XdsTask::Aggregated(client.mds_client_stream(config.clone())),
+            })
         } else {
             None
         };

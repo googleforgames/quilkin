@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 pub use std::{
     net::{Ipv4Addr, SocketAddr, SocketAddrV4, UdpSocket},
     sync::{atomic, mpsc, Arc},
@@ -293,7 +295,6 @@ impl<const N: usize> Writer<N> {
     }
 }
 
-#[allow(dead_code)]
 pub struct QuilkinLoop {
     shutdown: Option<quilkin::ShutdownTx>,
     thread: Option<std::thread::JoinHandle<()>>,
@@ -341,7 +342,7 @@ impl QuilkinLoop {
 
             runtime.block_on(async move {
                 let admin = quilkin::cli::Admin::Proxy(<_>::default());
-                proxy.run(config, admin, shutdown_rx).await.unwrap();
+                proxy.run(config, admin, None, shutdown_rx).await.unwrap();
             });
         });
 

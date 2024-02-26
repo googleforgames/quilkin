@@ -21,11 +21,10 @@ package quilkin.filters.compress.v1alpha1;
 message Compress {
   enum Mode {
     Snappy = 0;
+    Lz4 = 1;
   }
 
-  message ModeValue {
-    Mode value = 1;
-  }
+  message ModeValue { Mode value = 1; }
 
   enum Action {
     DoNothing = 0;
@@ -33,12 +32,9 @@ message Compress {
     Decompress = 2;
   }
 
-  message ActionValue {
-    Action value = 1;
-  }
+  message ActionValue { Action value = 1; }
 
   ModeValue mode = 1;
   ActionValue on_read = 2;
   ActionValue on_write = 3;
 }
-

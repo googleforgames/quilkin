@@ -53,7 +53,7 @@ pub struct Agent {
     pub provider: Option<crate::config::Providers>,
     /// The interval in seconds at which the agent will wait for a discovery
     /// request from a relay server before restarting the connection.
-    #[clap(long, env = "QUILKIN_IDLE_REQUEST_INTERVAL_SECS", default_value_t = super::admin::IDLE_REQUEST_INTERVAL_SECS)]
+    #[clap(long, env = "QUILKIN_IDLE_REQUEST_INTERVAL_SECS", default_value_t = super::admin::idle_request_interval_secs())]
     pub idle_request_interval_secs: u64,
 }
 
@@ -66,12 +66,13 @@ impl Default for Agent {
             zone: <_>::default(),
             sub_zone: <_>::default(),
             provider: <_>::default(),
-            idle_request_interval_secs: super::admin::IDLE_REQUEST_INTERVAL_SECS,
+            idle_request_interval_secs: super::admin::idle_request_interval_secs(),
         }
     }
 }
 
 impl Agent {
+    #[tracing::instrument(skip_all)]
     pub async fn run(
         &self,
         config: Arc<Config>,
@@ -105,7 +106,23 @@ impl Agent {
             );
 
             tokio::select! {
-                result = task => Some(result?.mds_client_stream(config.clone())),
+                result = task => {
+                    let client = result?;
+
+                    enum XdsTask {
+                        Delta(crate::net::xds::client::DeltaSubscription),
+                        Aggregated(crate::net::xds::client::MdsStream),
+                    }
+
+                    // Attempt to connect to a delta stream if the relay has one
+                    // available, otherwise fallback to the regular aggregated stream
+                    Some(match client.delta_stream(config.clone()).await {
+                        Ok(ds) => XdsTask::Delta(ds),
+                        Err(client) => {
+                            XdsTask::Aggregated(client.mds_client_stream(config.clone()))
+                        }
+                    })
+                }
                 _ = shutdown_rx.changed() => return Ok(()),
             }
         } else {
@@ -120,7 +137,7 @@ impl Agent {
 
 #[derive(Clone, Debug, Default)]
 pub struct RuntimeConfig {
-    pub idle_request_interval_secs: u64,
+    pub idle_request_interval: std::time::Duration,
     pub provider_is_healthy: Arc<AtomicBool>,
     pub relay_is_healthy: Arc<AtomicBool>,
 }

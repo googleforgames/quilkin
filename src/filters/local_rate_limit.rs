@@ -207,7 +207,10 @@ mod tests {
     use tokio::time;
 
     use super::*;
-    use crate::{config::ConfigType, test::assert_write_no_change};
+    use crate::{
+        config::ConfigType,
+        test::{alloc_buffer, assert_write_no_change},
+    };
 
     fn rate_limiter(config: Config) -> LocalRateLimit {
         LocalRateLimit::new(config).unwrap()
@@ -222,16 +225,19 @@ mod tests {
 
     /// Send a packet to the filter and assert whether or not it was processed.
     async fn read(r: &LocalRateLimit, address: &EndpointAddress, should_succeed: bool) {
-        let endpoints = vec![crate::net::endpoint::Endpoint::new(
-            (Ipv4Addr::LOCALHOST, 8089).into(),
-        )];
+        let endpoints = crate::net::cluster::ClusterMap::new_default(
+            [crate::net::endpoint::Endpoint::new(
+                (Ipv4Addr::LOCALHOST, 8089).into(),
+            )]
+            .into(),
+        );
 
-        let mut context = ReadContext::new(endpoints, address.clone(), vec![9]);
+        let mut context = ReadContext::new(endpoints.into(), address.clone(), alloc_buffer([9]));
         let result = r.read(&mut context).await;
 
         if should_succeed {
             result.unwrap();
-            assert_eq!(context.contents, vec![9]);
+            assert_eq!(&*context.contents, [9]);
         } else {
             assert!(result.is_err());
         }
