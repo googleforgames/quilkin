@@ -345,8 +345,9 @@ impl RuntimeConfig {
         self.xds_is_healthy
             .read()
             .as_ref()
-            .map_or(true, |health| health.load(Ordering::SeqCst))
-            && config.clusters.read().has_endpoints()
+            .map_or(config.clusters.read().has_endpoints(), |health| {
+                health.load(Ordering::SeqCst)
+            })
     }
 }
 
