@@ -50,17 +50,7 @@ public:
 	static FGetLowestLatencyEndpointInRegion GetLowestLatencyEndpointInRegion;
 
 	/**
-	 * Delegate used to get the endpoint that matches the `Region` paramaeter with the
-	 * lowest median latency. Returns `None` if there are no endpoints matching that region,
-	 * or `MeasureEndpoints` is `false`.
-	 */
-	DECLARE_DELEGATE_RetVal(EndpointMap, FGetLowestLatencyEndpointInEachRegion);
-	static FGetLowestLatencyEndpointInEachRegion GetLowestLatencyEndpointInEachRegion;
-
-	/**
-	 * Delegate used to get the endpoint that matches the `Region` paramaeter with the
-	 * lowest median latency. Returns `None` if there are no endpoints matching that region,
-	 * or `MeasureEndpoints` is `false`.
+	 * Delegate used to get the lowest latency measurement to each datacenter.
 	 */
 	DECLARE_DELEGATE_RetVal(DatacenterMap, FGetLowestLatencyToDatacenters);
 	static FGetLowestLatencyToDatacenters GetLowestLatencyToDatacenters;

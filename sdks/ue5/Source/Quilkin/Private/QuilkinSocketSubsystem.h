@@ -119,8 +119,6 @@ protected:
 	*/
 	TOptional<TTuple<FQuilkinEndpoint, int64>> GetLowestLatencyEndpoint();
 	TOptional<TTuple<FQuilkinEndpoint, int64>> GetLowestLatencyEndpointInRegion(FString Region) const;
-	/* Returns a list of each region and the lowest available latency endpoint in each.  */
-	TMap<FString, TTuple<FQuilkinEndpoint, int64>> GetLowestLatencyEndpointInEachRegion() const;
 	/* Shared implementation between `GetLowestLatencyEndpoint` and `GetLowestLatencyEndpointInRegion`. */
 	TOptional<TTuple<FQuilkinEndpoint, int64>> GetLowestLatencyEndpointImplementation(TOptional<FString> Region) const;
 	void UpdateEndpoints(TArray<FQuilkinEndpoint>);

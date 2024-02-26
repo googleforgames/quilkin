@@ -55,7 +55,6 @@ bool FQuilkinSocketSubsystem::Init(FString& Error)
 	FQuilkinDelegates::GetQuilkinEndpointMeasurements.BindRaw(this, &FQuilkinSocketSubsystem::GetEndpointMeasurements);
 	FQuilkinDelegates::GetLowestLatencyEndpoint.BindRaw(this, &FQuilkinSocketSubsystem::GetLowestLatencyEndpoint);
 	FQuilkinDelegates::GetLowestLatencyEndpointInRegion.BindRaw(this, &FQuilkinSocketSubsystem::GetLowestLatencyEndpointInRegion);
-	FQuilkinDelegates::GetLowestLatencyEndpointInEachRegion.BindRaw(this, &FQuilkinSocketSubsystem::GetLowestLatencyEndpointInEachRegion);
 	FQuilkinDelegates::GetLowestLatencyToDatacenters.BindRaw(this, &FQuilkinSocketSubsystem::GetLowestLatencyToDatacenters);
 
 	return true;
@@ -81,10 +80,6 @@ void FQuilkinSocketSubsystem::Shutdown()
 
 	if (FQuilkinDelegates::GetLowestLatencyEndpointInRegion.IsBound()) {
 		FQuilkinDelegates::GetLowestLatencyEndpointInRegion.Unbind();
-	}
-
-	if (FQuilkinDelegates::GetLowestLatencyEndpointInEachRegion.IsBound()) {
-		FQuilkinDelegates::GetLowestLatencyEndpointInEachRegion.Unbind();
 	}
 
 	if (FQuilkinDelegates::GetLowestLatencyToDatacenters.IsBound()) {
@@ -121,8 +116,14 @@ bool FQuilkinSocketSubsystem::Tick(float DeltaTime) {
 }
 
 TArray<TTuple<FQuilkinEndpoint, int64>> FQuilkinSocketSubsystem::GetEndpointMeasurements() {
-	return Endpoints.MapToArray<TTuple<FQuilkinEndpoint, int64>>([](FQuilkinEndpoint Endpoint, CircularBuffer<int64> Buffer) {
-		return TTuple<FQuilkinEndpoint, int64>(Endpoint, Buffer.Median());
+	return Endpoints.FilterMapToArray<TTuple<FQuilkinEndpoint, int64>>([](FQuilkinEndpoint Endpoint, CircularBuffer<int64> Buffer) {
+		auto Median = Buffer.Median();
+		if (Median == 0) {
+			return TOptional<TTuple<FQuilkinEndpoint, int64>>();
+		}
+		else {
+			return TOptional<TTuple<FQuilkinEndpoint, int64>>(TTuple<FQuilkinEndpoint, int64>(Endpoint, Median));
+		}
 	});
 }
 
@@ -195,12 +196,13 @@ TOptional<TTuple<FQuilkinEndpoint, int64>> FQuilkinSocketSubsystem::GetLowestLat
 	FQuilkinEndpoint LowestEndpoint;
 	int64 LowestLatency = INT64_MAX;
 	Endpoints.ForEach([&LowestEndpoint, &LowestLatency, &Region](FQuilkinEndpoint Endpoint, CircularBuffer<int64> Buffer) {
-		if (Region.IsSet() && Region.GetValue() != Endpoint.Region)
+		int64 Median = Buffer.Median();
+
+		// If the region has been set, and it doesn't match OR the median is zero, skip the endpoint.
+		if ((Region.IsSet() && Region.GetValue() != Endpoint.Region) || Median == 0)
 		{
 			return;
 		}
-
-		int64 Median = Buffer.Median();
 
 		if (Median < LowestLatency)
 		{
@@ -278,32 +280,6 @@ TMap<FString, int64> FQuilkinSocketSubsystem::GetLowestLatencyToDatacenters() co
 	});
 
 	return Map;
-}
-
-
-TMap<FString, EndpointPair> FQuilkinSocketSubsystem::GetLowestLatencyEndpointInEachRegion() const
-{
-	if (Endpoints.IsEmpty()) {
-		return TMap<FString, EndpointPair>();
-	}
-
-	TMap<FString, EndpointPair> LowestLatencyEndpoints;
-	Endpoints.ForEach([&LowestLatencyEndpoints](FQuilkinEndpoint Endpoint, CircularBuffer<int64> Buffer) {
-		auto Entry = LowestLatencyEndpoints.Find(Endpoint.Region);
-		if (Entry == nullptr) {
-			LowestLatencyEndpoints.Add(Endpoint.Region, EndpointPair(Endpoint, Buffer.Median()));
-			return;
-
-		}
-		int64 Median = Buffer.Median();
-		if (Median < Entry->template Get<1>())
-		{
-			LowestLatencyEndpoints.Add(Endpoint.Region, EndpointPair(Endpoint, Buffer.Median()));
-		}
-	});
-
-	return LowestLatencyEndpoints;
-
 }
 
 TResult<FSocket*, FString> FQuilkinSocketSubsystem::CreateRandomUdpSocket()
@@ -405,6 +381,10 @@ TResult<int64, FString> FQuilkinSocketSubsystem::SendPing(FSocket* Socket, FInte
 	}
 
 	auto NewLatency = WaitForResponses(Socket, *Addr, PingCount, Nonces);
+
+	if (NewLatency < 0ll)
+		return TResult<int64, FString>(TEXT("exit requested"));
+
 	UE_LOG(LogQuilkin, Verbose, TEXT("new measured latency for %s: %dms"), *Addr->ToString(true), NanosToMillis(NewLatency));
 	return TResult<int64, FString>(NewLatency);
 }
@@ -435,6 +415,9 @@ int64 FQuilkinSocketSubsystem::WaitForResponses(FSocket* Socket, FInternetAddr& 
 
 	while ((SuccessfulResponses.Num() < Nonces.Num()) && (ExceededTimeouts <= Nonces.Num()) && (NowSeconds() - StartTime < Timeout))
 	{
+		if (IsEngineExitRequested())
+			return -1ll;
+
 		TArray<uint8> Buffer;
 		Buffer.SetNumUninitialized(1024);
 		int32 BytesReceived = 0;

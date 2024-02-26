@@ -15,7 +15,9 @@
  */
 #pragma once
 
-/* A TMap data structure wrapped with FRWLock to allow for safe concurrent access. */
+/** A `TMap` data structure wrapped with `FRWLock` to allow for thread safe 
+  * concurrent access.
+  */
 template<typename TKey, typename TValue>
 class TSConcurrentMap
 {
@@ -24,9 +26,9 @@ public:
 
 	~TSConcurrentMap() { Empty(); }
 
-	/* Resets the map with the specified keysand calls `Func` with
-	 * each key for generating the value to be inserted into the map.
-	 */
+	/** Resets the map with the specified keysand calls `Func` with each key for
+	  * generating the value to be inserted into the map.
+	  */
 	template <typename Fn> void ResetWithKeys(const TArray<TKey>& NewKeys, Fn Func)
 	{
 		RWLock.WriteLock();
@@ -40,6 +42,9 @@ public:
 		RWLock.WriteUnlock();
 	}
 
+	/** If `Key` is not present, inserts `Value` into the map, otherwise it updates
+	  * the existing `Key` entry.
+	  */
 	void AddOrUpdate(const TKey& Key, const TValue& Value)
 	{
 		RWLock.WriteLock();
@@ -55,6 +60,9 @@ public:
 		RWLock.WriteUnlock();
 	}
 
+	/** If `Key` is not present, inserts `Value` into the map, otherwise it has
+	  * no effect.
+	  */
 	void Add(const TKey& Key, const TValue& Value)
 	{
 		RWLock.WriteLock();
@@ -62,6 +70,9 @@ public:
 		RWLock.WriteUnlock();
 	}
 
+	/** Returns the pointer to the value matching `Key`, if present, otherwise
+	  * returns a null pointer.
+	  */
 	const TValue* Find(const TKey& Key) const
 	{
 		RWLock.ReadLock();
@@ -71,6 +82,9 @@ public:
 		return Result;
 	}
 
+	/** Finds or inserts a default `TValue` in `Key`, and then calls `Add` on
+	  * `TValue` with `Latency`.
+	  */
 	void FindOrDefaultToAdd(const TKey& Key, int64 Latency)
 	{
 		RWLock.WriteLock();
@@ -78,6 +92,7 @@ public:
 		RWLock.WriteUnlock();
 	}
 
+	/** Removes the entry matching `Key`, if present. */
 	void Remove(const TKey& Key)
 	{
 		RWLock.WriteLock();
@@ -85,6 +100,7 @@ public:
 		RWLock.WriteUnlock();
 	}
 
+	/** Returns the number of entries in the map. */
 	int32 Num() const
 	{
 		RWLock.ReadLock();
@@ -93,6 +109,7 @@ public:
 		return Num;
 	}
 
+	/** Returns whether the map contains no entries. */
 	bool IsEmpty() const
 	{
 		RWLock.ReadLock();
@@ -101,6 +118,7 @@ public:
 		return Empty;
 	}
 
+	/** Returns whether the map contains an entry matching `Key`. */
 	bool Contains(const TKey& Key) const
 	{
 		RWLock.ReadLock();
@@ -109,6 +127,7 @@ public:
 		return Result;
 	}
 
+	/** Removes all entries from the map. */
 	void Empty()
 	{
 		RWLock.WriteLock();
@@ -116,6 +135,7 @@ public:
 		RWLock.WriteUnlock();
 	}
 
+	/** Returns all keys from the map. */
 	TArray<TKey> GetKeys() const
 	{
 		RWLock.ReadLock();
@@ -125,6 +145,11 @@ public:
 		return Keys;
 	}
 
+	/** Accepts a closure which accepts (KEY, VALUE) and returns a ENTRY.
+	  *
+	  * SAFETY: The closure must not call any method which write locks this map, otherwise
+	  * it will cause re-entrance.
+	  */
 	template<typename ENTRY, typename Fn>
 	TArray<ENTRY> MapToArray(Fn Closure) const
 	{
@@ -137,6 +162,33 @@ public:
 		return Entries;
 	}
 
+	/** Accepts a closure which accepts (KEY, VALUE) and returns a TOptional<ENTRY>.
+	  * If TOptional is not set, then that entry is not included in the returned array.
+	  *
+	  * SAFETY: The closure must not call any method which write locks this map, otherwise
+	  * it will cause re-entrance.
+	  */
+	template<typename ENTRY, typename Fn>
+	TArray<ENTRY> FilterMapToArray(Fn Closure) const
+	{
+		TArray<ENTRY> Entries;
+		RWLock.ReadLock();
+		for (auto& Entry : DataMap) {
+			TOptional<ENTRY> Option = Closure(Entry.template Get<0>(), Entry.template Get<1>());
+
+			if (Option.IsSet()) {
+				Entries.Push(Option.GetValue());
+			}
+		}
+		RWLock.ReadUnlock();
+		return Entries;
+	}
+
+	/** Accepts a closure which accepts (KEY, VALUE) and returns void.
+	  *
+	  * SAFETY: The closure must not call any method which write locks this map, otherwise
+	  * it will cause re-entrance.
+	  */
 	template <typename Fn> void ForEach(Fn Func) const
 	{
 		RWLock.ReadLock();
