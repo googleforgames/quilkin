@@ -15,7 +15,8 @@
  */
 
 use std::{
-    collections::BTreeSet,
+    collections::{hash_map::RandomState, BTreeSet},
+    fmt,
     sync::atomic::{AtomicU64, AtomicUsize, Ordering::Relaxed},
 };
 
@@ -28,7 +29,7 @@ use crate::net::endpoint::{Endpoint, Locality};
 const SUBSYSTEM: &str = "cluster";
 
 crate::include_proto!("quilkin.config.v1alpha1");
-pub(crate) use self::quilkin::config::v1alpha1 as proto;
+pub use self::quilkin::config::v1alpha1 as proto;
 
 pub(crate) fn active_clusters() -> &'static prometheus::IntGauge {
     static ACTIVE_CLUSTERS: Lazy<prometheus::IntGauge> = Lazy::new(|| {
@@ -59,8 +60,6 @@ pub(crate) fn active_endpoints() -> &'static prometheus::IntGauge {
 
     &ACTIVE_ENDPOINTS
 }
-
-use std::fmt;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct EndpointSetVersion(u64);
@@ -178,20 +177,44 @@ impl EndpointSet {
 }
 
 /// Represents a full snapshot of all clusters.
-#[derive(Default, Debug)]
-pub struct ClusterMap {
-    map: DashMap<Option<Locality>, EndpointSet>,
+pub struct ClusterMap<S = RandomState> {
+    map: DashMap<Option<Locality>, EndpointSet, S>,
     num_endpoints: AtomicUsize,
     version: AtomicU64,
 }
 
-type DashMapRef<'inner> = dashmap::mapref::one::Ref<'inner, Option<Locality>, EndpointSet>;
+type DashMapRef<'inner, S> = dashmap::mapref::one::Ref<'inner, Option<Locality>, EndpointSet, S>;
+type DashMapRefMut<'inner, S> =
+    dashmap::mapref::one::RefMut<'inner, Option<Locality>, EndpointSet, S>;
 
-impl ClusterMap {
+impl ClusterMap<RandomState> {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     pub fn new_default(cluster: BTreeSet<Endpoint>) -> Self {
         let this = Self::default();
         this.insert_default(cluster);
         this
+    }
+}
+
+impl<S> ClusterMap<S> {
+    #[inline]
+    pub fn version(&self) -> u64 {
+        self.version.load(Relaxed)
+    }
+}
+
+impl<S> ClusterMap<S>
+where
+    S: Default + std::hash::BuildHasher + Clone,
+{
+    pub fn benchmarking(capacity: usize, hasher: S) -> Self {
+        Self {
+            map: DashMap::with_capacity_and_hasher(capacity, hasher),
+            ..Self::default()
+        }
     }
 
     #[inline]
@@ -241,14 +264,20 @@ impl ClusterMap {
         self.map.is_empty()
     }
 
-    #[inline]
-    pub fn get(&self, key: &Option<Locality>) -> Option<DashMapRef> {
+    pub fn get(&self, key: &Option<Locality>) -> Option<DashMapRef<S>> {
         self.map.get(key)
     }
 
-    #[inline]
-    pub fn get_default(&self) -> Option<DashMapRef> {
+    pub fn get_mut(&self, key: &Option<Locality>) -> Option<DashMapRefMut<S>> {
+        self.map.get_mut(key)
+    }
+
+    pub fn get_default(&self) -> Option<DashMapRef<S>> {
         self.get(&None)
+    }
+
+    pub fn get_default_mut(&self) -> Option<DashMapRefMut<S>> {
+        self.get_mut(&None)
     }
 
     #[inline]
@@ -297,6 +326,18 @@ impl ClusterMap {
     }
 
     #[inline]
+    pub fn iter(&self) -> dashmap::iter::Iter<Option<Locality>, EndpointSet, S> {
+        self.map.iter()
+    }
+
+    pub fn entry(
+        &self,
+        key: Option<Locality>,
+    ) -> dashmap::mapref::entry::Entry<Option<Locality>, EndpointSet, S> {
+        self.map.entry(key)
+    }
+
+    #[inline]
     pub fn replace(&self, locality: Option<Locality>, endpoint: Endpoint) -> Option<Endpoint> {
         if let Some(mut set) = self.map.get_mut(&locality) {
             let replaced = set.endpoints.replace(endpoint);
@@ -312,11 +353,6 @@ impl ClusterMap {
             self.insert(locality, [endpoint].into());
             None
         }
-    }
-
-    #[inline]
-    pub fn iter(&self) -> dashmap::iter::Iter<Option<Locality>, EndpointSet> {
-        self.map.iter()
     }
 
     #[inline]
@@ -366,11 +402,6 @@ impl ClusterMap {
     }
 
     #[inline]
-    pub fn version(&self) -> u64 {
-        self.version.load(Relaxed)
-    }
-
-    #[inline]
     pub fn update_unlocated_endpoints(&self, locality: Locality) {
         if let Some((_, set)) = self.map.remove(&None) {
             self.version.fetch_add(1, Relaxed);
@@ -392,7 +423,7 @@ impl ClusterMap {
     }
 }
 
-impl crate::config::watch::Watchable for ClusterMap {
+impl<S> crate::config::watch::Watchable for ClusterMap<S> {
     #[inline]
     fn mark(&self) -> crate::config::watch::Marker {
         crate::config::watch::Marker::Version(self.version())
@@ -408,6 +439,31 @@ impl crate::config::watch::Watchable for ClusterMap {
     }
 }
 
+impl<S> fmt::Debug for ClusterMap<S>
+where
+    S: Default + std::hash::BuildHasher + Clone,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ClusterMap")
+            .field("map", &self.map)
+            .field("version", &self.version)
+            .finish_non_exhaustive()
+    }
+}
+
+impl<S> Default for ClusterMap<S>
+where
+    S: Default + std::hash::BuildHasher + Clone,
+{
+    fn default() -> Self {
+        Self {
+            map: <DashMap<Option<Locality>, EndpointSet, S>>::default(),
+            version: <_>::default(),
+            num_endpoints: <_>::default(),
+        }
+    }
+}
+
 impl Clone for ClusterMap {
     fn clone(&self) -> Self {
         let map = self.map.clone();
@@ -416,7 +472,10 @@ impl Clone for ClusterMap {
 }
 
 #[cfg(test)]
-impl PartialEq for ClusterMap {
+impl<S> PartialEq for ClusterMap<S>
+where
+    S: Default + std::hash::BuildHasher + Clone,
+{
     fn eq(&self, rhs: &Self) -> bool {
         for a in self.iter() {
             match rhs
@@ -510,7 +569,10 @@ impl Serialize for ClusterMap {
     }
 }
 
-impl From<ClusterMapDeser> for ClusterMap {
+impl<S> From<ClusterMapDeser> for ClusterMap<S>
+where
+    S: Default + std::hash::BuildHasher + Clone,
+{
     fn from(cmd: ClusterMapDeser) -> Self {
         let map = DashMap::from_iter(cmd.endpoints.into_iter().map(
             |EndpointWithLocality {
@@ -523,8 +585,11 @@ impl From<ClusterMapDeser> for ClusterMap {
     }
 }
 
-impl From<DashMap<Option<Locality>, EndpointSet>> for ClusterMap {
-    fn from(map: DashMap<Option<Locality>, EndpointSet>) -> Self {
+impl<S> From<DashMap<Option<Locality>, EndpointSet, S>> for ClusterMap<S>
+where
+    S: Default + std::hash::BuildHasher + Clone,
+{
+    fn from(map: DashMap<Option<Locality>, EndpointSet, S>) -> Self {
         let num_endpoints = AtomicUsize::new(map.iter().map(|kv| kv.value().len()).sum());
         Self {
             map,
@@ -570,11 +635,11 @@ mod tests {
 
     #[test]
     fn merge() {
-        let nl1 = Locality::region("nl-1");
-        let de1 = Locality::region("de-1");
+        let nl1 = Locality::with_region("nl-1");
+        let de1 = Locality::with_region("de-1");
 
         let mut endpoint = Endpoint::new((Ipv4Addr::LOCALHOST, 7777).into());
-        let cluster1 = ClusterMap::default();
+        let cluster1 = ClusterMap::new();
 
         cluster1.insert(Some(nl1.clone()), [endpoint.clone()].into());
         cluster1.insert(Some(de1.clone()), [endpoint.clone()].into());

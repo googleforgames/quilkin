@@ -71,6 +71,11 @@ name = "compression"
 harness = false
 test = false
 
+[[bench]]
+name = "cluster_map"
+harness = false
+test = false
+
 [dependencies]
 # Local
 quilkin-macros = { version = "0.8.0-dev", path = "./macros" }
@@ -88,6 +93,7 @@ dashmap = { version = "5.5.3", features = ["serde"] }
 either = "1.9.0"
 enum-map = "2.6.3"
 eyre = "0.6.8"
+fixedstr = { version = "0.5", features = ["flex-str"] }
 futures.workspace = true
 hyper = { version = "0.14.27", features = ["http2"] }
 hyper-rustls = { version = "0.24.1", features = ["http2", "webpki-roots"] }
@@ -153,6 +159,7 @@ rand = "0.8.5"
 regex = "1.9.6"
 tracing-test = "0.2.4"
 tempfile = "3.8.0"
+xxhash-rust = { version = "0.8", features = ["xxh3"] }
 
 [build-dependencies]
 tonic-build = { version = "0.10.2", default_features = false, features = [
