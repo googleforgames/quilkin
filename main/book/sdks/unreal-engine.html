@@ -174,12 +174,38 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="quilkin-unreal-engine-plugin"><a class="header" href="#quilkin-unreal-engine-plugin">Quilkin Unreal Engine Plugin</a></h1>
-<p>This is an alpha version of the Unreal Engine plugin for Quilkin. Currently it only supports adding a routing token in the following format.</p>
+<p>This is an unreal engine 5 plugin for Quilkin, a UDP proxy for gameservers. The plugin provides several features that you can use with Quilkin deployments, such as proxying game traffic, and latency measurement.</p>
+<p>You can also find guide level documentation on how the proxy works in the <a href="https://googleforgames.github.io/quilkin/main/book/">Quilkin Book</a>.</p>
+<h3 id="installation"><a class="header" href="#installation">Installation</a></h3>
+<p>Copy this plugin to your <code>Plugins</code> folder in your <code>Engine</code> directory.</p>
+<h3 id="configuration"><a class="header" href="#configuration">Configuration</a></h3>
+<p>Static configuration is available in the editor through <code>UQuilkinDeveloperSettings</code> in "Project Settings".</p>
+<p>Dynamic configuration is available through <code>UQuilkinConfigSubsystem</code>, it is initialised from the settings provided in <code>UQuilkinDeveloperSettings</code>, but can also be updated in code, and users can bind individual properties to delegates allowing them to dynamically set based on custom logic.</p>
+<ul>
+<li><code>bool Enabled</code> Whether the plugin will attach a versioned routing token to UDP packets to allow load balancers forward traffic to the correct gameserver. This also requires the address the clients connect to be a Quilkin load balancer, if connected directly to a gameserver the client will be rejected.</li>
+<li><code>bool EnabledInPie</code> By default <code>Enabled</code> is disabled in editor to prevent interfering with local clients and gameservers, you can override this behaviour by also enabling <code>EnabledInPie</code>.</li>
+<li><code>TArray&lt;uint8&gt; RoutingToken</code> The routing token representing the gameserver a client wants to reach, the token <strong>must</strong> be 16 bytes exactly. Currently the plugin only supports using <code>Enabled</code> with a routing token to create the following layout. It is assumed that the routing token would come from an external service, such as a matchmaking system.</li>
+</ul>
 <pre><code>&lt;packet&gt; | token    | version
-X bytes  | 16 bytes | 1 bytes
+ X bytes | 16 bytes | 1 byte
 </code></pre>
-<h2 id="how-to-install"><a class="header" href="#how-to-install">How to install</a></h2>
-<p>To get this client proxy installed, the SDK should be located in <code>Engine</code> path for Plugins, so copy the whole <code>ue4</code> folder (resides under <code>sdks</code> folder) in your Unreal Engine path <code>/[UE4 Root]/Engine/Plugins</code>, then you may want to rename the ue4 folder to <code>Quilkin</code>. Unreal Engine will automatically discover the plugin by searching for <code>.uplugin</code> file.</p>
+<ul>
+<li><code>TArray&lt;FQuilkinEndpoint&gt; Endpoints</code> A set of Quilkin load balancer endpoints that can be used for the following features.</li>
+<li><code>bool MeasureEndpoints</code> When enabled, the plugin will start a new <code>Tick</code> task that executes at a fixed interval (currently 30 seconds), where it will spawn a new background task that will ping each endpoint in <code>Endpoints</code>, and track its measurement in a fixed size circular buffer.
+Pings are handled through Quilkin Control Message Protocol, this is a bespoke protocol for UDP to be able to support situations where for example using ICMP is not possible, see the <a href="https://googleforgames.github.io/quilkin/main/book/services/proxy/qcmp.html">Quilkin Book</a> for more details on the protocol data unit.
+<strong>Note</strong> <code>MeasureEndpoints</code> is orthogonal to <code>Enabled</code> and <code>UseEndpoints</code> meaning that you can use <code>MeasureEndpoints</code> for latency measurements without being required to also use Quilkin for game traffic.</li>
+<li><code>bool UseEndpoints</code> Whether to use <code>Endpoints</code> for game traffic. When enabled, instead of using the provided <code>FInternetAddr</code>, the plugin will choose the lowest latency endpoint available and send traffic through that endpoint to connect to the gameserver, and if the latency should exceed <code>JitterThreshold</code> then the plugin will attempt to redirect traffic to the next available endpoint with the lowest latency.</li>
+</ul>
+<h3 id="delegates"><a class="header" href="#delegates">Delegates</a></h3>
+<p>Quilkin exposes a number of delegates to be able to access certain information, they can be accessed through the <code>FQuilkinDelegates</code> class.</p>
+<ul>
+<li>
+<p><code>GetQuilkinEndpointMeasurements</code> returns <code>TArray&lt;EndpointPair&gt;</code> representing each endpoint set in <code>Endpoints</code> with their median latency. The array will be empty if no endpoints have been set and <code>MeasureEndpoints</code> is not enabled.</p>
+</li>
+<li>
+<p><code>GetLowestLatencyEndpoint</code> returns <code>TOptional&lt;EndpointPair&gt;</code> is a specialisation of <code>GetQuilkinEndpointMeasurements</code> returning the lowest latency endpoint and its median latency. The delegate will return <code>None</code> if the array is empty and <code>MeasureEndpoints</code> is not enabled.</p>
+</li>
+</ul>
 
                     </main>
 
