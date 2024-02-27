@@ -4,10 +4,6 @@
 |----------|-------|-------------------|
 | QCMP     | 7600  | UDP(IPv4 OR IPv6) |
 
-> **Note:** This service is currently in active experimentation and development
-  so there may be bugs which cause it to be unusable  for production, as always
-  all bug reports are welcome and appreciated. 
-
 For multi-cluster integration, Quilkin provides a `agent` service, that can be
 deployed to a cluster to act as a beacon for QCMP pings and forward cluster
 configuration information to a `relay` service
