@@ -22,7 +22,11 @@ pub mod metadata;
 
 use serde::{Deserialize, Serialize};
 
-pub use self::{address::EndpointAddress, locality::Locality, metadata::DynamicMetadata};
+pub use self::{
+    address::{AddressKind, EndpointAddress},
+    locality::Locality,
+    metadata::DynamicMetadata,
+};
 
 pub type EndpointMetadata = metadata::MetadataView<Metadata>;
 
