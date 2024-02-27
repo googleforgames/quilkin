@@ -299,7 +299,7 @@ mod tests {
             region: None,
             sub_zone: None,
             zone: None,
-            idle_request_interval_secs: admin::IDLE_REQUEST_INTERVAL_SECS,
+            idle_request_interval_secs: admin::idle_request_interval_secs(),
             qcmp_port: agent_qcmp_port,
             icao_code: icao_code.clone(),
             provider: Some(Providers::File {

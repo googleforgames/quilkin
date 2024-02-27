@@ -130,6 +130,7 @@ use std::collections::HashMap;
 pub enum ClientVersions {
     Listener,
     Cluster(HashMap<Option<Locality>, EndpointSetVersion>),
+    Datacenter,
 }
 
 /// The resources and versions that were sent in a delta response, when acked
@@ -141,6 +142,7 @@ pub enum AwaitingAck {
         updated: Vec<(Option<Locality>, EndpointSetVersion)>,
         remove_none: bool,
     },
+    Datacenter,
 }
 
 impl ClientVersions {
@@ -149,6 +151,7 @@ impl ClientVersions {
         match rt {
             ResourceType::Listener => Self::Listener,
             ResourceType::Cluster => Self::Cluster(HashMap::new()),
+            ResourceType::Datacenter => Self::Datacenter,
         }
     }
 
@@ -157,6 +160,7 @@ impl ClientVersions {
         match self {
             Self::Listener => ResourceType::Listener,
             Self::Cluster(_) => ResourceType::Cluster,
+            Self::Datacenter => ResourceType::Datacenter,
         }
     }
 
@@ -165,7 +169,8 @@ impl ClientVersions {
     #[inline]
     pub fn ack(&mut self, ack: AwaitingAck) {
         match (self, ack) {
-            (Self::Listener, AwaitingAck::Listener) => {}
+            (Self::Listener, AwaitingAck::Listener)
+            | (Self::Datacenter, AwaitingAck::Datacenter) => {}
             (
                 Self::Cluster(map),
                 AwaitingAck::Cluster {
@@ -188,7 +193,7 @@ impl ClientVersions {
     #[inline]
     pub fn remove(&mut self, name: String) {
         match self {
-            Self::Listener => {}
+            Self::Listener | Self::Datacenter => {}
             Self::Cluster(map) => {
                 let locality = if name.is_empty() {
                     None
@@ -210,7 +215,7 @@ impl ClientVersions {
     #[inline]
     pub fn reset(&mut self, versions: HashMap<String, String>) -> crate::Result<()> {
         match self {
-            Self::Listener => Ok(()),
+            Self::Listener | Self::Datacenter => Ok(()),
             Self::Cluster(map) => {
                 map.clear();
 

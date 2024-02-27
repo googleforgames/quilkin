@@ -59,7 +59,7 @@ pub mod cluster;
 pub mod endpoint;
 pub(crate) mod maxmind_db;
 pub mod phoenix;
-pub(crate) mod xds;
+pub mod xds;
 
 use std::{
     io,

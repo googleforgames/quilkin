@@ -241,15 +241,15 @@ impl MdsClient {
         let handle = tokio::task::spawn(
             async move {
                 tracing::trace!("starting relay client delta stream task");
-                let agent = self.mode.unwrap_agent();
-                let interval = agent.idle_request_interval;
+                let mode = self.mode.clone();
+                let interval = mode.idle_request_interval();
 
                 loop {
                     {
                         let control_plane =
-                            super::server::ControlPlane::from_arc(config.clone(), interval);
+                            super::server::ControlPlane::from_arc(config.clone(), mode.clone());
                         let mut stream = control_plane.delta_aggregated_resources(stream).await?;
-                        agent.relay_is_healthy.store(true, Ordering::SeqCst);
+                        //agent.relay_is_healthy.store(true, Ordering::SeqCst);
 
                         loop {
                             let timeout = tokio::time::timeout(interval, stream.next());
@@ -265,7 +265,7 @@ impl MdsClient {
                         }
                     }
 
-                    agent.relay_is_healthy.store(false, Ordering::SeqCst);
+                    //agent.relay_is_healthy.store(false, Ordering::SeqCst);
 
                     tracing::warn!("lost connection to relay server, retrying");
                     let new_client = MdsClient::connect_with_backoff(&self.management_servers)
@@ -721,7 +721,7 @@ impl MdsStream {
 
                     let control_plane =
                         super::server::ControlPlane::from_arc(config.clone(), mode.clone());
-                    let mut stream = control_plane.stream_aggregated_resources(stream).await?;
+                    let mut stream = control_plane.stream_resources(stream).await?;
                     mode.unwrap_agent()
                         .relay_is_healthy
                         .store(true, Ordering::SeqCst);
@@ -878,7 +878,7 @@ pub fn handle_discovery_responses(
                 .into_iter()
                 .map(Resource::try_from)
                 .try_for_each(|resource| {
-                    let mut resource = resource?;
+                    let resource = resource?;
 
                     resource_names.push(resource.name().to_owned());
 

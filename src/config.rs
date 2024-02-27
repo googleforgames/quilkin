@@ -17,11 +17,13 @@
 //! Quilkin configuration.
 
 use std::{
+    collections::{BTreeSet, HashMap},
     net::IpAddr,
     sync::{
         atomic::{AtomicU64, Ordering::Relaxed},
         Arc,
     },
+    time::Duration,
 };
 
 use base64_serde::base64_serde_type;
@@ -208,6 +210,7 @@ impl Config {
     /// from those of the client
     pub fn delta_discovery_request(
         &self,
+        mode: &crate::cli::Admin,
         subscribed: &BTreeSet<String>,
         client_versions: &crate::net::xds::ClientVersions,
     ) -> crate::Result<DeltaDiscoveryRes> {
@@ -227,6 +230,42 @@ impl Config {
                     cache_control: None,
                 });
                 (crate::net::xds::AwaitingAck::Listener, Vec::new())
+            }
+            crate::net::xds::ClientVersions::Datacenter => {
+                if mode.is_agent() {
+                    resources.push(XdsResource {
+                        name: "datacenter".into(),
+                        version: "0".into(),
+                        resource: Some(ResourceType::Datacenter.encode_to_any(
+                            &crate::net::cluster::proto::Datacenter {
+                                qcmp_port: *self.qcmp_port.load() as _,
+                                icao_code: self.icao_code.load().to_string(),
+                                ..Default::default()
+                            },
+                        )?),
+                        aliases: Vec::new(),
+                        ttl: None,
+                        cache_control: None,
+                    });
+                } else {
+                    for entry in self.datacenters.read().iter() {
+                        resources.push(XdsResource {
+                            name: "datacenter".into(),
+                            version: "0".into(),
+                            resource: Some(ResourceType::Datacenter.encode_to_any(
+                                &crate::net::cluster::proto::Datacenter {
+                                    host: entry.key().to_string(),
+                                    qcmp_port: entry.qcmp_port.into(),
+                                    icao_code: entry.icao_code.to_string(),
+                                },
+                            )?),
+                            aliases: Vec::new(),
+                            ttl: None,
+                            cache_control: None,
+                        });
+                    }
+                }
+                (crate::net::xds::AwaitingAck::Datacenter, Vec::new())
             }
             crate::net::xds::ClientVersions::Cluster(map) => {
                 let resource_type = ResourceType::Cluster;
@@ -375,6 +414,29 @@ impl Config {
                     local_versions.insert(listener.name, "".into());
                 }
             }
+            ResourceType::Datacenter => self.datacenters.modify(|wg| {
+                for res in resources {
+                    let (resource, version) = res?;
+
+                    let Resource::Datacenter(dc) = resource else {
+                        return Err(eyre::eyre!("a non-datacenter resource was present"));
+                    };
+
+                    let host = dc.host.parse()?;
+
+                    wg.insert(
+                        host,
+                        Datacenter {
+                            qcmp_port: dc.qcmp_port.try_into()?,
+                            icao_code: dc.icao_code.parse()?,
+                        },
+                    );
+
+                    local_versions.insert(dc.host, version);
+                }
+
+                Ok(())
+            })?,
             ResourceType::Cluster => self.clusters.modify(|guard| {
                 for removed in removed_resources {
                     let locality = if removed.is_empty() {

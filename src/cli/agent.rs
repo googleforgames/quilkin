@@ -69,7 +69,7 @@ impl Default for Agent {
             zone: <_>::default(),
             sub_zone: <_>::default(),
             provider: <_>::default(),
-            idle_request_interval_secs: super::admin::IDLE_REQUEST_INTERVAL_SECS,
+            idle_request_interval_secs: super::admin::idle_request_interval_secs(),
             icao_code: <_>::default(),
         }
     }

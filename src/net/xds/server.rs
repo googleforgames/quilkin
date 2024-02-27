@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
 
 use cached::Cached;
 use futures::{Stream, TryFutureExt, TryStreamExt};
@@ -389,7 +389,7 @@ impl ControlPlane {
 
                 let req = this
                     .config
-                    .delta_discovery_request(&tracker.subscribed, &tracker.client)
+                    .delta_discovery_request(&this.mode, &tracker.subscribed, &tracker.client)
                     .map_err(|error| tonic::Status::internal(error.to_string()))?;
 
                 let nonce = uuid::Uuid::new_v4();
@@ -454,10 +454,10 @@ impl ControlPlane {
 
                         yield responder(None, &mut trackers[ResourceType::Listener], &mut pending_acks)?;
                     }
-                    _ => dc_rx.changed() => {
+                    _ = dc_rx.changed() => {
                         tracing::trace!("sending new datacenter delta discovery response");
 
-                        yield responder(None, &mut trackers[ResourceTYpe::Datacenter], &mut pending_acks)?;
+                        yield responder(None, &mut trackers[ResourceType::Datacenter], &mut pending_acks)?;
                     }
                     client_request = streaming.next() => {
                         let client_request = match client_request.transpose() {
@@ -579,7 +579,7 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
 
         tracing::info!(%identifier, "new control plane discovery stream");
         let config = self.config.clone();
-        let idle_request_interval_secs = self.mode.idle_request_interval_secs();
+        let idle_request_interval = self.mode.idle_request_interval();
         let stream = super::client::AdsStream::connect(
             Arc::from(&*identifier),
             move |(mut requests, _rx), _subscribed_resources| async move {
@@ -603,7 +603,7 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
                 let mut response_handler = super::client::handle_discovery_responses(
                     identifier.clone(),
                     responses,
-                    move |resource| {
+                    move |mut resource| {
                         resource.add_host_to_datacenter(remote_addr);
                         config.apply(resource)
                     },
@@ -662,7 +662,7 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
 
         tracing::info!(identifier, "new control plane delta discovery stream");
         let config = self.config.clone();
-        let idle_request_interval = self.idle_request_interval;
+        let idle_request_interval = self.mode.idle_request_interval();
 
         let (ds, mut request_stream) = super::client::DeltaClientStream::new();
 
