@@ -646,6 +646,10 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
     ) -> Result<tonic::Response<Self::DeltaAggregatedResourcesStream>, tonic::Status> {
         use crate::net::xds::ResourceType;
 
+        let remote_addr = responses
+            .remote_addr()
+            .ok_or_else(|| tonic::Status::invalid_argument("no remote address available"))?;
+
         tracing::info!("control plane discovery delta stream attempt");
         let mut responses = responses.into_inner();
         let Some(identifier) = responses
@@ -672,15 +676,23 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
 
                 let local = Arc::new(crate::config::xds::LocalVersions::default());
 
-                ds.refresh(&identifier, &[(ResourceType::Cluster, Vec::new())], &local)
-                    .await
-                    .map_err(|error| tonic::Status::internal(error.to_string()))?;
+                ds.refresh(
+                    &identifier,
+                    &[
+                        (ResourceType::Cluster, Vec::new()),
+                        (ResourceType::Datacenter, Vec::new()),
+                    ],
+                    &local,
+                )
+                .await
+                .map_err(|error| tonic::Status::internal(error.to_string()))?;
 
                 let mut response_stream = crate::config::xds::handle_delta_discovery_responses(
                     identifier.clone(),
                     responses,
                     config.clone(),
                     local.clone(),
+                    remote_addr,
                 );
 
                 loop {
@@ -694,9 +706,16 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
                             .map_err(|_| tonic::Status::internal("this should not be reachable"))?;
                     } else {
                         tracing::debug!("exceeded idle interval, sending request");
-                        ds.refresh(&identifier, &[(ResourceType::Cluster, Vec::new())], &local)
-                            .await
-                            .map_err(|error| tonic::Status::internal(error.to_string()))?;
+                        ds.refresh(
+                            &identifier,
+                            &[
+                                (ResourceType::Cluster, Vec::new()),
+                                (ResourceType::Datacenter, Vec::new()),
+                            ],
+                            &local,
+                        )
+                        .await
+                        .map_err(|error| tonic::Status::internal(error.to_string()))?;
                     }
                 }
             }
