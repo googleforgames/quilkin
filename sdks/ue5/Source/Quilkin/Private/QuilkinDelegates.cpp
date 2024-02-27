@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Google LLC
+ * Copyright 2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,22 +14,9 @@
  * limitations under the License.
  */
 
-#pragma once
+#include "QuilkinDelegates.h"
 
-#include "CoreMinimal.h"
-#include "Modules/ModuleInterface.h"
-#include "QuilkinSocketSubsystem.h"
-
-class FQuilkinModule : public IModuleInterface
-{
-public:
-	//~ Begin IModuleInterface interface
-	virtual void StartupModule() override;
-	virtual void ShutdownModule() override;
-	virtual bool SupportsDynamicReloading() override;
-	virtual bool SupportsAutomaticShutdown() override;
-	//~ End IModuleInterface Interface
-
-private:
-	TUniquePtr<FQuilkinSocketSubsystem> QuilkinSocketSubsystem;
-};
+FQuilkinDelegates::FGetQuilkinEndpointMeasurements FQuilkinDelegates::GetQuilkinEndpointMeasurements;
+FQuilkinDelegates::FGetLowestLatencyEndpoint FQuilkinDelegates::GetLowestLatencyEndpoint;
+FQuilkinDelegates::FGetLowestLatencyEndpointInRegion FQuilkinDelegates::GetLowestLatencyEndpointInRegion;
+FQuilkinDelegates::FGetLowestLatencyToDatacenters FQuilkinDelegates::GetLowestLatencyToDatacenters;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Google LLC
+ * Copyright 2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,20 @@
 
 #pragma once
 
+#include <atomic>
+
 #include "CoreMinimal.h"
 #include "Sockets.h"
 #include "SocketSubsystem.h"
-#include "QuilkinPacketHandler.h"
 
-class FQuilkinSocket
-	: public FSocket
+#include "QuilkinCircularBuffer.h"
+#include "QuilkinEndpoint.h"
+#include "QuilkinPacketHandler.h"
+#include "Containers/Ticker.h"
+
+class FQuilkinSocketSubsystem;
+
+class FQuilkinSocket: public FSocket
 {
 public:
 	FQuilkinSocket(FUniqueSocket WrappedSocket, ESocketType InSocketType, const FString& InSocketDescription, const FName& InSocketProtocol);
@@ -68,6 +75,7 @@ public:
 	virtual bool RecvFromWithPktInfo(uint8* Data, int32 BufferSize, int32& BytesRead, FInternetAddr& Source, FInternetAddr& Destination, ESocketReceiveFlags::Type Flags = ESocketReceiveFlags::None) override;
 	//~ End FSocket Interface
 
+	TWeakPtr<FQuilkinSocketSubsystem> Subsystem;
 protected:
 	FUniqueSocket Socket;
 	FQuilkinPacketHandler Handler;
