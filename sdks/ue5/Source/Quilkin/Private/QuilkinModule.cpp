@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Google LLC
+ * Copyright 2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,11 @@
 #include "Modules/ModuleManager.h"
 #include "SocketSubsystemModule.h"
 #include "UObject/NameTypes.h"
+#include "Misc/ConfigCacheIni.h"
+
+#define FIVE_MINUTES 5 * 60
+
+IMPLEMENT_MODULE(FQuilkinModule, Quilkin);
 
 void FQuilkinModule::StartupModule()
 {
@@ -37,9 +42,9 @@ void FQuilkinModule::StartupModule()
 		return;
 	}
 
-	FSocketSubsystemModule &SocketSubsystemModule = FModuleManager::LoadModuleChecked<FSocketSubsystemModule>("Sockets");
+	FSocketSubsystemModule& SocketSubsystemModule = FModuleManager::LoadModuleChecked<FSocketSubsystemModule>("Sockets");
 
-	ISocketSubsystem *DefaultSocketSubsystem = SocketSubsystemModule.GetSocketSubsystem();
+	ISocketSubsystem* DefaultSocketSubsystem = SocketSubsystemModule.GetSocketSubsystem();
 	if (DefaultSocketSubsystem == nullptr)
 	{
 		UE_LOG(LogQuilkin, Log, TEXT("No default SocketSubsystem was set. Will not use Quilkin SocketSubsystem"));
@@ -47,7 +52,9 @@ void FQuilkinModule::StartupModule()
 	}
 	UE_LOG(LogQuilkin, Log, TEXT("Overriding default SocketSubsystem with QuilkinSocketSubsystem"));
 
-	QuilkinSocketSubsystem = MakeUnique<FQuilkinSocketSubsystem>(DefaultSocketSubsystem);
+	QuilkinSocketSubsystem = MakeShared<FQuilkinSocketSubsystem>(DefaultSocketSubsystem);
+	FString Unused;
+	QuilkinSocketSubsystem->Init(Unused);
 	SocketSubsystemModule.RegisterSocketSubsystem(QUILKIN_SOCKETSUBSYSTEM_NAME, QuilkinSocketSubsystem.Get(), true);
 }
 
@@ -60,7 +67,7 @@ void FQuilkinModule::ShutdownModule()
 		return;
 	}
 
-	FSocketSubsystemModule &SocketSubsystemModule = FModuleManager::LoadModuleChecked<FSocketSubsystemModule>("Sockets");
+	FSocketSubsystemModule& SocketSubsystemModule = FModuleManager::LoadModuleChecked<FSocketSubsystemModule>("Sockets");
 	SocketSubsystemModule.UnregisterSocketSubsystem(QUILKIN_SOCKETSUBSYSTEM_NAME);
 	QuilkinSocketSubsystem.Reset();
 }
@@ -75,5 +82,3 @@ bool FQuilkinModule::SupportsAutomaticShutdown()
 	// Shutdown gets called by the SocketSubsystem, if we were registered (and we don't do anything if we weren't)
 	return false;
 }
-
-IMPLEMENT_MODULE(FQuilkinModule, Quilkin);
