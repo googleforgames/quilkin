@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Google LLC
+ * Copyright 2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,14 @@
  */
 
 #include "QuilkinSocket.h"
+
+#include "Containers/Ticker.h"
+#include "Async/Async.h"
+
+#include "QuilkinConcurrentMap.h"
+#include "QuilkinConstants.h"
+#include "QuilkinSettings.h"
+#include "QuilkinSocketSubsystem.h"
 
 FQuilkinSocket::FQuilkinSocket(FUniqueSocket WrappedSocket, ESocketType InSocketType, const FString& InSocketDescription, const FName& InSocketProtocol)
 	: FSocket(InSocketType, InSocketDescription, InSocketProtocol)
@@ -74,26 +82,16 @@ FSocket* FQuilkinSocket::Accept(FInternetAddr& OutAddr, const FString& InSocketD
 
 bool FQuilkinSocket::SendTo(const uint8* Data, int32 Count, int32& BytesSent, const FInternetAddr& Destination)
 {
-	if (!Handler.IsEnabled())
-	{
+	return Handler.Write(Data, Count, BytesSent, [this, &Destination](const uint8* Data, int32 Count, int32& BytesSent) {
 		return Socket.Get()->SendTo(Data, Count, BytesSent, Destination);
-	}
-
-	FBitWriter Packet;
-	Packet = Handler.Handle(Data, Count);
-	return Socket.Get()->SendTo(Packet.GetData(), Packet.GetNumBytes(), BytesSent, Destination);
+	});
 }
 
 bool FQuilkinSocket::Send(const uint8* Data, int32 Count, int32& BytesSent)
 {
-	if (!Handler.IsEnabled())
-	{
+	return Handler.Write(Data, Count, BytesSent, [this](const uint8* Data, int32 Count, int32& BytesSent) {
 		return Socket.Get()->Send(Data, Count, BytesSent);
-	}
-
-	FBitWriter Packet;
-	Packet = Handler.Handle(Data, Count);
-	return Socket.Get()->Send(Packet.GetData(), Packet.GetNumBytes(), BytesSent);
+	});
 }
 
 bool FQuilkinSocket::RecvFrom(uint8* Data, int32 BufferSize, int32& BytesRead, FInternetAddr& Source, ESocketReceiveFlags::Type Flags)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Google LLC
+ * Copyright 2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#pragma once
 
-#include "QuilkinLog.h"
+#include "CoreMinimal.h"
 
-DEFINE_LOG_CATEGORY(LogQuilkin);
+inline constexpr uint64_t MillisToNanos(uint64_t milliseconds) {
+    return milliseconds * 1000000;
+}
+
+constexpr int64 DefaultLatencyThreshold = MillisToNanos(150);
+constexpr int64 DefaultPenaltyLatency = MillisToNanos(200);
+
+inline int64 NanosToMillis(int64 Nanoseconds)
+{
+    return Nanoseconds / 1'000'000;
+}

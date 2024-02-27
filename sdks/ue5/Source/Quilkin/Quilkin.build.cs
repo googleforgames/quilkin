@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Google LLC
+ * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,14 +24,22 @@ public class Quilkin : ModuleRules
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
 		PrivateDependencyModuleNames.AddRange(new string[] {
-			"Sockets",
 			"Json",
-			"Engine"
+			"HTTP",
+			"Networking",
 		});
 
 		PublicDependencyModuleNames.AddRange(new string[] {
+			"Sockets",
 			"Core",
-			"CoreUObject",
+            "CoreUObject",
+            "Engine",
+			"DeveloperSettings",
+            "InputCore",
+		});
+
+		PrivateIncludePaths.AddRange(new string[] {
+			"Quilkin/Private/Tests",
 		});
 	}
 }
