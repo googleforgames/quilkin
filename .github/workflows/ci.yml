@@ -36,5 +36,4 @@ jobs:
       - uses: actions/checkout@v4
         with:
             submodules: true
-      - run: sudo apt-get install -y protobuf-compiler
       - run: cargo run -p proto-gen -- validate

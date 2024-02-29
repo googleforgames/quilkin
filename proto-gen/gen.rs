@@ -5,24 +5,31 @@ use std::{
 
 const VERSION: &str = "0.2.0";
 
-fn install() {
-    if let Ok(output) = Command::new("proto-gen").arg("-V").output() {
+fn check_version(name: &str, prefix: &str, wanted: &str) -> bool {
+    if let Ok(output) = Command::new(name).arg("--version").output() {
         if output.status.success() {
-            let version =
-                std::str::from_utf8(&output.stdout).expect("proto-gen version output was non-utf8");
+            let version = std::str::from_utf8(&output.stdout).expect("version output was non-utf8");
 
-            if let Some(v) = version.strip_prefix("proto-gen ") {
-                if v.trim() == VERSION {
-                    return;
+            if let Some(v) = version.strip_prefix(prefix) {
+                if v.trim() == wanted {
+                    return true;
                 } else {
-                    println!("proto-gen version detected as '{v}' which did not match expected version '{VERSION}'");
+                    println!("{name} version detected as '{v}' which did not match expected version '{wanted}'");
                 }
             }
         } else {
-            println!("failed to retrieve proto-gen version");
+            println!("failed to retrieve {name} version");
         }
     } else {
-        println!("proto-gen not installed (or not in PATH)");
+        println!("{name} not installed (or not in PATH)");
+    }
+
+    false
+}
+
+fn install() {
+    if check_version("proto-gen", "proto-gen ", VERSION) {
+        return;
     }
 
     // If we're in CI use the precompiled binary
@@ -95,23 +102,78 @@ fn install() {
     }
 }
 
+const VERSION_PROTOC: &str = "25.3";
+
+fn install_protoc() {
+    if std::env::var_os("CI").is_none() {
+        return;
+    }
+
+    let Some(rt) = std::env::var_os("RUNNER_TEMP") else {
+        panic!("failed to get github runner temp dir");
+    };
+
+    let rt = PathBuf::from(rt);
+
+    let temp = rt.join("protoc.zip");
+
+    // Install from github releases as eg. ubuntu 22.04 has a 2+ year old version :-/
+    if !Command::new("curl")
+        .args(["-L", "--fail", "-o"])
+        .arg(&temp)
+        .arg(format!("https://github.com/protocolbuffers/protobuf/releases/download/v{VERSION_PROTOC}/protoc-{VERSION_PROTOC}-linux-x86_64.zip"))
+        .status()
+        .expect("curl is not installed").success() {
+        panic!("curl failed to download protoc zip");
+    }
+
+    let mut cargo_root = std::env::var_os("CARGO_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            let home = std::env::var_os("HOME").expect("failed to locate CARGO_HOME or HOME");
+            let mut home = PathBuf::from(home);
+            home.push(".cargo");
+            home
+        });
+
+    cargo_root.push("bin");
+
+    if !Command::new("unzip")
+        .arg("-q")
+        .arg(&temp)
+        .args(["bin/protoc", "-d"])
+        .arg(&cargo_root)
+        .status()
+        .expect("unzip not installed")
+        .success()
+    {
+        panic!("failed to unzip protoc");
+    }
+
+    cargo_root.push("protoc");
+
+    if !Command::new("chmod")
+        .arg("+x")
+        .arg(cargo_root)
+        .status()
+        .expect("chmod not installed")
+        .success()
+    {
+        panic!("failed to enable execution mask on protoc");
+    }
+}
+
 fn execute(which: &str) {
     let files: &[(&str, &[&str])] = &[
         (
             "proto",
             &[
                 "envoy/config/accesslog/v3/accesslog",
-                // "envoy/config/cluster/v3/cluster",
-                // "envoy/config/common/matcher/v3/matcher",
                 "envoy/config/listener/v3/listener",
                 "envoy/config/listener/v3/listener_components",
-                // "envoy/config/route/v3/route",
-                // "envoy/service/cluster/v3/cds",
                 "envoy/service/discovery/v3/ads",
                 "envoy/service/discovery/v3/discovery",
                 "envoy/config/endpoint/v3/endpoint_components",
-                // "envoy/type/metadata/v3/metadata",
-                // "envoy/type/tracing/v3/custom_tag",
             ],
         ),
         ("proto/xds", &["core/v3/resource_name"]),
@@ -286,5 +348,7 @@ fn main() {
 
     // Check if proto-gen is available and install it if not
     install();
+    // We _also_ need to see if protoc is installed
+    install_protoc();
     execute(&subcmd);
 }
