@@ -73,6 +73,12 @@ pub(crate) trait Loggable {
     fn log(&self);
 }
 
+/// Gets the current [Unix timestamp](https://en.wikipedia.org/wiki/Unix_time)
+#[inline]
+pub fn unix_timestamp() -> i64 {
+    time::OffsetDateTime::now_utc().unix_timestamp()
+}
+
 #[cfg(doctest)]
 mod external_doc_tests {
     #![doc = include_str!("../docs/src/services/proxy/filters.md")]

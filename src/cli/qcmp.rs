@@ -70,7 +70,7 @@ impl Ping {
                 }
             };
 
-            let recv_time = chrono::Utc::now().timestamp_nanos_opt().unwrap();
+            let recv_time = crate::unix_timestamp();
             let reply = Protocol::parse(&buf[..size]).unwrap().unwrap();
 
             if ping.nonce() != reply.nonce() {

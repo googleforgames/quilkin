@@ -74,7 +74,7 @@ async fn ping(port: u16) {
         .await
         .unwrap()
         .unwrap();
-    let recv_time = chrono::Utc::now().timestamp_nanos_opt().unwrap();
+    let recv_time = quilkin::unix_timestamp();
     let reply = Protocol::parse(&buf[..size]).unwrap().unwrap();
 
     assert_eq!(ping.nonce(), reply.nonce());

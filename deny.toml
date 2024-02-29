@@ -27,6 +27,15 @@ ignore = []
 
 [bans]
 multiple-versions = "deny"
+deny = [
+    { crate = "openssl-sys", use-instead = "rustls" },
+    { crate = "openssl", use-instead = "rustls" },
+    { crate = "chrono", use-instead = "time", wrappers = [
+        "k8s-openapi",
+        "kube-client",
+        "kube-core",
+    ] },
+]
 skip = [
     { crate = "bitflags@1.3.2", reason = "multiple crates use this old version" },
     { crate = "syn@1.0", reason = "multiple crates use this old version" },
