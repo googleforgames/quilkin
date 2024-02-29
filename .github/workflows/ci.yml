@@ -29,4 +29,7 @@ jobs:
   validate:
     runs-on: ubuntu-22.04
     steps:
+      - uses: actions/checkout@v4
+        with:
+            submodules: true
       - run: cargo run -p proto-gen -- validate
