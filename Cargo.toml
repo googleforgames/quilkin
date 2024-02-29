@@ -112,7 +112,7 @@ prost = "0.12.1"
 prost-types = "0.12.1"
 rand = "0.8.5"
 regex = "1.9.6"
-schemars = { version = "0.8.15", features = ["chrono", "bytes", "url"] }
+schemars = { version = "0.8.15", features = ["bytes", "url"] }
 seahash = "4.1"
 serde = { version = "1.0.188", features = ["derive", "rc"] }
 serde_json = "1.0.107"
