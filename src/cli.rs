@@ -523,10 +523,17 @@ mod tests {
 
             assert_eq!(
                 "hello",
-                timeout(Duration::from_millis(2000), rx.recv())
-                    .await
-                    .expect("should have received a packet")
-                    .unwrap()
+                timeout(
+                    Duration::from_millis(if std::env::var_os("CI").is_some() {
+                        5000
+                    } else {
+                        100
+                    }),
+                    rx.recv()
+                )
+                .await
+                .expect("should have received a packet")
+                .unwrap()
             );
 
             tracing::info!(%token, "received packet");
