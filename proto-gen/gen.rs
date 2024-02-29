@@ -33,12 +33,12 @@ fn install() {
 
         // Fetch the tarball
         let output = Command::new("curl")
-        .args(["-L", "--fail"])
-        .arg(format!("https://github.com/EmbarkStudios/proto-gen/releases/download/v{VERSION}/proto-gen-v{VERSION}-x86_64-unknown-linux-musl.tar.gz"))
-        .stdout(Stdio::piped())
-        .spawn()
-        .expect("curl is not installed")
-        .wait_with_output().expect("curl was killed with a signal");
+            .args(["-L", "--fail"])
+            .arg(format!("https://github.com/EmbarkStudios/proto-gen/releases/download/v{VERSION}/proto-gen-v{VERSION}-x86_64-unknown-linux-musl.tar.gz"))
+            .stdout(Stdio::piped())
+            .spawn()
+            .expect("curl is not installed")
+            .wait_with_output().expect("curl was killed with a signal");
 
         if !output.status.success() {
             panic!("curl failed with {:?}", output.status);
@@ -62,16 +62,25 @@ fn install() {
         cargo_root.push("bin");
 
         // Untar just the binary to CARGO_HOME/bin
-        if !Command::new("tar")
+        let mut child = Command::new("tar")
             .args(["xzf", "-", "--strip-components=1", "-C"])
             .arg(cargo_root)
             .arg(format!(
                 "proto-gen-v{VERSION}-x86_64-unknown-linux-musl/proto-gen"
             ))
-            .status()
-            .expect("tar is not installed")
-            .success()
+            .stdin(Stdio::piped())
+            .spawn()
+            .expect("tar not installed");
+
         {
+            let mut stdin = child.stdin.take().unwrap();
+            use std::io::Write;
+            stdin
+                .write_all(&output.stdout)
+                .expect("failed to write tarball to stdin");
+        }
+
+        if !child.wait().expect("tar is not installed").success() {
             panic!("failed to extract proto-gen binary from tarball");
         }
     } else {
