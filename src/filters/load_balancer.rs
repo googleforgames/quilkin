@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-crate::include_proto!("quilkin.filters.load_balancer.v1alpha1");
+use crate::generated::quilkin::filters::load_balancer::v1alpha1 as proto;
 
 mod config;
 mod endpoint_chooser;
 
-use self::quilkin::filters::load_balancer::v1alpha1 as proto;
 use crate::filters::prelude::*;
 use endpoint_chooser::EndpointChooser;
 

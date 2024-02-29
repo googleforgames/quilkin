@@ -25,15 +25,15 @@ use crate::{
     cli::Admin,
     config::Config,
     net::xds::{
-        metrics,
-        relay::aggregated_control_plane_discovery_service_server::{
-            AggregatedControlPlaneDiscoveryService, AggregatedControlPlaneDiscoveryServiceServer,
-        },
-        service::discovery::v3::{
+        discovery::{
             aggregated_discovery_service_server::{
                 AggregatedDiscoveryService, AggregatedDiscoveryServiceServer,
             },
             DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
+        },
+        metrics,
+        relay::aggregated_control_plane_discovery_service_server::{
+            AggregatedControlPlaneDiscoveryService, AggregatedControlPlaneDiscoveryServiceServer,
         },
         ResourceType,
     },
@@ -167,7 +167,7 @@ impl ControlPlane {
                 .version
                 .load(std::sync::atomic::Ordering::Relaxed)
                 .to_string(),
-            control_plane: Some(crate::net::xds::config::core::v3::ControlPlane {
+            control_plane: Some(crate::net::xds::core::ControlPlane {
                 identifier: (*self.config.id.load()).clone(),
             }),
             type_url: resource_type.type_url().to_owned(),
@@ -309,7 +309,7 @@ impl ControlPlane {
         let mut pending_acks = cached::TimedSizedCache::with_size_and_lifespan(50, 1);
         let this = Self::clone(self);
 
-        let control_plane_id = crate::net::xds::config::core::v3::ControlPlane {
+        let control_plane_id = crate::net::xds::core::ControlPlane {
             identifier: (*this.config.id.load()).clone(),
         };
 
@@ -738,11 +738,11 @@ mod tests {
 
     use super::*;
     use crate::net::xds::{
-        config::{
-            core::v3::Node,
-            listener::v3::{FilterChain, Listener},
-        },
-        service::discovery::v3::DiscoveryResponse,
+        core::Node,
+        //     listener::v3::{FilterChain, Listener},
+        // },
+        discovery::DiscoveryResponse,
+        listener::{FilterChain, Listener},
         ResourceType,
     };
 

@@ -32,6 +32,8 @@ pub mod filters;
 #[doc(hidden)]
 pub mod test;
 
+mod generated;
+
 pub type Result<T, E = eyre::Error> = std::result::Result<T, E>;
 
 #[doc(inline)]

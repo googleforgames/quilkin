@@ -16,114 +16,116 @@
 
 // We don't control the codegen, so disable any code warnings in the
 // proto modules.
-#[allow(warnings)]
-mod xds {
-    pub mod core {
-        pub mod v3 {
-            #![doc(hidden)]
-            tonic::include_proto!("xds.core.v3");
-        }
-    }
+//#[allow(warnings)]
+// mod xds {
+//     pub mod core {
+//         pub mod v3 {
+//             #![doc(hidden)]
+//             tonic::include_proto!("xds.core.v3");
+//         }
+//     }
 
-    pub mod r#type {
-        pub mod matcher {
-            pub mod v3 {
-                pub use super::super::super::config::common::matcher::v3::*;
-                tonic::include_proto!("envoy.r#type.matcher.v3");
-            }
-        }
-        pub mod metadata {
-            pub mod v3 {
-                tonic::include_proto!("envoy.r#type.metadata.v3");
-            }
-        }
-        pub mod tracing {
-            pub mod v3 {
-                tonic::include_proto!("envoy.r#type.tracing.v3");
-            }
-        }
-        pub mod v3 {
-            tonic::include_proto!("envoy.r#type.v3");
-        }
-    }
-    pub mod config {
-        pub mod accesslog {
-            pub mod v3 {
-                tonic::include_proto!("envoy.config.accesslog.v3");
-            }
-        }
-        pub mod cluster {
-            pub mod v3 {
-                tonic::include_proto!("envoy.config.cluster.v3");
-            }
-        }
-        pub mod common {
-            pub mod matcher {
-                pub mod v3 {
-                    tonic::include_proto!("envoy.config.common.matcher.v3");
-                }
-            }
-        }
-        pub mod core {
-            pub mod v3 {
-                tonic::include_proto!("envoy.config.core.v3");
-            }
-        }
-        pub mod endpoint {
-            pub mod v3 {
-                tonic::include_proto!("envoy.config.endpoint.v3");
-            }
-        }
-        pub mod listener {
-            pub mod v3 {
-                tonic::include_proto!("envoy.config.listener.v3");
-            }
-        }
-        pub mod route {
-            pub mod v3 {
-                tonic::include_proto!("envoy.config.route.v3");
-            }
-        }
-    }
-    pub mod service {
-        pub mod discovery {
-            pub mod v3 {
-                tonic::include_proto!("envoy.service.discovery.v3");
-            }
-        }
-        pub mod cluster {
-            pub mod v3 {
-                tonic::include_proto!("envoy.service.cluster.v3");
-            }
-        }
-    }
-}
+//     pub mod r#type {
+//         pub mod matcher {
+//             pub mod v3 {
+//                 pub use super::super::super::config::common::matcher::v3::*;
+//                 tonic::include_proto!("envoy.r#type.matcher.v3");
+//             }
+//         }
+//         pub mod metadata {
+//             pub mod v3 {
+//                 tonic::include_proto!("envoy.r#type.metadata.v3");
+//             }
+//         }
+//         pub mod tracing {
+//             pub mod v3 {
+//                 tonic::include_proto!("envoy.r#type.tracing.v3");
+//             }
+//         }
+//         pub mod v3 {
+//             tonic::include_proto!("envoy.r#type.v3");
+//         }
+//     }
+//     pub mod config {
+//         pub mod accesslog {
+//             pub mod v3 {
+//                 tonic::include_proto!("envoy.config.accesslog.v3");
+//             }
+//         }
+//         pub mod cluster {
+//             pub mod v3 {
+//                 tonic::include_proto!("envoy.config.cluster.v3");
+//             }
+//         }
+//         pub mod common {
+//             pub mod matcher {
+//                 pub mod v3 {
+//                     tonic::include_proto!("envoy.config.common.matcher.v3");
+//                 }
+//             }
+//         }
+//         pub mod core {
+//             pub mod v3 {
+//                 tonic::include_proto!("envoy.config.core.v3");
+//             }
+//         }
+//         pub mod endpoint {
+//             pub mod v3 {
+//                 tonic::include_proto!("envoy.config.endpoint.v3");
+//             }
+//         }
+//         pub mod listener {
+//             pub mod v3 {
+//                 tonic::include_proto!("envoy.config.listener.v3");
+//             }
+//         }
+//         pub mod route {
+//             pub mod v3 {
+//                 tonic::include_proto!("envoy.config.route.v3");
+//             }
+//         }
+//     }
+//     pub mod service {
+//         pub mod discovery {
+//             pub mod v3 {
+//                 tonic::include_proto!("envoy.service.discovery.v3");
+//             }
+//         }
+//         pub mod cluster {
+//             pub mod v3 {
+//                 tonic::include_proto!("envoy.service.cluster.v3");
+//             }
+//         }
+//     }
+// }
 
-#[allow(warnings)]
-pub(crate) mod google {
-    pub mod rpc {
-        tonic::include_proto!("google.rpc");
-    }
-}
+// use crate::generated::envoy;
+// use crate::generated::xds;
 
-crate::include_proto!("quilkin.relay.v1alpha1");
+pub(crate) use crate::generated::quilkin::relay::v1alpha1 as relay;
 
 pub(crate) mod client;
 pub(crate) mod metrics;
 mod resource;
 pub(crate) mod server;
 
-pub(crate) use self::quilkin::relay::v1alpha1 as relay;
-use self::xds as envoy;
 use crate::net::{cluster::EndpointSetVersion, endpoint::Locality};
 
-pub use self::{
-    client::{AdsClient, Client},
-    resource::{Resource, ResourceType},
-    server::ControlPlane,
-    service::discovery::v3::aggregated_discovery_service_client::AggregatedDiscoveryServiceClient,
-    xds::*,
+pub use crate::generated::envoy::{
+    config::core::v3::{self as core, socket_address},
+    config::listener::v3 as listener,
+    service::discovery::v3 as discovery,
 };
+pub use client::{AdsClient, Client};
+pub use resource::{Resource, ResourceType};
+// pub use self::{
+//     client::{AdsClient, Client},
+//     envoy::service::discovery::v3::aggregated_discovery_service_client::AggregatedDiscoveryServiceClient,
+//     envoy::*,
+//     resource::{Resource, ResourceType},
+//     server::ControlPlane,
+//     xds::*,
+// };
 use std::collections::HashMap;
 
 /// Keeps track of what resource versions a particular client has

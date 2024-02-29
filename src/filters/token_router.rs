@@ -14,10 +14,6 @@
  *  limitations under the License.
  */
 
-crate::include_proto!("quilkin.filters.token_router.v1alpha1");
-
-use std::convert::TryFrom;
-
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -25,7 +21,7 @@ use crate::{
     net::endpoint::metadata,
 };
 
-use self::quilkin::filters::token_router::v1alpha1 as proto;
+use crate::generated::quilkin::filters::token_router::v1alpha1 as proto;
 
 /// Filter that only allows packets to be passed to Endpoints that have a matching
 /// connection_id to the token stored in the Filter's dynamic metadata.

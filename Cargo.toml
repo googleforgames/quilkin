@@ -15,7 +15,7 @@
 #
 
 [workspace]
-members = [".", "./macros", "./agones"]
+members = [".", "./macros", "./agones", "./proto-gen"]
 
 [workspace.dependencies]
 kube = { version = "0.88", features = [
@@ -170,12 +170,10 @@ tonic-build = { version = "0.10.2", default_features = false, features = [
     "prost",
 ] }
 prost-build = "0.12.1"
-protobuf-src = { version = "1.1.0", optional = true }
 
 [features]
-default = ["vendor-protoc"]
+default = []
 instrument = []
-vendor-protoc = ["dep:protobuf-src"]
 
 # We want debug information when doing benchmarks for debugging purposes as well
 # as better (correct) callstacks in perf

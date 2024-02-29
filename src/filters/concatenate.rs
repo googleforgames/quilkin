@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-crate::include_proto!("quilkin.filters.concatenate.v1alpha1");
+use crate::generated::quilkin::filters::concatenate::v1alpha1 as proto;
 
 mod config;
 
 use crate::filters::prelude::*;
 
-use self::quilkin::filters::concatenate::v1alpha1 as proto;
 pub use config::{Config, Strategy};
 
 /// The `Concatenate` filter's job is to add a byte packet to either the

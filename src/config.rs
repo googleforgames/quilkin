@@ -33,11 +33,11 @@ use uuid::Uuid;
 
 use crate::{
     filters::prelude::*,
-    net::cluster::{self, ClusterMap},
-    net::xds::{
-        config::listener::v3::Listener, service::discovery::v3::Resource as XdsResource, Resource,
-        ResourceType,
+    generated::envoy::{
+        config::listener::v3::Listener, service::discovery::v3::Resource as XdsResource,
     },
+    net::cluster::{self, ClusterMap},
+    net::xds::{Resource, ResourceType},
 };
 
 pub use self::{
@@ -662,13 +662,13 @@ pub struct Filter {
     pub config: Option<serde_json::Value>,
 }
 
-impl TryFrom<crate::net::xds::config::listener::v3::Filter> for Filter {
+use crate::generated::envoy::config::listener::v3 as listener;
+
+impl TryFrom<listener::Filter> for Filter {
     type Error = CreationError;
 
-    fn try_from(
-        filter: crate::net::xds::config::listener::v3::Filter,
-    ) -> Result<Self, Self::Error> {
-        use crate::net::xds::config::listener::v3::filter::ConfigType;
+    fn try_from(filter: listener::Filter) -> Result<Self, Self::Error> {
+        use listener::filter::ConfigType;
 
         let config = if let Some(config_type) = filter.config_type {
             let config = match config_type {
@@ -698,11 +698,11 @@ impl TryFrom<crate::net::xds::config::listener::v3::Filter> for Filter {
     }
 }
 
-impl TryFrom<Filter> for crate::net::xds::config::listener::v3::Filter {
+impl TryFrom<Filter> for listener::Filter {
     type Error = CreationError;
 
     fn try_from(filter: Filter) -> Result<Self, Self::Error> {
-        use crate::net::xds::config::listener::v3::filter::ConfigType;
+        use listener::filter::ConfigType;
 
         let config = if let Some(config) = filter.config {
             Some(

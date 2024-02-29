@@ -24,8 +24,7 @@ use crate::{
     net::endpoint::metadata::{self, Value},
 };
 
-crate::include_proto!("quilkin.filters.timestamp.v1alpha1");
-use self::quilkin::filters::timestamp::v1alpha1 as proto;
+use crate::generated::quilkin::filters::timestamp::v1alpha1 as proto;
 
 /// A filter that reads a metadata value as a timestamp to be observed in
 /// a histogram.

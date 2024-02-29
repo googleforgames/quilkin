@@ -29,15 +29,17 @@ use tryhard::{
 use crate::{
     cli::Admin,
     config::Config,
-    net::xds::{
-        config::core::v3::Node,
-        relay::aggregated_control_plane_discovery_service_client::AggregatedControlPlaneDiscoveryServiceClient,
-        service::discovery::v3::{
-            aggregated_discovery_service_client::AggregatedDiscoveryServiceClient,
-            DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
+    generated::{
+        envoy::{
+            config::core::v3::Node,
+            service::discovery::v3::{
+                aggregated_discovery_service_client::AggregatedDiscoveryServiceClient,
+                DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
+            },
         },
-        Resource, ResourceType,
+        quilkin::relay::v1alpha1::aggregated_control_plane_discovery_service_client::AggregatedControlPlaneDiscoveryServiceClient,
     },
+    net::xds::{Resource, ResourceType},
     Result,
 };
 
@@ -377,7 +379,7 @@ impl DeltaServerStream {
 
         res_tx
             .send(DeltaDiscoveryResponse {
-                control_plane: Some(crate::net::xds::config::core::v3::ControlPlane { identifier }),
+                control_plane: Some(crate::net::xds::core::ControlPlane { identifier }),
                 ..Default::default()
             })
             .await?;
@@ -755,7 +757,7 @@ impl MdsStream {
 
                 loop {
                     let initial_response = DiscoveryResponse {
-                        control_plane: Some(crate::net::xds::config::core::v3::ControlPlane {
+                        control_plane: Some(crate::net::xds::core::ControlPlane {
                             identifier: (&*identifier).into(),
                         }),
                         ..<_>::default()
@@ -943,7 +945,7 @@ pub fn handle_discovery_responses(
 
             let error_detail = if let Err(error) = result {
                 super::metrics::nacks(&control_plane_identifier, &response.type_url).inc();
-                Some(crate::net::xds::google::rpc::Status {
+                Some(crate::generated::google::rpc::Status {
                     code: 3,
                     message: error.to_string(),
                     ..Default::default()

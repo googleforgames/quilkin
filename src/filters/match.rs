@@ -17,16 +17,12 @@
 mod config;
 mod metrics;
 
-use crate::{
-    filters::prelude::*,
-    net::{endpoint::metadata, xds as envoy},
-};
+use crate::{filters::prelude::*, net::endpoint::metadata};
 
-use self::{metrics::Metrics, quilkin::filters::matches::v1alpha1 as proto};
+use self::metrics::Metrics;
 
 pub use self::config::{Branch, Config, DirectionalConfig, Fallthrough};
-
-crate::include_proto!("quilkin.filters.matches.v1alpha1");
+use crate::generated::quilkin::filters::matches::v1alpha1 as proto;
 
 struct ConfigInstance {
     metadata_key: metadata::Key,

@@ -1,8 +1,7 @@
 use super::Config;
 use crate::net::xds::{
-    metrics,
-    service::discovery::v3::{DeltaDiscoveryRequest, DeltaDiscoveryResponse},
-    Resource, ResourceType,
+    discovery::{DeltaDiscoveryRequest, DeltaDiscoveryResponse},
+    metrics, Resource, ResourceType,
 };
 use enum_map::Enum as _;
 use std::{collections::HashMap, sync::Arc};
@@ -80,7 +79,7 @@ pub fn handle_delta_discovery_responses(
 
             let error_detail = if let Err(error) = result {
                 metrics::nacks(control_plane_identifier, &response.type_url).inc();
-                Some(crate::net::xds::google::rpc::Status {
+                Some(crate::generated::google::rpc::Status {
                     code: 3,
                     message: error.to_string(),
                     ..Default::default()

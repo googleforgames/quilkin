@@ -14,13 +14,10 @@
  * limitations under the License.
  */
 
-use std::convert::TryFrom;
-
 use crate::filters::prelude::*;
 use serde::{Deserialize, Serialize};
 
-crate::include_proto!("quilkin.filters.drop.v1alpha1");
-use self::quilkin::filters::drop::v1alpha1 as proto;
+use crate::generated::quilkin::filters::drop::v1alpha1 as proto;
 
 pub const NAME: &str = Drop::NAME;
 

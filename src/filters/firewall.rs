@@ -18,12 +18,10 @@ mod config;
 
 use tracing::debug;
 
-use self::quilkin::filters::firewall::v1alpha1 as proto;
 use crate::filters::prelude::*;
+use crate::generated::quilkin::filters::firewall::v1alpha1 as proto;
 
 pub use config::{Action, Config, PortRange, PortRangeError, Rule};
-
-crate::include_proto!("quilkin.filters.firewall.v1alpha1");
 
 /// Filter for allowing/blocking traffic by IP and port.
 pub struct Firewall {
