@@ -136,8 +136,6 @@ fn install_protoc() {
             home
         });
 
-    cargo_root.push("bin");
-
     if !Command::new("unzip")
         .arg("-q")
         .arg(&temp)
@@ -150,7 +148,7 @@ fn install_protoc() {
         panic!("failed to unzip protoc");
     }
 
-    cargo_root.push("protoc");
+    cargo_root.push("bin/protoc");
 
     if !Command::new("chmod")
         .arg("+x")
