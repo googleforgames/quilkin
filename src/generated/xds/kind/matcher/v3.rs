@@ -116,9 +116,7 @@ pub struct Matcher {
     /// succeeded). If no matcher above matched and this field is not populated,
     /// the match will be considered unsuccessful.
     #[prost(message, optional, boxed, tag = "3")]
-    pub on_no_match: ::core::option::Option<
-        ::prost::alloc::boxed::Box<matcher::OnMatch>,
-    >,
+    pub on_no_match: ::core::option::Option<::prost::alloc::boxed::Box<matcher::OnMatch>>,
     #[prost(oneof = "matcher::MatcherType", tags = "1, 2")]
     pub matcher_type: ::core::option::Option<matcher::MatcherType>,
 }
@@ -240,9 +238,8 @@ pub mod matcher {
     pub struct MatcherTree {
         /// Protocol-specific specification of input field to match on.
         #[prost(message, optional, tag = "1")]
-        pub input: ::core::option::Option<
-            super::super::super::super::core::v3::TypedExtensionConfig,
-        >,
+        pub input:
+            ::core::option::Option<super::super::super::super::core::v3::TypedExtensionConfig>,
         /// Exact or prefix match maps in which to look up the input value.
         /// If the lookup succeeds, the match is considered successful, and
         /// the corresponding OnMatch is used.
@@ -256,10 +253,7 @@ pub mod matcher {
         #[derive(Clone, PartialEq, ::prost::Message)]
         pub struct MatchMap {
             #[prost(map = "string, message", tag = "1")]
-            pub map: ::std::collections::HashMap<
-                ::prost::alloc::string::String,
-                super::OnMatch,
-            >,
+            pub map: ::std::collections::HashMap<::prost::alloc::string::String, super::OnMatch>,
         }
         /// Exact or prefix match maps in which to look up the input value.
         /// If the lookup succeeds, the match is considered successful, and
@@ -274,9 +268,7 @@ pub mod matcher {
             PrefixMatchMap(MatchMap),
             /// Extension for custom matching logic.
             #[prost(message, tag = "4")]
-            CustomMatch(
-                super::super::super::super::super::core::v3::TypedExtensionConfig,
-            ),
+            CustomMatch(super::super::super::super::super::core::v3::TypedExtensionConfig),
         }
     }
     #[allow(clippy::derive_partial_eq_without_eq)]

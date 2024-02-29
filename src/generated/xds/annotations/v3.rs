@@ -52,9 +52,7 @@ impl PackageVersionStatus {
             PackageVersionStatus::Unknown => "UNKNOWN",
             PackageVersionStatus::Frozen => "FROZEN",
             PackageVersionStatus::Active => "ACTIVE",
-            PackageVersionStatus::NextMajorVersionCandidate => {
-                "NEXT_MAJOR_VERSION_CANDIDATE"
-            }
+            PackageVersionStatus::NextMajorVersionCandidate => "NEXT_MAJOR_VERSION_CANDIDATE",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.

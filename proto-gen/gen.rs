@@ -135,7 +135,7 @@ fn execute(which: &str) {
 
     cmd
         // Run rustfmt on the output, since they're committed they might as well be nice
-        //.arg("--format")
+        .arg("--format")
         .arg("--build-server")
         .arg("--build-client")
         .arg("--generate-transport")

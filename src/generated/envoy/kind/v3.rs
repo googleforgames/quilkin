@@ -26,17 +26,7 @@ pub struct FractionalPercent {
 /// Nested message and enum types in `FractionalPercent`.
 pub mod fractional_percent {
     /// Fraction percentages support several fixed denominator values.
-    #[derive(
-        Clone,
-        Copy,
-        Debug,
-        PartialEq,
-        Eq,
-        Hash,
-        PartialOrd,
-        Ord,
-        ::prost::Enumeration
-    )]
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
     #[repr(i32)]
     pub enum DenominatorType {
         /// 100.

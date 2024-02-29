@@ -58,14 +58,10 @@ pub mod custom_tag {
     pub struct Metadata {
         /// Specify what kind of metadata to obtain tag value from.
         #[prost(message, optional, tag = "1")]
-        pub kind: ::core::option::Option<
-            super::super::super::metadata::v3::MetadataKind,
-        >,
+        pub kind: ::core::option::Option<super::super::super::metadata::v3::MetadataKind>,
         /// Metadata key to define the path to retrieve the tag value.
         #[prost(message, optional, tag = "2")]
-        pub metadata_key: ::core::option::Option<
-            super::super::super::metadata::v3::MetadataKey,
-        >,
+        pub metadata_key: ::core::option::Option<super::super::super::metadata::v3::MetadataKey>,
         /// When no valid metadata is found,
         /// the tag value would be populated with this default value if specified,
         /// otherwise no tag would be populated.

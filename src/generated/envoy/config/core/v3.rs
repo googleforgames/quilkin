@@ -101,10 +101,8 @@ pub struct Metadata {
     /// are present in the metadata with same keys, only *typed_filter_metadata*
     /// field will be parsed.
     #[prost(map = "string, message", tag = "1")]
-    pub filter_metadata: ::std::collections::HashMap<
-        ::prost::alloc::string::String,
-        ::prost_types::Struct,
-    >,
+    pub filter_metadata:
+        ::std::collections::HashMap<::prost::alloc::string::String, ::prost_types::Struct>,
     /// Key is the reverse DNS filter name, e.g. com.acme.widget. The envoy.*
     /// namespace is reserved for Envoy's built-in filters.
     /// The value is encoded as google.protobuf.Any.
@@ -113,10 +111,8 @@ pub struct Metadata {
     /// *typed_filter_metadata* fields are present in the metadata with same keys,
     /// only *typed_filter_metadata* field will be parsed.
     #[prost(map = "string, message", tag = "2")]
-    pub typed_filter_metadata: ::std::collections::HashMap<
-        ::prost::alloc::string::String,
-        ::prost_types::Any,
-    >,
+    pub typed_filter_metadata:
+        ::std::collections::HashMap<::prost::alloc::string::String, ::prost_types::Any>,
 }
 /// Runtime derived uint32 with a default when not specified.
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -211,17 +207,7 @@ pub struct HeaderValueOption {
 /// Nested message and enum types in `HeaderValueOption`.
 pub mod header_value_option {
     /// Describes the supported actions types for header append action.
-    #[derive(
-        Clone,
-        Copy,
-        Debug,
-        PartialEq,
-        Eq,
-        Hash,
-        PartialOrd,
-        Ord,
-        ::prost::Enumeration
-    )]
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
     #[repr(i32)]
     pub enum HeaderAppendAction {
         /// This action will append the specified value to the existing values if the
@@ -245,9 +231,7 @@ pub mod header_value_option {
             match self {
                 HeaderAppendAction::AppendIfExistsOrAdd => "APPEND_IF_EXISTS_OR_ADD",
                 HeaderAppendAction::AddIfAbsent => "ADD_IF_ABSENT",
-                HeaderAppendAction::OverwriteIfExistsOrAdd => {
-                    "OVERWRITE_IF_EXISTS_OR_ADD"
-                }
+                HeaderAppendAction::OverwriteIfExistsOrAdd => "OVERWRITE_IF_EXISTS_OR_ADD",
             }
         }
         /// Creates an enum from field names used in the ProtoBuf definition.
@@ -354,9 +338,7 @@ pub struct RuntimeFractionalPercent {
     /// Default value if the runtime value's for the numerator/denominator keys are
     /// not available.
     #[prost(message, optional, tag = "1")]
-    pub default_value: ::core::option::Option<
-        super::super::super::kind::v3::FractionalPercent,
-    >,
+    pub default_value: ::core::option::Option<super::super::super::kind::v3::FractionalPercent>,
     /// Runtime key for a YAML representation of a FractionalPercent.
     #[prost(string, tag = "2")]
     pub runtime_key: ::prost::alloc::string::String,
@@ -517,17 +499,7 @@ pub struct ProxyProtocolConfig {
 }
 /// Nested message and enum types in `ProxyProtocolConfig`.
 pub mod proxy_protocol_config {
-    #[derive(
-        Clone,
-        Copy,
-        Debug,
-        PartialEq,
-        Eq,
-        Hash,
-        PartialOrd,
-        Ord,
-        ::prost::Enumeration
-    )]
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
     #[repr(i32)]
     pub enum Version {
         /// PROXY protocol version 1. Human readable format.
@@ -581,17 +553,7 @@ pub struct SocketOption {
 }
 /// Nested message and enum types in `SocketOption`.
 pub mod socket_option {
-    #[derive(
-        Clone,
-        Copy,
-        Debug,
-        PartialEq,
-        Eq,
-        Hash,
-        PartialOrd,
-        Ord,
-        ::prost::Enumeration
-    )]
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
     #[repr(i32)]
     pub enum SocketState {
         /// Socket options are applied after socket creation but before binding the
@@ -657,9 +619,8 @@ pub struct Pipe {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EnvoyInternalAddress {
     #[prost(oneof = "envoy_internal_address::AddressNameSpecifier", tags = "1")]
-    pub address_name_specifier: ::core::option::Option<
-        envoy_internal_address::AddressNameSpecifier,
-    >,
+    pub address_name_specifier:
+        ::core::option::Option<envoy_internal_address::AddressNameSpecifier>,
 }
 /// Nested message and enum types in `EnvoyInternalAddress`.
 pub mod envoy_internal_address {
@@ -714,17 +675,7 @@ pub struct SocketAddress {
 }
 /// Nested message and enum types in `SocketAddress`.
 pub mod socket_address {
-    #[derive(
-        Clone,
-        Copy,
-        Debug,
-        PartialEq,
-        Eq,
-        Hash,
-        PartialOrd,
-        Ord,
-        ::prost::Enumeration
-    )]
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
     #[repr(i32)]
     pub enum Protocol {
         Tcp = 0,
@@ -895,16 +846,16 @@ pub mod grpc_service {
         /// service.
         ///
         /// .. csv-table::
-///```ignore
+        ///```ignore
         ///     :header: Name, Type, Description
         ///     :widths: 1, 1, 2
-///```
+        ///```
         ///
-///```ignore
+        ///```ignore
         ///     streams_total, Counter, Total number of streams opened
         ///     streams_closed_<gRPC status code>, Counter, Total streams closed with
         ///     <gRPC status code>
-///```
+        ///```
         #[prost(string, tag = "4")]
         pub stat_prefix: ::prost::alloc::string::String,
         /// The name of the Google gRPC credentials factory to use. This must have
@@ -951,13 +902,9 @@ pub mod grpc_service {
         #[allow(clippy::derive_partial_eq_without_eq)]
         #[derive(Clone, PartialEq, ::prost::Message)]
         pub struct ChannelCredentials {
-            #[prost(
-                oneof = "channel_credentials::CredentialSpecifier",
-                tags = "1, 2, 3"
-            )]
-            pub credential_specifier: ::core::option::Option<
-                channel_credentials::CredentialSpecifier,
-            >,
+            #[prost(oneof = "channel_credentials::CredentialSpecifier", tags = "1, 2, 3")]
+            pub credential_specifier:
+                ::core::option::Option<channel_credentials::CredentialSpecifier>,
         }
         /// Nested message and enum types in `ChannelCredentials`.
         pub mod channel_credentials {
@@ -981,9 +928,7 @@ pub mod grpc_service {
                 oneof = "call_credentials::CredentialSpecifier",
                 tags = "1, 2, 3, 4, 5, 6, 7"
             )]
-            pub credential_specifier: ::core::option::Option<
-                call_credentials::CredentialSpecifier,
-            >,
+            pub credential_specifier: ::core::option::Option<call_credentials::CredentialSpecifier>,
         }
         /// Nested message and enum types in `CallCredentials`.
         pub mod call_credentials {
@@ -1009,13 +954,9 @@ pub mod grpc_service {
                 #[prost(string, tag = "1")]
                 pub name: ::prost::alloc::string::String,
                 /// \[#extension-category: envoy.grpc_credentials\]
-                #[prost(
-                    oneof = "metadata_credentials_from_plugin::ConfigType",
-                    tags = "3"
-                )]
-                pub config_type: ::core::option::Option<
-                    metadata_credentials_from_plugin::ConfigType,
-                >,
+                #[prost(oneof = "metadata_credentials_from_plugin::ConfigType", tags = "3")]
+                pub config_type:
+                    ::core::option::Option<metadata_credentials_from_plugin::ConfigType>,
             }
             /// Nested message and enum types in `MetadataCredentialsFromPlugin`.
             pub mod metadata_credentials_from_plugin {
@@ -1114,10 +1055,8 @@ pub mod grpc_service {
         pub struct ChannelArgs {
             /// See grpc_types.h GRPC_ARG #defines for keys that work here.
             #[prost(map = "string, message", tag = "1")]
-            pub args: ::std::collections::HashMap<
-                ::prost::alloc::string::String,
-                channel_args::Value,
-            >,
+            pub args:
+                ::std::collections::HashMap<::prost::alloc::string::String, channel_args::Value>,
         }
         /// Nested message and enum types in `ChannelArgs`.
         pub mod channel_args {
@@ -1215,17 +1154,7 @@ pub struct ApiConfigSource {
 /// Nested message and enum types in `ApiConfigSource`.
 pub mod api_config_source {
     /// APIs may be fetched via either REST or gRPC.
-    #[derive(
-        Clone,
-        Copy,
-        Debug,
-        PartialEq,
-        Eq,
-        Hash,
-        PartialOrd,
-        Ord,
-        ::prost::Enumeration
-    )]
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
     #[repr(i32)]
     pub enum ApiType {
         /// Ideally this would be 'reserved 0' but one can't reserve the default
@@ -1331,7 +1260,7 @@ pub struct PathConfigSource {
     ///
     /// .. note::
     ///
-///```ignore
+    ///```ignore
     ///    If `watched_directory` is *not* configured, Envoy will watch the file
     ///    path for *moves.* This is because in general only moves are atomic. The
     ///    same method of swapping files as is demonstrated in the :ref:`runtime
@@ -1340,7 +1269,7 @@ pub struct PathConfigSource {
     ///    this path. Instead, the configured `watched_directory` will be used to
     ///    trigger reloads of this path. This is required in certain deployment
     ///    scenarios. See below for more information.
-///```
+    ///```
     #[prost(string, tag = "1")]
     pub path: ::prost::alloc::string::String,
     /// If configured, this directory will be watched for *moves.* When an entry in
@@ -1378,9 +1307,7 @@ pub struct ConfigSource {
     /// configuration source.
     /// \[#not-implemented-hide:\]
     #[prost(message, repeated, tag = "7")]
-    pub authorities: ::prost::alloc::vec::Vec<
-        super::super::super::super::xds::core::v3::Authority,
-    >,
+    pub authorities: ::prost::alloc::vec::Vec<super::super::super::super::xds::core::v3::Authority>,
     /// When this timeout is specified, Envoy will wait no longer than the
     /// specified time for first config response on this xDS subscription during
     /// the :ref:`initialization process <arch_overview_initialization>`. After
@@ -1397,9 +1324,7 @@ pub struct ConfigSource {
     #[prost(enumeration = "ApiVersion", tag = "6")]
     pub resource_api_version: i32,
     #[prost(oneof = "config_source::ConfigSourceSpecifier", tags = "1, 8, 2, 3, 5")]
-    pub config_source_specifier: ::core::option::Option<
-        config_source::ConfigSourceSpecifier,
-    >,
+    pub config_source_specifier: ::core::option::Option<config_source::ConfigSourceSpecifier>,
 }
 /// Nested message and enum types in `ConfigSource`.
 pub mod config_source {
@@ -1673,12 +1598,12 @@ pub struct AlternateProtocolsCacheOptions {
     ///
     /// .. note:
     ///
-///```ignore
+    ///```ignore
     ///    The implementation is approximate and enforced independently on each
     ///    worker thread, thus it is possible for the maximum entries in the cache
     ///    to go slightly above the configured value depending on timing. This is
     ///    similar to how other circuit breakers work.
-///```
+    ///```
     #[prost(message, optional, tag = "2")]
     pub max_entries: ::core::option::Option<u32>,
     /// Allows configuring a persistent
@@ -1691,9 +1616,8 @@ pub struct AlternateProtocolsCacheOptions {
     pub key_value_store_config: ::core::option::Option<TypedExtensionConfig>,
     /// Allows pre-populating the cache with entries, as described above.
     #[prost(message, repeated, tag = "4")]
-    pub prepopulated_entries: ::prost::alloc::vec::Vec<
-        alternate_protocols_cache_options::AlternateProtocolsCacheEntry,
-    >,
+    pub prepopulated_entries:
+        ::prost::alloc::vec::Vec<alternate_protocols_cache_options::AlternateProtocolsCacheEntry>,
 }
 /// Nested message and enum types in `AlternateProtocolsCacheOptions`.
 pub mod alternate_protocols_cache_options {
@@ -1732,10 +1656,10 @@ pub struct HttpProtocolOptions {
     /// idle timeouts explicitly set this to 0.
     ///
     /// .. warning::
-///```ignore
+    ///```ignore
     ///    Disabling this timeout has a highly likelihood of yielding connection
     ///    leaks due to lost TCP FIN packets, etc.
-///```
+    ///```
     ///
     /// If the :ref:`overload action <config_overload_manager_overload_actions>`
     /// "envoy.overload_actions.reduce_timeouts" is configured, this timeout is
@@ -1791,17 +1715,7 @@ pub mod http_protocol_options {
     /// names by the RFC-7230 and this behavior is implemented as a security
     /// measure due to systems that treat '_' and '-' as interchangeable. Envoy by
     /// default allows client request headers with underscore characters.
-    #[derive(
-        Clone,
-        Copy,
-        Debug,
-        PartialEq,
-        Eq,
-        Hash,
-        PartialOrd,
-        Ord,
-        ::prost::Enumeration
-    )]
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
     #[repr(i32)]
     pub enum HeadersWithUnderscoresAction {
         /// Allow headers with underscores. This is the default behavior.
@@ -1864,22 +1778,20 @@ pub struct Http1ProtocolOptions {
     /// Describes how the keys for response headers should be formatted. By
     /// default, all header keys are lower cased.
     #[prost(message, optional, tag = "4")]
-    pub header_key_format: ::core::option::Option<
-        http1_protocol_options::HeaderKeyFormat,
-    >,
+    pub header_key_format: ::core::option::Option<http1_protocol_options::HeaderKeyFormat>,
     /// Enables trailers for HTTP/1. By default the HTTP/1 codec drops proxied
     /// trailers.
     ///
     /// .. attention::
     ///
-///```ignore
+    ///```ignore
     ///    Note that this only happens when Envoy is chunk encoding which occurs
     ///    when:
     ///    - The request is HTTP/1.1.
     ///    - Is neither a HEAD only request nor a HTTP Upgrade.
     ///    - Not a response to a HEAD request.
     ///    - The content length header is not present.
-///```
+    ///```
     #[prost(bool, tag = "5")]
     pub enable_trailers: bool,
     /// Allows Envoy to process requests/responses with both `Content-Length` and
@@ -1889,10 +1801,10 @@ pub struct Http1ProtocolOptions {
     /// <<https://tools.ietf.org/html/rfc7230#section-3.3.3>`_> for details.
     ///
     /// .. attention::
-///```ignore
+    ///```ignore
     ///    Enabling this option might lead to request smuggling vulnerability,
     ///    especially if traffic is proxied via multiple layers of proxies.
-///```
+    ///```
     #[prost(bool, tag = "6")]
     pub allow_chunked_length: bool,
     /// Allows invalid HTTP messaging. When this option is false, then Envoy will
@@ -2054,9 +1966,9 @@ pub struct Http2ProtocolOptions {
     /// If the number of PRIORITY frames received over the lifetime of connection
     /// exceeds the value calculated using this formula::
     ///
-///```ignore
+    ///```ignore
     ///    max_inbound_priority_frames_per_stream * (1 + opened_streams)
-///```
+    ///```
     ///
     /// the connection is terminated. For downstream connections the
     /// `opened_streams` is incremented when Envoy receives complete response
@@ -2072,11 +1984,11 @@ pub struct Http2ProtocolOptions {
     /// sent. If the number of WINDOW_UPDATE frames received over the lifetime of
     /// connection exceeds the value calculated using this formula::
     ///
-///```ignore
+    ///```ignore
     ///    5 + 2 * (opened_streams +
     ///             max_inbound_window_update_frames_per_data_frame_sent *
     ///             outbound_data_frames)
-///```
+    ///```
     ///
     /// the connection is terminated. For downstream connections the
     /// `opened_streams` is incremented when Envoy receives complete response
@@ -2090,9 +2002,7 @@ pub struct Http2ProtocolOptions {
     /// flow control, but more complex implementations that try to estimate
     /// available bandwidth require at least 2.
     #[prost(message, optional, tag = "11")]
-    pub max_inbound_window_update_frames_per_data_frame_sent: ::core::option::Option<
-        u32,
-    >,
+    pub max_inbound_window_update_frames_per_data_frame_sent: ::core::option::Option<u32>,
     /// Allows invalid HTTP messaging and headers. When this option is disabled
     /// (default), then the whole HTTP/2 connection is terminated upon receiving
     /// invalid HEADERS frame. However, when this option is enabled, only the
@@ -2138,13 +2048,13 @@ pub struct Http2ProtocolOptions {
     ///
     /// .. code-block:: text
     ///
-///```ignore
+    ///```ignore
     ///    ID    Field Name
     ///    ----------------
     ///    0x1   hpack_table_size
     ///    0x3   max_concurrent_streams
     ///    0x4   initial_stream_window_size
-///```
+    ///```
     ///
     /// Collisions will trigger config validation failure on load/update. Likewise,
     /// inconsistencies between custom parameters with the same identifier will
@@ -2154,9 +2064,8 @@ pub struct Http2ProtocolOptions {
     /// <<https://www.iana.org/assignments/http2-parameters/http2-parameters.xhtml#settings>`_>
     /// for standardized identifiers.
     #[prost(message, repeated, tag = "13")]
-    pub custom_settings_parameters: ::prost::alloc::vec::Vec<
-        http2_protocol_options::SettingsParameter,
-    >,
+    pub custom_settings_parameters:
+        ::prost::alloc::vec::Vec<http2_protocol_options::SettingsParameter>,
     /// Send HTTP/2 PING frames to verify that the connection is still healthy. If
     /// the remote peer does not respond within the configured timeout, the
     /// connection will be aborted.
@@ -2216,9 +2125,7 @@ pub struct Http3ProtocolOptions {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SchemeHeaderTransformation {
     #[prost(oneof = "scheme_header_transformation::Transformation", tags = "1")]
-    pub transformation: ::core::option::Option<
-        scheme_header_transformation::Transformation,
-    >,
+    pub transformation: ::core::option::Option<scheme_header_transformation::Transformation>,
 }
 /// Nested message and enum types in `SchemeHeaderTransformation`.
 pub mod scheme_header_transformation {
@@ -2236,9 +2143,8 @@ pub mod scheme_header_transformation {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EventServiceConfig {
     #[prost(oneof = "event_service_config::ConfigSourceSpecifier", tags = "1")]
-    pub config_source_specifier: ::core::option::Option<
-        event_service_config::ConfigSourceSpecifier,
-    >,
+    pub config_source_specifier:
+        ::core::option::Option<event_service_config::ConfigSourceSpecifier>,
 }
 /// Nested message and enum types in `EventServiceConfig`.
 pub mod event_service_config {
@@ -2386,9 +2292,9 @@ pub struct HealthCheck {
     /// .. code-block:: yaml
     ///
     ///   transport_socket_match_criteria:
-///```ignore
+    ///```ignore
     ///     useMTLS: true
-///```
+    ///```
     ///
     /// Will match the following :ref:`cluster socket match
     /// <envoy_v3_api_msg_config.cluster.v3.Cluster.TransportSocketMatch>`
@@ -2397,13 +2303,13 @@ pub struct HealthCheck {
     ///
     ///   transport_socket_matches:
     ///   - name: "useMTLS"
-///```ignore
+    ///```ignore
     ///     match:
     ///       useMTLS: true
     ///     transport_socket:
     ///       name: envoy.transport_sockets.tls
     ///       config: { ... } # tls socket configuration
-///```
+    ///```
     ///
     /// If this field is set, then for health checks it will supersede an entry of
     /// *envoy.transport_socket* in the :ref:`LbEndpoint.Metadata
@@ -2477,9 +2383,7 @@ pub mod health_check {
         /// Specifies a list of HTTP headers that should be removed from each request
         /// that is sent to the health checked cluster.
         #[prost(string, repeated, tag = "8")]
-        pub request_headers_to_remove: ::prost::alloc::vec::Vec<
-            ::prost::alloc::string::String,
-        >,
+        pub request_headers_to_remove: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
         /// Specifies a list of HTTP response statuses considered healthy. If
         /// provided, replaces default 200-only policy - 200 must be included
         /// explicitly as needed. Ranges follow half-open semantics of
@@ -2487,9 +2391,8 @@ pub mod health_check {
         /// end of each range are required. Only statuses in the range [100, 600) are
         /// allowed.
         #[prost(message, repeated, tag = "9")]
-        pub expected_statuses: ::prost::alloc::vec::Vec<
-            super::super::super::super::kind::v3::Int64Range,
-        >,
+        pub expected_statuses:
+            ::prost::alloc::vec::Vec<super::super::super::super::kind::v3::Int64Range>,
         /// Specifies a list of HTTP response statuses considered retriable. If
         /// provided, responses in this range will count towards the configured
         /// :ref:`unhealthy_threshold
@@ -2510,9 +2413,8 @@ pub mod health_check {
         /// statuses, any non-200 response will result in the host being marked
         /// unhealthy.
         #[prost(message, repeated, tag = "12")]
-        pub retriable_statuses: ::prost::alloc::vec::Vec<
-            super::super::super::super::kind::v3::Int64Range,
-        >,
+        pub retriable_statuses:
+            ::prost::alloc::vec::Vec<super::super::super::super::kind::v3::Int64Range>,
         /// Use specified application protocol for health checks.
         #[prost(
             enumeration = "super::super::super::super::kind::v3::CodecClientType",
@@ -2525,9 +2427,8 @@ pub mod health_check {
         /// :ref:`architecture overview <arch_overview_health_checking_identity>` for
         /// more information.
         #[prost(message, optional, tag = "11")]
-        pub service_name_matcher: ::core::option::Option<
-            super::super::super::super::kind::matcher::v3::StringMatcher,
-        >,
+        pub service_name_matcher:
+            ::core::option::Option<super::super::super::super::kind::matcher::v3::StringMatcher>,
     }
     #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Message)]

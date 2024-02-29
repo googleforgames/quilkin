@@ -6,14 +6,14 @@ pub struct Endpoint {
     ///
     /// .. attention::
     ///
-///```ignore
+    ///```ignore
     ///    The form of host address depends on the given cluster type. For STATIC or
     ///    EDS, it is expected to be a direct IP address (or something resolvable by
     ///    the specified :ref:`resolver
     ///    <envoy_v3_api_field_config.core.v3.SocketAddress.resolver_name>` in the
     ///    Address). For LOGICAL or STRICT DNS, it is expected to be hostname, and
     ///    will be resolved via DNS.
-///```
+    ///```
     #[prost(message, optional, tag = "1")]
     pub address: ::core::option::Option<super::super::core::v3::Address>,
     /// The optional health check configuration is used as configuration for the
@@ -21,10 +21,10 @@ pub struct Endpoint {
     ///
     /// .. attention::
     ///
-///```ignore
+    ///```ignore
     ///    This takes into effect only for upstream clusters with
     ///    :ref:`active health checking <arch_overview_health_checking>` enabled.
-///```
+    ///```
     #[prost(message, optional, tag = "2")]
     pub health_check_config: ::core::option::Option<endpoint::HealthCheckConfig>,
     /// The hostname associated with this endpoint. This hostname is not used for

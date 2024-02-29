@@ -96,17 +96,7 @@ pub struct ComparisonFilter {
 }
 /// Nested message and enum types in `ComparisonFilter`.
 pub mod comparison_filter {
-    #[derive(
-        Clone,
-        Copy,
-        Debug,
-        PartialEq,
-        Eq,
-        Hash,
-        PartialOrd,
-        Ord,
-        ::prost::Enumeration
-    )]
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
     #[repr(i32)]
     pub enum Op {
         /// =
@@ -177,9 +167,7 @@ pub struct RuntimeFilter {
     /// The default sampling percentage. If not specified, defaults to 0% with
     /// denominator of 100.
     #[prost(message, optional, tag = "2")]
-    pub percent_sampled: ::core::option::Option<
-        super::super::super::kind::v3::FractionalPercent,
-    >,
+    pub percent_sampled: ::core::option::Option<super::super::super::kind::v3::FractionalPercent>,
     /// By default, sampling pivots on the header
     /// :ref:`x-request-id<config_http_conn_man_headers_x-request-id>` being
     /// present. If :ref:`x-request-id<config_http_conn_man_headers_x-request-id>`
@@ -259,17 +247,7 @@ pub struct GrpcStatusFilter {
 }
 /// Nested message and enum types in `GrpcStatusFilter`.
 pub mod grpc_status_filter {
-    #[derive(
-        Clone,
-        Copy,
-        Debug,
-        PartialEq,
-        Eq,
-        Hash,
-        PartialOrd,
-        Ord,
-        ::prost::Enumeration
-    )]
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
     #[repr(i32)]
     pub enum Status {
         Ok = 0,
@@ -354,9 +332,7 @@ pub struct MetadataFilter {
     /// access_log_hint metadata, set the filter to "envoy.common" and the path to
     /// "access_log_hint", and the value to "true".
     #[prost(message, optional, tag = "1")]
-    pub matcher: ::core::option::Option<
-        super::super::super::kind::matcher::v3::MetadataMatcher,
-    >,
+    pub matcher: ::core::option::Option<super::super::super::kind::matcher::v3::MetadataMatcher>,
     /// Default result if the key does not exist in dynamic metadata: if unset or
     /// true, then log; if false, then don't log.
     #[prost(message, optional, tag = "2")]

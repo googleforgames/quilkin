@@ -12,17 +12,7 @@ pub mod load_balancer {
         #[prost(enumeration = "Policy", tag = "1")]
         pub value: i32,
     }
-    #[derive(
-        Clone,
-        Copy,
-        Debug,
-        PartialEq,
-        Eq,
-        Hash,
-        PartialOrd,
-        Ord,
-        ::prost::Enumeration
-    )]
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
     #[repr(i32)]
     pub enum Policy {
         RoundRobin = 0,

@@ -26,17 +26,7 @@ pub mod firewall {
         #[prost(message, repeated, tag = "3")]
         pub ports: ::prost::alloc::vec::Vec<PortRange>,
     }
-    #[derive(
-        Clone,
-        Copy,
-        Debug,
-        PartialEq,
-        Eq,
-        Hash,
-        PartialOrd,
-        Ord,
-        ::prost::Enumeration
-    )]
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
     #[repr(i32)]
     pub enum Action {
         Allow = 0,

@@ -44,9 +44,7 @@ pub struct DiscoveryRequest {
     /// consumption during manual debugging, the string provided is not guaranteed
     /// to be stable across Envoy versions.
     #[prost(message, optional, tag = "6")]
-    pub error_detail: ::core::option::Option<
-        super::super::super::super::google::rpc::Status,
-    >,
+    pub error_detail: ::core::option::Option<super::super::super::super::google::rpc::Status>,
 }
 /// \[#next-free-field: 7\]
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -63,7 +61,7 @@ pub struct DiscoveryResponse {
     /// Canary is used to support two Envoy command line flags:
     ///
     /// * --terminate-on-canary-transition-failure. When set, Envoy is able to
-///```ignore
+    ///```ignore
     ///    terminate if it detects that configuration is stuck at canary. Consider
     ///    this example sequence of updates:
     ///    - Management server applies a canary config successfully.
@@ -72,11 +70,11 @@ pub struct DiscoveryResponse {
     ///    Since there is no sensible way to continue receiving configuration
     ///    updates, Envoy will then terminate and apply production config from a
     ///    clean slate.
-///```
+    ///```
     /// * --dry-run-canary. When set, a canary response will never be applied, only
-///```ignore
+    ///```ignore
     ///    validated via a dry run.
-///```
+    ///```
     #[prost(bool, tag = "3")]
     pub canary: bool,
     /// Type URL for resources. Identifies the xDS API when muxing over ADS.
@@ -96,9 +94,7 @@ pub struct DiscoveryResponse {
     pub nonce: ::prost::alloc::string::String,
     /// The control plane instance that sent the response.
     #[prost(message, optional, tag = "6")]
-    pub control_plane: ::core::option::Option<
-        super::super::super::config::core::v3::ControlPlane,
-    >,
+    pub control_plane: ::core::option::Option<super::super::super::config::core::v3::ControlPlane>,
 }
 /// DeltaDiscoveryRequest and DeltaDiscoveryResponse are used in a new gRPC
 /// endpoint for Delta xDS.
@@ -171,14 +167,10 @@ pub struct DeltaDiscoveryRequest {
     ///
     /// A list of Resource names to add to the list of tracked resources.
     #[prost(string, repeated, tag = "3")]
-    pub resource_names_subscribe: ::prost::alloc::vec::Vec<
-        ::prost::alloc::string::String,
-    >,
+    pub resource_names_subscribe: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
     /// A list of Resource names to remove from the list of tracked resources.
     #[prost(string, repeated, tag = "4")]
-    pub resource_names_unsubscribe: ::prost::alloc::vec::Vec<
-        ::prost::alloc::string::String,
-    >,
+    pub resource_names_unsubscribe: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
     /// Informs the server of the versions of the resources the xDS client knows
     /// of, to enable the client to continue the same logical xDS session even in
     /// the face of gRPC stream reconnection. It will not be populated: \[1\] in the
@@ -189,10 +181,8 @@ pub struct DeltaDiscoveryRequest {
     /// stream populates this map.) The map's keys are names of xDS resources known
     /// to the xDS client. The map's values are opaque resource versions.
     #[prost(map = "string, string", tag = "5")]
-    pub initial_resource_versions: ::std::collections::HashMap<
-        ::prost::alloc::string::String,
-        ::prost::alloc::string::String,
-    >,
+    pub initial_resource_versions:
+        ::std::collections::HashMap<::prost::alloc::string::String, ::prost::alloc::string::String>,
     /// When the DeltaDiscoveryRequest is a ACK or NACK message in response
     /// to a previous DeltaDiscoveryResponse, the response_nonce must be the
     /// nonce in the DeltaDiscoveryResponse.
@@ -204,9 +194,7 @@ pub struct DeltaDiscoveryRequest {
     /// configuration. The *message* field in *error_details* provides the Envoy
     /// internal exception related to the failure.
     #[prost(message, optional, tag = "7")]
-    pub error_detail: ::core::option::Option<
-        super::super::super::super::google::rpc::Status,
-    >,
+    pub error_detail: ::core::option::Option<super::super::super::super::google::rpc::Status>,
 }
 /// \[#next-free-field: 8\]
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -235,9 +223,7 @@ pub struct DeltaDiscoveryResponse {
     /// \[#not-implemented-hide:\]
     /// The control plane instance that sent the response.
     #[prost(message, optional, tag = "7")]
-    pub control_plane: ::core::option::Option<
-        super::super::super::config::core::v3::ControlPlane,
-    >,
+    pub control_plane: ::core::option::Option<super::super::super::config::core::v3::ControlPlane>,
 }
 /// \[#next-free-field: 8\]
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -303,8 +289,8 @@ pub struct AdsDummy {}
 /// Generated client implementations.
 pub mod aggregated_discovery_service_client {
     #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
-    use tonic::codegen::*;
     use tonic::codegen::http::Uri;
+    use tonic::codegen::*;
     /// See https://github.com/envoyproxy/envoy-api#apis for a description of the
     /// role of ADS and how it is intended to be used by a management server. ADS
     /// requests have the same structure as their singleton xDS counterparts, but can
@@ -354,13 +340,10 @@ pub mod aggregated_discovery_service_client {
                     <T as tonic::client::GrpcService<tonic::body::BoxBody>>::ResponseBody,
                 >,
             >,
-            <T as tonic::codegen::Service<
-                http::Request<tonic::body::BoxBody>,
-            >>::Error: Into<StdError> + Send + Sync,
+            <T as tonic::codegen::Service<http::Request<tonic::body::BoxBody>>>::Error:
+                Into<StdError> + Send + Sync,
         {
-            AggregatedDiscoveryServiceClient::new(
-                InterceptedService::new(inner, interceptor),
-            )
+            AggregatedDiscoveryServiceClient::new(InterceptedService::new(inner, interceptor))
         }
         /// Compress requests with the given encoding.
         ///
@@ -401,59 +384,45 @@ pub mod aggregated_discovery_service_client {
             tonic::Response<tonic::codec::Streaming<super::DiscoveryResponse>>,
             tonic::Status,
         > {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::new(
+                    tonic::Code::Unknown,
+                    format!("Service was not ready: {}", e.into()),
+                )
+            })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/envoy.service.discovery.v3.AggregatedDiscoveryService/StreamAggregatedResources",
             );
             let mut req = request.into_streaming_request();
-            req.extensions_mut()
-                .insert(
-                    GrpcMethod::new(
-                        "envoy.service.discovery.v3.AggregatedDiscoveryService",
-                        "StreamAggregatedResources",
-                    ),
-                );
+            req.extensions_mut().insert(GrpcMethod::new(
+                "envoy.service.discovery.v3.AggregatedDiscoveryService",
+                "StreamAggregatedResources",
+            ));
             self.inner.streaming(req, path, codec).await
         }
         pub async fn delta_aggregated_resources(
             &mut self,
-            request: impl tonic::IntoStreamingRequest<
-                Message = super::DeltaDiscoveryRequest,
-            >,
+            request: impl tonic::IntoStreamingRequest<Message = super::DeltaDiscoveryRequest>,
         ) -> std::result::Result<
             tonic::Response<tonic::codec::Streaming<super::DeltaDiscoveryResponse>>,
             tonic::Status,
         > {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::new(
+                    tonic::Code::Unknown,
+                    format!("Service was not ready: {}", e.into()),
+                )
+            })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/envoy.service.discovery.v3.AggregatedDiscoveryService/DeltaAggregatedResources",
             );
             let mut req = request.into_streaming_request();
-            req.extensions_mut()
-                .insert(
-                    GrpcMethod::new(
-                        "envoy.service.discovery.v3.AggregatedDiscoveryService",
-                        "DeltaAggregatedResources",
-                    ),
-                );
+            req.extensions_mut().insert(GrpcMethod::new(
+                "envoy.service.discovery.v3.AggregatedDiscoveryService",
+                "DeltaAggregatedResources",
+            ));
             self.inner.streaming(req, path, codec).await
         }
     }
@@ -468,8 +437,7 @@ pub mod aggregated_discovery_service_server {
         /// Server streaming response type for the StreamAggregatedResources method.
         type StreamAggregatedResourcesStream: tonic::codegen::tokio_stream::Stream<
                 Item = std::result::Result<super::DiscoveryResponse, tonic::Status>,
-            >
-            + Send
+            > + Send
             + 'static;
         /// This is a gRPC-only API.
         async fn stream_aggregated_resources(
@@ -482,16 +450,12 @@ pub mod aggregated_discovery_service_server {
         /// Server streaming response type for the DeltaAggregatedResources method.
         type DeltaAggregatedResourcesStream: tonic::codegen::tokio_stream::Stream<
                 Item = std::result::Result<super::DeltaDiscoveryResponse, tonic::Status>,
-            >
-            + Send
+            > + Send
             + 'static;
         async fn delta_aggregated_resources(
             &self,
             request: tonic::Request<tonic::Streaming<super::DeltaDiscoveryRequest>>,
-        ) -> std::result::Result<
-            tonic::Response<Self::DeltaAggregatedResourcesStream>,
-            tonic::Status,
-        >;
+        ) -> std::result::Result<tonic::Response<Self::DeltaAggregatedResourcesStream>, tonic::Status>;
     }
     /// See https://github.com/envoyproxy/envoy-api#apis for a description of the
     /// role of ADS and how it is intended to be used by a management server. ADS
@@ -522,10 +486,7 @@ pub mod aggregated_discovery_service_server {
                 max_encoding_message_size: None,
             }
         }
-        pub fn with_interceptor<F>(
-            inner: T,
-            interceptor: F,
-        ) -> InterceptedService<Self, F>
+        pub fn with_interceptor<F>(inner: T, interceptor: F) -> InterceptedService<Self, F>
         where
             F: tonic::service::Interceptor,
         {
@@ -560,8 +521,7 @@ pub mod aggregated_discovery_service_server {
             self
         }
     }
-    impl<T, B> tonic::codegen::Service<http::Request<B>>
-    for AggregatedDiscoveryServiceServer<T>
+    impl<T, B> tonic::codegen::Service<http::Request<B>> for AggregatedDiscoveryServiceServer<T>
     where
         T: AggregatedDiscoveryService,
         B: Body + Send + 'static,
@@ -727,7 +687,8 @@ pub mod aggregated_discovery_service_server {
         }
     }
     impl<T: AggregatedDiscoveryService> tonic::server::NamedService
-    for AggregatedDiscoveryServiceServer<T> {
+        for AggregatedDiscoveryServiceServer<T>
+    {
         const NAME: &'static str = "envoy.service.discovery.v3.AggregatedDiscoveryService";
     }
 }

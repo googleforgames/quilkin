@@ -34,10 +34,8 @@ pub struct Authority {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ContextParams {
     #[prost(map = "string, string", tag = "1")]
-    pub params: ::std::collections::HashMap<
-        ::prost::alloc::string::String,
-        ::prost::alloc::string::String,
-    >,
+    pub params:
+        ::std::collections::HashMap<::prost::alloc::string::String, ::prost::alloc::string::String>,
 }
 /// xDS resource locators identify a xDS resource name and instruct the
 /// data-plane load balancer on how the resource may be located.
@@ -90,9 +88,7 @@ pub struct ResourceLocator {
     #[prost(message, repeated, tag = "6")]
     pub directives: ::prost::alloc::vec::Vec<resource_locator::Directive>,
     #[prost(oneof = "resource_locator::ContextParamSpecifier", tags = "5")]
-    pub context_param_specifier: ::core::option::Option<
-        resource_locator::ContextParamSpecifier,
-    >,
+    pub context_param_specifier: ::core::option::Option<resource_locator::ContextParamSpecifier>,
 }
 /// Nested message and enum types in `ResourceLocator`.
 pub mod resource_locator {
@@ -131,9 +127,9 @@ pub mod resource_locator {
             /// An alternative resource locator for fallback if the resource is
             /// unavailable. For example, take the resource locator:
             ///
-///```ignore
+            ///```ignore
             ///    xdstp://foo/some-type/some-route-table#alt=xdstp://bar/some-type/another-route-table
-///```
+            ///```
             ///
             /// If the data-plane load balancer is unable to reach `foo` to fetch the
             /// resource, it will fallback to `bar`. Alternative resources do not need
@@ -149,17 +145,7 @@ pub mod resource_locator {
             Entry(::prost::alloc::string::String),
         }
     }
-    #[derive(
-        Clone,
-        Copy,
-        Debug,
-        PartialEq,
-        Eq,
-        Hash,
-        PartialOrd,
-        Ord,
-        ::prost::Enumeration
-    )]
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
     #[repr(i32)]
     pub enum Scheme {
         Xdstp = 0,

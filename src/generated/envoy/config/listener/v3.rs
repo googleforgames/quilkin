@@ -124,9 +124,7 @@ pub struct FilterChainMatch {
     /// subnets. If the parameter is not specified or the list is empty, the
     /// directly connected source IP address is ignored.
     #[prost(message, repeated, tag = "13")]
-    pub direct_source_prefix_ranges: ::prost::alloc::vec::Vec<
-        super::super::core::v3::CidrRange,
-    >,
+    pub direct_source_prefix_ranges: ::prost::alloc::vec::Vec<super::super::core::v3::CidrRange>,
     /// Specifies the connection source IP match type. Can be any, local or
     /// external network.
     #[prost(enumeration = "filter_chain_match::ConnectionSourceType", tag = "12")]
@@ -136,9 +134,7 @@ pub struct FilterChainMatch {
     /// parameter is not specified or the list is empty, the source IP address is
     /// ignored.
     #[prost(message, repeated, tag = "6")]
-    pub source_prefix_ranges: ::prost::alloc::vec::Vec<
-        super::super::core::v3::CidrRange,
-    >,
+    pub source_prefix_ranges: ::prost::alloc::vec::Vec<super::super::core::v3::CidrRange>,
     /// The criteria is satisfied if the source port of the downstream connection
     /// is contained in at least one of the specified ports. If the parameter is
     /// not specified, the source port is ignored.
@@ -158,10 +154,10 @@ pub struct FilterChainMatch {
     ///
     /// .. attention::
     ///
-///```ignore
+    ///```ignore
     ///    See the :ref:`FAQ entry <faq_how_to_setup_sni>` on how to configure SNI
     ///    for more information.
-///```
+    ///```
     #[prost(string, repeated, tag = "11")]
     pub server_names: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
     /// If non-empty, a transport protocol to consider when determining a filter
@@ -173,9 +169,9 @@ pub struct FilterChainMatch {
     /// * ``raw_buffer`` - default, used when no transport protocol is detected,
     /// * ``tls`` - set by :ref:`envoy.filters.listener.tls_inspector
     /// <config_listener_filters_tls_inspector>`
-///```ignore
+    ///```ignore
     ///    when TLS protocol is detected.
-///```
+    ///```
     #[prost(string, tag = "9")]
     pub transport_protocol: ::prost::alloc::string::String,
     /// If non-empty, a list of application protocols (e.g. ALPN for TLS protocol)
@@ -186,44 +182,34 @@ pub struct FilterChainMatch {
     /// Suggested values include:
     ///
     /// * ``http/1.1`` - set by :ref:`envoy.filters.listener.tls_inspector
-///```ignore
+    ///```ignore
     ///    <config_listener_filters_tls_inspector>`,
-///```
+    ///```
     /// * ``h2`` - set by :ref:`envoy.filters.listener.tls_inspector
     /// <config_listener_filters_tls_inspector>`
     ///
     /// .. attention::
     ///
-///```ignore
+    ///```ignore
     ///    Currently, only :ref:`TLS Inspector
     ///    <config_listener_filters_tls_inspector>` provides application protocol
     ///    detection based on the requested `ALPN
     ///    <<https://en.wikipedia.org/wiki/Application-Layer_Protocol_Negotiation>`_>
     ///    values.
-///```
+    ///```
     ///
-///```ignore
+    ///```ignore
     ///    However, the use of ALPN is pretty much limited to the HTTP/2 traffic on
     ///    the Internet, and matching on values other than ``h2`` is going to lead
     ///    to a lot of false negatives, unless all connecting clients are known to
     ///    use ALPN.
-///```
+    ///```
     #[prost(string, repeated, tag = "10")]
     pub application_protocols: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 /// Nested message and enum types in `FilterChainMatch`.
 pub mod filter_chain_match {
-    #[derive(
-        Clone,
-        Copy,
-        Debug,
-        PartialEq,
-        Eq,
-        Hash,
-        PartialOrd,
-        Ord,
-        ::prost::Enumeration
-    )]
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
     #[repr(i32)]
     pub enum ConnectionSourceType {
         /// Any connection source matches.
@@ -295,17 +281,13 @@ pub struct FilterChain {
     /// new connections will be set up with plaintext.
     /// \[#extension-category: envoy.transport_sockets.downstream\]
     #[prost(message, optional, tag = "6")]
-    pub transport_socket: ::core::option::Option<
-        super::super::core::v3::TransportSocket,
-    >,
+    pub transport_socket: ::core::option::Option<super::super::core::v3::TransportSocket>,
     /// If present and nonzero, the amount of time to allow incoming connections to
     /// complete any transport socket negotiations. If this expires before the
     /// transport reports connection establishment, the connection is summarily
     /// closed.
     #[prost(message, optional, tag = "9")]
-    pub transport_socket_connect_timeout: ::core::option::Option<
-        ::prost_types::Duration,
-    >,
+    pub transport_socket_connect_timeout: ::core::option::Option<::prost_types::Duration>,
     /// \[#not-implemented-hide:\] The unique name (or empty) by which this filter
     /// chain is known. If no name is provided, Envoy will allocate an internal
     /// UUID for the filter chain. If the filter chain is to be dynamically updated
@@ -317,9 +299,7 @@ pub struct FilterChain {
     /// will be built on-demand. Otherwise, the filter chain will be built normally
     /// and block listener warming.
     #[prost(message, optional, tag = "8")]
-    pub on_demand_configuration: ::core::option::Option<
-        filter_chain::OnDemandConfiguration,
-    >,
+    pub on_demand_configuration: ::core::option::Option<filter_chain::OnDemandConfiguration>,
 }
 /// Nested message and enum types in `FilterChain`.
 pub mod filter_chain {
@@ -460,9 +440,7 @@ pub mod listener_filter {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct QuicProtocolOptions {
     #[prost(message, optional, tag = "1")]
-    pub quic_protocol_options: ::core::option::Option<
-        super::super::core::v3::QuicProtocolOptions,
-    >,
+    pub quic_protocol_options: ::core::option::Option<super::super::core::v3::QuicProtocolOptions>,
     /// Maximum number of milliseconds that connection will be alive when there is
     /// no network activity.
     ///
@@ -495,18 +473,14 @@ pub struct QuicProtocolOptions {
     /// will be used.
     /// \[#extension-category: envoy.quic.server.crypto_stream\]
     #[prost(message, optional, tag = "6")]
-    pub crypto_stream_config: ::core::option::Option<
-        super::super::core::v3::TypedExtensionConfig,
-    >,
+    pub crypto_stream_config: ::core::option::Option<super::super::core::v3::TypedExtensionConfig>,
     /// Configure which implementation of `quic::ProofSource` to be used for this
     /// listener. If not specified the :ref:`default one configured by
     /// <envoy_v3_api_msg_extensions.quic.proof_source.v3.ProofSourceConfig>` will
     /// be used.
     /// \[#extension-category: envoy.quic.proof_source\]
     #[prost(message, optional, tag = "7")]
-    pub proof_source_config: ::core::option::Option<
-        super::super::core::v3::TypedExtensionConfig,
-    >,
+    pub proof_source_config: ::core::option::Option<super::super::core::v3::TypedExtensionConfig>,
 }
 /// \[#next-free-field: 8\]
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -519,9 +493,7 @@ pub struct UdpListenerConfig {
     /// number of sources, it may be worthwhile to enable this option after
     /// performance testing.
     #[prost(message, optional, tag = "5")]
-    pub downstream_socket_config: ::core::option::Option<
-        super::super::core::v3::UdpSocketConfig,
-    >,
+    pub downstream_socket_config: ::core::option::Option<super::super::core::v3::UdpSocketConfig>,
     /// Configuration for QUIC protocol. If empty, QUIC will not be enabled on this
     /// listener. Set to the default object to enable QUIC without modifying any
     /// additional options.
@@ -537,9 +509,8 @@ pub struct ActiveRawUdpListenerConfig {}
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListenerCollection {
     #[prost(message, repeated, tag = "1")]
-    pub entries: ::prost::alloc::vec::Vec<
-        super::super::super::super::xds::core::v3::CollectionEntry,
-    >,
+    pub entries:
+        ::prost::alloc::vec::Vec<super::super::super::super::xds::core::v3::CollectionEntry>,
 }
 /// \[#next-free-field: 32\]
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -623,11 +594,11 @@ pub struct Listener {
     ///
     /// .. attention::
     ///
-///```ignore
+    ///```ignore
     ///    Some listener filters, such as :ref:`Proxy Protocol filter
     ///    <config_listener_filters_proxy_protocol>`, should not be used with this
     ///    option. It will cause unexpected behavior when a connection is created.
-///```
+    ///```
     #[prost(bool, tag = "17")]
     pub continue_on_listener_filters_timeout: bool,
     /// Whether the listener should be set as a transparent socket.
@@ -722,9 +693,7 @@ pub struct Listener {
     /// avoid the cost of balancing, and enable the balance config in Y1 and Y2 to
     /// balance the connections among the workers.
     #[prost(message, optional, tag = "20")]
-    pub connection_balance_config: ::core::option::Option<
-        listener::ConnectionBalanceConfig,
-    >,
+    pub connection_balance_config: ::core::option::Option<listener::ConnectionBalanceConfig>,
     /// Deprecated. Use `enable_reuse_port` instead.
     #[deprecated]
     #[prost(bool, tag = "21")]
@@ -737,31 +706,31 @@ pub struct Listener {
     ///
     /// .. attention::
     ///
-///```ignore
+    ///```ignore
     ///    Although this field defaults to true, it has different behavior on
     ///    different platforms. See the following text for more information.
-///```
+    ///```
     ///
     /// * On Linux, reuse_port is respected for both TCP and UDP listeners. It also
     /// works correctly
-///```ignore
+    ///```ignore
     ///    with hot restart.
-///```
+    ///```
     /// * On macOS, reuse_port for TCP does not do what it does on Linux. Instead
     /// of load balancing,
-///```ignore
+    ///```ignore
     ///    the last socket wins and receives all connections/packets. For TCP,
     ///    reuse_port is force disabled and the user is warned. For UDP, it is
     ///    enabled, but only one worker will receive packets. For QUIC/H3, SW
     ///    routing will send packets to other workers. For "raw" UDP, only a single
     ///    worker will currently receive packets.
-///```
+    ///```
     /// * On Windows, reuse_port for TCP has undefined behavior. It is force
     /// disabled and the user
-///```ignore
+    ///```ignore
     ///    is warned similar to macOS. It is left enabled for UDP with undefined
     ///    behavior currently.
-///```
+    ///```
     #[prost(message, optional, tag = "29")]
     pub enable_reuse_port: ::core::option::Option<bool>,
     /// Configuration for :ref:`access logs <arch_overview_access_logs>`
@@ -847,17 +816,7 @@ pub mod listener {
     #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Message)]
     pub struct InternalListenerConfig {}
-    #[derive(
-        Clone,
-        Copy,
-        Debug,
-        PartialEq,
-        Eq,
-        Hash,
-        PartialOrd,
-        Ord,
-        ::prost::Enumeration
-    )]
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
     #[repr(i32)]
     pub enum DrainType {
         /// Drain in response to calling /healthcheck/fail admin endpoint (along with
@@ -910,10 +869,10 @@ pub mod listener {
         /// * :ref:`ConnectionBalanceConfig
         /// <envoy_v3_api_msg_config.listener.v3.Listener.ConnectionBalanceConfig>`
         /// is not
-///```ignore
+        ///```ignore
         ///    allowed because both cluster connection and listener connection must be
         ///    owned by the same dispatcher.
-///```
+        ///```
         /// * :ref:`tcp_backlog_size
         /// <envoy_v3_api_field_config.listener.v3.Listener.tcp_backlog_size>`
         /// * :ref:`freebind

@@ -1,8 +1,8 @@
 /// Generated client implementations.
 pub mod aggregated_control_plane_discovery_service_client {
     #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
-    use tonic::codegen::*;
     use tonic::codegen::http::Uri;
+    use tonic::codegen::*;
     /// The Manager Discovery Service provides an RPC for a management
     /// service to upstream its configuration to a relay service.
     /// This RPC works essentially the same as xDS, except instead of the
@@ -56,13 +56,13 @@ pub mod aggregated_control_plane_discovery_service_client {
                     <T as tonic::client::GrpcService<tonic::body::BoxBody>>::ResponseBody,
                 >,
             >,
-            <T as tonic::codegen::Service<
-                http::Request<tonic::body::BoxBody>,
-            >>::Error: Into<StdError> + Send + Sync,
+            <T as tonic::codegen::Service<http::Request<tonic::body::BoxBody>>>::Error:
+                Into<StdError> + Send + Sync,
         {
-            AggregatedControlPlaneDiscoveryServiceClient::new(
-                InterceptedService::new(inner, interceptor),
-            )
+            AggregatedControlPlaneDiscoveryServiceClient::new(InterceptedService::new(
+                inner,
+                interceptor,
+            ))
         }
         /// Compress requests with the given encoding.
         ///
@@ -112,27 +112,21 @@ pub mod aggregated_control_plane_discovery_service_client {
             >,
             tonic::Status,
         > {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::new(
+                    tonic::Code::Unknown,
+                    format!("Service was not ready: {}", e.into()),
+                )
+            })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/quilkin.relay.v1alpha1.AggregatedControlPlaneDiscoveryService/StreamAggregatedResources",
             );
             let mut req = request.into_streaming_request();
-            req.extensions_mut()
-                .insert(
-                    GrpcMethod::new(
-                        "quilkin.relay.v1alpha1.AggregatedControlPlaneDiscoveryService",
-                        "StreamAggregatedResources",
-                    ),
-                );
+            req.extensions_mut().insert(GrpcMethod::new(
+                "quilkin.relay.v1alpha1.AggregatedControlPlaneDiscoveryService",
+                "StreamAggregatedResources",
+            ));
             self.inner.streaming(req, path, codec).await
         }
         pub async fn delta_aggregated_resources(
@@ -147,28 +141,22 @@ pub mod aggregated_control_plane_discovery_service_client {
                 >,
             >,
             tonic::Status,
-        > {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
+        >{
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::new(
+                    tonic::Code::Unknown,
+                    format!("Service was not ready: {}", e.into()),
+                )
+            })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
                 "/quilkin.relay.v1alpha1.AggregatedControlPlaneDiscoveryService/DeltaAggregatedResources",
             );
             let mut req = request.into_streaming_request();
-            req.extensions_mut()
-                .insert(
-                    GrpcMethod::new(
-                        "quilkin.relay.v1alpha1.AggregatedControlPlaneDiscoveryService",
-                        "DeltaAggregatedResources",
-                    ),
-                );
+            req.extensions_mut().insert(GrpcMethod::new(
+                "quilkin.relay.v1alpha1.AggregatedControlPlaneDiscoveryService",
+                "DeltaAggregatedResources",
+            ));
             self.inner.streaming(req, path, codec).await
         }
     }
@@ -186,8 +174,7 @@ pub mod aggregated_control_plane_discovery_service_server {
                     super::super::super::super::envoy::service::discovery::v3::DiscoveryRequest,
                     tonic::Status,
                 >,
-            >
-            + Send
+            > + Send
             + 'static;
         /// The RPC protocol begins with a single empty DiscoveryResponse
         /// initiated by the management server, after that this behaves
@@ -220,10 +207,7 @@ pub mod aggregated_control_plane_discovery_service_server {
                     super::super::super::super::envoy::service::discovery::v3::DeltaDiscoveryResponse,
                 >,
             >,
-        ) -> std::result::Result<
-            tonic::Response<Self::DeltaAggregatedResourcesStream>,
-            tonic::Status,
-        >;
+        ) -> std::result::Result<tonic::Response<Self::DeltaAggregatedResourcesStream>, tonic::Status>;
     }
     /// The Manager Discovery Service provides an RPC for a management
     /// service to upstream its configuration to a relay service.
@@ -246,9 +230,7 @@ pub mod aggregated_control_plane_discovery_service_server {
         max_encoding_message_size: Option<usize>,
     }
     struct _Inner<T>(Arc<T>);
-    impl<
-        T: AggregatedControlPlaneDiscoveryService,
-    > AggregatedControlPlaneDiscoveryServiceServer<T> {
+    impl<T: AggregatedControlPlaneDiscoveryService> AggregatedControlPlaneDiscoveryServiceServer<T> {
         pub fn new(inner: T) -> Self {
             Self::from_arc(Arc::new(inner))
         }
@@ -262,10 +244,7 @@ pub mod aggregated_control_plane_discovery_service_server {
                 max_encoding_message_size: None,
             }
         }
-        pub fn with_interceptor<F>(
-            inner: T,
-            interceptor: F,
-        ) -> InterceptedService<Self, F>
+        pub fn with_interceptor<F>(inner: T, interceptor: F) -> InterceptedService<Self, F>
         where
             F: tonic::service::Interceptor,
         {
@@ -301,7 +280,7 @@ pub mod aggregated_control_plane_discovery_service_server {
         }
     }
     impl<T, B> tonic::codegen::Service<http::Request<B>>
-    for AggregatedControlPlaneDiscoveryServiceServer<T>
+        for AggregatedControlPlaneDiscoveryServiceServer<T>
     where
         T: AggregatedControlPlaneDiscoveryService,
         B: Body + Send + 'static,
@@ -455,7 +434,8 @@ pub mod aggregated_control_plane_discovery_service_server {
         }
     }
     impl<T: AggregatedControlPlaneDiscoveryService> Clone
-    for AggregatedControlPlaneDiscoveryServiceServer<T> {
+        for AggregatedControlPlaneDiscoveryServiceServer<T>
+    {
         fn clone(&self) -> Self {
             let inner = self.inner.clone();
             Self {
@@ -478,7 +458,8 @@ pub mod aggregated_control_plane_discovery_service_server {
         }
     }
     impl<T: AggregatedControlPlaneDiscoveryService> tonic::server::NamedService
-    for AggregatedControlPlaneDiscoveryServiceServer<T> {
+        for AggregatedControlPlaneDiscoveryServiceServer<T>
+    {
         const NAME: &'static str = "quilkin.relay.v1alpha1.AggregatedControlPlaneDiscoveryService";
     }
 }

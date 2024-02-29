@@ -16,17 +16,7 @@ pub mod concatenate {
         #[prost(enumeration = "Strategy", tag = "1")]
         pub value: i32,
     }
-    #[derive(
-        Clone,
-        Copy,
-        Debug,
-        PartialEq,
-        Eq,
-        Hash,
-        PartialOrd,
-        Ord,
-        ::prost::Enumeration
-    )]
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
     #[repr(i32)]
     pub enum Strategy {
         DoNothing = 0,
