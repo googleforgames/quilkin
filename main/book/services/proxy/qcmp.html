@@ -175,13 +175,13 @@
                     <main>
                         <h1 id="quilkin-control-message-protocol-qcmp"><a class="header" href="#quilkin-control-message-protocol-qcmp">Quilkin Control Message Protocol (QCMP)</a></h1>
 <div class="table-wrapper"><table><thead><tr><th>services</th><th>ports</th><th>Protocol</th></tr></thead><tbody>
-<tr><td>QCMP</td><td>7600</td><td>UDP (IPv4 OR IPv6)</td></tr>
+<tr><td>QCMP</td><td>7600</td><td>UDP AND TCP (IPv4 OR IPv6)</td></tr>
 </tbody></table>
 </div>
 <p>In addition to the TCP based administration API, Quilkin provides a meta API
-over UDP. The purpose of this API is to provide meta operations that can be
-used by untrusted clients. Currently the API is focuses on providing pings for
-latency measurement but that may change overtime as new features are added.</p>
+over UDP and TCP. The purpose of this API is to provide meta operations that can
+be used by untrusted clients. Currently the API is focuses on providing pings
+for latency measurement but that may change overtime as new features are added.</p>
 <h2 id="ping"><a class="header" href="#ping">Ping</a></h2>
 <p>The main functionality currently in QCMP is pinging, measuring the latency from
 one service to another over UDP. You can also measure the distance locally using
@@ -238,6 +238,33 @@ types:
       - id: server_sent_timestamp
         type: u8
 </code></pre>
+<h2 id="datacenter-latency"><a class="header" href="#datacenter-latency">Datacenter Latency</a></h2>
+<p>In addition to being able to ping Quilkin to get the latency between the client
+and proxy. In order to allow clients to send information to services like a
+matchmaker about which datacentre they are closest to, Quilkin also includes
+the ability to get a proxy's latency to each of its connected datacentres.</p>
+<blockquote>
+<p>Note: This requires a multi-cluster relay setup, as when you set up proxies
+in the same cluster as gameservers, this measurement is redundant.</p>
+</blockquote>
+<p>All that is required to set this up is to provide an ICAO code to the agent in
+the gameserver cluster. (E.g. through the environment variable <code>ICAO_CODE</code>).
+No further setup is required. <strong>You can use duplicate ICAO codes</strong>, Quilkin will
+choose the best result amongst the duplicates to return. Quilkin assumes that
+multiple of the same ICAO code refer to the same phyiscal datacentre, so latency
+between them should negible.</p>
+<blockquote>
+<p>Why ICAO? ICAO is an international standard for airport codes, airport codes
+are an easy human readable code that makes it easy to use geo-visualisations
+in tools like Grafana, and easily allows grouping. IATA codes only cover
+major airports, ICAO codes cover practically every airport making them easy to
+more accurately represent the location of any datacentre.</p>
+</blockquote>
+<h3 id="api-and-schema"><a class="header" href="#api-and-schema">API And Schema</a></h3>
+<p>Currently the datacentre latency can be retrieved by sending a <code>GET /</code> HTTP
+request to the QCMP port.</p>
+<p>The returned data is a JSON object with each key being the ICAO code for the
+datacentre, and the value being the latency in nanoseconds.</p>
 
                     </main>
 

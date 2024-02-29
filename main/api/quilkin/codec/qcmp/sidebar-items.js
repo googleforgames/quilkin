@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["Error","Protocol"],"fn":["spawn"]};
+window.SIDEBAR_ITEMS = {"enum":["Error","Protocol"],"fn":["spawn"],"struct":["QcmpMeasurement"]};

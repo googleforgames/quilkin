@@ -819,6 +819,14 @@
 <a href="#819" id="819">819</a>
 <a href="#820" id="820">820</a>
 <a href="#821" id="821">821</a>
+<a href="#822" id="822">822</a>
+<a href="#823" id="823">823</a>
+<a href="#824" id="824">824</a>
+<a href="#825" id="825">825</a>
+<a href="#826" id="826">826</a>
+<a href="#827" id="827">827</a>
+<a href="#828" id="828">828</a>
+<a href="#829" id="829">829</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -967,7 +975,7 @@
         <span class="macro">eyre::ensure!</span>(num_workers &gt; <span class="number">0</span>, <span class="string">&quot;must use at least 1 worker&quot;</span>);
 
         <span class="kw">let </span>(upstream_sender, upstream_receiver) =
-            async_channel::unbounded::&lt;(PoolBuffer, <span class="prelude-ty">Option</span>&lt;IpNetEntry&gt;, SocketAddr)&gt;();
+            async_channel::bounded::&lt;(PoolBuffer, <span class="prelude-ty">Option</span>&lt;IpNetEntry&gt;, SocketAddr)&gt;(<span class="number">250</span>);
         <span class="kw">let </span>buffer_pool = Arc::new(<span class="kw">crate</span>::pool::BufferPool::new(num_workers, <span class="number">64 </span>* <span class="number">1024</span>));
         <span class="kw">let </span>sessions = SessionPool::new(
             config.clone(),
@@ -1013,6 +1021,7 @@
                                 [
                                     (ResourceType::Cluster, Vec::new()),
                                     (ResourceType::Listener, Vec::new()),
+                                    (ResourceType::Datacenter, Vec::new()),
                                 ],
                             )
                             .<span class="kw">await
@@ -1029,6 +1038,10 @@
                                 tokio::time::sleep(std::time::Duration::from_nanos(<span class="number">1</span>)).<span class="kw">await</span>;
                                 stream
                                     .aggregated_subscribe(ResourceType::Listener, <span class="kw-2">&amp;</span>[])
+                                    .<span class="kw">await</span><span class="question-mark">?</span>;
+                                tokio::time::sleep(std::time::Duration::from_nanos(<span class="number">1</span>)).<span class="kw">await</span>;
+                                stream
+                                    .aggregated_subscribe(ResourceType::Datacenter, <span class="kw-2">&amp;</span>[])
                                     .<span class="kw">await</span><span class="question-mark">?</span>;
 
                                 state_sub = <span class="prelude-val">Some</span>(stream);
@@ -1066,7 +1079,8 @@
             buffer_pool,
         )<span class="question-mark">?</span>;
 
-        <span class="kw">crate</span>::codec::qcmp::spawn(<span class="self">self</span>.qcmp_port).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">crate</span>::codec::qcmp::spawn(<span class="self">self</span>.qcmp_port, shutdown_rx.clone());
+        <span class="kw">crate</span>::net::phoenix::spawn(<span class="self">self</span>.qcmp_port, config.clone(), shutdown_rx.clone())<span class="question-mark">?</span>;
         <span class="kw">for </span>notification <span class="kw">in </span>worker_notifications {
             notification.notified().<span class="kw">await</span>;
         }
@@ -1405,6 +1419,8 @@
     </span>Io(<span class="attr">#[from] </span>std::io::Error),
     <span class="attr">#[error(<span class="string">&quot;Channel closed&quot;</span>)]
     </span>ChannelClosed,
+    <span class="attr">#[error(<span class="string">&quot;Under pressure&quot;</span>)]
+    </span>ChannelFull,
 }
 
 <span class="attr">#[cfg(test)]

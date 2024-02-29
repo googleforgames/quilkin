@@ -234,7 +234,7 @@
             <span class="prelude-val">None
         </span>};
 
-        <span class="kw">let </span>server_task = tokio::spawn(<span class="kw">crate</span>::net::xds::server::spawn(<span class="self">self</span>.port, config))
+        <span class="kw">let </span>server_task = tokio::spawn(<span class="kw">crate</span>::net::xds::server::spawn(<span class="self">self</span>.port, mode, config))
             .map_err(From::from)
             .and_then(std::future::ready);
 

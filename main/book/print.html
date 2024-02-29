@@ -251,7 +251,7 @@ your local machine through <a href="installation.html#cargo">Cargo</a>.</p>
 <dl>
   <dt><strong>Source / Method</strong></dt>
   <dd>
-<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.8.0-dev-80741fb
+<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.8.0-dev-d22a444
 </code></pre>
   </dd>
   <dt><strong>Notes</strong></dt>
@@ -2408,13 +2408,13 @@ endpoints:
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="quilkin-control-message-protocol-qcmp"><a class="header" href="#quilkin-control-message-protocol-qcmp">Quilkin Control Message Protocol (QCMP)</a></h1>
 <div class="table-wrapper"><table><thead><tr><th>services</th><th>ports</th><th>Protocol</th></tr></thead><tbody>
-<tr><td>QCMP</td><td>7600</td><td>UDP (IPv4 OR IPv6)</td></tr>
+<tr><td>QCMP</td><td>7600</td><td>UDP AND TCP (IPv4 OR IPv6)</td></tr>
 </tbody></table>
 </div>
 <p>In addition to the TCP based administration API, Quilkin provides a meta API
-over UDP. The purpose of this API is to provide meta operations that can be
-used by untrusted clients. Currently the API is focuses on providing pings for
-latency measurement but that may change overtime as new features are added.</p>
+over UDP and TCP. The purpose of this API is to provide meta operations that can
+be used by untrusted clients. Currently the API is focuses on providing pings
+for latency measurement but that may change overtime as new features are added.</p>
 <h2 id="ping"><a class="header" href="#ping">Ping</a></h2>
 <p>The main functionality currently in QCMP is pinging, measuring the latency from
 one service to another over UDP. You can also measure the distance locally using
@@ -2471,6 +2471,33 @@ types:
       - id: server_sent_timestamp
         type: u8
 </code></pre>
+<h2 id="datacenter-latency"><a class="header" href="#datacenter-latency">Datacenter Latency</a></h2>
+<p>In addition to being able to ping Quilkin to get the latency between the client
+and proxy. In order to allow clients to send information to services like a
+matchmaker about which datacentre they are closest to, Quilkin also includes
+the ability to get a proxy's latency to each of its connected datacentres.</p>
+<blockquote>
+<p>Note: This requires a multi-cluster relay setup, as when you set up proxies
+in the same cluster as gameservers, this measurement is redundant.</p>
+</blockquote>
+<p>All that is required to set this up is to provide an ICAO code to the agent in
+the gameserver cluster. (E.g. through the environment variable <code>ICAO_CODE</code>).
+No further setup is required. <strong>You can use duplicate ICAO codes</strong>, Quilkin will
+choose the best result amongst the duplicates to return. Quilkin assumes that
+multiple of the same ICAO code refer to the same phyiscal datacentre, so latency
+between them should negible.</p>
+<blockquote>
+<p>Why ICAO? ICAO is an international standard for airport codes, airport codes
+are an easy human readable code that makes it easy to use geo-visualisations
+in tools like Grafana, and easily allows grouping. IATA codes only cover
+major airports, ICAO codes cover practically every airport making them easy to
+more accurately represent the location of any datacentre.</p>
+</blockquote>
+<h3 id="api-and-schema"><a class="header" href="#api-and-schema">API And Schema</a></h3>
+<p>Currently the datacentre latency can be retrieved by sending a <code>GET /</code> HTTP
+request to the QCMP port.</p>
+<p>The returned data is a JSON object with each key being the ICAO code for the
+datacentre, and the value being the latency in nanoseconds.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="proxy-metrics"><a class="header" href="#proxy-metrics">Proxy Metrics</a></h1>
 <p>The following are metrics that Quilkin provides while in Proxy Mode.</p>
 <h1 id="asn-maxmind-information"><a class="header" href="#asn-maxmind-information">ASN Maxmind Information</a></h1>
@@ -2987,6 +3014,8 @@ Options:
           The `sub_zone` in the `zone` in the `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_SUB_ZONE=]
       --idle-request-interval-secs &lt;IDLE_REQUEST_INTERVAL_SECS&gt;
           The interval in seconds at which the agent will wait for a discovery request from a relay server before restarting the connection [env: QUILKIN_IDLE_REQUEST_INTERVAL_SECS=] [default: 30]
+  -i, --icao-code &lt;ICAO_CODE&gt;
+          The ICAO code for the agent [env: ICAO_CODE=] [default: XXXX]
   -h, --help
           Print help
 </code></pre>

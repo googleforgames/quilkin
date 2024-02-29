@@ -164,6 +164,7 @@
 <a href="#164" id="164">164</a>
 <a href="#165" id="165">165</a>
 <a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2023 Google LLC
  *
@@ -230,10 +231,11 @@
         mode: <span class="kw">crate</span>::cli::Admin,
         <span class="kw-2">mut </span>shutdown_rx: <span class="kw">crate</span>::ShutdownRx,
     ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
-        <span class="kw">let </span>xds_server = <span class="kw">crate</span>::net::xds::server::spawn(<span class="self">self</span>.xds_port, config.clone());
+        <span class="kw">let </span>xds_server =
+            <span class="kw">crate</span>::net::xds::server::spawn(<span class="self">self</span>.xds_port, mode.clone(), config.clone());
         <span class="kw">let </span>mds_server = tokio::spawn(<span class="kw">crate</span>::net::xds::server::control_plane_discovery_server(
             <span class="self">self</span>.mds_port,
-            std::time::Duration::from_secs(<span class="self">self</span>.idle_request_interval_secs),
+            mode.clone(),
             config.clone(),
         ));
         <span class="kw">let </span>runtime_config = mode.unwrap_relay();

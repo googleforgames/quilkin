@@ -163,6 +163,24 @@
 <a href="#163" id="163">163</a>
 <a href="#164" id="164">164</a>
 <a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -199,13 +217,15 @@
     <span class="string">&quot;type.googleapis.com&quot;</span>: {
         CLUSTER_TYPE = <span class="string">&quot;quilkin.config.v1alpha1.Cluster&quot;</span>,
         LISTENER_TYPE = <span class="string">&quot;envoy.config.listener.v3.Listener&quot;</span>,
+        DATACENTER_TYPE = <span class="string">&quot;quilkin.config.v1alpha1.Datacenter&quot;</span>,
     }
 }
 
 <span class="attr">#[derive(Clone, Debug)]
 </span><span class="kw">pub enum </span>Resource {
-    Cluster(<span class="kw">crate</span>::net::cluster::proto::Cluster),
-    Listener(Listener),
+    Cluster(Box&lt;<span class="kw">crate</span>::net::cluster::proto::Cluster&gt;),
+    Datacenter(Box&lt;<span class="kw">crate</span>::net::cluster::proto::Datacenter&gt;),
+    Listener(Box&lt;Listener&gt;),
 }
 
 <span class="kw">impl </span>Resource {
@@ -218,6 +238,7 @@
                 .map(|locality| <span class="kw">crate</span>::net::endpoint::Locality::from(locality).to_string())
                 .unwrap_or_default(),
             <span class="self">Self</span>::Listener(listener) =&gt; listener.name.to_string(),
+            <span class="self">Self</span>::Datacenter(dc) =&gt; dc.icao_code.to_string(),
         }
     }
 
@@ -226,6 +247,17 @@
         <span class="kw">match </span><span class="self">self </span>{
             <span class="self">Self</span>::Cluster(<span class="kw">_</span>) =&gt; ResourceType::Cluster,
             <span class="self">Self</span>::Listener(<span class="kw">_</span>) =&gt; ResourceType::Listener,
+            <span class="self">Self</span>::Datacenter(<span class="kw">_</span>) =&gt; ResourceType::Datacenter,
+        }
+    }
+
+    <span class="doccomment">/// In the relay service, it receives datacenter resources from the agents
+    /// without a host, because hosts don&#39;t know their own public IP, but the
+    /// relay does, so we add it to the `Resource`.
+    </span><span class="kw">pub fn </span>add_host_to_datacenter(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>addr: std::net::SocketAddr) {
+        <span class="kw">if let </span><span class="self">Self</span>::Datacenter(dc) = <span class="self">self </span>{
+            <span class="kw">crate</span>::net::to_canonical(<span class="kw-2">&amp;mut </span>addr);
+            dc.host = addr.ip().to_string();
         }
     }
 
@@ -242,6 +274,7 @@
         <span class="prelude-val">Ok</span>(<span class="kw">match </span><span class="kw-2">&amp;*</span>any.type_url {
             CLUSTER_TYPE =&gt; Resource::Cluster(&lt;<span class="kw">_</span>&gt;::decode(<span class="kw-2">&amp;*</span>any.value)<span class="question-mark">?</span>),
             LISTENER_TYPE =&gt; Resource::Listener(&lt;<span class="kw">_</span>&gt;::decode(<span class="kw-2">&amp;*</span>any.value)<span class="question-mark">?</span>),
+            DATACENTER_TYPE =&gt; Resource::Datacenter(&lt;<span class="kw">_</span>&gt;::decode(<span class="kw-2">&amp;*</span>any.value)<span class="question-mark">?</span>),
             url =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(UnknownResourceType(url.into()).into()),
         })
     }
@@ -251,10 +284,11 @@
 </span><span class="kw">pub enum </span>ResourceType {
     Cluster,
     Listener,
+    Datacenter,
 }
 
 <span class="kw">impl </span>ResourceType {
-    <span class="kw">pub const </span>VARIANTS: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[<span class="self">Self</span>] = <span class="kw-2">&amp;</span>[<span class="self">Self</span>::Cluster, <span class="self">Self</span>::Listener];
+    <span class="kw">pub const </span>VARIANTS: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[<span class="self">Self</span>] = <span class="kw-2">&amp;</span>[<span class="self">Self</span>::Cluster, <span class="self">Self</span>::Listener, <span class="self">Self</span>::Datacenter];
 
     <span class="doccomment">/// Returns the corresponding type URL for the response type.
     </span><span class="attr">#[inline]
@@ -262,6 +296,7 @@
         <span class="kw">match </span><span class="self">self </span>{
             <span class="self">Self</span>::Cluster =&gt; CLUSTER_TYPE,
             <span class="self">Self</span>::Listener =&gt; LISTENER_TYPE,
+            <span class="self">Self</span>::Datacenter =&gt; DATACENTER_TYPE,
         }
     }
 
@@ -289,6 +324,7 @@
         <span class="prelude-val">Ok</span>(<span class="kw">match </span>url {
             CLUSTER_TYPE =&gt; <span class="self">Self</span>::Cluster,
             LISTENER_TYPE =&gt; <span class="self">Self</span>::Listener,
+            DATACENTER_TYPE =&gt; <span class="self">Self</span>::Datacenter,
             unknown =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(UnknownResourceType(unknown.to_owned())),
         })
     }

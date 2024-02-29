@@ -294,6 +294,11 @@
 <a href="#294" id="294">294</a>
 <a href="#295" id="295">295</a>
 <a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2023 Google LLC
  *
@@ -349,6 +354,11 @@
             <span class="self">Self</span>::Agent(config) =&gt; config,
             <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;attempted to unwrap agent config when not in agent mode&quot;</span>),
         }
+    }
+
+    <span class="attr">#[must_use]
+    </span><span class="kw">pub fn </span>is_agent(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="macro">matches!</span>(<span class="self">self</span>, <span class="self">Self</span>::Agent(<span class="kw">_</span>))
     }
 
     <span class="attr">#[track_caller]

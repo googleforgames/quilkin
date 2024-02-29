@@ -148,6 +148,13 @@
 <a href="#148" id="148">148</a>
 <a href="#149" id="149">149</a>
 <a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2023 Google LLC
  *
@@ -205,6 +212,9 @@
     /// request from a relay server before restarting the connection.
     </span><span class="attr">#[clap(long, env = <span class="string">&quot;QUILKIN_IDLE_REQUEST_INTERVAL_SECS&quot;</span>, default_value_t = <span class="kw">super</span>::admin::idle_request_interval_secs())]
     </span><span class="kw">pub </span>idle_request_interval_secs: u64,
+    <span class="doccomment">/// The ICAO code for the agent.
+    </span><span class="attr">#[clap(short, long, env, default_value_t = <span class="kw">crate</span>::config::IcaoCode::default())]
+    </span><span class="kw">pub </span>icao_code: <span class="kw">crate</span>::config::IcaoCode,
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>Agent {
@@ -217,6 +227,7 @@
             sub_zone: &lt;<span class="kw">_</span>&gt;::default(),
             provider: &lt;<span class="kw">_</span>&gt;::default(),
             idle_request_interval_secs: <span class="kw">super</span>::admin::idle_request_interval_secs(),
+            icao_code: &lt;<span class="kw">_</span>&gt;::default(),
         }
     }
 }
@@ -236,6 +247,9 @@
                 <span class="self">self</span>.sub_zone.as_deref().unwrap_or_default(),
             )
         });
+
+        config.qcmp_port.store(<span class="self">self</span>.qcmp_port.into());
+        config.icao_code.store(<span class="self">self</span>.icao_code.clone().into());
 
         <span class="kw">let </span>runtime_config = mode.unwrap_agent();
 
@@ -280,7 +294,7 @@
             <span class="prelude-val">None
         </span>};
 
-        <span class="kw">crate</span>::codec::qcmp::spawn(<span class="self">self</span>.qcmp_port).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">crate</span>::codec::qcmp::spawn(<span class="self">self</span>.qcmp_port, shutdown_rx.clone());
         shutdown_rx.changed().<span class="kw">await</span>.map_err(From::from)
     }
 }
