@@ -2,12 +2,12 @@
 
 | services | ports | Protocol |
 |----------|-------|-----------|
-| QCMP | 7600 | UDP (IPv4 OR IPv6) |
+| QCMP | 7600 | UDP AND TCP (IPv4 OR IPv6) |
 
 In addition to the TCP based administration API, Quilkin provides a meta API
-over UDP. The purpose of this API is to provide meta operations that can be
-used by untrusted clients. Currently the API is focuses on providing pings for
-latency measurement but that may change overtime as new features are added.
+over UDP and TCP. The purpose of this API is to provide meta operations that can
+be used by untrusted clients. Currently the API is focuses on providing pings
+for latency measurement but that may change overtime as new features are added.
 
 ## Ping
 The main functionality currently in QCMP is pinging, measuring the latency from
@@ -70,3 +70,35 @@ types:
       - id: server_sent_timestamp
         type: u8
 ```
+
+## Datacenter Latency
+
+In addition to being able to ping Quilkin to get the latency between the client
+and proxy. In order to allow clients to send information to services like a
+matchmaker about which datacentre they are closest to, Quilkin also includes
+the ability to get a proxy's latency to each of its connected datacentres.
+
+> Note: This requires a multi-cluster relay setup, as when you set up proxies
+  in the same cluster as gameservers, this measurement is redundant.
+
+All that is required to set this up is to provide an ICAO code to the agent in
+the gameserver cluster. (E.g. through the environment variable `ICAO_CODE`).
+No further setup is required. **You can use duplicate ICAO codes**, Quilkin will
+choose the best result amongst the duplicates to return. Quilkin assumes that
+multiple of the same ICAO code refer to the same phyiscal datacentre, so latency
+between them should negible.
+
+> Why ICAO? ICAO is an international standard for airport codes, airport codes
+  are an easy human readable code that makes it easy to use geo-visualisations
+  in tools like Grafana, and easily allows grouping. IATA codes only cover
+  major airports, ICAO codes cover practically every airport making them easy to
+  more accurately represent the location of any datacentre.
+
+
+### API And Schema
+
+Currently the datacentre latency can be retrieved by sending a `GET /` HTTP
+request to the QCMP port.
+
+The returned data is a JSON object with each key being the ICAO code for the
+datacentre, and the value being the latency in nanoseconds.
