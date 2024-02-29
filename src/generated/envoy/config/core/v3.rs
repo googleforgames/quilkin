@@ -1,340 +1,3 @@
-/// Generic socket option message. This would be used to set socket options that
-/// might not exist in upstream kernels or precompiled Envoy binaries.
-/// \[#next-free-field: 7\]
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct SocketOption {
-    /// An optional name to give this socket option for debugging, etc.
-    /// Uniqueness is not required and no special meaning is assumed.
-    #[prost(string, tag = "1")]
-    pub description: ::prost::alloc::string::String,
-    /// Corresponding to the level value passed to setsockopt, such as IPPROTO_TCP
-    #[prost(int64, tag = "2")]
-    pub level: i64,
-    /// The numeric name as passed to setsockopt
-    #[prost(int64, tag = "3")]
-    pub name: i64,
-    /// The state in which the option will be applied. When used in BindConfig
-    /// STATE_PREBIND is currently the only valid value.
-    #[prost(enumeration = "socket_option::SocketState", tag = "6")]
-    pub state: i32,
-    #[prost(oneof = "socket_option::Value", tags = "4, 5")]
-    pub value: ::core::option::Option<socket_option::Value>,
-}
-/// Nested message and enum types in `SocketOption`.
-pub mod socket_option {
-    #[derive(
-        Clone,
-        Copy,
-        Debug,
-        PartialEq,
-        Eq,
-        Hash,
-        PartialOrd,
-        Ord,
-        ::prost::Enumeration
-    )]
-    #[repr(i32)]
-    pub enum SocketState {
-        /// Socket options are applied after socket creation but before binding the socket to a port
-        StatePrebind = 0,
-        /// Socket options are applied after binding the socket to a port but before calling listen()
-        StateBound = 1,
-        /// Socket options are applied after calling listen()
-        StateListening = 2,
-    }
-    impl SocketState {
-        /// String value of the enum field names used in the ProtoBuf definition.
-        ///
-        /// The values are not transformed in any way and thus are considered stable
-        /// (if the ProtoBuf definition does not change) and safe for programmatic use.
-        pub fn as_str_name(&self) -> &'static str {
-            match self {
-                SocketState::StatePrebind => "STATE_PREBIND",
-                SocketState::StateBound => "STATE_BOUND",
-                SocketState::StateListening => "STATE_LISTENING",
-            }
-        }
-        /// Creates an enum from field names used in the ProtoBuf definition.
-        pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
-            match value {
-                "STATE_PREBIND" => Some(Self::StatePrebind),
-                "STATE_BOUND" => Some(Self::StateBound),
-                "STATE_LISTENING" => Some(Self::StateListening),
-                _ => None,
-            }
-        }
-    }
-    #[allow(clippy::derive_partial_eq_without_eq)]
-    #[derive(Clone, PartialEq, ::prost::Oneof)]
-    pub enum Value {
-        /// Because many sockopts take an int value.
-        #[prost(int64, tag = "4")]
-        IntValue(i64),
-        /// Otherwise it's a byte buffer.
-        #[prost(bytes, tag = "5")]
-        BufValue(::prost::alloc::vec::Vec<u8>),
-    }
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct Pipe {
-    /// Unix Domain Socket path. On Linux, paths starting with '@' will use the
-    /// abstract namespace. The starting '@' is replaced by a null byte by Envoy.
-    /// Paths starting with '@' will result in an error in environments other than
-    /// Linux.
-    #[prost(string, tag = "1")]
-    pub path: ::prost::alloc::string::String,
-    /// The mode for the Pipe. Not applicable for abstract sockets.
-    #[prost(uint32, tag = "2")]
-    pub mode: u32,
-}
-/// \[#not-implemented-hide:\] The address represents an envoy internal listener.
-/// TODO(lambdai): Make this address available for listener and endpoint.
-/// TODO(asraa): When address available, remove workaround from test/server/server_fuzz_test.cc:30.
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct EnvoyInternalAddress {
-    #[prost(oneof = "envoy_internal_address::AddressNameSpecifier", tags = "1")]
-    pub address_name_specifier: ::core::option::Option<
-        envoy_internal_address::AddressNameSpecifier,
-    >,
-}
-/// Nested message and enum types in `EnvoyInternalAddress`.
-pub mod envoy_internal_address {
-    #[allow(clippy::derive_partial_eq_without_eq)]
-    #[derive(Clone, PartialEq, ::prost::Oneof)]
-    pub enum AddressNameSpecifier {
-        /// \[#not-implemented-hide:\] The :ref:`listener name <envoy_v3_api_field_config.listener.v3.Listener.name>` of the destination internal listener.
-        #[prost(string, tag = "1")]
-        ServerListenerName(::prost::alloc::string::String),
-    }
-}
-/// \[#next-free-field: 7\]
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct SocketAddress {
-    #[prost(enumeration = "socket_address::Protocol", tag = "1")]
-    pub protocol: i32,
-    /// The address for this socket. :ref:`Listeners <config_listeners>` will bind
-    /// to the address. An empty address is not allowed. Specify ``0.0.0.0`` or ``::``
-    /// to bind to any address. [#comment:TODO(zuercher) reinstate when implemented:
-    /// It is possible to distinguish a Listener address via the prefix/suffix matching
-    /// in :ref:`FilterChainMatch <envoy_v3_api_msg_config.listener.v3.FilterChainMatch>`.] When used
-    /// within an upstream :ref:`BindConfig <envoy_v3_api_msg_config.core.v3.BindConfig>`, the address
-    /// controls the source address of outbound connections. For :ref:`clusters
-    /// <envoy_v3_api_msg_config.cluster.v3.Cluster>`, the cluster type determines whether the
-    /// address must be an IP (*STATIC* or *EDS* clusters) or a hostname resolved by DNS
-    /// (*STRICT_DNS* or *LOGICAL_DNS* clusters). Address resolution can be customized
-    /// via :ref:`resolver_name <envoy_v3_api_field_config.core.v3.SocketAddress.resolver_name>`.
-    #[prost(string, tag = "2")]
-    pub address: ::prost::alloc::string::String,
-    /// The name of the custom resolver. This must have been registered with Envoy. If
-    /// this is empty, a context dependent default applies. If the address is a concrete
-    /// IP address, no resolution will occur. If address is a hostname this
-    /// should be set for resolution other than DNS. Specifying a custom resolver with
-    /// *STRICT_DNS* or *LOGICAL_DNS* will generate an error at runtime.
-    #[prost(string, tag = "5")]
-    pub resolver_name: ::prost::alloc::string::String,
-    /// When binding to an IPv6 address above, this enables `IPv4 compatibility
-    /// <<https://tools.ietf.org/html/rfc3493#page-11>`_.> Binding to ``::`` will
-    /// allow both IPv4 and IPv6 connections, with peer IPv4 addresses mapped into
-    /// IPv6 space as ``::FFFF:<IPv4-address>``.
-    #[prost(bool, tag = "6")]
-    pub ipv4_compat: bool,
-    #[prost(oneof = "socket_address::PortSpecifier", tags = "3, 4")]
-    pub port_specifier: ::core::option::Option<socket_address::PortSpecifier>,
-}
-/// Nested message and enum types in `SocketAddress`.
-pub mod socket_address {
-    #[derive(
-        Clone,
-        Copy,
-        Debug,
-        PartialEq,
-        Eq,
-        Hash,
-        PartialOrd,
-        Ord,
-        ::prost::Enumeration
-    )]
-    #[repr(i32)]
-    pub enum Protocol {
-        Tcp = 0,
-        Udp = 1,
-    }
-    impl Protocol {
-        /// String value of the enum field names used in the ProtoBuf definition.
-        ///
-        /// The values are not transformed in any way and thus are considered stable
-        /// (if the ProtoBuf definition does not change) and safe for programmatic use.
-        pub fn as_str_name(&self) -> &'static str {
-            match self {
-                Protocol::Tcp => "TCP",
-                Protocol::Udp => "UDP",
-            }
-        }
-        /// Creates an enum from field names used in the ProtoBuf definition.
-        pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
-            match value {
-                "TCP" => Some(Self::Tcp),
-                "UDP" => Some(Self::Udp),
-                _ => None,
-            }
-        }
-    }
-    #[allow(clippy::derive_partial_eq_without_eq)]
-    #[derive(Clone, PartialEq, ::prost::Oneof)]
-    pub enum PortSpecifier {
-        #[prost(uint32, tag = "3")]
-        PortValue(u32),
-        /// This is only valid if :ref:`resolver_name
-        /// <envoy_v3_api_field_config.core.v3.SocketAddress.resolver_name>` is specified below and the
-        /// named resolver is capable of named port resolution.
-        #[prost(string, tag = "4")]
-        NamedPort(::prost::alloc::string::String),
-    }
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct TcpKeepalive {
-    /// Maximum number of keepalive probes to send without response before deciding
-    /// the connection is dead. Default is to use the OS level configuration (unless
-    /// overridden, Linux defaults to 9.)
-    #[prost(message, optional, tag = "1")]
-    pub keepalive_probes: ::core::option::Option<u32>,
-    /// The number of seconds a connection needs to be idle before keep-alive probes
-    /// start being sent. Default is to use the OS level configuration (unless
-    /// overridden, Linux defaults to 7200s (i.e., 2 hours.)
-    #[prost(message, optional, tag = "2")]
-    pub keepalive_time: ::core::option::Option<u32>,
-    /// The number of seconds between keep-alive probes. Default is to use the OS
-    /// level configuration (unless overridden, Linux defaults to 75s.)
-    #[prost(message, optional, tag = "3")]
-    pub keepalive_interval: ::core::option::Option<u32>,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct BindConfig {
-    /// The address to bind to when creating a socket.
-    #[prost(message, optional, tag = "1")]
-    pub source_address: ::core::option::Option<SocketAddress>,
-    /// Whether to set the *IP_FREEBIND* option when creating the socket. When this
-    /// flag is set to true, allows the :ref:`source_address
-    /// <envoy_v3_api_field_config.cluster.v3.UpstreamBindConfig.source_address>` to be an IP address
-    /// that is not configured on the system running Envoy. When this flag is set
-    /// to false, the option *IP_FREEBIND* is disabled on the socket. When this
-    /// flag is not set (default), the socket is not modified, i.e. the option is
-    /// neither enabled nor disabled.
-    #[prost(message, optional, tag = "2")]
-    pub freebind: ::core::option::Option<bool>,
-    /// Additional socket options that may not be present in Envoy source code or
-    /// precompiled binaries.
-    #[prost(message, repeated, tag = "3")]
-    pub socket_options: ::prost::alloc::vec::Vec<SocketOption>,
-}
-/// Addresses specify either a logical or physical address and port, which are
-/// used to tell Envoy where to bind/listen, connect to upstream and find
-/// management servers.
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct Address {
-    #[prost(oneof = "address::Address", tags = "1, 2, 3")]
-    pub address: ::core::option::Option<address::Address>,
-}
-/// Nested message and enum types in `Address`.
-pub mod address {
-    #[allow(clippy::derive_partial_eq_without_eq)]
-    #[derive(Clone, PartialEq, ::prost::Oneof)]
-    pub enum Address {
-        #[prost(message, tag = "1")]
-        SocketAddress(super::SocketAddress),
-        #[prost(message, tag = "2")]
-        Pipe(super::Pipe),
-        /// \[#not-implemented-hide:\]
-        #[prost(message, tag = "3")]
-        EnvoyInternalAddress(super::EnvoyInternalAddress),
-    }
-}
-/// CidrRange specifies an IP Address and a prefix length to construct
-/// the subnet mask for a `CIDR <<https://tools.ietf.org/html/rfc4632>`_> range.
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct CidrRange {
-    /// IPv4 or IPv6 address, e.g. ``192.0.0.0`` or ``2001:db8::``.
-    #[prost(string, tag = "1")]
-    pub address_prefix: ::prost::alloc::string::String,
-    /// Length of prefix, e.g. 0, 32. Defaults to 0 when unset.
-    #[prost(message, optional, tag = "2")]
-    pub prefix_len: ::core::option::Option<u32>,
-}
-/// Configuration defining a jittered exponential back off strategy.
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct BackoffStrategy {
-    /// The base interval to be used for the next back off computation. It should
-    /// be greater than zero and less than or equal to :ref:`max_interval
-    /// <envoy_v3_api_field_config.core.v3.BackoffStrategy.max_interval>`.
-    #[prost(message, optional, tag = "1")]
-    pub base_interval: ::core::option::Option<::prost_types::Duration>,
-    /// Specifies the maximum interval between retries. This parameter is optional,
-    /// but must be greater than or equal to the :ref:`base_interval
-    /// <envoy_v3_api_field_config.core.v3.BackoffStrategy.base_interval>` if set. The default
-    /// is 10 times the :ref:`base_interval
-    /// <envoy_v3_api_field_config.core.v3.BackoffStrategy.base_interval>`.
-    #[prost(message, optional, tag = "2")]
-    pub max_interval: ::core::option::Option<::prost_types::Duration>,
-}
-/// Envoy external URI descriptor
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct HttpUri {
-    /// The HTTP server URI. It should be a full FQDN with protocol, host and path.
-    ///
-    /// Example:
-    ///
-    /// .. code-block:: yaml
-    ///
-///```ignore
-    ///     uri: <https://www.googleapis.com/oauth2/v1/certs>
-///```
-    ///
-    #[prost(string, tag = "1")]
-    pub uri: ::prost::alloc::string::String,
-    /// Sets the maximum duration in milliseconds that a response can take to arrive upon request.
-    #[prost(message, optional, tag = "3")]
-    pub timeout: ::core::option::Option<::prost_types::Duration>,
-    /// Specify how `uri` is to be fetched. Today, this requires an explicit
-    /// cluster, but in the future we may support dynamic cluster creation or
-    /// inline DNS resolution. See `issue
-    /// <<https://github.com/envoyproxy/envoy/issues/1606>`_.>
-    #[prost(oneof = "http_uri::HttpUpstreamType", tags = "2")]
-    pub http_upstream_type: ::core::option::Option<http_uri::HttpUpstreamType>,
-}
-/// Nested message and enum types in `HttpUri`.
-pub mod http_uri {
-    /// Specify how `uri` is to be fetched. Today, this requires an explicit
-    /// cluster, but in the future we may support dynamic cluster creation or
-    /// inline DNS resolution. See `issue
-    /// <<https://github.com/envoyproxy/envoy/issues/1606>`_.>
-    #[allow(clippy::derive_partial_eq_without_eq)]
-    #[derive(Clone, PartialEq, ::prost::Oneof)]
-    pub enum HttpUpstreamType {
-        /// A cluster is created in the Envoy "cluster_manager" config
-        /// section. This field specifies the cluster name.
-        ///
-        /// Example:
-        ///
-        /// .. code-block:: yaml
-        ///
-///```ignore
-        ///     cluster: jwks_cluster
-///```
-        ///
-        #[prost(string, tag = "2")]
-        Cluster(::prost::alloc::string::String),
-    }
-}
 /// Identifies location of where either Envoy runs or where upstream hosts run.
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -359,53 +22,6 @@ pub struct Locality {
     /// independently.
     #[prost(string, tag = "3")]
     pub sub_zone: ::prost::alloc::string::String,
-}
-/// BuildVersion combines SemVer version of extension with free-form build
-/// information (i.e. 'alpha', 'private-build') as a set of strings.
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct BuildVersion {
-    /// SemVer version of extension.
-    #[prost(message, optional, tag = "1")]
-    pub version: ::core::option::Option<super::super::super::kind::v3::SemanticVersion>,
-    /// Free-form build information.
-    /// Envoy defines several well known keys in the
-    /// source/common/version/version.h file
-    #[prost(message, optional, tag = "2")]
-    pub metadata: ::core::option::Option<::prost_types::Struct>,
-}
-/// Version and identification for an Envoy extension.
-/// \[#next-free-field: 6\]
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct Extension {
-    /// This is the name of the Envoy filter as specified in the Envoy
-    /// configuration, e.g. envoy.filters.http.router, com.acme.widget.
-    #[prost(string, tag = "1")]
-    pub name: ::prost::alloc::string::String,
-    /// Category of the extension.
-    /// Extension category names use reverse DNS notation. For instance
-    /// "envoy.filters.listener" for Envoy's built-in listener filters or
-    /// "com.acme.filters.http" for HTTP filters from acme.com vendor.
-    /// [#comment:TODO(yanavlasov): Link to the doc with existing envoy category
-    /// names.]
-    #[prost(string, tag = "2")]
-    pub category: ::prost::alloc::string::String,
-    /// \[#not-implemented-hide:\] Type descriptor of extension configuration proto.
-    /// [#comment:TODO(yanavlasov): Link to the doc with existing configuration
-    /// protos.]
-    /// \[#comment:TODO(yanavlasov): Add tests when PR #9391 lands.\]
-    #[prost(string, tag = "3")]
-    pub type_descriptor: ::prost::alloc::string::String,
-    /// The version is a property of the extension and maintained independently
-    /// of other extensions and the Envoy API.
-    /// This field is not set when extension did not provide version information.
-    #[prost(message, optional, tag = "4")]
-    pub version: ::core::option::Option<BuildVersion>,
-    /// Indicates that the extension is present but was disabled via dynamic
-    /// configuration.
-    #[prost(bool, tag = "5")]
-    pub disabled: bool,
 }
 /// Identifies a specific Envoy instance. The node identifier is presented to the
 /// management server, which may use this identifier to distinguish per Envoy
@@ -440,18 +56,6 @@ pub struct Node {
     /// directly to the management server.
     #[prost(message, optional, tag = "3")]
     pub metadata: ::core::option::Option<::prost_types::Struct>,
-    /// Map from xDS resource type URL to dynamic context parameters. These may
-    /// vary at runtime (unlike other fields in this message). For example, the xDS
-    /// client may have a shard identifier that changes during the lifetime of the
-    /// xDS client. In Envoy, this would be achieved by updating the dynamic
-    /// context on the Server::Instance's LocalInfo context provider. The shard ID
-    /// dynamic parameter then appears in this field during future discovery
-    /// requests.
-    #[prost(map = "string, message", tag = "12")]
-    pub dynamic_parameters: ::std::collections::HashMap<
-        ::prost::alloc::string::String,
-        super::super::super::super::xds::core::v3::ContextParams,
-    >,
     /// Locality specifying where the Envoy instance is running.
     #[prost(message, optional, tag = "4")]
     pub locality: ::core::option::Option<Locality>,
@@ -459,39 +63,6 @@ pub struct Node {
     /// E.g. "envoy" or "grpc"
     #[prost(string, tag = "6")]
     pub user_agent_name: ::prost::alloc::string::String,
-    /// List of extensions and their versions supported by the node.
-    #[prost(message, repeated, tag = "9")]
-    pub extensions: ::prost::alloc::vec::Vec<Extension>,
-    /// Client feature support list. These are well known features described
-    /// in the Envoy API repository for a given major version of an API. Client
-    /// features use reverse DNS naming scheme, for example `com.acme.feature`. See
-    /// :ref:`the list of features <client_features>` that xDS client may support.
-    #[prost(string, repeated, tag = "10")]
-    pub client_features: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
-    /// Known listening ports on the node as a generic hint to the management
-    /// server for filtering :ref:`listeners <config_listeners>` to be returned.
-    /// For example, if there is a listener bound to port 80, the list can
-    /// optionally contain the SocketAddress `(0.0.0.0,80)`. The field is optional
-    /// and just a hint.
-    #[deprecated]
-    #[prost(message, repeated, tag = "11")]
-    pub listening_addresses: ::prost::alloc::vec::Vec<Address>,
-    #[prost(oneof = "node::UserAgentVersionType", tags = "7, 8")]
-    pub user_agent_version_type: ::core::option::Option<node::UserAgentVersionType>,
-}
-/// Nested message and enum types in `Node`.
-pub mod node {
-    #[allow(clippy::derive_partial_eq_without_eq)]
-    #[derive(Clone, PartialEq, ::prost::Oneof)]
-    pub enum UserAgentVersionType {
-        /// Free-form string that identifies the version of the entity requesting
-        /// config. E.g. "1.12.2" or "abcd1234", or "SpecialEnvoyBuild"
-        #[prost(string, tag = "7")]
-        UserAgentVersion(::prost::alloc::string::String),
-        /// Structured version of the entity requesting config.
-        #[prost(message, tag = "8")]
-        UserAgentBuildVersion(super::BuildVersion),
-    }
 }
 /// Metadata provides additional inputs to filters based on matched listeners,
 /// filter chains, routes and endpoints. It is structured as a map, usually from
@@ -733,56 +304,6 @@ pub mod data_source {
         EnvironmentVariable(::prost::alloc::string::String),
     }
 }
-/// The message specifies the retry policy of remote data source when fetching
-/// fails.
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct RetryPolicy {
-    /// Specifies parameters that control :ref:`retry backoff strategy
-    /// <envoy_v3_api_msg_config.core.v3.BackoffStrategy>`. This parameter is
-    /// optional, in which case the default base interval is 1000 milliseconds. The
-    /// default maximum interval is 10 times the base interval.
-    #[prost(message, optional, tag = "1")]
-    pub retry_back_off: ::core::option::Option<BackoffStrategy>,
-    /// Specifies the allowed number of retries. This parameter is optional and
-    /// defaults to 1.
-    #[prost(message, optional, tag = "2")]
-    pub num_retries: ::core::option::Option<u32>,
-}
-/// The message specifies how to fetch data from remote and how to verify it.
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct RemoteDataSource {
-    /// The HTTP URI to fetch the remote data.
-    #[prost(message, optional, tag = "1")]
-    pub http_uri: ::core::option::Option<HttpUri>,
-    /// SHA256 string for verifying data.
-    #[prost(string, tag = "2")]
-    pub sha256: ::prost::alloc::string::String,
-    /// Retry policy for fetching remote data.
-    #[prost(message, optional, tag = "3")]
-    pub retry_policy: ::core::option::Option<RetryPolicy>,
-}
-/// Async data source which support async data fetch.
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct AsyncDataSource {
-    #[prost(oneof = "async_data_source::Specifier", tags = "1, 2")]
-    pub specifier: ::core::option::Option<async_data_source::Specifier>,
-}
-/// Nested message and enum types in `AsyncDataSource`.
-pub mod async_data_source {
-    #[allow(clippy::derive_partial_eq_without_eq)]
-    #[derive(Clone, PartialEq, ::prost::Oneof)]
-    pub enum Specifier {
-        /// Local async data source.
-        #[prost(message, tag = "1")]
-        Local(super::DataSource),
-        /// Remote async data source.
-        #[prost(message, tag = "2")]
-        Remote(super::RemoteDataSource),
-    }
-}
 /// Configuration for transport socket in :ref:`listeners <config_listeners>` and
 /// :ref:`clusters <envoy_v3_api_msg_config.cluster.v3.Cluster>`. If the
 /// configuration is empty, a default transport socket implementation and
@@ -968,7 +489,8 @@ impl TrafficDirection {
     }
 }
 /// Message type for extension configuration.
-/// \[#next-major-version: revisit all existing typed_config that doesn't use this wrapper.\].
+/// [#next-major-version: revisit all existing typed_config that doesn't use this
+/// wrapper.].
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct TypedExtensionConfig {
@@ -988,7 +510,8 @@ pub struct TypedExtensionConfig {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ProxyProtocolConfig {
-    /// The PROXY protocol version to use. See <https://www.haproxy.org/download/2.1/doc/proxy-protocol.txt> for details
+    /// The PROXY protocol version to use. See
+    /// <https://www.haproxy.org/download/2.1/doc/proxy-protocol.txt> for details
     #[prost(enumeration = "proxy_protocol_config::Version", tag = "1")]
     pub version: i32,
 }
@@ -1033,6 +556,286 @@ pub mod proxy_protocol_config {
         }
     }
 }
+/// Generic socket option message. This would be used to set socket options that
+/// might not exist in upstream kernels or precompiled Envoy binaries.
+/// \[#next-free-field: 7\]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SocketOption {
+    /// An optional name to give this socket option for debugging, etc.
+    /// Uniqueness is not required and no special meaning is assumed.
+    #[prost(string, tag = "1")]
+    pub description: ::prost::alloc::string::String,
+    /// Corresponding to the level value passed to setsockopt, such as IPPROTO_TCP
+    #[prost(int64, tag = "2")]
+    pub level: i64,
+    /// The numeric name as passed to setsockopt
+    #[prost(int64, tag = "3")]
+    pub name: i64,
+    /// The state in which the option will be applied. When used in BindConfig
+    /// STATE_PREBIND is currently the only valid value.
+    #[prost(enumeration = "socket_option::SocketState", tag = "6")]
+    pub state: i32,
+    #[prost(oneof = "socket_option::Value", tags = "4, 5")]
+    pub value: ::core::option::Option<socket_option::Value>,
+}
+/// Nested message and enum types in `SocketOption`.
+pub mod socket_option {
+    #[derive(
+        Clone,
+        Copy,
+        Debug,
+        PartialEq,
+        Eq,
+        Hash,
+        PartialOrd,
+        Ord,
+        ::prost::Enumeration
+    )]
+    #[repr(i32)]
+    pub enum SocketState {
+        /// Socket options are applied after socket creation but before binding the
+        /// socket to a port
+        StatePrebind = 0,
+        /// Socket options are applied after binding the socket to a port but before
+        /// calling listen()
+        StateBound = 1,
+        /// Socket options are applied after calling listen()
+        StateListening = 2,
+    }
+    impl SocketState {
+        /// String value of the enum field names used in the ProtoBuf definition.
+        ///
+        /// The values are not transformed in any way and thus are considered stable
+        /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+        pub fn as_str_name(&self) -> &'static str {
+            match self {
+                SocketState::StatePrebind => "STATE_PREBIND",
+                SocketState::StateBound => "STATE_BOUND",
+                SocketState::StateListening => "STATE_LISTENING",
+            }
+        }
+        /// Creates an enum from field names used in the ProtoBuf definition.
+        pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+            match value {
+                "STATE_PREBIND" => Some(Self::StatePrebind),
+                "STATE_BOUND" => Some(Self::StateBound),
+                "STATE_LISTENING" => Some(Self::StateListening),
+                _ => None,
+            }
+        }
+    }
+    #[allow(clippy::derive_partial_eq_without_eq)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum Value {
+        /// Because many sockopts take an int value.
+        #[prost(int64, tag = "4")]
+        IntValue(i64),
+        /// Otherwise it's a byte buffer.
+        #[prost(bytes, tag = "5")]
+        BufValue(::prost::alloc::vec::Vec<u8>),
+    }
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Pipe {
+    /// Unix Domain Socket path. On Linux, paths starting with '@' will use the
+    /// abstract namespace. The starting '@' is replaced by a null byte by Envoy.
+    /// Paths starting with '@' will result in an error in environments other than
+    /// Linux.
+    #[prost(string, tag = "1")]
+    pub path: ::prost::alloc::string::String,
+    /// The mode for the Pipe. Not applicable for abstract sockets.
+    #[prost(uint32, tag = "2")]
+    pub mode: u32,
+}
+/// \[#not-implemented-hide:\] The address represents an envoy internal listener.
+/// TODO(lambdai): Make this address available for listener and endpoint.
+/// TODO(asraa): When address available, remove workaround from
+/// test/server/server_fuzz_test.cc:30.
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct EnvoyInternalAddress {
+    #[prost(oneof = "envoy_internal_address::AddressNameSpecifier", tags = "1")]
+    pub address_name_specifier: ::core::option::Option<
+        envoy_internal_address::AddressNameSpecifier,
+    >,
+}
+/// Nested message and enum types in `EnvoyInternalAddress`.
+pub mod envoy_internal_address {
+    #[allow(clippy::derive_partial_eq_without_eq)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum AddressNameSpecifier {
+        /// \[#not-implemented-hide:\] The :ref:`listener name
+        /// <envoy_v3_api_field_config.listener.v3.Listener.name>` of the destination
+        /// internal listener.
+        #[prost(string, tag = "1")]
+        ServerListenerName(::prost::alloc::string::String),
+    }
+}
+/// \[#next-free-field: 7\]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SocketAddress {
+    #[prost(enumeration = "socket_address::Protocol", tag = "1")]
+    pub protocol: i32,
+    /// The address for this socket. :ref:`Listeners <config_listeners>` will bind
+    /// to the address. An empty address is not allowed. Specify ``0.0.0.0`` or
+    /// ``::`` to bind to any address. [#comment:TODO(zuercher) reinstate when
+    /// implemented: It is possible to distinguish a Listener address via the
+    /// prefix/suffix matching in :ref:`FilterChainMatch
+    /// <envoy_v3_api_msg_config.listener.v3.FilterChainMatch>`.] When used within
+    /// an upstream :ref:`BindConfig <envoy_v3_api_msg_config.core.v3.BindConfig>`,
+    /// the address controls the source address of outbound connections. For
+    /// :ref:`clusters <envoy_v3_api_msg_config.cluster.v3.Cluster>`, the cluster
+    /// type determines whether the address must be an IP (*STATIC* or *EDS*
+    /// clusters) or a hostname resolved by DNS
+    /// (*STRICT_DNS* or *LOGICAL_DNS* clusters). Address resolution can be
+    /// customized via :ref:`resolver_name
+    /// <envoy_v3_api_field_config.core.v3.SocketAddress.resolver_name>`.
+    #[prost(string, tag = "2")]
+    pub address: ::prost::alloc::string::String,
+    /// The name of the custom resolver. This must have been registered with Envoy.
+    /// If this is empty, a context dependent default applies. If the address is a
+    /// concrete IP address, no resolution will occur. If address is a hostname
+    /// this should be set for resolution other than DNS. Specifying a custom
+    /// resolver with *STRICT_DNS* or *LOGICAL_DNS* will generate an error at
+    /// runtime.
+    #[prost(string, tag = "5")]
+    pub resolver_name: ::prost::alloc::string::String,
+    /// When binding to an IPv6 address above, this enables `IPv4 compatibility
+    /// <<https://tools.ietf.org/html/rfc3493#page-11>`_.> Binding to ``::`` will
+    /// allow both IPv4 and IPv6 connections, with peer IPv4 addresses mapped into
+    /// IPv6 space as ``::FFFF:<IPv4-address>``.
+    #[prost(bool, tag = "6")]
+    pub ipv4_compat: bool,
+    #[prost(oneof = "socket_address::PortSpecifier", tags = "3, 4")]
+    pub port_specifier: ::core::option::Option<socket_address::PortSpecifier>,
+}
+/// Nested message and enum types in `SocketAddress`.
+pub mod socket_address {
+    #[derive(
+        Clone,
+        Copy,
+        Debug,
+        PartialEq,
+        Eq,
+        Hash,
+        PartialOrd,
+        Ord,
+        ::prost::Enumeration
+    )]
+    #[repr(i32)]
+    pub enum Protocol {
+        Tcp = 0,
+        Udp = 1,
+    }
+    impl Protocol {
+        /// String value of the enum field names used in the ProtoBuf definition.
+        ///
+        /// The values are not transformed in any way and thus are considered stable
+        /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+        pub fn as_str_name(&self) -> &'static str {
+            match self {
+                Protocol::Tcp => "TCP",
+                Protocol::Udp => "UDP",
+            }
+        }
+        /// Creates an enum from field names used in the ProtoBuf definition.
+        pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+            match value {
+                "TCP" => Some(Self::Tcp),
+                "UDP" => Some(Self::Udp),
+                _ => None,
+            }
+        }
+    }
+    #[allow(clippy::derive_partial_eq_without_eq)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum PortSpecifier {
+        #[prost(uint32, tag = "3")]
+        PortValue(u32),
+        /// This is only valid if :ref:`resolver_name
+        /// <envoy_v3_api_field_config.core.v3.SocketAddress.resolver_name>` is
+        /// specified below and the named resolver is capable of named port
+        /// resolution.
+        #[prost(string, tag = "4")]
+        NamedPort(::prost::alloc::string::String),
+    }
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct TcpKeepalive {
+    /// Maximum number of keepalive probes to send without response before deciding
+    /// the connection is dead. Default is to use the OS level configuration
+    /// (unless overridden, Linux defaults to 9.)
+    #[prost(message, optional, tag = "1")]
+    pub keepalive_probes: ::core::option::Option<u32>,
+    /// The number of seconds a connection needs to be idle before keep-alive
+    /// probes start being sent. Default is to use the OS level configuration
+    /// (unless overridden, Linux defaults to 7200s (i.e., 2 hours.)
+    #[prost(message, optional, tag = "2")]
+    pub keepalive_time: ::core::option::Option<u32>,
+    /// The number of seconds between keep-alive probes. Default is to use the OS
+    /// level configuration (unless overridden, Linux defaults to 75s.)
+    #[prost(message, optional, tag = "3")]
+    pub keepalive_interval: ::core::option::Option<u32>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct BindConfig {
+    /// The address to bind to when creating a socket.
+    #[prost(message, optional, tag = "1")]
+    pub source_address: ::core::option::Option<SocketAddress>,
+    /// Whether to set the *IP_FREEBIND* option when creating the socket. When this
+    /// flag is set to true, allows the :ref:`source_address
+    /// <envoy_v3_api_field_config.cluster.v3.UpstreamBindConfig.source_address>`
+    /// to be an IP address that is not configured on the system running Envoy.
+    /// When this flag is set to false, the option *IP_FREEBIND* is disabled on the
+    /// socket. When this flag is not set (default), the socket is not modified,
+    /// i.e. the option is neither enabled nor disabled.
+    #[prost(message, optional, tag = "2")]
+    pub freebind: ::core::option::Option<bool>,
+    /// Additional socket options that may not be present in Envoy source code or
+    /// precompiled binaries.
+    #[prost(message, repeated, tag = "3")]
+    pub socket_options: ::prost::alloc::vec::Vec<SocketOption>,
+}
+/// Addresses specify either a logical or physical address and port, which are
+/// used to tell Envoy where to bind/listen, connect to upstream and find
+/// management servers.
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Address {
+    #[prost(oneof = "address::Address", tags = "1, 2, 3")]
+    pub address: ::core::option::Option<address::Address>,
+}
+/// Nested message and enum types in `Address`.
+pub mod address {
+    #[allow(clippy::derive_partial_eq_without_eq)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum Address {
+        #[prost(message, tag = "1")]
+        SocketAddress(super::SocketAddress),
+        #[prost(message, tag = "2")]
+        Pipe(super::Pipe),
+        /// \[#not-implemented-hide:\]
+        #[prost(message, tag = "3")]
+        EnvoyInternalAddress(super::EnvoyInternalAddress),
+    }
+}
+/// CidrRange specifies an IP Address and a prefix length to construct
+/// the subnet mask for a `CIDR <<https://tools.ietf.org/html/rfc4632>`_> range.
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct CidrRange {
+    /// IPv4 or IPv6 address, e.g. ``192.0.0.0`` or ``2001:db8::``.
+    #[prost(string, tag = "1")]
+    pub address_prefix: ::prost::alloc::string::String,
+    /// Length of prefix, e.g. 0, 32. Defaults to 0 when unset.
+    #[prost(message, optional, tag = "2")]
+    pub prefix_len: ::core::option::Option<u32>,
+}
 /// gRPC service configuration. This is used by :ref:`ApiConfigSource
 /// <envoy_v3_api_msg_config.core.v3.ApiConfigSource>` and filter configurations.
 /// \[#next-free-field: 6\]
@@ -1043,9 +846,10 @@ pub struct GrpcService {
     /// request.
     #[prost(message, optional, tag = "3")]
     pub timeout: ::core::option::Option<::prost_types::Duration>,
-    /// Additional metadata to include in streams initiated to the GrpcService. This can be used for
-    /// scenarios in which additional ad hoc authorization headers (e.g. ``x-foo-bar: baz-key``) are to
-    /// be injected. For more information, including details on header value syntax, see the
+    /// Additional metadata to include in streams initiated to the GrpcService.
+    /// This can be used for scenarios in which additional ad hoc authorization
+    /// headers (e.g. ``x-foo-bar: baz-key``) are to be injected. For more
+    /// information, including details on header value syntax, see the
     /// documentation on :ref:`custom request headers
     /// <config_http_conn_man_headers_custom_request_headers>`.
     #[prost(message, repeated, tag = "5")]
@@ -1059,12 +863,15 @@ pub mod grpc_service {
     #[derive(Clone, PartialEq, ::prost::Message)]
     pub struct EnvoyGrpc {
         /// The name of the upstream gRPC cluster. SSL credentials will be supplied
-        /// in the :ref:`Cluster <envoy_v3_api_msg_config.cluster.v3.Cluster>` :ref:`transport_socket
+        /// in the :ref:`Cluster <envoy_v3_api_msg_config.cluster.v3.Cluster>`
+        /// :ref:`transport_socket
         /// <envoy_v3_api_field_config.cluster.v3.Cluster.transport_socket>`.
         #[prost(string, tag = "1")]
         pub cluster_name: ::prost::alloc::string::String,
-        /// The `:authority` header in the grpc request. If this field is not set, the authority header value will be `cluster_name`.
-        /// Note that this authority does not override the SNI. The SNI is provided by the transport socket of the cluster.
+        /// The `:authority` header in the grpc request. If this field is not set,
+        /// the authority header value will be `cluster_name`. Note that this
+        /// authority does not override the SNI. The SNI is provided by the transport
+        /// socket of the cluster.
         #[prost(string, tag = "2")]
         pub authority: ::prost::alloc::string::String,
     }
@@ -1074,7 +881,8 @@ pub mod grpc_service {
     pub struct GoogleGrpc {
         /// The target URI when using the `Google C++ gRPC client
         /// <<https://github.com/grpc/grpc>`_.> SSL credentials will be supplied in
-        /// :ref:`channel_credentials <envoy_v3_api_field_config.core.v3.GrpcService.GoogleGrpc.channel_credentials>`.
+        /// :ref:`channel_credentials
+        /// <envoy_v3_api_field_config.core.v3.GrpcService.GoogleGrpc.channel_credentials>`.
         #[prost(string, tag = "1")]
         pub target_uri: ::prost::alloc::string::String,
         #[prost(message, optional, tag = "2")]
@@ -1094,13 +902,15 @@ pub mod grpc_service {
         ///
 ///```ignore
         ///     streams_total, Counter, Total number of streams opened
-        ///     streams_closed_<gRPC status code>, Counter, Total streams closed with <gRPC status code>
+        ///     streams_closed_<gRPC status code>, Counter, Total streams closed with
+        ///     <gRPC status code>
 ///```
         #[prost(string, tag = "4")]
         pub stat_prefix: ::prost::alloc::string::String,
-        /// The name of the Google gRPC credentials factory to use. This must have been registered with
-        /// Envoy. If this is empty, a default credentials factory will be used that sets up channel
-        /// credentials based on other configuration parameters.
+        /// The name of the Google gRPC credentials factory to use. This must have
+        /// been registered with Envoy. If this is empty, a default credentials
+        /// factory will be used that sets up channel credentials based on other
+        /// configuration parameters.
         #[prost(string, tag = "5")]
         pub credentials_factory_name: ::prost::alloc::string::String,
         /// Additional configuration for site-specific customizations of the Google
@@ -1136,8 +946,8 @@ pub mod grpc_service {
         #[allow(clippy::derive_partial_eq_without_eq)]
         #[derive(Clone, PartialEq, ::prost::Message)]
         pub struct GoogleLocalCredentials {}
-        /// See <https://grpc.io/docs/guides/auth.html#credential-types> to understand Channel and Call
-        /// credential types.
+        /// See <https://grpc.io/docs/guides/auth.html#credential-types> to understand
+        /// Channel and Call credential types.
         #[allow(clippy::derive_partial_eq_without_eq)]
         #[derive(Clone, PartialEq, ::prost::Message)]
         pub struct ChannelCredentials {
@@ -1225,9 +1035,10 @@ pub mod grpc_service {
             #[allow(clippy::derive_partial_eq_without_eq)]
             #[derive(Clone, PartialEq, ::prost::Message)]
             pub struct StsService {
-                /// URI of the token exchange service that handles token exchange requests.
-                /// [#comment:TODO(asraa): Add URI validation when implemented. Tracked by
-                /// <https://github.com/envoyproxy/protoc-gen-validate/issues/303]>
+                /// URI of the token exchange service that handles token exchange
+                /// requests.
+                /// [#comment:TODO(asraa): Add URI validation when implemented. Tracked
+                /// by <https://github.com/envoyproxy/protoc-gen-validate/issues/303]>
                 #[prost(string, tag = "1")]
                 pub token_exchange_service_uri: ::prost::alloc::string::String,
                 /// Location of the target service or resource where the client
@@ -1252,9 +1063,9 @@ pub mod grpc_service {
                 /// Type of the subject token.
                 #[prost(string, tag = "7")]
                 pub subject_token_type: ::prost::alloc::string::String,
-                /// The path of actor token, a security token that represents the identity
-                /// of the acting party. The acting party is authorized to use the
-                /// requested security token and act on behalf of the subject.
+                /// The path of actor token, a security token that represents the
+                /// identity of the acting party. The acting party is authorized to use
+                /// the requested security token and act on behalf of the subject.
                 #[prost(string, tag = "8")]
                 pub actor_token_path: ::prost::alloc::string::String,
                 /// Type of the actor token.
@@ -1289,7 +1100,8 @@ pub mod grpc_service {
                 /// <https://grpc.io/docs/guides/auth.html#extending-grpc-to-support-other-authentication-mechanisms.>
                 #[prost(message, tag = "6")]
                 FromPlugin(MetadataCredentialsFromPlugin),
-                /// Custom security token service which implements OAuth 2.0 token exchange.
+                /// Custom security token service which implements OAuth 2.0 token
+                /// exchange.
                 /// <https://tools.ietf.org/html/draft-ietf-oauth-token-exchange-16>
                 /// See <https://github.com/grpc/grpc/pull/19587.>
                 #[prost(message, tag = "7")]
@@ -1312,15 +1124,15 @@ pub mod grpc_service {
             #[allow(clippy::derive_partial_eq_without_eq)]
             #[derive(Clone, PartialEq, ::prost::Message)]
             pub struct Value {
-                /// Pointer values are not supported, since they don't make any sense when
-                /// delivered via the API.
+                /// Pointer values are not supported, since they don't make any sense
+                /// when delivered via the API.
                 #[prost(oneof = "value::ValueSpecifier", tags = "1, 2")]
                 pub value_specifier: ::core::option::Option<value::ValueSpecifier>,
             }
             /// Nested message and enum types in `Value`.
             pub mod value {
-                /// Pointer values are not supported, since they don't make any sense when
-                /// delivered via the API.
+                /// Pointer values are not supported, since they don't make any sense
+                /// when delivered via the API.
                 #[allow(clippy::derive_partial_eq_without_eq)]
                 #[derive(Clone, PartialEq, ::prost::Oneof)]
                 pub enum ValueSpecifier {
@@ -1377,14 +1189,16 @@ pub struct ApiConfigSource {
     /// For REST APIs, the delay between successive polls.
     #[prost(message, optional, tag = "3")]
     pub refresh_delay: ::core::option::Option<::prost_types::Duration>,
-    /// For REST APIs, the request timeout. If not set, a default value of 1s will be used.
+    /// For REST APIs, the request timeout. If not set, a default value of 1s will
+    /// be used.
     #[prost(message, optional, tag = "5")]
     pub request_timeout: ::core::option::Option<::prost_types::Duration>,
-    /// For GRPC APIs, the rate limit settings. If present, discovery requests made by Envoy will be
-    /// rate limited.
+    /// For GRPC APIs, the rate limit settings. If present, discovery requests made
+    /// by Envoy will be rate limited.
     #[prost(message, optional, tag = "6")]
     pub rate_limit_settings: ::core::option::Option<RateLimitSettings>,
-    /// Skip the node identifier in subsequent discovery requests for streaming gRPC config types.
+    /// Skip the node identifier in subsequent discovery requests for streaming
+    /// gRPC config types.
     #[prost(bool, tag = "7")]
     pub set_node_on_first_message_only: bool,
     /// A list of config validators that will be executed when a new update is
@@ -1392,8 +1206,8 @@ pub struct ApiConfigSource {
     /// specific xDS service type, and only the validators corresponding to the
     /// type url (in `:ref: DiscoveryResponse` or `:ref: DeltaDiscoveryResponse`)
     /// will be invoked.
-    /// If the validator returns false or throws an exception, the config will be rejected by
-    /// the client, and a NACK will be sent.
+    /// If the validator returns false or throws an exception, the config will be
+    /// rejected by the client, and a NACK will be sent.
     /// \[#extension-category: envoy.config.validators\]
     #[prost(message, repeated, tag = "9")]
     pub config_validators: ::prost::alloc::vec::Vec<TypedExtensionConfig>,
@@ -1424,15 +1238,17 @@ pub mod api_config_source {
         /// SotW gRPC service.
         Grpc = 2,
         /// Using the delta xDS gRPC service, i.e. DeltaDiscovery{Request,Response}
-        /// rather than Discovery{Request,Response}. Rather than sending Envoy the entire state
-        /// with every update, the xDS server only sends what has changed since the last update.
+        /// rather than Discovery{Request,Response}. Rather than sending Envoy the
+        /// entire state with every update, the xDS server only sends what has
+        /// changed since the last update.
         DeltaGrpc = 3,
-        /// SotW xDS gRPC with ADS. All resources which resolve to this configuration source will be
-        /// multiplexed on a single connection to an ADS endpoint.
+        /// SotW xDS gRPC with ADS. All resources which resolve to this configuration
+        /// source will be multiplexed on a single connection to an ADS endpoint.
         /// \[#not-implemented-hide:\]
         AggregatedGrpc = 5,
-        /// Delta xDS gRPC with ADS. All resources which resolve to this configuration source will be
-        /// multiplexed on a single connection to an ADS endpoint.
+        /// Delta xDS gRPC with ADS. All resources which resolve to this
+        /// configuration source will be multiplexed on a single connection to an ADS
+        /// endpoint.
         /// \[#not-implemented-hide:\]
         AggregatedDeltaGrpc = 6,
     }
@@ -1470,15 +1286,15 @@ pub mod api_config_source {
     }
 }
 /// Aggregated Discovery Service (ADS) options. This is currently empty, but when
-/// set in :ref:`ConfigSource <envoy_v3_api_msg_config.core.v3.ConfigSource>` can be used to
-/// specify that ADS is to be used.
+/// set in :ref:`ConfigSource <envoy_v3_api_msg_config.core.v3.ConfigSource>` can
+/// be used to specify that ADS is to be used.
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AggregatedConfigSource {}
 /// \[#not-implemented-hide:\]
 /// Self-referencing config source options. This is currently empty, but when
-/// set in :ref:`ConfigSource <envoy_v3_api_msg_config.core.v3.ConfigSource>` can be used to
-/// specify that other data can be obtained from the same server.
+/// set in :ref:`ConfigSource <envoy_v3_api_msg_config.core.v3.ConfigSource>` can
+/// be used to specify that other data can be obtained from the same server.
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SelfConfigSource {
@@ -1491,12 +1307,12 @@ pub struct SelfConfigSource {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RateLimitSettings {
-    /// Maximum number of tokens to be used for rate limiting discovery request calls. If not set, a
-    /// default value of 100 will be used.
+    /// Maximum number of tokens to be used for rate limiting discovery request
+    /// calls. If not set, a default value of 100 will be used.
     #[prost(message, optional, tag = "1")]
     pub max_tokens: ::core::option::Option<u32>,
-    /// Rate at which tokens will be filled per second. If not set, a default fill rate of 10 tokens
-    /// per second will be used.
+    /// Rate at which tokens will be filled per second. If not set, a default fill
+    /// rate of 10 tokens per second will be used.
     #[prost(message, optional, tag = "2")]
     pub fill_rate: ::core::option::Option<f64>,
 }
@@ -1505,8 +1321,9 @@ pub struct RateLimitSettings {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct PathConfigSource {
     /// Path on the filesystem to source and watch for configuration updates.
-    /// When sourcing configuration for a :ref:`secret <envoy_v3_api_msg_extensions.transport_sockets.tls.v3.Secret>`,
-    /// the certificate and key files are also watched for updates.
+    /// When sourcing configuration for a :ref:`secret
+    /// <envoy_v3_api_msg_extensions.transport_sockets.tls.v3.Secret>`, the
+    /// certificate and key files are also watched for updates.
     ///
     /// .. note::
     ///
@@ -1515,28 +1332,33 @@ pub struct PathConfigSource {
     /// .. note::
     ///
 ///```ignore
-    ///    If `watched_directory` is *not* configured, Envoy will watch the file path for *moves.*
-    ///    This is because in general only moves are atomic. The same method of swapping files as is
-    ///    demonstrated in the :ref:`runtime documentation <config_runtime_symbolic_link_swap>` can be
-    ///    used here also. If `watched_directory` is configured, no watch will be placed directly on
-    ///    this path. Instead, the configured `watched_directory` will be used to trigger reloads of
-    ///    this path. This is required in certain deployment scenarios. See below for more information.
+    ///    If `watched_directory` is *not* configured, Envoy will watch the file
+    ///    path for *moves.* This is because in general only moves are atomic. The
+    ///    same method of swapping files as is demonstrated in the :ref:`runtime
+    ///    documentation <config_runtime_symbolic_link_swap>` can be used here also.
+    ///    If `watched_directory` is configured, no watch will be placed directly on
+    ///    this path. Instead, the configured `watched_directory` will be used to
+    ///    trigger reloads of this path. This is required in certain deployment
+    ///    scenarios. See below for more information.
 ///```
     #[prost(string, tag = "1")]
     pub path: ::prost::alloc::string::String,
-    /// If configured, this directory will be watched for *moves.* When an entry in this directory is
-    /// moved to, the `path` will be reloaded. This is required in certain deployment scenarios.
+    /// If configured, this directory will be watched for *moves.* When an entry in
+    /// this directory is moved to, the `path` will be reloaded. This is required
+    /// in certain deployment scenarios.
     ///
     /// Specifically, if trying to load an xDS resource using a
-    /// `Kubernetes ConfigMap <<https://kubernetes.io/docs/concepts/configuration/configmap/>`_,> the
+    /// `Kubernetes ConfigMap
+    /// <<https://kubernetes.io/docs/concepts/configuration/configmap/>`_,> the
     /// following configuration might be used:
     /// 1. Store xds.yaml inside a ConfigMap.
     /// 2. Mount the ConfigMap to `/config_map/xds`
     /// 3. Configure path `/config_map/xds/xds.yaml`
     /// 4. Configure watched directory `/config_map/xds`
     ///
-    /// The above configuration will ensure that Envoy watches the owning directory for moves which is
-    /// required due to how Kubernetes manages ConfigMap symbolic links during atomic updates.
+    /// The above configuration will ensure that Envoy watches the owning directory
+    /// for moves which is required due to how Kubernetes manages ConfigMap
+    /// symbolic links during atomic updates.
     #[prost(message, optional, tag = "2")]
     pub watched_directory: ::core::option::Option<WatchedDirectory>,
 }
@@ -1550,21 +1372,23 @@ pub struct PathConfigSource {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ConfigSource {
-    /// Authorities that this config source may be used for. An authority specified in a xdstp:// URL
-    /// is resolved to a *ConfigSource* prior to configuration fetch. This field provides the
-    /// association between authority name and configuration source.
+    /// Authorities that this config source may be used for. An authority specified
+    /// in a xdstp:// URL is resolved to a *ConfigSource* prior to configuration
+    /// fetch. This field provides the association between authority name and
+    /// configuration source.
     /// \[#not-implemented-hide:\]
     #[prost(message, repeated, tag = "7")]
     pub authorities: ::prost::alloc::vec::Vec<
         super::super::super::super::xds::core::v3::Authority,
     >,
-    /// When this timeout is specified, Envoy will wait no longer than the specified time for first
-    /// config response on this xDS subscription during the :ref:`initialization process
-    /// <arch_overview_initialization>`. After reaching the timeout, Envoy will move to the next
-    /// initialization phase, even if the first config is not delivered yet. The timer is activated
-    /// when the xDS API subscription starts, and is disarmed on first config update or on error. 0
-    /// means no timeout - Envoy will wait indefinitely for the first xDS config (unless another
-    /// timeout applies). The default is 15s.
+    /// When this timeout is specified, Envoy will wait no longer than the
+    /// specified time for first config response on this xDS subscription during
+    /// the :ref:`initialization process <arch_overview_initialization>`. After
+    /// reaching the timeout, Envoy will move to the next initialization phase,
+    /// even if the first config is not delivered yet. The timer is activated when
+    /// the xDS API subscription starts, and is disarmed on first config update or
+    /// on error. 0 means no timeout - Envoy will wait indefinitely for the first
+    /// xDS config (unless another timeout applies). The default is 15s.
     #[prost(message, optional, tag = "4")]
     pub initial_fetch_timeout: ::core::option::Option<::prost_types::Duration>,
     /// API version for xDS resources. This implies the type URLs that the client
@@ -1596,16 +1420,18 @@ pub mod config_source {
         #[prost(message, tag = "3")]
         Ads(super::AggregatedConfigSource),
         /// \[#not-implemented-hide:\]
-        /// When set, the client will access the resources from the same server it got the
-        /// ConfigSource from, although not necessarily from the same stream. This is similar to the
-        /// :ref:`ads<envoy_v3_api_field.ConfigSource.ads>` field, except that the client may use a
-        /// different stream to the same server. As a result, this field can be used for things
-        /// like LRS that cannot be sent on an ADS stream. It can also be used to link from (e.g.)
-        /// LDS to RDS on the same server without requiring the management server to know its name
-        /// or required credentials.
-        /// [#next-major-version: In xDS v3, consider replacing the ads field with this one, since
-        /// this field can implicitly mean to use the same stream in the case where the ConfigSource
-        /// is provided via ADS and the specified data can also be obtained via ADS.]
+        /// When set, the client will access the resources from the same server it
+        /// got the ConfigSource from, although not necessarily from the same stream.
+        /// This is similar to the :ref:`ads<envoy_v3_api_field.ConfigSource.ads>`
+        /// field, except that the client may use a different stream to the same
+        /// server. As a result, this field can be used for things like LRS that
+        /// cannot be sent on an ADS stream. It can also be used to link from (e.g.)
+        /// LDS to RDS on the same server without requiring the management server to
+        /// know its name or required credentials.
+        /// [#next-major-version: In xDS v3, consider replacing the ads field with
+        /// this one, since this field can implicitly mean to use the same stream in
+        /// the case where the ConfigSource is provided via ADS and the specified
+        /// data can also be obtained via ADS.]
         #[prost(message, tag = "5")]
         Self_(super::SelfConfigSource),
     }
@@ -1632,17 +1458,17 @@ pub struct ExtensionConfigSource {
     #[prost(message, optional, tag = "2")]
     pub default_config: ::core::option::Option<::prost_types::Any>,
     /// Use the default config as the initial configuration without warming and
-    /// waiting for the first discovery response. Requires the default configuration
-    /// to be supplied.
+    /// waiting for the first discovery response. Requires the default
+    /// configuration to be supplied.
     #[prost(bool, tag = "3")]
     pub apply_default_config_without_warming: bool,
-    /// A set of permitted extension type URLs. Extension configuration updates are rejected
-    /// if they do not match any type URL in the set.
+    /// A set of permitted extension type URLs. Extension configuration updates are
+    /// rejected if they do not match any type URL in the set.
     #[prost(string, repeated, tag = "4")]
     pub type_urls: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
-/// xDS API and non-xDS services version. This is used to describe both resource and transport
-/// protocol versions (in distinct configuration fields).
+/// xDS API and non-xDS services version. This is used to describe both resource
+/// and transport protocol versions (in distinct configuration fields).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum ApiVersion {
@@ -1681,16 +1507,17 @@ impl ApiVersion {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct UdpSocketConfig {
-    /// The maximum size of received UDP datagrams. Using a larger size will cause Envoy to allocate
-    /// more memory per socket. Received datagrams above this size will be dropped. If not set
-    /// defaults to 1500 bytes.
+    /// The maximum size of received UDP datagrams. Using a larger size will cause
+    /// Envoy to allocate more memory per socket. Received datagrams above this
+    /// size will be dropped. If not set defaults to 1500 bytes.
     #[prost(message, optional, tag = "1")]
     pub max_rx_datagram_size: ::core::option::Option<u64>,
     /// Configures whether Generic Receive Offload (GRO)
-    /// <<https://en.wikipedia.org/wiki/Large_receive_offload>_> is preferred when reading from the
-    /// UDP socket. The default is context dependent and is documented where UdpSocketConfig is used.
-    /// This option affects performance but not functionality. If GRO is not supported by the operating
-    /// system, non-GRO receive will be used.
+    /// <<https://en.wikipedia.org/wiki/Large_receive_offload>_> is preferred when
+    /// reading from the UDP socket. The default is context dependent and is
+    /// documented where UdpSocketConfig is used. This option affects performance
+    /// but not functionality. If GRO is not supported by the operating system,
+    /// non-GRO receive will be used.
     #[prost(message, optional, tag = "2")]
     pub prefer_gro: ::core::option::Option<bool>,
 }

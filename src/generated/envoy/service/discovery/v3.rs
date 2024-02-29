@@ -37,10 +37,12 @@ pub struct DiscoveryRequest {
     /// delta, where it is populated only for new explicit ACKs).
     #[prost(string, tag = "5")]
     pub response_nonce: ::prost::alloc::string::String,
-    /// This is populated when the previous :ref:`DiscoveryResponse <envoy_v3_api_msg_service.discovery.v3.DiscoveryResponse>`
-    /// failed to update configuration. The *message* field in *error_details* provides the Envoy
-    /// internal exception related to the failure. It is only intended for consumption during manual
-    /// debugging, the string provided is not guaranteed to be stable across Envoy versions.
+    /// This is populated when the previous :ref:`DiscoveryResponse
+    /// <envoy_v3_api_msg_service.discovery.v3.DiscoveryResponse>` failed to update
+    /// configuration. The *message* field in *error_details* provides the Envoy
+    /// internal exception related to the failure. It is only intended for
+    /// consumption during manual debugging, the string provided is not guaranteed
+    /// to be stable across Envoy versions.
     #[prost(message, optional, tag = "6")]
     pub error_detail: ::core::option::Option<
         super::super::super::super::google::rpc::Status,
@@ -53,7 +55,8 @@ pub struct DiscoveryResponse {
     /// The version of the response data.
     #[prost(string, tag = "1")]
     pub version_info: ::prost::alloc::string::String,
-    /// The response resources. These resources are typed and depend on the API being called.
+    /// The response resources. These resources are typed and depend on the API
+    /// being called.
     #[prost(message, repeated, tag = "2")]
     pub resources: ::prost::alloc::vec::Vec<::prost_types::Any>,
     /// \[#not-implemented-hide:\]
@@ -77,7 +80,8 @@ pub struct DiscoveryResponse {
     #[prost(bool, tag = "3")]
     pub canary: bool,
     /// Type URL for resources. Identifies the xDS API when muxing over ADS.
-    /// Must be consistent with the type_url in the 'resources' repeated Any (if non-empty).
+    /// Must be consistent with the type_url in the 'resources' repeated Any (if
+    /// non-empty).
     #[prost(string, tag = "4")]
     pub type_url: ::prost::alloc::string::String,
     /// For gRPC based subscriptions, the nonce provides a way to explicitly ack a
@@ -117,17 +121,18 @@ pub struct DiscoveryResponse {
 /// can be either or both of: \[1\] informing the server of what resources the
 /// client has gained/lost interest in (using resource_names_subscribe and
 /// resource_names_unsubscribe), or \[2\] (N)ACKing an earlier resource update from
-/// the server (using response_nonce, with presence of error_detail making it a NACK).
-/// Additionally, the first message (for a given type_url) of a reconnected gRPC stream
-/// has a third role: informing the server of the resources (and their versions)
-/// that the client already possesses, using the initial_resource_versions field.
+/// the server (using response_nonce, with presence of error_detail making it a
+/// NACK). Additionally, the first message (for a given type_url) of a
+/// reconnected gRPC stream has a third role: informing the server of the
+/// resources (and their versions) that the client already possesses, using the
+/// initial_resource_versions field.
 ///
-/// As with state-of-the-world, when multiple resource types are multiplexed (ADS),
-/// all requests/acknowledgments/updates are logically walled off by type_url:
-/// a Cluster ACK exists in a completely separate world from a prior Route NACK.
-/// In particular, initial_resource_versions being sent at the "start" of every
-/// gRPC stream actually entails a message for each type_url, each with its own
-/// initial_resource_versions.
+/// As with state-of-the-world, when multiple resource types are multiplexed
+/// (ADS), all requests/acknowledgments/updates are logically walled off by
+/// type_url: a Cluster ACK exists in a completely separate world from a prior
+/// Route NACK. In particular, initial_resource_versions being sent at the
+/// "start" of every gRPC stream actually entails a message for each type_url,
+/// each with its own initial_resource_versions.
 /// \[#next-free-field: 8\]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -136,27 +141,30 @@ pub struct DeltaDiscoveryRequest {
     #[prost(message, optional, tag = "1")]
     pub node: ::core::option::Option<super::super::super::config::core::v3::Node>,
     /// Type of the resource that is being requested, e.g.
-    /// "type.googleapis.com/envoy.api.v2.ClusterLoadAssignment". This does not need to be set if
-    /// resources are only referenced via *xds_resource_subscribe* and
-    /// *xds_resources_unsubscribe*.
+    /// "type.googleapis.com/envoy.api.v2.ClusterLoadAssignment". This does not
+    /// need to be set if resources are only referenced via
+    /// *xds_resource_subscribe* and *xds_resources_unsubscribe*.
     #[prost(string, tag = "2")]
     pub type_url: ::prost::alloc::string::String,
     /// DeltaDiscoveryRequests allow the client to add or remove individual
     /// resources to the set of tracked resources in the context of a stream.
     /// All resource names in the resource_names_subscribe list are added to the
-    /// set of tracked resources and all resource names in the resource_names_unsubscribe
-    /// list are removed from the set of tracked resources.
+    /// set of tracked resources and all resource names in the
+    /// resource_names_unsubscribe list are removed from the set of tracked
+    /// resources.
     ///
     /// *Unlike* state-of-the-world xDS, an empty resource_names_subscribe or
     /// resource_names_unsubscribe list simply means that no resources are to be
     /// added or removed to the resource list.
     /// *Like* state-of-the-world xDS, the server must send updates for all tracked
-    /// resources, but can also send updates for resources the client has not subscribed to.
+    /// resources, but can also send updates for resources the client has not
+    /// subscribed to.
     ///
-    /// NOTE: the server must respond with all resources listed in resource_names_subscribe,
-    /// even if it believes the client has the most recent version of them. The reason:
-    /// the client may have dropped them, but then regained interest before it had a chance
-    /// to send the unsubscribe message. See DeltaSubscriptionStateTest.RemoveThenAdd.
+    /// NOTE: the server must respond with all resources listed in
+    /// resource_names_subscribe, even if it believes the client has the most
+    /// recent version of them. The reason: the client may have dropped them, but
+    /// then regained interest before it had a chance to send the unsubscribe
+    /// message. See DeltaSubscriptionStateTest.RemoveThenAdd.
     ///
     /// These two fields can be set in any DeltaDiscoveryRequest, including ACKs
     /// and initial_resource_versions.
@@ -171,14 +179,15 @@ pub struct DeltaDiscoveryRequest {
     pub resource_names_unsubscribe: ::prost::alloc::vec::Vec<
         ::prost::alloc::string::String,
     >,
-    /// Informs the server of the versions of the resources the xDS client knows of, to enable the
-    /// client to continue the same logical xDS session even in the face of gRPC stream reconnection.
-    /// It will not be populated: \[1\] in the very first stream of a session, since the client will
-    /// not yet have any resources,  \[2\] in any message after the first in a stream (for a given
-    /// type_url), since the server will already be correctly tracking the client's state.
-    /// (In ADS, the first message *of each type_url* of a reconnected stream populates this map.)
-    /// The map's keys are names of xDS resources known to the xDS client.
-    /// The map's values are opaque resource versions.
+    /// Informs the server of the versions of the resources the xDS client knows
+    /// of, to enable the client to continue the same logical xDS session even in
+    /// the face of gRPC stream reconnection. It will not be populated: \[1\] in the
+    /// very first stream of a session, since the client will not yet have any
+    /// resources,  \[2\] in any message after the first in a stream (for a given
+    /// type_url), since the server will already be correctly tracking the client's
+    /// state. (In ADS, the first message *of each type_url* of a reconnected
+    /// stream populates this map.) The map's keys are names of xDS resources known
+    /// to the xDS client. The map's values are opaque resource versions.
     #[prost(map = "string, string", tag = "5")]
     pub initial_resource_versions: ::std::collections::HashMap<
         ::prost::alloc::string::String,
@@ -190,9 +199,10 @@ pub struct DeltaDiscoveryRequest {
     /// Otherwise (unlike in DiscoveryRequest) response_nonce must be omitted.
     #[prost(string, tag = "6")]
     pub response_nonce: ::prost::alloc::string::String,
-    /// This is populated when the previous :ref:`DiscoveryResponse <envoy_v3_api_msg_service.discovery.v3.DiscoveryResponse>`
-    /// failed to update configuration. The *message* field in *error_details*
-    /// provides the Envoy internal exception related to the failure.
+    /// This is populated when the previous :ref:`DiscoveryResponse
+    /// <envoy_v3_api_msg_service.discovery.v3.DiscoveryResponse>` failed to update
+    /// configuration. The *message* field in *error_details* provides the Envoy
+    /// internal exception related to the failure.
     #[prost(message, optional, tag = "7")]
     pub error_detail: ::core::option::Option<
         super::super::super::super::google::rpc::Status,
@@ -210,11 +220,12 @@ pub struct DeltaDiscoveryResponse {
     #[prost(message, repeated, tag = "2")]
     pub resources: ::prost::alloc::vec::Vec<Resource>,
     /// Type URL for resources. Identifies the xDS API when muxing over ADS.
-    /// Must be consistent with the type_url in the Any within 'resources' if 'resources' is non-empty.
+    /// Must be consistent with the type_url in the Any within 'resources' if
+    /// 'resources' is non-empty.
     #[prost(string, tag = "4")]
     pub type_url: ::prost::alloc::string::String,
-    /// Resources names of resources that have be deleted and to be removed from the xDS Client.
-    /// Removed resources for missing resources can be ignored.
+    /// Resources names of resources that have be deleted and to be removed from
+    /// the xDS Client. Removed resources for missing resources can be ignored.
     #[prost(string, repeated, tag = "6")]
     pub removed_resources: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
     /// The nonce provides a way for DeltaDiscoveryRequests to uniquely
@@ -232,7 +243,8 @@ pub struct DeltaDiscoveryResponse {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Resource {
-    /// The resource's name, to distinguish it from others of the same type of resource.
+    /// The resource's name, to distinguish it from others of the same type of
+    /// resource.
     #[prost(string, tag = "3")]
     pub name: ::prost::alloc::string::String,
     /// The aliases are a list of other names that this resource can go by.
@@ -245,19 +257,22 @@ pub struct Resource {
     /// The resource being tracked.
     #[prost(message, optional, tag = "2")]
     pub resource: ::core::option::Option<::prost_types::Any>,
-    /// Time-to-live value for the resource. For each resource, a timer is started. The timer is
-    /// reset each time the resource is received with a new TTL. If the resource is received with
-    /// no TTL set, the timer is removed for the resource. Upon expiration of the timer, the
-    /// configuration for the resource will be removed.
+    /// Time-to-live value for the resource. For each resource, a timer is started.
+    /// The timer is reset each time the resource is received with a new TTL. If
+    /// the resource is received with no TTL set, the timer is removed for the
+    /// resource. Upon expiration of the timer, the configuration for the resource
+    /// will be removed.
     ///
-    /// The TTL can be refreshed or changed by sending a response that doesn't change the resource
-    /// version. In this case the resource field does not need to be populated, which allows for
-    /// light-weight "heartbeat" updates to keep a resource with a TTL alive.
+    /// The TTL can be refreshed or changed by sending a response that doesn't
+    /// change the resource version. In this case the resource field does not need
+    /// to be populated, which allows for light-weight "heartbeat" updates to keep
+    /// a resource with a TTL alive.
     ///
-    /// The TTL feature is meant to support configurations that should be removed in the event of
-    /// a management server failure. For example, the feature may be used for fault injection
-    /// testing where the fault injection should be terminated in the event that Envoy loses contact
-    /// with the management server.
+    /// The TTL feature is meant to support configurations that should be removed
+    /// in the event of a management server failure. For example, the feature may
+    /// be used for fault injection testing where the fault injection should be
+    /// terminated in the event that Envoy loses contact with the management
+    /// server.
     #[prost(message, optional, tag = "6")]
     pub ttl: ::core::option::Option<::prost_types::Duration>,
     /// Cache control properties for the resource.
@@ -273,14 +288,15 @@ pub mod resource {
     #[derive(Clone, PartialEq, ::prost::Message)]
     pub struct CacheControl {
         /// If true, xDS proxies may not cache this resource.
-        /// Note that this does not apply to clients other than xDS proxies, which must cache resources
-        /// for their own use, regardless of the value of this field.
+        /// Note that this does not apply to clients other than xDS proxies, which
+        /// must cache resources for their own use, regardless of the value of this
+        /// field.
         #[prost(bool, tag = "1")]
         pub do_not_cache: bool,
     }
 }
-/// \[#not-implemented-hide:\] Not configuration. Workaround c++ protobuf issue with importing
-/// services: <https://github.com/google/protobuf/issues/4221>
+/// \[#not-implemented-hide:\] Not configuration. Workaround c++ protobuf issue
+/// with importing services: <https://github.com/google/protobuf/issues/4221>
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AdsDummy {}
@@ -289,15 +305,26 @@ pub mod aggregated_discovery_service_client {
     #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     use tonic::codegen::*;
     use tonic::codegen::http::Uri;
-    /// See https://github.com/envoyproxy/envoy-api#apis for a description of the role of
-    /// ADS and how it is intended to be used by a management server. ADS requests
-    /// have the same structure as their singleton xDS counterparts, but can
+    /// See https://github.com/envoyproxy/envoy-api#apis for a description of the
+    /// role of ADS and how it is intended to be used by a management server. ADS
+    /// requests have the same structure as their singleton xDS counterparts, but can
     /// multiplex many resource types on a single stream. The type_url in the
     /// DiscoveryRequest/DiscoveryResponse provides sufficient information to recover
     /// the multiplexed singleton APIs at the Envoy instance and management server.
     #[derive(Debug, Clone)]
     pub struct AggregatedDiscoveryServiceClient<T> {
         inner: tonic::client::Grpc<T>,
+    }
+    impl AggregatedDiscoveryServiceClient<tonic::transport::Channel> {
+        /// Attempt to create a new client by connecting to a given endpoint.
+        pub async fn connect<D>(dst: D) -> Result<Self, tonic::transport::Error>
+        where
+            D: TryInto<tonic::transport::Endpoint>,
+            D::Error: Into<StdError>,
+        {
+            let conn = tonic::transport::Endpoint::new(dst)?.connect().await?;
+            Ok(Self::new(conn))
+        }
     }
     impl<T> AggregatedDiscoveryServiceClient<T>
     where
@@ -466,9 +493,9 @@ pub mod aggregated_discovery_service_server {
             tonic::Status,
         >;
     }
-    /// See https://github.com/envoyproxy/envoy-api#apis for a description of the role of
-    /// ADS and how it is intended to be used by a management server. ADS requests
-    /// have the same structure as their singleton xDS counterparts, but can
+    /// See https://github.com/envoyproxy/envoy-api#apis for a description of the
+    /// role of ADS and how it is intended to be used by a management server. ADS
+    /// requests have the same structure as their singleton xDS counterparts, but can
     /// multiplex many resource types on a single stream. The type_url in the
     /// DiscoveryRequest/DiscoveryResponse provides sufficient information to recover
     /// the multiplexed singleton APIs at the Envoy instance and management server.

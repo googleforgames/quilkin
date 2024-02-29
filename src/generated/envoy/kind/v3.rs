@@ -75,19 +75,6 @@ pub mod fractional_percent {
         }
     }
 }
-/// Envoy uses SemVer (<https://semver.org/>). Major/minor versions indicate
-/// expected behaviors and APIs, the patch version field is used only
-/// for security fixes and can be generally ignored.
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct SemanticVersion {
-    #[prost(uint32, tag = "1")]
-    pub major_number: u32,
-    #[prost(uint32, tag = "2")]
-    pub minor_number: u32,
-    #[prost(uint32, tag = "3")]
-    pub patch: u32,
-}
 /// Specifies the int64 start and end of the range using half-open interval
 /// semantics [start, end).
 #[allow(clippy::derive_partial_eq_without_eq)]

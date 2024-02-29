@@ -89,7 +89,7 @@ fn install() {
 fn execute(which: &str) {
     let files: &[(&str, &[&str])] = &[
         (
-            "proto/data-plane-api",
+            "proto",
             &[
                 "envoy/config/accesslog/v3/accesslog",
                 // "envoy/config/cluster/v3/cluster",
@@ -105,7 +105,7 @@ fn execute(which: &str) {
                 // "envoy/type/tracing/v3/custom_tag",
             ],
         ),
-        ("proto/udpa", &["xds/core/v3/resource_name"]),
+        ("proto/xds", &["core/v3/resource_name"]),
         ("proto/google_apis", &[]),
         // For google/protobuf
         ("proto", &[]),
@@ -136,8 +136,9 @@ fn execute(which: &str) {
     cmd
         // Run rustfmt on the output, since they're committed they might as well be nice
         //.arg("--format")
-        .arg("-s")
-        .arg("-c")
+        .arg("--build-server")
+        .arg("--build-client")
+        .arg("--generate-transport")
         .arg(which)
         .args(["-o", "src/generated"]);
 
@@ -156,13 +157,122 @@ fn execute(which: &str) {
     }
 }
 
+fn copy() {
+    struct Source {
+        name: &'static str,
+        repo: &'static str,
+        rev: &'static str,
+        root: &'static str,
+        target: &'static str,
+    }
+
+    impl Source {
+        fn sync(&self) -> PathBuf {
+            let path = self.path();
+
+            if path.exists() {
+                return path;
+            }
+
+            if !Command::new("git")
+                .arg("clone")
+                .arg(self.repo)
+                .arg(&path)
+                .status()
+                .expect("git not installed")
+                .success()
+            {
+                panic!("failed to clone {} from {}", self.name, self.repo);
+            }
+
+            if !Command::new("git")
+                .arg("-C")
+                .arg(&path)
+                .arg("checkout")
+                .arg(self.rev)
+                .status()
+                .unwrap()
+                .success()
+            {
+                panic!("failed to checkout {} from {}", self.rev, self.repo);
+            }
+
+            path
+        }
+
+        fn path(&self) -> PathBuf {
+            format!("/tmp/{}-{}", self.name, &self.rev[..7]).into()
+        }
+    }
+
+    const REPOS: &[Source] = &[
+        Source {
+            name: "envoy",
+            repo: "https://github.com/envoyproxy/data-plane-api",
+            rev: "a04278879ba6eb9264d755936942b23cbf552a04",
+            root: "envoy",
+            target: "envoy",
+        },
+        Source {
+            name: "xds",
+            repo: "https://github.com/cncf/xds",
+            rev: "4a2b9fdd466b16721f8c058d7cadf5a54e229d66",
+            root: "xds",
+            target: "xds",
+        },
+    ];
+
+    let args: Vec<_> = std::env::args().skip(2).collect();
+    let name = args.get(0).expect("must provide source name");
+    let path = args.get(1).expect("must provide path");
+
+    let Some(ri) = REPOS.iter().find(|r| r.name == name) else {
+        panic!("unknown repo '{name}'")
+    };
+
+    let mut pb = ri.sync();
+    pb.push(ri.root);
+    pb.push(path);
+
+    if !pb.exists() {
+        panic!("failed to find {pb:?}");
+    }
+
+    let tp = path.replace("type", "kind");
+
+    let mut tbp = PathBuf::new();
+    tbp.push("proto");
+    tbp.push(ri.target);
+    tbp.push(tp);
+
+    {
+        let parent = tbp.parent().unwrap();
+        if !parent.exists() {
+            if let Err(err) = std::fs::create_dir_all(parent) {
+                panic!("failed to create directory {parent:?}: {err}");
+            }
+        }
+    }
+
+    if let Err(err) = std::fs::copy(&pb, &tbp) {
+        panic!("failed to copy {pb:?} -> {tbp:?}: {err}");
+    } else {
+        println!("copied {pb:?} -> {tbp:?}");
+    }
+}
+
 fn main() {
     let subcmd = std::env::args()
         .nth(1)
         .expect("expected a subcommand to execute");
 
-    if !matches!(subcmd.as_str(), "generate" | "validate") {
-        panic!("unexpected subcommmand '{subcmd}', expected 'generate' or 'validate'");
+    if !matches!(subcmd.as_str(), "generate" | "validate" | "copy") {
+        panic!("unexpected subcommmand '{subcmd}', expected 'generate', 'validate', or 'copy'");
+    }
+
+    if subcmd == "copy" {
+        copy();
+        return;
     }
 
     // Check if proto-gen is available and install it if not

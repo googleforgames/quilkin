@@ -1,20 +1,3 @@
-/// Additional parameters that can be used to select resource variants. These include any
-/// global context parameters, per-resource type client feature capabilities and per-resource
-/// type functional attributes. All per-resource type attributes will be `xds.resource.`
-/// prefixed and some of these are documented below:
-/// `xds.resource.listening_address`: The value is "IP:port" (e.g. "10.1.1.3:8080") which is
-///```ignore
-///    the listening address of a Listener. Used in a Listener resource query.
-///```
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ContextParams {
-    #[prost(map = "string, string", tag = "1")]
-    pub params: ::std::collections::HashMap<
-        ::prost::alloc::string::String,
-        ::prost::alloc::string::String,
-    >,
-}
 /// Message type for extension configuration.
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -38,6 +21,23 @@ pub struct TypedExtensionConfig {
 pub struct Authority {
     #[prost(string, tag = "1")]
     pub name: ::prost::alloc::string::String,
+}
+/// Additional parameters that can be used to select resource variants. These include any
+/// global context parameters, per-resource type client feature capabilities and per-resource
+/// type functional attributes. All per-resource type attributes will be `xds.resource.`
+/// prefixed and some of these are documented below:
+/// `xds.resource.listening_address`: The value is "IP:port" (e.g. "10.1.1.3:8080") which is
+///```ignore
+///    the listening address of a Listener. Used in a Listener resource query.
+///```
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ContextParams {
+    #[prost(map = "string, string", tag = "1")]
+    pub params: ::std::collections::HashMap<
+        ::prost::alloc::string::String,
+        ::prost::alloc::string::String,
+    >,
 }
 /// xDS resource locators identify a xDS resource name and instruct the
 /// data-plane load balancer on how the resource may be located.

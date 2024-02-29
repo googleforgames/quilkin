@@ -7,11 +7,12 @@ pub struct Endpoint {
     /// .. attention::
     ///
 ///```ignore
-    ///    The form of host address depends on the given cluster type. For STATIC or EDS,
-    ///    it is expected to be a direct IP address (or something resolvable by the
-    ///    specified :ref:`resolver <envoy_v3_api_field_config.core.v3.SocketAddress.resolver_name>`
-    ///    in the Address). For LOGICAL or STRICT DNS, it is expected to be hostname,
-    ///    and will be resolved via DNS.
+    ///    The form of host address depends on the given cluster type. For STATIC or
+    ///    EDS, it is expected to be a direct IP address (or something resolvable by
+    ///    the specified :ref:`resolver
+    ///    <envoy_v3_api_field_config.core.v3.SocketAddress.resolver_name>` in the
+    ///    Address). For LOGICAL or STRICT DNS, it is expected to be hostname, and
+    ///    will be resolved via DNS.
 ///```
     #[prost(message, optional, tag = "1")]
     pub address: ::core::option::Option<super::super::core::v3::Address>,
@@ -26,10 +27,11 @@ pub struct Endpoint {
 ///```
     #[prost(message, optional, tag = "2")]
     pub health_check_config: ::core::option::Option<endpoint::HealthCheckConfig>,
-    /// The hostname associated with this endpoint. This hostname is not used for routing or address
-    /// resolution. If provided, it will be associated with the endpoint, and can be used for features
-    /// that require a hostname, like
-    /// :ref:`auto_host_rewrite <envoy_v3_api_field_config.route.v3.RouteAction.auto_host_rewrite>`.
+    /// The hostname associated with this endpoint. This hostname is not used for
+    /// routing or address resolution. If provided, it will be associated with the
+    /// endpoint, and can be used for features that require a hostname, like
+    /// :ref:`auto_host_rewrite
+    /// <envoy_v3_api_field_config.route.v3.RouteAction.auto_host_rewrite>`.
     #[prost(string, tag = "3")]
     pub hostname: ::prost::alloc::string::String,
 }
@@ -47,11 +49,13 @@ pub mod endpoint {
         /// to have different health check address port.
         #[prost(uint32, tag = "1")]
         pub port_value: u32,
-        /// By default, the host header for L7 health checks is controlled by cluster level configuration
-        /// (see: :ref:`host <envoy_v3_api_field_config.core.v3.HealthCheck.HttpHealthCheck.host>` and
-        /// :ref:`authority <envoy_v3_api_field_config.core.v3.HealthCheck.GrpcHealthCheck.authority>`). Setting this
-        /// to a non-empty value allows overriding the cluster level configuration for a specific
-        /// endpoint.
+        /// By default, the host header for L7 health checks is controlled by cluster
+        /// level configuration (see: :ref:`host
+        /// <envoy_v3_api_field_config.core.v3.HealthCheck.HttpHealthCheck.host>` and
+        /// :ref:`authority
+        /// <envoy_v3_api_field_config.core.v3.HealthCheck.GrpcHealthCheck.authority>`).
+        /// Setting this to a non-empty value allows overriding the cluster level
+        /// configuration for a specific endpoint.
         #[prost(string, tag = "2")]
         pub hostname: ::prost::alloc::string::String,
     }
@@ -69,8 +73,9 @@ pub struct LbEndpoint {
     /// name should be specified as *envoy.lb*. An example boolean key-value pair
     /// is *canary*, providing the optional canary status of the upstream host.
     /// This may be matched against in a route's
-    /// :ref:`RouteAction <envoy_v3_api_msg_config.route.v3.RouteAction>` metadata_match field
-    /// to subset the endpoints considered in cluster load balancing.
+    /// :ref:`RouteAction <envoy_v3_api_msg_config.route.v3.RouteAction>`
+    /// metadata_match field to subset the endpoints considered in cluster load
+    /// balancing.
     #[prost(message, optional, tag = "3")]
     pub metadata: ::core::option::Option<super::super::core::v3::Metadata>,
     /// The optional load balancing weight of the upstream host; at least 1.
@@ -134,7 +139,8 @@ pub struct LocalityLbEndpoints {
     /// balancing weight for a locality is divided by the sum of the weights of all
     /// localities  at the same priority level to produce the effective percentage
     /// of traffic for the locality. The sum of the weights of all localities at
-    /// the same priority level must not exceed uint32_t maximal value (4294967295).
+    /// the same priority level must not exceed uint32_t maximal value
+    /// (4294967295).
     ///
     /// Locality weights are only considered when :ref:`locality weighted load
     /// balancing <arch_overview_load_balancing_locality_weighted_lb>` is
@@ -143,8 +149,8 @@ pub struct LocalityLbEndpoints {
     /// assigned no load.
     #[prost(message, optional, tag = "3")]
     pub load_balancing_weight: ::core::option::Option<u32>,
-    /// Optional: the priority for this LocalityLbEndpoints. If unspecified this will
-    /// default to the highest priority (0).
+    /// Optional: the priority for this LocalityLbEndpoints. If unspecified this
+    /// will default to the highest priority (0).
     ///
     /// Under usual circumstances, Envoy will only select endpoints for the highest
     /// priority (0). In the event all endpoints for a particular priority are
@@ -181,8 +187,8 @@ pub mod locality_lb_endpoints {
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum LbConfig {
         /// The group of endpoints belonging to the locality.
-        /// [#comment:TODO(adisuissa): Once LEDS is implemented the *lb_endpoints* field
-        /// needs to be deprecated.]
+        /// [#comment:TODO(adisuissa): Once LEDS is implemented the *lb_endpoints*
+        /// field needs to be deprecated.]
         #[prost(message, tag = "7")]
         LoadBalancerEndpoints(LbEndpointList),
         /// LEDS Configuration for the current locality.

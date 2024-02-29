@@ -2,6 +2,5 @@
 pub mod envoy;
 pub mod google;
 pub mod quilkin;
-pub mod udpa;
 pub mod validate;
 pub mod xds;

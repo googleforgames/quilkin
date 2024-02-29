@@ -1,17 +1,21 @@
-/// Describes a type of API listener, which is used in non-proxy clients. The type of API
-/// exposed to the non-proxy application depends on the type of API listener.
+/// Describes a type of API listener, which is used in non-proxy clients. The
+/// type of API exposed to the non-proxy application depends on the type of API
+/// listener.
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ApiListener {
-    /// The type in this field determines the type of API listener. At present, the following
-    /// types are supported:
-    /// envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager (HTTP)
-    /// envoy.extensions.filters.network.http_connection_manager.v3.EnvoyMobileHttpConnectionManager (HTTP)
-    /// [#next-major-version: In the v3 API, replace this Any field with a oneof containing the
-    /// specific config message for each type of API listener. We could not do this in v2 because
-    /// it would have caused circular dependencies for go protos: lds.proto depends on this file,
-    /// and http_connection_manager.proto depends on rds.proto, which is in the same directory as
-    /// lds.proto, so lds.proto cannot depend on this file.]
+    /// The type in this field determines the type of API listener. At present, the
+    /// following types are supported:
+    /// envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+    /// (HTTP)
+    /// envoy.extensions.filters.network.http_connection_manager.v3.EnvoyMobileHttpConnectionManager
+    /// (HTTP)
+    /// [#next-major-version: In the v3 API, replace this Any field with a oneof
+    /// containing the specific config message for each type of API listener. We
+    /// could not do this in v2 because it would have caused circular dependencies
+    /// for go protos: lds.proto depends on this file, and
+    /// http_connection_manager.proto depends on rds.proto, which is in the same
+    /// directory as lds.proto, so lds.proto cannot depend on this file.]
     #[prost(message, optional, tag = "1")]
     pub api_listener: ::core::option::Option<::prost_types::Any>,
 }
@@ -470,28 +474,34 @@ pub struct QuicProtocolOptions {
     /// If it is less than 5000ms, Envoy will use 5000ms. 20000ms if not specified.
     #[prost(message, optional, tag = "3")]
     pub crypto_handshake_timeout: ::core::option::Option<::prost_types::Duration>,
-    /// Runtime flag that controls whether the listener is enabled or not. If not specified, defaults
-    /// to enabled.
+    /// Runtime flag that controls whether the listener is enabled or not. If not
+    /// specified, defaults to enabled.
     #[prost(message, optional, tag = "4")]
     pub enabled: ::core::option::Option<super::super::core::v3::RuntimeFeatureFlag>,
-    /// A multiplier to number of connections which is used to determine how many packets to read per
-    /// event loop. A reasonable number should allow the listener to process enough payload but not
-    /// starve TCP and other UDP sockets and also prevent long event loop duration.
-    /// The default value is 32. This means if there are N QUIC connections, the total number of
-    /// packets to read in each read event will be 32 * N.
-    /// The actual number of packets to read in total by the UDP listener is also
-    /// bound by 6000, regardless of this field or how many connections there are.
+    /// A multiplier to number of connections which is used to determine how many
+    /// packets to read per event loop. A reasonable number should allow the
+    /// listener to process enough payload but not starve TCP and other UDP sockets
+    /// and also prevent long event loop duration. The default value is 32. This
+    /// means if there are N QUIC connections, the total number of packets to read
+    /// in each read event will be 32 * N. The actual number of packets to read in
+    /// total by the UDP listener is also bound by 6000, regardless of this field
+    /// or how many connections there are.
     #[prost(message, optional, tag = "5")]
     pub packets_to_read_to_connection_count_ratio: ::core::option::Option<u32>,
-    /// Configure which implementation of `quic::QuicCryptoClientStreamBase` to be used for this listener.
-    /// If not specified the :ref:`QUICHE default one configured by <envoy_v3_api_msg_extensions.quic.crypto_stream.v3.CryptoServerStreamConfig>` will be used.
+    /// Configure which implementation of `quic::QuicCryptoClientStreamBase` to be
+    /// used for this listener. If not specified the :ref:`QUICHE default one
+    /// configured by
+    /// <envoy_v3_api_msg_extensions.quic.crypto_stream.v3.CryptoServerStreamConfig>`
+    /// will be used.
     /// \[#extension-category: envoy.quic.server.crypto_stream\]
     #[prost(message, optional, tag = "6")]
     pub crypto_stream_config: ::core::option::Option<
         super::super::core::v3::TypedExtensionConfig,
     >,
-    /// Configure which implementation of `quic::ProofSource` to be used for this listener.
-    /// If not specified the :ref:`default one configured by <envoy_v3_api_msg_extensions.quic.proof_source.v3.ProofSourceConfig>` will be used.
+    /// Configure which implementation of `quic::ProofSource` to be used for this
+    /// listener. If not specified the :ref:`default one configured by
+    /// <envoy_v3_api_msg_extensions.quic.proof_source.v3.ProofSourceConfig>` will
+    /// be used.
     /// \[#extension-category: envoy.quic.proof_source\]
     #[prost(message, optional, tag = "7")]
     pub proof_source_config: ::core::option::Option<
@@ -503,15 +513,18 @@ pub struct QuicProtocolOptions {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct UdpListenerConfig {
     /// UDP socket configuration for the listener. The default for
-    /// :ref:`prefer_gro <envoy_v3_api_field_config.core.v3.UdpSocketConfig.prefer_gro>` is false for
-    /// listener sockets. If receiving a large amount of datagrams from a small number of sources, it
-    /// may be worthwhile to enable this option after performance testing.
+    /// :ref:`prefer_gro
+    /// <envoy_v3_api_field_config.core.v3.UdpSocketConfig.prefer_gro>` is false
+    /// for listener sockets. If receiving a large amount of datagrams from a small
+    /// number of sources, it may be worthwhile to enable this option after
+    /// performance testing.
     #[prost(message, optional, tag = "5")]
     pub downstream_socket_config: ::core::option::Option<
         super::super::core::v3::UdpSocketConfig,
     >,
-    /// Configuration for QUIC protocol. If empty, QUIC will not be enabled on this listener. Set
-    /// to the default object to enable QUIC without modifying any additional options.
+    /// Configuration for QUIC protocol. If empty, QUIC will not be enabled on this
+    /// listener. Set to the default object to enable QUIC without modifying any
+    /// additional options.
     #[prost(message, optional, tag = "7")]
     pub quic_options: ::core::option::Option<QuicProtocolOptions>,
 }
@@ -533,38 +546,43 @@ pub struct ListenerCollection {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Listener {
     /// The unique name by which this listener is known. If no name is provided,
-    /// Envoy will allocate an internal UUID for the listener. If the listener is to be dynamically
-    /// updated or removed via :ref:`LDS <config_listeners_lds>` a unique name must be provided.
+    /// Envoy will allocate an internal UUID for the listener. If the listener is
+    /// to be dynamically updated or removed via :ref:`LDS <config_listeners_lds>`
+    /// a unique name must be provided.
     #[prost(string, tag = "1")]
     pub name: ::prost::alloc::string::String,
-    /// The address that the listener should listen on. In general, the address must be unique, though
-    /// that is governed by the bind rules of the OS. E.g., multiple listeners can listen on port 0 on
-    /// Linux as the actual port will be allocated by the OS.
+    /// The address that the listener should listen on. In general, the address
+    /// must be unique, though that is governed by the bind rules of the OS. E.g.,
+    /// multiple listeners can listen on port 0 on Linux as the actual port will be
+    /// allocated by the OS.
     #[prost(message, optional, tag = "2")]
     pub address: ::core::option::Option<super::super::core::v3::Address>,
-    /// Optional prefix to use on listener stats. If empty, the stats will be rooted at
-    /// `listener.<address as string>.`. If non-empty, stats will be rooted at
-    /// `listener.<stat_prefix>.`.
+    /// Optional prefix to use on listener stats. If empty, the stats will be
+    /// rooted at `listener.<address as string>.`. If non-empty, stats will be
+    /// rooted at `listener.<stat_prefix>.`.
     #[prost(string, tag = "28")]
     pub stat_prefix: ::prost::alloc::string::String,
     /// A list of filter chains to consider for this listener. The
-    /// :ref:`FilterChain <envoy_v3_api_msg_config.listener.v3.FilterChain>` with the most specific
-    /// :ref:`FilterChainMatch <envoy_v3_api_msg_config.listener.v3.FilterChainMatch>` criteria is used on a
-    /// connection.
+    /// :ref:`FilterChain <envoy_v3_api_msg_config.listener.v3.FilterChain>` with
+    /// the most specific :ref:`FilterChainMatch
+    /// <envoy_v3_api_msg_config.listener.v3.FilterChainMatch>` criteria is used on
+    /// a connection.
     ///
     /// Example using SNI for filter chain selection can be found in the
     /// :ref:`FAQ entry <faq_how_to_setup_sni>`.
     #[prost(message, repeated, tag = "3")]
     pub filter_chains: ::prost::alloc::vec::Vec<FilterChain>,
     /// If a connection is redirected using *iptables*, the port on which the proxy
-    /// receives it might be different from the original destination address. When this flag is set to
-    /// true, the listener hands off redirected connections to the listener associated with the
-    /// original destination address. If there is no listener associated with the original destination
-    /// address, the connection is handled by the listener that receives it. Defaults to false.
+    /// receives it might be different from the original destination address. When
+    /// this flag is set to true, the listener hands off redirected connections to
+    /// the listener associated with the original destination address. If there is
+    /// no listener associated with the original destination address, the
+    /// connection is handled by the listener that receives it. Defaults to false.
     #[prost(message, optional, tag = "4")]
     pub use_original_dst: ::core::option::Option<bool>,
-    /// The default filter chain if none of the filter chain matches. If no default filter chain is supplied,
-    /// the connection will be closed. The filter chain match is ignored in this field.
+    /// The default filter chain if none of the filter chain matches. If no default
+    /// filter chain is supplied, the connection will be closed. The filter chain
+    /// match is ignored in this field.
     #[prost(message, optional, tag = "25")]
     pub default_filter_chain: ::core::option::Option<FilterChain>,
     /// Soft limit on size of the listener’s new connection read and write buffers.
@@ -581,47 +599,53 @@ pub struct Listener {
     /// The type of draining to perform at a listener-wide level.
     #[prost(enumeration = "listener::DrainType", tag = "8")]
     pub drain_type: i32,
-    /// Listener filters have the opportunity to manipulate and augment the connection metadata that
-    /// is used in connection filter chain matching, for example. These filters are run before any in
-    /// :ref:`filter_chains <envoy_v3_api_field_config.listener.v3.Listener.filter_chains>`. Order matters as the
-    /// filters are processed sequentially right after a socket has been accepted by the listener, and
-    /// before a connection is created.
-    /// UDP Listener filters can be specified when the protocol in the listener socket address in
-    /// :ref:`protocol <envoy_v3_api_field_config.core.v3.SocketAddress.protocol>` is :ref:`UDP
+    /// Listener filters have the opportunity to manipulate and augment the
+    /// connection metadata that is used in connection filter chain matching, for
+    /// example. These filters are run before any in :ref:`filter_chains
+    /// <envoy_v3_api_field_config.listener.v3.Listener.filter_chains>`. Order
+    /// matters as the filters are processed sequentially right after a socket has
+    /// been accepted by the listener, and before a connection is created. UDP
+    /// Listener filters can be specified when the protocol in the listener socket
+    /// address in :ref:`protocol
+    /// <envoy_v3_api_field_config.core.v3.SocketAddress.protocol>` is :ref:`UDP
     /// <envoy_v3_api_enum_value_config.core.v3.SocketAddress.Protocol.UDP>`.
     #[prost(message, repeated, tag = "9")]
     pub listener_filters: ::prost::alloc::vec::Vec<ListenerFilter>,
-    /// The timeout to wait for all listener filters to complete operation. If the timeout is reached,
-    /// the accepted socket is closed without a connection being created unless
-    /// `continue_on_listener_filters_timeout` is set to true. Specify 0 to disable the
-    /// timeout. If not specified, a default timeout of 15s is used.
+    /// The timeout to wait for all listener filters to complete operation. If the
+    /// timeout is reached, the accepted socket is closed without a connection
+    /// being created unless `continue_on_listener_filters_timeout` is set to true.
+    /// Specify 0 to disable the timeout. If not specified, a default timeout of
+    /// 15s is used.
     #[prost(message, optional, tag = "15")]
     pub listener_filters_timeout: ::core::option::Option<::prost_types::Duration>,
-    /// Whether a connection should be created when listener filters timeout. Default is false.
+    /// Whether a connection should be created when listener filters timeout.
+    /// Default is false.
     ///
     /// .. attention::
     ///
 ///```ignore
     ///    Some listener filters, such as :ref:`Proxy Protocol filter
-    ///    <config_listener_filters_proxy_protocol>`, should not be used with this option. It will cause
-    ///    unexpected behavior when a connection is created.
+    ///    <config_listener_filters_proxy_protocol>`, should not be used with this
+    ///    option. It will cause unexpected behavior when a connection is created.
 ///```
     #[prost(bool, tag = "17")]
     pub continue_on_listener_filters_timeout: bool,
     /// Whether the listener should be set as a transparent socket.
-    /// When this flag is set to true, connections can be redirected to the listener using an
-    /// *iptables* *TPROXY* target, in which case the original source and destination addresses and
-    /// ports are preserved on accepted connections. This flag should be used in combination with
-    /// :ref:`an original_dst <config_listener_filters_original_dst>` :ref:`listener filter
-    /// <envoy_v3_api_field_config.listener.v3.Listener.listener_filters>` to mark the connections' local addresses as
-    /// "restored." This can be used to hand off each redirected connection to another listener
-    /// associated with the connection's destination address. Direct connections to the socket without
-    /// using *TPROXY* cannot be distinguished from connections redirected using *TPROXY* and are
-    /// therefore treated as if they were redirected.
-    /// When this flag is set to false, the listener's socket is explicitly reset as non-transparent.
-    /// Setting this flag requires Envoy to run with the *CAP_NET_ADMIN* capability.
-    /// When this flag is not set (default), the socket is not modified, i.e. the transparent option
-    /// is neither set nor reset.
+    /// When this flag is set to true, connections can be redirected to the
+    /// listener using an *iptables* *TPROXY* target, in which case the original
+    /// source and destination addresses and ports are preserved on accepted
+    /// connections. This flag should be used in combination with :ref:`an
+    /// original_dst <config_listener_filters_original_dst>` :ref:`listener filter
+    /// <envoy_v3_api_field_config.listener.v3.Listener.listener_filters>` to mark
+    /// the connections' local addresses as "restored." This can be used to hand
+    /// off each redirected connection to another listener associated with the
+    /// connection's destination address. Direct connections to the socket without
+    /// using *TPROXY* cannot be distinguished from connections redirected using
+    /// *TPROXY* and are therefore treated as if they were redirected. When this
+    /// flag is set to false, the listener's socket is explicitly reset as
+    /// non-transparent. Setting this flag requires Envoy to run with the
+    /// *CAP_NET_ADMIN* capability. When this flag is not set (default), the socket
+    /// is not modified, i.e. the transparent option is neither set nor reset.
     #[prost(message, optional, tag = "10")]
     pub transparent: ::core::option::Option<bool>,
     /// Whether the listener should set the *IP_FREEBIND* socket option. When this
@@ -637,59 +661,66 @@ pub struct Listener {
     #[prost(message, repeated, tag = "13")]
     pub socket_options: ::prost::alloc::vec::Vec<super::super::core::v3::SocketOption>,
     /// Whether the listener should accept TCP Fast Open (TFO) connections.
-    /// When this flag is set to a value greater than 0, the option TCP_FASTOPEN is enabled on
-    /// the socket, with a queue length of the specified size
-    /// (see `details in RFC7413 <<https://tools.ietf.org/html/rfc7413#section-5.1>`_>).
-    /// When this flag is set to 0, the option TCP_FASTOPEN is disabled on the socket.
-    /// When this flag is not set (default), the socket is not modified,
+    /// When this flag is set to a value greater than 0, the option TCP_FASTOPEN is
+    /// enabled on the socket, with a queue length of the specified size (see
+    /// `details in RFC7413 <<https://tools.ietf.org/html/rfc7413#section-5.1>`_>).
+    /// When this flag is set to 0, the option TCP_FASTOPEN is disabled on the
+    /// socket. When this flag is not set (default), the socket is not modified,
     /// i.e. the option is neither enabled nor disabled.
     ///
-    /// On Linux, the net.ipv4.tcp_fastopen kernel parameter must include flag 0x2 to enable
-    /// TCP_FASTOPEN.
-    /// See `ip-sysctl.txt <<https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt>`_.>
+    /// On Linux, the net.ipv4.tcp_fastopen kernel parameter must include flag 0x2
+    /// to enable TCP_FASTOPEN. See `ip-sysctl.txt
+    /// <<https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt>`_.>
     ///
-    /// On macOS, only values of 0, 1, and unset are valid; other values may result in an error.
-    /// To set the queue length on macOS, set the net.inet.tcp.fastopen_backlog kernel parameter.
+    /// On macOS, only values of 0, 1, and unset are valid; other values may result
+    /// in an error. To set the queue length on macOS, set the
+    /// net.inet.tcp.fastopen_backlog kernel parameter.
     #[prost(message, optional, tag = "12")]
     pub tcp_fast_open_queue_length: ::core::option::Option<u32>,
-    /// Specifies the intended direction of the traffic relative to the local Envoy.
-    /// This property is required on Windows for listeners using the original destination filter,
-    /// see :ref:`Original Destination <config_listener_filters_original_dst>`.
+    /// Specifies the intended direction of the traffic relative to the local
+    /// Envoy. This property is required on Windows for listeners using the
+    /// original destination filter, see :ref:`Original Destination
+    /// <config_listener_filters_original_dst>`.
     #[prost(enumeration = "super::super::core::v3::TrafficDirection", tag = "16")]
     pub traffic_direction: i32,
     /// If the protocol in the listener socket address in :ref:`protocol
     /// <envoy_v3_api_field_config.core.v3.SocketAddress.protocol>` is :ref:`UDP
-    /// <envoy_v3_api_enum_value_config.core.v3.SocketAddress.Protocol.UDP>`, this field specifies UDP
-    /// listener specific configuration.
+    /// <envoy_v3_api_enum_value_config.core.v3.SocketAddress.Protocol.UDP>`, this
+    /// field specifies UDP listener specific configuration.
     #[prost(message, optional, tag = "18")]
     pub udp_listener_config: ::core::option::Option<UdpListenerConfig>,
-    /// Used to represent an API listener, which is used in non-proxy clients. The type of API
-    /// exposed to the non-proxy application depends on the type of API listener.
-    /// When this field is set, no other field except for :ref:`name<envoy_v3_api_field_config.listener.v3.Listener.name>`
-    /// should be set.
+    /// Used to represent an API listener, which is used in non-proxy clients. The
+    /// type of API exposed to the non-proxy application depends on the type of API
+    /// listener. When this field is set, no other field except for
+    /// :ref:`name<envoy_v3_api_field_config.listener.v3.Listener.name>` should be
+    /// set.
     ///
     /// .. note::
     ///
-    ///   Currently only one ApiListener can be installed; and it can only be done via bootstrap config,
-    ///   not LDS.
+    ///   Currently only one ApiListener can be installed; and it can only be done
+    ///   via bootstrap config, not LDS.
     ///
-    /// [#next-major-version: In the v3 API, instead of this messy approach where the socket
-    /// listener fields are directly in the top-level Listener message and the API listener types
-    /// are in the ApiListener message, the socket listener messages should be in their own message,
-    /// and the top-level Listener should essentially be a oneof that selects between the
-    /// socket listener and the various types of API listener. That way, a given Listener message
-    /// can structurally only contain the fields of the relevant type.]
+    /// [#next-major-version: In the v3 API, instead of this messy approach where
+    /// the socket listener fields are directly in the top-level Listener message
+    /// and the API listener types are in the ApiListener message, the socket
+    /// listener messages should be in their own message, and the top-level
+    /// Listener should essentially be a oneof that selects between the socket
+    /// listener and the various types of API listener. That way, a given Listener
+    /// message can structurally only contain the fields of the relevant type.]
     #[prost(message, optional, tag = "19")]
     pub api_listener: ::core::option::Option<ApiListener>,
-    /// The listener's connection balancer configuration, currently only applicable to TCP listeners.
-    /// If no configuration is specified, Envoy will not attempt to balance active connections between
-    /// worker threads.
+    /// The listener's connection balancer configuration, currently only applicable
+    /// to TCP listeners. If no configuration is specified, Envoy will not attempt
+    /// to balance active connections between worker threads.
     ///
-    /// In the scenario that the listener X redirects all the connections to the listeners Y1 and Y2
-    /// by setting :ref:`use_original_dst <envoy_v3_api_field_config.listener.v3.Listener.use_original_dst>` in X
-    /// and :ref:`bind_to_port <envoy_v3_api_field_config.listener.v3.Listener.bind_to_port>` to false in Y1 and Y2,
-    /// it is recommended to disable the balance config in listener X to avoid the cost of balancing, and
-    /// enable the balance config in Y1 and Y2 to balance the connections among the workers.
+    /// In the scenario that the listener X redirects all the connections to the
+    /// listeners Y1 and Y2 by setting :ref:`use_original_dst
+    /// <envoy_v3_api_field_config.listener.v3.Listener.use_original_dst>` in X and
+    /// :ref:`bind_to_port
+    /// <envoy_v3_api_field_config.listener.v3.Listener.bind_to_port>` to false in
+    /// Y1 and Y2, it is recommended to disable the balance config in listener X to
+    /// avoid the cost of balancing, and enable the balance config in Y1 and Y2 to
+    /// balance the connections among the workers.
     #[prost(message, optional, tag = "20")]
     pub connection_balance_config: ::core::option::Option<
         listener::ConnectionBalanceConfig,
@@ -698,33 +729,38 @@ pub struct Listener {
     #[deprecated]
     #[prost(bool, tag = "21")]
     pub reuse_port: bool,
-    /// When this flag is set to true, listeners set the *SO_REUSEPORT* socket option and
-    /// create one socket for each worker thread. This makes inbound connections
-    /// distribute among worker threads roughly evenly in cases where there are a high number
-    /// of connections. When this flag is set to false, all worker threads share one socket. This field
-    /// defaults to true.
+    /// When this flag is set to true, listeners set the *SO_REUSEPORT* socket
+    /// option and create one socket for each worker thread. This makes inbound
+    /// connections distribute among worker threads roughly evenly in cases where
+    /// there are a high number of connections. When this flag is set to false, all
+    /// worker threads share one socket. This field defaults to true.
     ///
     /// .. attention::
     ///
 ///```ignore
-    ///    Although this field defaults to true, it has different behavior on different platforms. See
-    ///    the following text for more information.
+    ///    Although this field defaults to true, it has different behavior on
+    ///    different platforms. See the following text for more information.
 ///```
     ///
-    /// * On Linux, reuse_port is respected for both TCP and UDP listeners. It also works correctly
+    /// * On Linux, reuse_port is respected for both TCP and UDP listeners. It also
+    /// works correctly
 ///```ignore
     ///    with hot restart.
 ///```
-    /// * On macOS, reuse_port for TCP does not do what it does on Linux. Instead of load balancing,
+    /// * On macOS, reuse_port for TCP does not do what it does on Linux. Instead
+    /// of load balancing,
 ///```ignore
-    ///    the last socket wins and receives all connections/packets. For TCP, reuse_port is force
-    ///    disabled and the user is warned. For UDP, it is enabled, but only one worker will receive
-    ///    packets. For QUIC/H3, SW routing will send packets to other workers. For "raw" UDP, only
-    ///    a single worker will currently receive packets.
+    ///    the last socket wins and receives all connections/packets. For TCP,
+    ///    reuse_port is force disabled and the user is warned. For UDP, it is
+    ///    enabled, but only one worker will receive packets. For QUIC/H3, SW
+    ///    routing will send packets to other workers. For "raw" UDP, only a single
+    ///    worker will currently receive packets.
 ///```
-    /// * On Windows, reuse_port for TCP has undefined behavior. It is force disabled and the user
+    /// * On Windows, reuse_port for TCP has undefined behavior. It is force
+    /// disabled and the user
 ///```ignore
-    ///    is warned similar to macOS. It is left enabled for UDP with undefined behavior currently.
+    ///    is warned similar to macOS. It is left enabled for UDP with undefined
+    ///    behavior currently.
 ///```
     #[prost(message, optional, tag = "29")]
     pub enable_reuse_port: ::core::option::Option<bool>,
@@ -732,27 +768,32 @@ pub struct Listener {
     /// emitted by this listener.
     #[prost(message, repeated, tag = "22")]
     pub access_log: ::prost::alloc::vec::Vec<super::super::accesslog::v3::AccessLog>,
-    /// The maximum length a tcp listener's pending connections queue can grow to. If no value is
-    /// provided net.core.somaxconn will be used on Linux and 128 otherwise.
+    /// The maximum length a tcp listener's pending connections queue can grow to.
+    /// If no value is provided net.core.somaxconn will be used on Linux and 128
+    /// otherwise.
     #[prost(message, optional, tag = "24")]
     pub tcp_backlog_size: ::core::option::Option<u32>,
     /// Whether the listener should bind to the port. A listener that doesn't
     /// bind can only receive connections redirected from other listeners that set
-    /// :ref:`use_original_dst <envoy_v3_api_field_config.listener.v3.Listener.use_original_dst>`
-    /// to true. Default is true.
+    /// :ref:`use_original_dst
+    /// <envoy_v3_api_field_config.listener.v3.Listener.use_original_dst>` to true.
+    /// Default is true.
     #[prost(message, optional, tag = "26")]
     pub bind_to_port: ::core::option::Option<bool>,
-    /// Enable MPTCP (multi-path TCP) on this listener. Clients will be allowed to establish
-    /// MPTCP connections. Non-MPTCP clients will fall back to regular TCP.
+    /// Enable MPTCP (multi-path TCP) on this listener. Clients will be allowed to
+    /// establish MPTCP connections. Non-MPTCP clients will fall back to regular
+    /// TCP.
     #[prost(bool, tag = "30")]
     pub enable_mptcp: bool,
     /// Whether the listener should limit connections based upon the value of
-    /// :ref:`global_downstream_max_connections <config_overload_manager_limiting_connections>`.
+    /// :ref:`global_downstream_max_connections
+    /// <config_overload_manager_limiting_connections>`.
     #[prost(bool, tag = "31")]
     pub ignore_global_conn_limit: bool,
     /// The exclusive listener type and the corresponding config.
     /// TODO(lambdai): <https://github.com/envoyproxy/envoy/issues/15372>
-    /// Will create and add TcpListenerConfig. Will add UdpListenerConfig and ApiListener.
+    /// Will create and add TcpListenerConfig. Will add UdpListenerConfig and
+    /// ApiListener.
     /// \[#not-implemented-hide:\]
     #[prost(oneof = "listener::ListenerSpecifier", tags = "27")]
     pub listener_specifier: ::core::option::Option<listener::ListenerSpecifier>,
@@ -781,12 +822,14 @@ pub mod listener {
     }
     /// Nested message and enum types in `ConnectionBalanceConfig`.
     pub mod connection_balance_config {
-        /// A connection balancer implementation that does exact balancing. This means that a lock is
-        /// held during balancing so that connection counts are nearly exactly balanced between worker
-        /// threads. This is "nearly" exact in the sense that a connection might close in parallel thus
-        /// making the counts incorrect, but this should be rectified on the next accept. This balancer
-        /// sacrifices accept throughput for accuracy and should be used when there are a small number of
-        /// connections that rarely cycle (e.g., service mesh gRPC egress).
+        /// A connection balancer implementation that does exact balancing. This
+        /// means that a lock is held during balancing so that connection counts are
+        /// nearly exactly balanced between worker threads. This is "nearly" exact in
+        /// the sense that a connection might close in parallel thus making the
+        /// counts incorrect, but this should be rectified on the next accept. This
+        /// balancer sacrifices accept throughput for accuracy and should be used
+        /// when there are a small number of connections that rarely cycle (e.g.,
+        /// service mesh gRPC egress).
         #[allow(clippy::derive_partial_eq_without_eq)]
         #[derive(Clone, PartialEq, ::prost::Message)]
         pub struct ExactBalance {}
@@ -798,7 +841,8 @@ pub mod listener {
             ExactBalance(ExactBalance),
         }
     }
-    /// Configuration for envoy internal listener. All the future internal listener features should be added here.
+    /// Configuration for envoy internal listener. All the future internal listener
+    /// features should be added here.
     /// \[#not-implemented-hide:\]
     #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Message)]
@@ -816,12 +860,12 @@ pub mod listener {
     )]
     #[repr(i32)]
     pub enum DrainType {
-        /// Drain in response to calling /healthcheck/fail admin endpoint (along with the health check
-        /// filter), listener removal/modification, and hot restart.
+        /// Drain in response to calling /healthcheck/fail admin endpoint (along with
+        /// the health check filter), listener removal/modification, and hot restart.
         Default = 0,
-        /// Drain in response to listener removal/modification and hot restart. This setting does not
-        /// include /healthcheck/fail. This setting may be desirable if Envoy is hosting both ingress
-        /// and egress listeners.
+        /// Drain in response to listener removal/modification and hot restart. This
+        /// setting does not include /healthcheck/fail. This setting may be desirable
+        /// if Envoy is hosting both ingress and egress listeners.
         ModifyOnly = 1,
     }
     impl DrainType {
@@ -846,26 +890,36 @@ pub mod listener {
     }
     /// The exclusive listener type and the corresponding config.
     /// TODO(lambdai): <https://github.com/envoyproxy/envoy/issues/15372>
-    /// Will create and add TcpListenerConfig. Will add UdpListenerConfig and ApiListener.
+    /// Will create and add TcpListenerConfig. Will add UdpListenerConfig and
+    /// ApiListener.
     /// \[#not-implemented-hide:\]
     #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum ListenerSpecifier {
-        /// Used to represent an internal listener which does not listen on OSI L4 address but can be used by the
-        /// :ref:`envoy cluster <envoy_v3_api_msg_config.cluster.v3.Cluster>` to create a user space connection to.
-        /// The internal listener acts as a tcp listener. It supports listener filters and network filter chains.
-        /// The internal listener require :ref:`address <envoy_v3_api_field_config.listener.v3.Listener.address>` has
-        /// field `envoy_internal_address`.
+        /// Used to represent an internal listener which does not listen on OSI L4
+        /// address but can be used by the :ref:`envoy cluster
+        /// <envoy_v3_api_msg_config.cluster.v3.Cluster>` to create a user space
+        /// connection to. The internal listener acts as a tcp listener. It supports
+        /// listener filters and network filter chains. The internal listener require
+        /// :ref:`address <envoy_v3_api_field_config.listener.v3.Listener.address>`
+        /// has field `envoy_internal_address`.
         ///
-        /// There are some limitations are derived from the implementation. The known limitations include
+        /// There are some limitations are derived from the implementation. The known
+        /// limitations include
         ///
-        /// * :ref:`ConnectionBalanceConfig <envoy_v3_api_msg_config.listener.v3.Listener.ConnectionBalanceConfig>` is not
+        /// * :ref:`ConnectionBalanceConfig
+        /// <envoy_v3_api_msg_config.listener.v3.Listener.ConnectionBalanceConfig>`
+        /// is not
 ///```ignore
-        ///    allowed because both cluster connection and listener connection must be owned by the same dispatcher.
+        ///    allowed because both cluster connection and listener connection must be
+        ///    owned by the same dispatcher.
 ///```
-        /// * :ref:`tcp_backlog_size <envoy_v3_api_field_config.listener.v3.Listener.tcp_backlog_size>`
-        /// * :ref:`freebind <envoy_v3_api_field_config.listener.v3.Listener.freebind>`
-        /// * :ref:`transparent <envoy_v3_api_field_config.listener.v3.Listener.transparent>`
+        /// * :ref:`tcp_backlog_size
+        /// <envoy_v3_api_field_config.listener.v3.Listener.tcp_backlog_size>`
+        /// * :ref:`freebind
+        /// <envoy_v3_api_field_config.listener.v3.Listener.freebind>`
+        /// * :ref:`transparent
+        /// <envoy_v3_api_field_config.listener.v3.Listener.transparent>`
         /// \[#not-implemented-hide:\]
         #[prost(message, tag = "27")]
         InternalListener(InternalListenerConfig),
