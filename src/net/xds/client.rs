@@ -57,8 +57,9 @@ pub trait ServiceClient: Clone + Sized + Send + 'static {
     type Request: Clone + Send + Sync + Sized + 'static + std::fmt::Debug;
     type Response: Clone + Send + Sync + Sized + 'static + std::fmt::Debug;
 
-    async fn connect(endpoint: tonic::transport::Endpoint)
-        -> Result<Self, tonic::transport::Error>;
+    async fn connect_to_endpoint(
+        endpoint: tonic::transport::Endpoint,
+    ) -> Result<Self, tonic::transport::Error>;
     async fn stream_requests<S: tonic::IntoStreamingRequest<Message = Self::Request> + Send>(
         &mut self,
         stream: S,
@@ -70,7 +71,7 @@ impl ServiceClient for AdsGrpcClient {
     type Request = DiscoveryRequest;
     type Response = DiscoveryResponse;
 
-    async fn connect(
+    async fn connect_to_endpoint(
         endpoint: tonic::transport::Endpoint,
     ) -> Result<Self, tonic::transport::Error> {
         Ok(AdsGrpcClient::connect(endpoint)
@@ -92,7 +93,7 @@ impl ServiceClient for MdsGrpcClient {
     type Request = DiscoveryResponse;
     type Response = DiscoveryRequest;
 
-    async fn connect(
+    async fn connect_to_endpoint(
         endpoint: tonic::transport::Endpoint,
     ) -> Result<Self, tonic::transport::Error> {
         Ok(MdsGrpcClient::connect(endpoint)
@@ -198,9 +199,9 @@ impl<C: ServiceClient> Client<C> {
                             ));
                         }
 
-                        C::connect(endpoint)
+                        C::connect_to_endpoint(endpoint)
                             .instrument(tracing::debug_span!(
-                                "AggregatedDiscoveryServiceClient::connect"
+                                "AggregatedDiscoveryServiceClient::connect_to_endpoint"
                             ))
                             .await
                             .map_err(RpcSessionError::InitialConnect)
