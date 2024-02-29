@@ -32,6 +32,7 @@ pub mod filters;
 #[doc(hidden)]
 pub mod test;
 
+#[allow(clippy::enum_variant_names, clippy::large_enum_variant)]
 mod generated;
 
 pub type Result<T, E = eyre::Error> = std::result::Result<T, E>;

@@ -32,3 +32,13 @@ pub struct Endpoint {
     #[prost(message, optional, tag = "3")]
     pub metadata: ::core::option::Option<::prost_types::Struct>,
 }
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Datacenter {
+    #[prost(string, tag = "1")]
+    pub host: ::prost::alloc::string::String,
+    #[prost(uint32, tag = "2")]
+    pub qcmp_port: u32,
+    #[prost(string, tag = "3")]
+    pub icao_code: ::prost::alloc::string::String,
+}
