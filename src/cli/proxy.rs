@@ -146,7 +146,7 @@ impl Proxy {
         eyre::ensure!(num_workers > 0, "must use at least 1 worker");
 
         let (upstream_sender, upstream_receiver) =
-            async_channel::unbounded::<(PoolBuffer, Option<IpNetEntry>, SocketAddr)>();
+            async_channel::bounded::<(PoolBuffer, Option<IpNetEntry>, SocketAddr)>(250);
         let buffer_pool = Arc::new(crate::pool::BufferPool::new(num_workers, 64 * 1024));
         let sessions = SessionPool::new(
             config.clone(),
@@ -192,6 +192,7 @@ impl Proxy {
                                 [
                                     (ResourceType::Cluster, Vec::new()),
                                     (ResourceType::Listener, Vec::new()),
+                                    (ResourceType::Datacenter, Vec::new()),
                                 ],
                             )
                             .await
@@ -208,6 +209,10 @@ impl Proxy {
                                 tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
                                 stream
                                     .aggregated_subscribe(ResourceType::Listener, &[])
+                                    .await?;
+                                tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
+                                stream
+                                    .aggregated_subscribe(ResourceType::Datacenter, &[])
                                     .await?;
 
                                 state_sub = Some(stream);
@@ -245,7 +250,8 @@ impl Proxy {
             buffer_pool,
         )?;
 
-        crate::codec::qcmp::spawn(self.qcmp_port).await?;
+        crate::codec::qcmp::spawn(self.qcmp_port, shutdown_rx.clone());
+        crate::net::phoenix::spawn(self.qcmp_port, config.clone(), shutdown_rx.clone())?;
         for notification in worker_notifications {
             notification.notified().await;
         }
@@ -584,6 +590,8 @@ pub enum PipelineError {
     Io(#[from] std::io::Error),
     #[error("Channel closed")]
     ChannelClosed,
+    #[error("Under pressure")]
+    ChannelFull,
 }
 
 #[cfg(test)]

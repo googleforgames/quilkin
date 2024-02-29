@@ -229,7 +229,15 @@ mod serde {
         for cluster in cm.iter() {
             resources.push(
                 resource_type
-                    .encode_to_any(&Cluster::try_from((cluster.key(), cluster.value())).unwrap())
+                    .encode_to_any(&Cluster {
+                        locality: cluster.key().clone().map(|l| l.try_into().unwrap()),
+                        endpoints: cluster
+                            .endpoints
+                            .iter()
+                            .map(TryFrom::try_from)
+                            .collect::<Result<_, _>>()
+                            .unwrap(),
+                    })
                     .unwrap(),
             );
         }
@@ -246,7 +254,7 @@ mod serde {
             let quilkin::net::xds::Resource::Cluster(cluster) = c else {
                 unreachable!()
             };
-            cm.merge(
+            cm.insert(
                 cluster.locality.map(From::from),
                 cluster
                     .endpoints
@@ -313,20 +321,18 @@ mod ops {
         let mut total_endpoints = 0;
 
         for kv in gc.cm.iter() {
-            for _ep in kv.value() {
-                total_endpoints += 1;
-            }
+            total_endpoints += kv.endpoints.len();
         }
 
         assert_eq!(total_endpoints, gc.total_endpoints);
         total_endpoints
     }
 
-    #[allow(clippy::eq_op)]
-    fn is_equal(gc: &GenCluster) -> usize {
-        assert_eq!(gc.cm, gc.cm);
-        gc.total_endpoints
-    }
+    // #[allow(clippy::eq_op)]
+    // fn is_equal(gc: &GenCluster) -> usize {
+    //     assert_eq!(gc.cm, gc.cm);
+    //     gc.total_endpoints
+    // }
 
     #[divan::bench(consts = SEEDS)]
     fn iterate<const S: u64>(b: Bencher) {
@@ -346,13 +352,13 @@ mod ops {
             .bench(|| divan::black_box(compute_hash::<S>(&cm)))
     }
 
-    #[divan::bench(consts = SEEDS)]
-    fn partial_eq<const S: u64>(b: Bencher) {
-        let cm = gen_cluster_map::<S>();
+    // #[divan::bench(consts = SEEDS)]
+    // fn partial_eq<const S: u64>(b: Bencher) {
+    //     let cm = gen_cluster_map::<S>();
 
-        b.counter(cm.total_endpoints)
-            .bench(|| divan::black_box(is_equal(&cm)))
-    }
+    //     b.counter(cm.total_endpoints)
+    //         .bench(|| divan::black_box(is_equal(&cm)))
+    // }
 }
 
 fn main() {

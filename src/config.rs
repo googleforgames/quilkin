@@ -18,7 +18,11 @@
 
 use std::{
     collections::{BTreeSet, HashMap},
-    sync::Arc,
+    net::IpAddr,
+    sync::{
+        atomic::{AtomicU64, Ordering::Relaxed},
+        Arc,
+    },
     time::Duration,
 };
 
@@ -79,6 +83,12 @@ pub struct Config {
     pub id: Slot<String>,
     #[serde(default)]
     pub version: Slot<Version>,
+    #[serde(default)]
+    pub datacenters: Watch<DatacenterMap>,
+    #[serde(default)]
+    pub icao_code: Slot<IcaoCode>,
+    #[serde(default)]
+    pub qcmp_port: Slot<u16>,
 }
 
 pub struct DeltaDiscoveryRes {
@@ -132,13 +142,35 @@ impl Config {
 
     pub fn discovery_request(
         &self,
-        _id: &str,
+        mode: &crate::cli::Admin,
+        _node_id: &str,
         resource_type: ResourceType,
         names: &[String],
     ) -> Result<Vec<prost_types::Any>, eyre::Error> {
         let mut resources = Vec::new();
 
         match resource_type {
+            ResourceType::Datacenter => {
+                if mode.is_agent() {
+                    resources.push(resource_type.encode_to_any(
+                        &crate::net::cluster::proto::Datacenter {
+                            qcmp_port: u16::clone(&self.qcmp_port.load()).into(),
+                            icao_code: self.icao_code.load().to_string(),
+                            ..<_>::default()
+                        },
+                    )?);
+                } else {
+                    for entry in self.datacenters.read().iter() {
+                        resources.push(resource_type.encode_to_any(
+                            &crate::net::cluster::proto::Datacenter {
+                                host: entry.key().to_string(),
+                                qcmp_port: entry.qcmp_port.into(),
+                                icao_code: entry.icao_code.to_string(),
+                            },
+                        )?);
+                    }
+                }
+            }
             ResourceType::Listener => {
                 resources.push(resource_type.encode_to_any(&Listener {
                     filter_chains: vec![(&*self.filters.load()).try_into()?],
@@ -178,6 +210,7 @@ impl Config {
     /// from those of the client
     pub fn delta_discovery_request(
         &self,
+        mode: &crate::cli::Admin,
         subscribed: &BTreeSet<String>,
         client_versions: &crate::net::xds::ClientVersions,
     ) -> crate::Result<DeltaDiscoveryRes> {
@@ -197,6 +230,42 @@ impl Config {
                     cache_control: None,
                 });
                 (crate::net::xds::AwaitingAck::Listener, Vec::new())
+            }
+            crate::net::xds::ClientVersions::Datacenter => {
+                if mode.is_agent() {
+                    resources.push(XdsResource {
+                        name: "datacenter".into(),
+                        version: "0".into(),
+                        resource: Some(ResourceType::Datacenter.encode_to_any(
+                            &crate::net::cluster::proto::Datacenter {
+                                qcmp_port: *self.qcmp_port.load() as _,
+                                icao_code: self.icao_code.load().to_string(),
+                                ..Default::default()
+                            },
+                        )?),
+                        aliases: Vec::new(),
+                        ttl: None,
+                        cache_control: None,
+                    });
+                } else {
+                    for entry in self.datacenters.read().iter() {
+                        resources.push(XdsResource {
+                            name: "datacenter".into(),
+                            version: "0".into(),
+                            resource: Some(ResourceType::Datacenter.encode_to_any(
+                                &crate::net::cluster::proto::Datacenter {
+                                    host: entry.key().to_string(),
+                                    qcmp_port: entry.qcmp_port.into(),
+                                    icao_code: entry.icao_code.to_string(),
+                                },
+                            )?),
+                            aliases: Vec::new(),
+                            ttl: None,
+                            cache_control: None,
+                        });
+                    }
+                }
+                (crate::net::xds::AwaitingAck::Datacenter, Vec::new())
             }
             crate::net::xds::ClientVersions::Cluster(map) => {
                 let resource_type = ResourceType::Cluster;
@@ -282,6 +351,16 @@ impl Config {
 
                 self.filters.store(Arc::new(chain));
             }
+            Resource::Datacenter(dc) => {
+                let host = dc.host.parse()?;
+                self.datacenters.write().insert(
+                    host,
+                    Datacenter {
+                        qcmp_port: dc.qcmp_port.try_into()?,
+                        icao_code: dc.icao_code.parse()?,
+                    },
+                );
+            }
             Resource::Cluster(cluster) => {
                 self.clusters.write().insert(
                     cluster.locality.map(From::from),
@@ -335,6 +414,29 @@ impl Config {
                     local_versions.insert(listener.name, "".into());
                 }
             }
+            ResourceType::Datacenter => self.datacenters.modify(|wg| {
+                for res in resources {
+                    let (resource, version) = res?;
+
+                    let Resource::Datacenter(dc) = resource else {
+                        return Err(eyre::eyre!("a non-datacenter resource was present"));
+                    };
+
+                    let host = dc.host.parse()?;
+
+                    wg.insert(
+                        host,
+                        Datacenter {
+                            qcmp_port: dc.qcmp_port.try_into()?,
+                            icao_code: dc.icao_code.parse()?,
+                        },
+                    );
+
+                    local_versions.insert(dc.host, version);
+                }
+
+                Ok(())
+            })?,
             ResourceType::Cluster => self.clusters.modify(|guard| {
                 for removed in removed_resources {
                     let locality = if removed.is_empty() {
@@ -393,7 +495,139 @@ impl Default for Config {
             filters: <_>::default(),
             id: default_proxy_id(),
             version: Slot::with_default(),
+            datacenters: <_>::default(),
+            qcmp_port: <_>::default(),
+            icao_code: <_>::default(),
         }
+    }
+}
+
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct DatacenterMap {
+    map: dashmap::DashMap<IpAddr, Datacenter>,
+    version: AtomicU64,
+}
+
+impl DatacenterMap {
+    #[inline]
+    pub fn insert(&self, ip: IpAddr, datacenter: Datacenter) -> Option<Datacenter> {
+        let old = self.map.insert(ip, datacenter);
+        self.version.fetch_add(1, Relaxed);
+        old
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.map.len()
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.map.is_empty()
+    }
+
+    #[inline]
+    pub fn version(&self) -> u64 {
+        self.version.load(Relaxed)
+    }
+
+    #[inline]
+    pub fn get(&self, key: &IpAddr) -> Option<dashmap::mapref::one::Ref<IpAddr, Datacenter>> {
+        self.map.get(key)
+    }
+
+    #[inline]
+    pub fn iter(&self) -> dashmap::iter::Iter<IpAddr, Datacenter> {
+        self.map.iter()
+    }
+}
+
+impl Clone for DatacenterMap {
+    fn clone(&self) -> Self {
+        let map = self.map.clone();
+        Self {
+            map,
+            version: <_>::default(),
+        }
+    }
+}
+
+impl crate::config::watch::Watchable for DatacenterMap {
+    #[inline]
+    fn mark(&self) -> crate::config::watch::Marker {
+        crate::config::watch::Marker::Version(self.version())
+    }
+
+    #[inline]
+    #[allow(irrefutable_let_patterns)]
+    fn has_changed(&self, marker: crate::config::watch::Marker) -> bool {
+        let crate::config::watch::Marker::Version(marked) = marker else {
+            return false;
+        };
+        self.version() != marked
+    }
+}
+
+impl schemars::JsonSchema for DatacenterMap {
+    fn schema_name() -> String {
+        <std::collections::HashMap<IpAddr, Datacenter>>::schema_name()
+    }
+    fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+        <std::collections::HashMap<IpAddr, Datacenter>>::json_schema(gen)
+    }
+
+    fn is_referenceable() -> bool {
+        <std::collections::HashMap<IpAddr, Datacenter>>::is_referenceable()
+    }
+}
+
+impl PartialEq for DatacenterMap {
+    fn eq(&self, rhs: &Self) -> bool {
+        if self.map.len() != rhs.map.len() {
+            return false;
+        }
+
+        for a in self.iter() {
+            match rhs.get(a.key()).filter(|b| *a.value() == **b) {
+                Some(_) => {}
+                None => return false,
+            }
+        }
+
+        true
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, JsonSchema, Serialize, Deserialize)]
+pub struct Datacenter {
+    pub qcmp_port: u16,
+    pub icao_code: IcaoCode,
+}
+
+#[derive(Clone, Debug, Hash, Eq, PartialEq, JsonSchema, Serialize, Deserialize)]
+pub struct IcaoCode(String);
+
+impl Default for IcaoCode {
+    fn default() -> Self {
+        Self("XXXX".to_owned())
+    }
+}
+
+impl std::str::FromStr for IcaoCode {
+    type Err = eyre::Error;
+
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        if input.len() == 4 {
+            Ok(Self(input.to_owned()))
+        } else {
+            Err(eyre::eyre!("invalid ICAO code"))
+        }
+    }
+}
+
+impl std::fmt::Display for IcaoCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        self.0.fmt(f)
     }
 }
 

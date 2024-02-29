@@ -39,3 +39,9 @@ message Endpoint {
     uint32 port = 2;
     google.protobuf.Struct metadata = 3;
 }
+
+message Datacenter {
+    string host = 1;
+    uint32 qcmp_port = 2;
+    string icao_code = 3;
+}
