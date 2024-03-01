@@ -36,7 +36,3 @@ serde_yaml = "0.9"
 bytes = "1"
 schemars = "0.8"
 async-trait = "0.1"
-
-[build-dependencies]
-prost-build = "0.12"
-protobuf-src = "1.1.0"
