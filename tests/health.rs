@@ -33,7 +33,7 @@ async fn health_server() {
     t.run_server(
         server_config,
         Some(quilkin::Proxy {
-            qcmp_port: 9094,
+            qcmp_port: 0,
             ..Default::default()
         }),
         Some(Some((std::net::Ipv6Addr::UNSPECIFIED, 9093).into())),
