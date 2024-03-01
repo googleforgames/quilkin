@@ -30,6 +30,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: "clippy, rustfmt"
+      - uses: Swatinem/rust-cache@v2
+
+      # make sure all code has been formatted with rustfmt and linted with clippy
+      - name: rustfmt
+        run: cargo fmt -- --check --color always
+
+      # run clippy to verify we have no warnings
+      - run: cargo fetch
+      - name: cargo clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
   validate-proto-bufs:
     name: Validate proto bufs
     runs-on: ubuntu-22.04
@@ -53,3 +72,10 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo fetch
       - run: cargo build
+
+  deny-check:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: deny check
+        uses: EmbarkStudios/cargo-deny-action@v1

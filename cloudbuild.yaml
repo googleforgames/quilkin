@@ -41,31 +41,18 @@ steps:
   - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
     dir: ./build
     args:
-      - check-quilkin
-    id: check-quilkin
-    waitFor:
-      - fetch-quilkin
-  - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
-    dir: ./build
-    args:
       - test-examples
     id: test-examples
-    waitFor:
-      - fetch-quilkin
   - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
     dir: ./build
     args:
       - test-docs
     id: test-docs
-    waitFor:
-      - fetch-quilkin
   - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
     dir: ./build
     args:
       - build-image
     id: build
-    waitFor:
-      - fetch-quilkin
 
   #
   # Run the built images for 5 seconds in a few standard configurations, to test basic common scenarios
