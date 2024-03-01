@@ -86,12 +86,13 @@ check-quilkin: ensure-build-image
 	docker run --rm $(common_rust_args) \
 		--entrypoint=cargo $(BUILD_IMAGE_TAG) fmt -- --check
 
-# test only the quilkin crate
+# test only the quilkin crate, if you want to see test output regardless of test
+# failure or success, set RUST_TEST_NOCAPTURE to something other than "0"
 test-quilkin: ensure-build-image
 	# --network=host because docker containers are not great at ipv6.
 	docker run --rm $(common_rust_args)  \
 			--network=host \
-			-e RUST_BACKTRACE=1 --entrypoint=cargo $(BUILD_IMAGE_TAG) test -- --nocapture
+			-e RUST_BACKTRACE=1 --entrypoint=cargo $(BUILD_IMAGE_TAG) test
 
 # Run tests against the examples
 test-examples: ensure-build-image
