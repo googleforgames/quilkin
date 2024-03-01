@@ -215,6 +215,7 @@ async fn test(
 
     let server_proxy = quilkin::cli::Proxy {
         port: server_port,
+        qcmp_port: 0,
         ..<_>::default()
     };
     let server_config = std::sync::Arc::new(quilkin::Config::default());

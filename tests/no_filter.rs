@@ -34,6 +34,7 @@ async fn echo() {
     let local_addr = available_addr(&AddressType::Random).await;
     let server_proxy = quilkin::cli::Proxy {
         port: local_addr.port(),
+        qcmp_port: 0,
         ..<_>::default()
     };
     let server_config = std::sync::Arc::new(quilkin::Config::default());

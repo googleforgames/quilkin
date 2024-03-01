@@ -39,6 +39,7 @@ period: 1
     quilkin::test::map_addr_to_localhost(&mut server_addr);
     let server_proxy = quilkin::cli::Proxy {
         port: server_addr.port(),
+        qcmp_port: 0,
         ..<_>::default()
     };
     let server_config = std::sync::Arc::new(quilkin::Config::default());
