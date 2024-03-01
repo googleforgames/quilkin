@@ -15,11 +15,9 @@
  */
 
 #[allow(warnings, clippy::all)]
-// ANCHOR: include_proto
-mod proto {
-    tonic::include_proto!("greet");
-}
-// ANCHOR_END: include_proto
+mod generated;
+use generated::greet as proto;
+
 use quilkin::filters::prelude::*;
 
 use serde::{Deserialize, Serialize};
