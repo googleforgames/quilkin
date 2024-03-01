@@ -399,8 +399,6 @@
 <a href="#399" id="399">399</a>
 <a href="#400" id="400">400</a>
 <a href="#401" id="401">401</a>
-<a href="#402" id="402">402</a>
-<a href="#403" id="403">403</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -417,8 +415,7 @@
  * limitations under the License.
  */
 
-</span><span class="kw">use </span>std::convert::TryFrom;
-<span class="kw">use </span>std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+</span><span class="kw">use </span>std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 <span class="kw">use </span>std::sync::Arc;
 <span class="kw">use </span>std::time::Duration;
 
@@ -430,8 +427,7 @@
     net::endpoint::EndpointAddress,
 };
 
-<span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.filters.local_rate_limit.v1alpha1&quot;</span>);
-<span class="kw">use </span><span class="self">self</span>::quilkin::filters::local_rate_limit::v1alpha1 <span class="kw">as </span>proto;
+<span class="kw">use </span><span class="kw">crate</span>::generated::quilkin::filters::local_rate_limit::v1alpha1 <span class="kw">as </span>proto;
 
 <span class="comment">// TODO: we should make these values configurable and transparent to the filter.
 </span><span class="doccomment">/// SESSION_TIMEOUT_SECONDS is the default session timeout.

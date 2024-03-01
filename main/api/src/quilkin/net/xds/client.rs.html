@@ -965,6 +965,9 @@
 <a href="#965" id="965">965</a>
 <a href="#966" id="966">966</a>
 <a href="#967" id="967">967</a>
+<a href="#968" id="968">968</a>
+<a href="#969" id="969">969</a>
+<a href="#970" id="970">970</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -996,15 +999,17 @@
 <span class="kw">use crate</span>::{
     cli::Admin,
     config::Config,
-    net::xds::{
-        config::core::v3::Node,
-        relay::aggregated_control_plane_discovery_service_client::AggregatedControlPlaneDiscoveryServiceClient,
-        service::discovery::v3::{
-            aggregated_discovery_service_client::AggregatedDiscoveryServiceClient,
-            DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
+    generated::{
+        envoy::{
+            config::core::v3::Node,
+            service::discovery::v3::{
+                aggregated_discovery_service_client::AggregatedDiscoveryServiceClient,
+                DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
+            },
         },
-        Resource, ResourceType,
+        quilkin::relay::v1alpha1::aggregated_control_plane_discovery_service_client::AggregatedControlPlaneDiscoveryServiceClient,
     },
+    net::xds::{Resource, ResourceType},
     <span class="prelude-ty">Result</span>,
 };
 
@@ -1022,8 +1027,9 @@
     <span class="kw">type </span>Request: Clone + Send + Sync + Sized + <span class="lifetime">&#39;static </span>+ std::fmt::Debug;
     <span class="kw">type </span>Response: Clone + Send + Sync + Sized + <span class="lifetime">&#39;static </span>+ std::fmt::Debug;
 
-    <span class="kw">async fn </span>connect(endpoint: tonic::transport::Endpoint)
-        -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, tonic::transport::Error&gt;;
+    <span class="kw">async fn </span>connect_to_endpoint(
+        endpoint: tonic::transport::Endpoint,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, tonic::transport::Error&gt;;
     <span class="kw">async fn </span>stream_requests&lt;S: tonic::IntoStreamingRequest&lt;Message = <span class="self">Self</span>::Request&gt; + Send&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         stream: S,
@@ -1035,7 +1041,7 @@
     <span class="kw">type </span>Request = DiscoveryRequest;
     <span class="kw">type </span>Response = DiscoveryResponse;
 
-    <span class="kw">async fn </span>connect(
+    <span class="kw">async fn </span>connect_to_endpoint(
         endpoint: tonic::transport::Endpoint,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, tonic::transport::Error&gt; {
         <span class="prelude-val">Ok</span>(AdsGrpcClient::connect(endpoint)
@@ -1057,7 +1063,7 @@
     <span class="kw">type </span>Request = DiscoveryResponse;
     <span class="kw">type </span>Response = DiscoveryRequest;
 
-    <span class="kw">async fn </span>connect(
+    <span class="kw">async fn </span>connect_to_endpoint(
         endpoint: tonic::transport::Endpoint,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, tonic::transport::Error&gt; {
         <span class="prelude-val">Ok</span>(MdsGrpcClient::connect(endpoint)
@@ -1163,9 +1169,9 @@
                             ));
                         }
 
-                        C::connect(endpoint)
+                        C::connect_to_endpoint(endpoint)
                             .instrument(<span class="macro">tracing::debug_span!</span>(
-                                <span class="string">&quot;AggregatedDiscoveryServiceClient::connect&quot;
+                                <span class="string">&quot;AggregatedDiscoveryServiceClient::connect_to_endpoint&quot;
                             </span>))
                             .<span class="kw">await
                             </span>.map_err(RpcSessionError::InitialConnect)
@@ -1344,7 +1350,7 @@
 
         res_tx
             .send(DeltaDiscoveryResponse {
-                control_plane: <span class="prelude-val">Some</span>(<span class="kw">crate</span>::net::xds::config::core::v3::ControlPlane { identifier }),
+                control_plane: <span class="prelude-val">Some</span>(<span class="kw">crate</span>::net::xds::core::ControlPlane { identifier }),
                 ..Default::default()
             })
             .<span class="kw">await</span><span class="question-mark">?</span>;
@@ -1722,7 +1728,7 @@
 
                 <span class="kw">loop </span>{
                     <span class="kw">let </span>initial_response = DiscoveryResponse {
-                        control_plane: <span class="prelude-val">Some</span>(<span class="kw">crate</span>::net::xds::config::core::v3::ControlPlane {
+                        control_plane: <span class="prelude-val">Some</span>(<span class="kw">crate</span>::net::xds::core::ControlPlane {
                             identifier: (<span class="kw-2">&amp;*</span>identifier).into(),
                         }),
                         ..&lt;<span class="kw">_</span>&gt;::default()
@@ -1910,7 +1916,7 @@
 
             <span class="kw">let </span>error_detail = <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = result {
                 <span class="kw">super</span>::metrics::nacks(<span class="kw-2">&amp;</span>control_plane_identifier, <span class="kw-2">&amp;</span>response.type_url).inc();
-                <span class="prelude-val">Some</span>(<span class="kw">crate</span>::net::xds::google::rpc::Status {
+                <span class="prelude-val">Some</span>(<span class="kw">crate</span>::generated::google::rpc::Status {
                     code: <span class="number">3</span>,
                     message: error.to_string(),
                     ..Default::default()

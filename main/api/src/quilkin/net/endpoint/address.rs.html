@@ -455,7 +455,7 @@
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 <span class="kw">use </span>trust_dns_resolver::{AsyncResolver, TokioAsyncResolver};
 
-<span class="kw">use </span><span class="kw">crate</span>::net::xds::config::core::v3::{
+<span class="kw">use </span><span class="kw">crate</span>::generated::envoy::config::core::v3::{
     address::Address <span class="kw">as </span>EnvoyAddress, SocketAddress <span class="kw">as </span>EnvoySocketAddress,
 };
 
@@ -644,7 +644,7 @@
 
 <span class="kw">impl </span>From&lt;EndpointAddress&gt; <span class="kw">for </span>EnvoySocketAddress {
     <span class="kw">fn </span>from(address: EndpointAddress) -&gt; <span class="self">Self </span>{
-        <span class="kw">use </span><span class="kw">crate</span>::net::xds::config::core::v3::socket_address::{PortSpecifier, Protocol};
+        <span class="kw">use </span><span class="kw">crate</span>::net::xds::socket_address::{PortSpecifier, Protocol};
 
         <span class="self">Self </span>{
             protocol: Protocol::Udp <span class="kw">as </span>i32,
@@ -659,7 +659,7 @@
     <span class="kw">type </span>Error = eyre::Error;
 
     <span class="kw">fn </span>try_from(value: EnvoySocketAddress) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
-        <span class="kw">use </span><span class="kw">crate</span>::net::xds::config::core::v3::socket_address::PortSpecifier;
+        <span class="kw">use </span><span class="kw">crate</span>::net::xds::socket_address::PortSpecifier;
 
         <span class="kw">let </span>address = <span class="self">Self </span>{
             host: value.address.parse()<span class="question-mark">?</span>,
@@ -676,7 +676,7 @@
     }
 }
 
-<span class="kw">impl </span>From&lt;EndpointAddress&gt; <span class="kw">for </span><span class="kw">crate</span>::net::xds::config::core::v3::Address {
+<span class="kw">impl </span>From&lt;EndpointAddress&gt; <span class="kw">for </span><span class="kw">crate</span>::net::xds::core::Address {
     <span class="kw">fn </span>from(address: EndpointAddress) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             address: <span class="prelude-val">Some</span>(address.into()),
@@ -701,10 +701,10 @@
     }
 }
 
-<span class="kw">impl </span>TryFrom&lt;<span class="kw">crate</span>::net::xds::config::core::v3::Address&gt; <span class="kw">for </span>EndpointAddress {
+<span class="kw">impl </span>TryFrom&lt;<span class="kw">crate</span>::net::xds::core::Address&gt; <span class="kw">for </span>EndpointAddress {
     <span class="kw">type </span>Error = eyre::Error;
 
-    <span class="kw">fn </span>try_from(value: <span class="kw">crate</span>::net::xds::config::core::v3::Address) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
+    <span class="kw">fn </span>try_from(value: <span class="kw">crate</span>::net::xds::core::Address) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
         <span class="kw">match </span>value.address {
             <span class="prelude-val">Some</span>(address) =&gt; <span class="self">Self</span>::try_from(address),
             <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;No address found&quot;</span>)),
@@ -712,11 +712,11 @@
     }
 }
 
-<span class="kw">impl </span>TryFrom&lt;<span class="kw">crate</span>::net::xds::config::endpoint::v3::Endpoint&gt; <span class="kw">for </span>EndpointAddress {
+<span class="kw">impl </span>TryFrom&lt;<span class="kw">crate</span>::generated::envoy::config::endpoint::v3::Endpoint&gt; <span class="kw">for </span>EndpointAddress {
     <span class="kw">type </span>Error = eyre::Error;
 
     <span class="kw">fn </span>try_from(
-        value: <span class="kw">crate</span>::net::xds::config::endpoint::v3::Endpoint,
+        value: <span class="kw">crate</span>::generated::envoy::config::endpoint::v3::Endpoint,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
         <span class="kw">match </span>value.address {
             <span class="prelude-val">Some</span>(address) =&gt; <span class="self">Self</span>::try_from(address),

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["AwaitingAck","ClientVersions","Resource","ResourceType"],"mod":["config","core","quilkin","service","type"],"struct":["AggregatedDiscoveryServiceClient","Client","ControlPlane"],"type":["AdsClient"]};
+window.SIDEBAR_ITEMS = {"enum":["AwaitingAck","ClientVersions","Resource","ResourceType"],"mod":["core","discovery","listener","socket_address"],"struct":["Client"],"type":["AdsClient"]};

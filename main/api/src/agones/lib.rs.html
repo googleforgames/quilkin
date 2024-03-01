@@ -726,6 +726,7 @@
 <a href="#726" id="726">726</a>
 <a href="#727" id="727">727</a>
 <a href="#728" id="728">728</a>
+<a href="#729" id="729">729</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -1208,6 +1209,7 @@
                         resources: <span class="prelude-val">Some</span>(ResourceRequirements {
                             limits: <span class="prelude-val">Some</span>(resources.clone()),
                             requests: <span class="prelude-val">Some</span>(resources),
+                            claims: <span class="prelude-val">None</span>,
                         }),
                         ..Default::default()
                     }],

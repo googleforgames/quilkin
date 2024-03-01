@@ -1287,7 +1287,7 @@
                     <span class="prelude-val">Ok</span>((_size, <span class="kw-2">mut </span>source)) =&gt; {
                         <span class="kw">crate</span>::net::to_canonical(<span class="kw-2">&amp;mut </span>source);
                         <span class="kw">let </span>packet = DownstreamPacket {
-                            received_at: chrono::Utc::now().timestamp_nanos_opt().unwrap(),
+                            received_at: <span class="kw">crate</span>::unix_timestamp(),
                             asn_info: <span class="kw">crate</span>::net::maxmind_db::MaxmindDb::lookup(source.ip()),
                             contents,
                             source,

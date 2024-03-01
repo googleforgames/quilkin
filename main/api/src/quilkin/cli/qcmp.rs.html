@@ -221,7 +221,7 @@
                 }
             };
 
-            <span class="kw">let </span>recv_time = chrono::Utc::now().timestamp_nanos_opt().unwrap();
+            <span class="kw">let </span>recv_time = <span class="kw">crate</span>::unix_timestamp();
             <span class="kw">let </span>reply = Protocol::parse(<span class="kw-2">&amp;</span>buf[..size]).unwrap().unwrap();
 
             <span class="kw">if </span>ping.nonce() != reply.nonce() {

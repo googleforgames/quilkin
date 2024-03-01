@@ -98,12 +98,10 @@
 <a href="#98" id="98">98</a>
 <a href="#99" id="99">99</a>
 <a href="#100" id="100">100</a>
-<a href="#101" id="101">101</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::Config;
 <span class="kw">use </span><span class="kw">crate</span>::net::xds::{
-    metrics,
-    service::discovery::v3::{DeltaDiscoveryRequest, DeltaDiscoveryResponse},
-    Resource, ResourceType,
+    discovery::{DeltaDiscoveryRequest, DeltaDiscoveryResponse},
+    metrics, Resource, ResourceType,
 };
 <span class="kw">use </span>enum_map::Enum <span class="kw">as _</span>;
 <span class="kw">use </span>std::{collections::HashMap, sync::Arc};
@@ -181,7 +179,7 @@
 
             <span class="kw">let </span>error_detail = <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = result {
                 metrics::nacks(control_plane_identifier, <span class="kw-2">&amp;</span>response.type_url).inc();
-                <span class="prelude-val">Some</span>(<span class="kw">crate</span>::net::xds::google::rpc::Status {
+                <span class="prelude-val">Some</span>(<span class="kw">crate</span>::generated::google::rpc::Status {
                     code: <span class="number">3</span>,
                     message: error.to_string(),
                     ..Default::default()

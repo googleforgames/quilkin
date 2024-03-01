@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["quilkin"],"struct":["Config","Timestamp"]};
+window.SIDEBAR_ITEMS = {"struct":["Config","Timestamp"]};

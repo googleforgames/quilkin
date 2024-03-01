@@ -201,19 +201,6 @@
 <a href="#201" id="201">201</a>
 <a href="#202" id="202">202</a>
 <a href="#203" id="203">203</a>
-<a href="#204" id="204">204</a>
-<a href="#205" id="205">205</a>
-<a href="#206" id="206">206</a>
-<a href="#207" id="207">207</a>
-<a href="#208" id="208">208</a>
-<a href="#209" id="209">209</a>
-<a href="#210" id="210">210</a>
-<a href="#211" id="211">211</a>
-<a href="#212" id="212">212</a>
-<a href="#213" id="213">213</a>
-<a href="#214" id="214">214</a>
-<a href="#215" id="215">215</a>
-<a href="#216" id="216">216</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -232,16 +219,13 @@
 
 </span><span class="kw">use </span>std::sync::Arc;
 
-<span class="kw">use </span>chrono::prelude::<span class="kw-2">*</span>;
-
 <span class="kw">use crate</span>::{
     filters::prelude::<span class="kw-2">*</span>,
     metrics::Direction,
     net::endpoint::metadata::{<span class="self">self</span>, Value},
 };
 
-<span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.filters.timestamp.v1alpha1&quot;</span>);
-<span class="kw">use </span><span class="self">self</span>::quilkin::filters::timestamp::v1alpha1 <span class="kw">as </span>proto;
+<span class="kw">use </span><span class="kw">crate</span>::generated::quilkin::filters::timestamp::v1alpha1 <span class="kw">as </span>proto;
 
 <span class="doccomment">/// A filter that reads a metadata value as a timestamp to be observed in
 /// a histogram.
@@ -254,38 +238,28 @@
     <span class="doccomment">/// Observes the duration since a timestamp stored in `metadata` and now,
     /// if present.
     </span><span class="kw">pub fn </span>observe(<span class="kw-2">&amp;</span><span class="self">self</span>, metadata: <span class="kw-2">&amp;</span>metadata::DynamicMetadata, direction: Direction) {
-        <span class="kw">let </span>value = metadata
+        <span class="kw">let </span><span class="prelude-val">Some</span>(value) = metadata
             .get(<span class="kw-2">&amp;</span><span class="self">self</span>.config.metadata_key)
             .and_then(|item| <span class="kw">match </span>item {
                 Value::Number(item) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>item <span class="kw">as </span>i64),
                 Value::Bytes(vec) =&gt; <span class="prelude-val">Some</span>(i64::from_be_bytes((<span class="kw-2">**</span>vec).try_into().ok()<span class="question-mark">?</span>)),
                 <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-            });
-
-        <span class="kw">let </span>value = <span class="kw">match </span>value {
-            <span class="prelude-val">Some</span>(item) =&gt; item,
-            <span class="prelude-val">None </span>=&gt; <span class="kw">return</span>,
+            })
+        <span class="kw">else </span>{
+            <span class="kw">return</span>;
         };
 
-        <span class="kw">let </span>naive = <span class="kw">match </span>NaiveDateTime::from_timestamp_opt(value, <span class="number">0</span>) {
-            <span class="prelude-val">Some</span>(datetime) =&gt; datetime,
-            <span class="prelude-val">None </span>=&gt; {
-                <span class="macro">tracing::warn!</span>(
-                    timestamp = value,
-                    metadata_key = %<span class="self">self</span>.config.metadata_key,
-                    <span class="string">&quot;invalid unix timestamp&quot;
-                </span>);
-                <span class="kw">return</span>;
-            }
+        <span class="kw">let </span><span class="prelude-val">Ok</span>(datetime) = time::OffsetDateTime::from_unix_timestamp(value) <span class="kw">else </span>{
+            <span class="macro">tracing::warn!</span>(
+                timestamp = value,
+                metadata_key = %<span class="self">self</span>.config.metadata_key,
+                <span class="string">&quot;invalid unix timestamp&quot;
+            </span>);
+            <span class="kw">return</span>;
         };
 
-        <span class="comment">// Create a normal DateTime from the NaiveDateTime
-        </span><span class="attr">#[allow(deprecated)]
-        </span><span class="kw">let </span>datetime: DateTime&lt;Utc&gt; = DateTime::from_utc(naive, Utc);
-
-        <span class="kw">let </span>now = Utc::now();
-        <span class="kw">let </span>seconds = now.signed_duration_since(datetime).num_seconds();
-        <span class="self">self</span>.metric(direction).observe(seconds <span class="kw">as </span>f64);
+        <span class="kw">let </span>seconds = (time::OffsetDateTime::now_utc() - datetime).as_seconds_f64();
+        <span class="self">self</span>.metric(direction).observe(seconds);
     }
 
     <span class="kw">fn </span>metric(<span class="kw-2">&amp;</span><span class="self">self</span>, direction: Direction) -&gt; prometheus::Histogram {
@@ -394,7 +368,7 @@
         );
         ctx.metadata.insert(
             TIMESTAMP_KEY.into(),
-            Value::Number(Utc::now().timestamp() <span class="kw">as </span>u64),
+            Value::Number(<span class="kw">crate</span>::unix_timestamp() <span class="kw">as </span>u64),
         );
 
         filter.read(<span class="kw-2">&amp;mut </span>ctx).<span class="kw">await</span>.unwrap();

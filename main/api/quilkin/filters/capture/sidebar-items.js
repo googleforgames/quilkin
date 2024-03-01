@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["Strategy"],"mod":["quilkin"],"struct":["Capture","Config","Prefix","Regex","Suffix"],"trait":["CaptureStrategy"]};
+window.SIDEBAR_ITEMS = {"enum":["Strategy"],"struct":["Capture","Config","Prefix","Regex","Suffix"],"trait":["CaptureStrategy"]};

@@ -273,10 +273,6 @@
 <a href="#273" id="273">273</a>
 <a href="#274" id="274">274</a>
 <a href="#275" id="275">275</a>
-<a href="#276" id="276">276</a>
-<a href="#277" id="277">277</a>
-<a href="#278" id="278">278</a>
-<a href="#279" id="279">279</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -293,18 +289,14 @@
  *  limitations under the License.
  */
 
-</span><span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.filters.token_router.v1alpha1&quot;</span>);
-
-<span class="kw">use </span>std::convert::TryFrom;
-
-<span class="kw">use </span>serde::{Deserialize, Serialize};
+</span><span class="kw">use </span>serde::{Deserialize, Serialize};
 
 <span class="kw">use crate</span>::{
     filters::{metadata::CAPTURED_BYTES, prelude::<span class="kw-2">*</span>},
     net::endpoint::metadata,
 };
 
-<span class="kw">use </span><span class="self">self</span>::quilkin::filters::token_router::v1alpha1 <span class="kw">as </span>proto;
+<span class="kw">use </span><span class="kw">crate</span>::generated::quilkin::filters::token_router::v1alpha1 <span class="kw">as </span>proto;
 
 <span class="doccomment">/// Filter that only allows packets to be passed to Endpoints that have a matching
 /// connection_id to the token stored in the Filter&#39;s dynamic metadata.

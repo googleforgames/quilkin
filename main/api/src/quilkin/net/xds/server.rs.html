@@ -884,15 +884,15 @@
     cli::Admin,
     config::Config,
     net::xds::{
-        metrics,
-        relay::aggregated_control_plane_discovery_service_server::{
-            AggregatedControlPlaneDiscoveryService, AggregatedControlPlaneDiscoveryServiceServer,
-        },
-        service::discovery::v3::{
+        discovery::{
             aggregated_discovery_service_server::{
                 AggregatedDiscoveryService, AggregatedDiscoveryServiceServer,
             },
             DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
+        },
+        metrics,
+        relay::aggregated_control_plane_discovery_service_server::{
+            AggregatedControlPlaneDiscoveryService, AggregatedControlPlaneDiscoveryServiceServer,
         },
         ResourceType,
     },
@@ -1026,7 +1026,7 @@
                 .version
                 .load(std::sync::atomic::Ordering::Relaxed)
                 .to_string(),
-            control_plane: <span class="prelude-val">Some</span>(<span class="kw">crate</span>::net::xds::config::core::v3::ControlPlane {
+            control_plane: <span class="prelude-val">Some</span>(<span class="kw">crate</span>::net::xds::core::ControlPlane {
                 identifier: (<span class="kw-2">*</span><span class="self">self</span>.config.id.load()).clone(),
             }),
             type_url: resource_type.type_url().to_owned(),
@@ -1168,7 +1168,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>pending_acks = cached::TimedSizedCache::with_size_and_lifespan(<span class="number">50</span>, <span class="number">1</span>);
         <span class="kw">let </span>this = <span class="self">Self</span>::clone(<span class="self">self</span>);
 
-        <span class="kw">let </span>control_plane_id = <span class="kw">crate</span>::net::xds::config::core::v3::ControlPlane {
+        <span class="kw">let </span>control_plane_id = <span class="kw">crate</span>::net::xds::core::ControlPlane {
             identifier: (<span class="kw-2">*</span>this.config.id.load()).clone(),
         };
 
@@ -1597,11 +1597,11 @@
 
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
     <span class="kw">use </span><span class="kw">crate</span>::net::xds::{
-        config::{
-            core::v3::Node,
-            listener::v3::{FilterChain, Listener},
-        },
-        service::discovery::v3::DiscoveryResponse,
+        core::Node,
+        <span class="comment">//     listener::v3::{FilterChain, Listener},
+        // },
+        </span>discovery::DiscoveryResponse,
+        listener::{FilterChain, Listener},
         ResourceType,
     };
 

@@ -971,7 +971,7 @@
         port: u16,
         last_received_at: <span class="kw-2">&amp;mut </span><span class="prelude-ty">Option</span>&lt;i64&gt;,
     ) {
-        <span class="kw">let </span>received_at = chrono::Utc::now().timestamp_nanos_opt().unwrap();
+        <span class="kw">let </span>received_at = <span class="kw">crate</span>::unix_timestamp();
         <span class="kw">crate</span>::net::to_canonical(<span class="kw-2">&amp;mut </span>recv_addr);
         <span class="kw">let </span>(downstream_addr, asn_info): (SocketAddr, <span class="prelude-ty">Option</span>&lt;IpNetEntry&gt;) = {
             <span class="kw">let </span>storage = <span class="self">self</span>.storage.read().<span class="kw">await</span>;

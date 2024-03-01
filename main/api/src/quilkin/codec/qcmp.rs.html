@@ -613,7 +613,7 @@
             <span class="self">self</span>.socket.recv_from(<span class="kw-2">&amp;mut </span>recv),
         )
         .<span class="kw">await</span><span class="question-mark">??</span>;
-        <span class="kw">let </span>now = chrono::Utc::now().timestamp_nanos_opt().unwrap();
+        <span class="kw">let </span>now = <span class="kw">crate</span>::unix_timestamp();
         <span class="kw">let </span><span class="prelude-val">Some</span>(reply) = Protocol::parse(<span class="kw-2">&amp;</span>recv[..size])<span class="question-mark">? </span><span class="kw">else </span>{
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;received non qcmp packet&quot;</span>));
         };
@@ -639,7 +639,7 @@
             <span class="kw">match </span>result {
                 (<span class="prelude-val">Ok</span>((size, source)), new_input_buf) =&gt; {
                     input_buf = new_input_buf;
-                    <span class="kw">let </span>received_at = chrono::Utc::now().timestamp_nanos_opt().unwrap();
+                    <span class="kw">let </span>received_at = <span class="kw">crate</span>::unix_timestamp();
                     <span class="kw">let </span>command = <span class="kw">match </span>Protocol::parse(<span class="kw-2">&amp;</span>input_buf[..size]) {
                         <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(command)) =&gt; command,
                         <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; {
@@ -722,7 +722,7 @@
     </span><span class="kw">pub fn </span>ping_with_nonce(nonce: u8) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::Ping {
             nonce,
-            client_timestamp: chrono::Utc::now().timestamp_nanos_opt().unwrap(),
+            client_timestamp: <span class="kw">crate</span>::unix_timestamp(),
         }
     }
 
@@ -734,7 +734,7 @@
             nonce,
             client_timestamp,
             server_start_timestamp,
-            server_transmit_timestamp: chrono::Utc::now().timestamp_nanos_opt().unwrap(),
+            server_transmit_timestamp: <span class="kw">crate</span>::unix_timestamp(),
         }
     }
 

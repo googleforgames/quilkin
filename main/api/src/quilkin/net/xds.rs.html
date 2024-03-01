@@ -473,6 +473,8 @@
 <a href="#473" id="473">473</a>
 <a href="#474" id="474">474</a>
 <a href="#475" id="475">475</a>
+<a href="#476" id="476">476</a>
+<a href="#477" id="477">477</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -491,115 +493,117 @@
 
 // We don&#39;t control the codegen, so disable any code warnings in the
 // proto modules.
-</span><span class="attr">#[allow(warnings)]
-</span><span class="kw">mod </span>xds {
-    <span class="kw">pub mod </span>core {
-        <span class="kw">pub mod </span>v3 {
-            <span class="attr">#![doc(hidden)]
-            </span><span class="macro">tonic::include_proto!</span>(<span class="string">&quot;xds.core.v3&quot;</span>);
-        }
-    }
+//#[allow(warnings)]
+// mod xds {
+//     pub mod core {
+//         pub mod v3 {
+//             #![doc(hidden)]
+//             tonic::include_proto!(&quot;xds.core.v3&quot;);
+//         }
+//     }
 
-    <span class="kw">pub mod </span>r#type {
-        <span class="kw">pub mod </span>matcher {
-            <span class="kw">pub mod </span>v3 {
-                <span class="kw">pub use </span><span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::config::common::matcher::v3::<span class="kw-2">*</span>;
-                <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;envoy.r#type.matcher.v3&quot;</span>);
-            }
-        }
-        <span class="kw">pub mod </span>metadata {
-            <span class="kw">pub mod </span>v3 {
-                <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;envoy.r#type.metadata.v3&quot;</span>);
-            }
-        }
-        <span class="kw">pub mod </span>tracing {
-            <span class="kw">pub mod </span>v3 {
-                <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;envoy.r#type.tracing.v3&quot;</span>);
-            }
-        }
-        <span class="kw">pub mod </span>v3 {
-            <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;envoy.r#type.v3&quot;</span>);
-        }
-    }
-    <span class="kw">pub mod </span>config {
-        <span class="kw">pub mod </span>accesslog {
-            <span class="kw">pub mod </span>v3 {
-                <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;envoy.config.accesslog.v3&quot;</span>);
-            }
-        }
-        <span class="kw">pub mod </span>cluster {
-            <span class="kw">pub mod </span>v3 {
-                <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;envoy.config.cluster.v3&quot;</span>);
-            }
-        }
-        <span class="kw">pub mod </span>common {
-            <span class="kw">pub mod </span>matcher {
-                <span class="kw">pub mod </span>v3 {
-                    <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;envoy.config.common.matcher.v3&quot;</span>);
-                }
-            }
-        }
-        <span class="kw">pub mod </span>core {
-            <span class="kw">pub mod </span>v3 {
-                <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;envoy.config.core.v3&quot;</span>);
-            }
-        }
-        <span class="kw">pub mod </span>endpoint {
-            <span class="kw">pub mod </span>v3 {
-                <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;envoy.config.endpoint.v3&quot;</span>);
-            }
-        }
-        <span class="kw">pub mod </span>listener {
-            <span class="kw">pub mod </span>v3 {
-                <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;envoy.config.listener.v3&quot;</span>);
-            }
-        }
-        <span class="kw">pub mod </span>route {
-            <span class="kw">pub mod </span>v3 {
-                <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;envoy.config.route.v3&quot;</span>);
-            }
-        }
-    }
-    <span class="kw">pub mod </span>service {
-        <span class="kw">pub mod </span>discovery {
-            <span class="kw">pub mod </span>v3 {
-                <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;envoy.service.discovery.v3&quot;</span>);
-            }
-        }
-        <span class="kw">pub mod </span>cluster {
-            <span class="kw">pub mod </span>v3 {
-                <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;envoy.service.cluster.v3&quot;</span>);
-            }
-        }
-    }
-}
+//     pub mod r#type {
+//         pub mod matcher {
+//             pub mod v3 {
+//                 pub use super::super::super::config::common::matcher::v3::*;
+//                 tonic::include_proto!(&quot;envoy.r#type.matcher.v3&quot;);
+//             }
+//         }
+//         pub mod metadata {
+//             pub mod v3 {
+//                 tonic::include_proto!(&quot;envoy.r#type.metadata.v3&quot;);
+//             }
+//         }
+//         pub mod tracing {
+//             pub mod v3 {
+//                 tonic::include_proto!(&quot;envoy.r#type.tracing.v3&quot;);
+//             }
+//         }
+//         pub mod v3 {
+//             tonic::include_proto!(&quot;envoy.r#type.v3&quot;);
+//         }
+//     }
+//     pub mod config {
+//         pub mod accesslog {
+//             pub mod v3 {
+//                 tonic::include_proto!(&quot;envoy.config.accesslog.v3&quot;);
+//             }
+//         }
+//         pub mod cluster {
+//             pub mod v3 {
+//                 tonic::include_proto!(&quot;envoy.config.cluster.v3&quot;);
+//             }
+//         }
+//         pub mod common {
+//             pub mod matcher {
+//                 pub mod v3 {
+//                     tonic::include_proto!(&quot;envoy.config.common.matcher.v3&quot;);
+//                 }
+//             }
+//         }
+//         pub mod core {
+//             pub mod v3 {
+//                 tonic::include_proto!(&quot;envoy.config.core.v3&quot;);
+//             }
+//         }
+//         pub mod endpoint {
+//             pub mod v3 {
+//                 tonic::include_proto!(&quot;envoy.config.endpoint.v3&quot;);
+//             }
+//         }
+//         pub mod listener {
+//             pub mod v3 {
+//                 tonic::include_proto!(&quot;envoy.config.listener.v3&quot;);
+//             }
+//         }
+//         pub mod route {
+//             pub mod v3 {
+//                 tonic::include_proto!(&quot;envoy.config.route.v3&quot;);
+//             }
+//         }
+//     }
+//     pub mod service {
+//         pub mod discovery {
+//             pub mod v3 {
+//                 tonic::include_proto!(&quot;envoy.service.discovery.v3&quot;);
+//             }
+//         }
+//         pub mod cluster {
+//             pub mod v3 {
+//                 tonic::include_proto!(&quot;envoy.service.cluster.v3&quot;);
+//             }
+//         }
+//     }
+// }
 
-<span class="attr">#[allow(warnings)]
-</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>google {
-    <span class="kw">pub mod </span>rpc {
-        <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;google.rpc&quot;</span>);
-    }
-}
+// use crate::generated::envoy;
+// use crate::generated::xds;
 
-<span class="macro">crate::include_proto!</span>(<span class="string">&quot;quilkin.relay.v1alpha1&quot;</span>);
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">use </span><span class="kw">crate</span>::generated::quilkin::relay::v1alpha1 <span class="kw">as </span>relay;
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>client;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>metrics;
 <span class="kw">mod </span>resource;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>server;
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">use </span><span class="self">self</span>::quilkin::relay::v1alpha1 <span class="kw">as </span>relay;
-<span class="kw">use </span><span class="self">self</span>::xds <span class="kw">as </span>envoy;
 <span class="kw">use </span><span class="kw">crate</span>::net::{cluster::EndpointSetVersion, endpoint::Locality};
 
-<span class="kw">pub use </span><span class="self">self</span>::{
-    client::{AdsClient, Client},
-    resource::{Resource, ResourceType},
-    server::ControlPlane,
-    service::discovery::v3::aggregated_discovery_service_client::AggregatedDiscoveryServiceClient,
-    xds::<span class="kw-2">*</span>,
+<span class="kw">pub use </span><span class="kw">crate</span>::generated::envoy::{
+    config::core::v3::{<span class="self">self </span><span class="kw">as </span>core, socket_address},
+    config::listener::v3 <span class="kw">as </span>listener,
+    service::discovery::v3 <span class="kw">as </span>discovery,
 };
-<span class="kw">use </span>std::collections::HashMap;
+<span class="kw">pub use </span>client::{AdsClient, Client};
+<span class="kw">pub use </span>resource::{Resource, ResourceType};
+<span class="comment">// pub use self::{
+//     client::{AdsClient, Client},
+//     envoy::service::discovery::v3::aggregated_discovery_service_client::AggregatedDiscoveryServiceClient,
+//     envoy::*,
+//     resource::{Resource, ResourceType},
+//     server::ControlPlane,
+//     xds::*,
+// };
+</span><span class="kw">use </span>std::collections::HashMap;
 
 <span class="doccomment">/// Keeps track of what resource versions a particular client has
 </span><span class="kw">pub enum </span>ClientVersions {

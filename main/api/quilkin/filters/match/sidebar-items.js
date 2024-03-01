@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["quilkin"],"struct":["Branch","Config","DirectionalConfig","Fallthrough","Match"]};
+window.SIDEBAR_ITEMS = {"struct":["Branch","Config","DirectionalConfig","Fallthrough","Match"]};

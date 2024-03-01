@@ -574,6 +574,7 @@
 <a href="#574" id="574">574</a>
 <a href="#575" id="575">575</a>
 <a href="#576" id="576">576</a>
+<a href="#577" id="577">577</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -954,6 +955,7 @@
     }
 
     <span class="attr">#[tokio::test]
+    #[ignore = <span class="string">&quot;extremely flaky in CI atm&quot;</span>]
     </span><span class="kw">async fn </span>relay_routing() {
         <span class="kw">let </span><span class="kw-2">mut </span>t = TestHelper::default();
         <span class="kw">let </span>(<span class="kw-2">mut </span>rx, server_socket) = t.open_socket_and_recv_multiple_packets().<span class="kw">await</span>;
@@ -1057,16 +1059,16 @@
         };
 
         tokio::spawn(relay.drive(<span class="prelude-val">None</span>));
-        tokio::time::sleep(Duration::from_millis(<span class="number">150</span>)).<span class="kw">await</span>;
+        tokio::time::sleep(Duration::from_millis(<span class="number">1500</span>)).<span class="kw">await</span>;
         tokio::spawn(control_plane.drive(<span class="prelude-val">None</span>));
-        tokio::time::sleep(Duration::from_millis(<span class="number">150</span>)).<span class="kw">await</span>;
+        tokio::time::sleep(Duration::from_millis(<span class="number">1500</span>)).<span class="kw">await</span>;
 
         <span class="kw">let </span>(tx, proxy_init) = tokio::sync::oneshot::channel();
 
         tokio::spawn(proxy.drive(<span class="prelude-val">Some</span>(tx)));
 
         proxy_init.<span class="kw">await</span>.unwrap();
-        tokio::time::sleep(Duration::from_millis(<span class="number">150</span>)).<span class="kw">await</span>;
+        tokio::time::sleep(Duration::from_millis(<span class="number">1500</span>)).<span class="kw">await</span>;
 
         <span class="kw">let </span>socket = create_socket().<span class="kw">await</span>;
         <span class="kw">let </span>config = TestConfig::default();
@@ -1091,7 +1093,7 @@
                 config.write_to_file(endpoints_file.path());
             }
 
-            tokio::time::sleep(Duration::from_millis(<span class="number">280</span>)).<span class="kw">await</span>;
+            tokio::time::sleep(Duration::from_millis(<span class="number">580</span>)).<span class="kw">await</span>;
             <span class="kw">let </span><span class="kw-2">mut </span>msg = <span class="string">b&quot;hello&quot;</span>.to_vec();
             msg.extend_from_slice(<span class="kw-2">&amp;</span>token.inner);
             <span class="macro">tracing::info!</span>(%token, <span class="string">&quot;sending packet&quot;</span>);

@@ -86,6 +86,19 @@
 <a href="#86" id="86">86</a>
 <a href="#87" id="87">87</a>
 <a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -119,6 +132,13 @@
 
 <span class="attr">#[doc(hidden)]
 </span><span class="kw">pub mod </span>test;
+
+<span class="attr">#[allow(
+    clippy::enum_variant_names,
+    clippy::large_enum_variant,
+    rustdoc::bare_urls
+)]
+</span><span class="kw">mod </span>generated;
 
 <span class="kw">pub type </span><span class="prelude-ty">Result</span>&lt;T, E = eyre::Error&gt; = std::result::Result&lt;T, E&gt;;
 
@@ -156,6 +176,12 @@
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">trait </span>Loggable {
     <span class="doccomment">/// Output a log.
     </span><span class="kw">fn </span>log(<span class="kw-2">&amp;</span><span class="self">self</span>);
+}
+
+<span class="doccomment">/// Gets the current [Unix timestamp](https://en.wikipedia.org/wiki/Unix_time)
+</span><span class="attr">#[inline]
+</span><span class="kw">pub fn </span>unix_timestamp() -&gt; i64 {
+    time::OffsetDateTime::now_utc().unix_timestamp()
 }
 
 <span class="attr">#[cfg(doctest)]
