@@ -34,6 +34,14 @@ steps:
   - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
     dir: ./build
     args:
+      - check-quilkin
+    id: check-quilkin
+    waitFor:
+      - fetch-git-submodules
+      - pull-build-image
+  - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
+    dir: ./build
+    args:
       - test-examples
     id: test-examples
   - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker

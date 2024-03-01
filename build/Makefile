@@ -78,14 +78,16 @@ version:
 # Run all tests
 test: ensure-build-image test-quilkin test-examples test-docs
 
-# test only the quilkin crate
-test-quilkin: ensure-build-image
+check-quilkin: ensure-build-image
 	docker run --rm $(common_rust_args) \
 			--entrypoint=cargo $(BUILD_IMAGE_TAG) deny check
 	docker run --rm $(common_rust_args) \
 		--entrypoint=cargo $(BUILD_IMAGE_TAG) clippy --tests -- -D warnings
 	docker run --rm $(common_rust_args) \
 		--entrypoint=cargo $(BUILD_IMAGE_TAG) fmt -- --check
+
+# test only the quilkin crate
+test-quilkin: ensure-build-image
 	# --network=host because docker containers are not great at ipv6.
 	docker run --rm $(common_rust_args)  \
 			--network=host \
