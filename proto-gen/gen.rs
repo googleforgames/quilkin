@@ -73,7 +73,7 @@ fn install() {
             .args(["xzf", "-", "--strip-components=1", "-C"])
             .arg(cargo_root)
             .arg(format!(
-                "proto-gen-v{VERSION}-x86_64-unknown-linux-musl/proto-gen"
+                "proto-gen-{VERSION}-x86_64-unknown-linux-musl/proto-gen"
             ))
             .stdin(Stdio::piped())
             .spawn()
