@@ -513,7 +513,6 @@ impl Default for Protocol {
 }
 
 #[derive(Clone, Debug, JsonSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct Fleet {
     #[schemars(skip)]
     pub metadata: ::k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta,
@@ -533,6 +532,51 @@ impl Fleet {
             spec,
             status: None,
         }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, JsonSchema)]
+pub struct FleetInner {
+    #[schemars(skip)]
+    metadata: ObjectMeta,
+    spec: FleetSpec,
+    status: Option<FleetStatus>,
+}
+
+impl<'de> serde::Deserialize<'de> for Fleet {
+    fn deserialize<D: serde::Deserializer<'de>>(de: D) -> Result<Self, D::Error> {
+        use serde::de::Error;
+        let value = serde_json::Value::deserialize(de).unwrap();
+
+        serde_json::from_value::<FleetInner>(value.clone())
+            .map_err(|error| {
+                tracing::trace!(%error, %value, "fleet failed");
+                Error::custom(error)
+            })
+            .map(
+                |FleetInner {
+                     metadata,
+                     spec,
+                     status,
+                 }| Self {
+                    metadata,
+                    spec,
+                    status,
+                },
+            )
+    }
+}
+
+impl serde::Serialize for Fleet {
+    fn serialize<S: serde::Serializer>(&self, ser: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeStruct;
+        let mut obj = ser.serialize_struct("Fleet", 5)?;
+        obj.serialize_field("apiVersion", &Fleet::api_version(&()))?;
+        obj.serialize_field("kind", &Fleet::kind(&()))?;
+        obj.serialize_field("metadata", &self.metadata)?;
+        obj.serialize_field("spec", &self.spec)?;
+        obj.serialize_field("status", &self.status)?;
+        obj.end()
     }
 }
 
@@ -710,6 +754,7 @@ impl ::kube::core::crd::v1::CustomResourceExt for Fleet {
         &[]
     }
 }
+
 impl ::kube::core::object::HasSpec for Fleet {
     type Spec = FleetSpec;
     fn spec(&self) -> &FleetSpec {
@@ -719,6 +764,7 @@ impl ::kube::core::object::HasSpec for Fleet {
         &mut self.spec
     }
 }
+
 impl ::kube::core::object::HasStatus for Fleet {
     type Status = FleetStatus;
     fn status(&self) -> Option<&FleetStatus> {

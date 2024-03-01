@@ -480,6 +480,7 @@ pub fn game_server() -> GameServer {
                         resources: Some(ResourceRequirements {
                             limits: Some(resources.clone()),
                             requests: Some(resources),
+                            claims: None,
                         }),
                         ..Default::default()
                     }],
