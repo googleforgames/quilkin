@@ -3,7 +3,7 @@ use std::{
     process::{Command, Stdio},
 };
 
-const VERSION: &str = "0.2.0";
+const VERSION: &str = "0.2.1";
 
 fn check_version(name: &str, prefix: &str, wanted: &str) -> bool {
     if let Ok(output) = Command::new(name).arg("--version").output() {
