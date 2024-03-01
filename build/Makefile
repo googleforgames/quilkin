@@ -78,6 +78,14 @@ version:
 # Run all tests
 test: ensure-build-image test-quilkin test-examples test-docs
 
+# In CI with split jobs that both fetch they will fail if run in parallel since
+# cargo will be fighting with itself for some the same host directory that is
+# mapped into the container, so instead just split it out to its own job
+fetch-quilkin: ensure-build-image
+	docker run --rm $(common_rust_args)  \
+			--network=host \
+			-e RUST_BACKTRACE=1 --entrypoint=cargo $(BUILD_IMAGE_TAG) fetch
+
 check-quilkin: ensure-build-image
 	docker run --rm $(common_rust_args) \
 			--entrypoint=cargo $(BUILD_IMAGE_TAG) deny check
