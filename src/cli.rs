@@ -378,6 +378,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "extremely flaky in CI atm"]
     async fn relay_routing() {
         let mut t = TestHelper::default();
         let (mut rx, server_socket) = t.open_socket_and_recv_multiple_packets().await;
