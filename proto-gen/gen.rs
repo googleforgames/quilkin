@@ -208,6 +208,7 @@ fn execute(which: &str) {
         .arg("--build-server")
         .arg("--build-client")
         .arg("--generate-transport")
+        .args(["--disable-comments", "."])
         .arg(which)
         .args(["-o", "src/generated"]);
 
