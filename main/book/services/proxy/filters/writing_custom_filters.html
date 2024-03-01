@@ -381,19 +381,12 @@ bytes = "1.0"
 prost-build = "0.7"
 </code></pre>
 <pre><code class="language-rust no_run noplayground ignore">// src/build.rs
-fn main() {
-    // Remove if you already have `protoc` installed in your system.
-    std::env::set_var("PROTOC", protobuf_src::protoc());
-
-    prost_build::compile_protos(&amp;["src/greet.proto"], &amp;["src/"]).unwrap();
-}</code></pre>
+{{#include ../../../../../examples/quilkin-filter-example/build.rs:build}}</code></pre>
 <p>To include the generated code, we'll use [<code>tonic::include_proto</code>], then we just
 need to implement <a href="https://doc.rust-lang.org/std/convert/trait.TryFrom.html">std::convert::TryFrom</a> for converting the protobuf message to
 equivalvent configuration.</p>
 <pre><code class="language-rust no_run noplayground ignore">// src/main.rs
-mod proto {
-    tonic::include_proto!("greet");
-}
+
 
 impl TryFrom&lt;proto::Greet&gt; for Config {
     type Error = ConvertProtoConfigError;
