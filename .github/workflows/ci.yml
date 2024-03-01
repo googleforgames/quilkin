@@ -17,7 +17,7 @@
 # with auto-merge enabled and update it to the latest `main`, forming a best-effort queue
 # of approved PRs.
 
-name: Validate protobufs
+name: CI
 
 on:
   push:
@@ -30,10 +30,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  validate:
+  validate-proto-bufs:
+    name: Validate proto bufs
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
         with:
             submodules: true
       - run: cargo run -p proto-gen -- validate
+
+  build:
+    name: Build
+    strategy:
+      matrix:
+        os: [windows-2022, macos-14]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fetch
+      - run: cargo build
