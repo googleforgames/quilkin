@@ -61,7 +61,7 @@ impl Measurement for QcmpMeasurement {
             self.socket.recv_from(&mut recv),
         )
         .await??;
-        let now = chrono::Utc::now().timestamp_nanos_opt().unwrap();
+        let now = crate::unix_timestamp();
         let Some(reply) = Protocol::parse(&recv[..size])? else {
             return Err(eyre::eyre!("received non qcmp packet"));
         };
@@ -87,7 +87,7 @@ pub fn spawn(port: u16, mut shutdown_rx: crate::ShutdownRx) {
             match result {
                 (Ok((size, source)), new_input_buf) => {
                     input_buf = new_input_buf;
-                    let received_at = chrono::Utc::now().timestamp_nanos_opt().unwrap();
+                    let received_at = crate::unix_timestamp();
                     let command = match Protocol::parse(&input_buf[..size]) {
                         Ok(Some(command)) => command,
                         Ok(None) => {
@@ -170,7 +170,7 @@ impl Protocol {
     pub fn ping_with_nonce(nonce: u8) -> Self {
         Self::Ping {
             nonce,
-            client_timestamp: chrono::Utc::now().timestamp_nanos_opt().unwrap(),
+            client_timestamp: crate::unix_timestamp(),
         }
     }
 
@@ -182,7 +182,7 @@ impl Protocol {
             nonce,
             client_timestamp,
             server_start_timestamp,
-            server_transmit_timestamp: chrono::Utc::now().timestamp_nanos_opt().unwrap(),
+            server_transmit_timestamp: crate::unix_timestamp(),
         }
     }
 

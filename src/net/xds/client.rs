@@ -29,15 +29,17 @@ use tryhard::{
 use crate::{
     cli::Admin,
     config::Config,
-    net::xds::{
-        config::core::v3::Node,
-        relay::aggregated_control_plane_discovery_service_client::AggregatedControlPlaneDiscoveryServiceClient,
-        service::discovery::v3::{
-            aggregated_discovery_service_client::AggregatedDiscoveryServiceClient,
-            DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
+    generated::{
+        envoy::{
+            config::core::v3::Node,
+            service::discovery::v3::{
+                aggregated_discovery_service_client::AggregatedDiscoveryServiceClient,
+                DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
+            },
         },
-        Resource, ResourceType,
+        quilkin::relay::v1alpha1::aggregated_control_plane_discovery_service_client::AggregatedControlPlaneDiscoveryServiceClient,
     },
+    net::xds::{Resource, ResourceType},
     Result,
 };
 
@@ -55,8 +57,9 @@ pub trait ServiceClient: Clone + Sized + Send + 'static {
     type Request: Clone + Send + Sync + Sized + 'static + std::fmt::Debug;
     type Response: Clone + Send + Sync + Sized + 'static + std::fmt::Debug;
 
-    async fn connect(endpoint: tonic::transport::Endpoint)
-        -> Result<Self, tonic::transport::Error>;
+    async fn connect_to_endpoint(
+        endpoint: tonic::transport::Endpoint,
+    ) -> Result<Self, tonic::transport::Error>;
     async fn stream_requests<S: tonic::IntoStreamingRequest<Message = Self::Request> + Send>(
         &mut self,
         stream: S,
@@ -68,7 +71,7 @@ impl ServiceClient for AdsGrpcClient {
     type Request = DiscoveryRequest;
     type Response = DiscoveryResponse;
 
-    async fn connect(
+    async fn connect_to_endpoint(
         endpoint: tonic::transport::Endpoint,
     ) -> Result<Self, tonic::transport::Error> {
         Ok(AdsGrpcClient::connect(endpoint)
@@ -90,7 +93,7 @@ impl ServiceClient for MdsGrpcClient {
     type Request = DiscoveryResponse;
     type Response = DiscoveryRequest;
 
-    async fn connect(
+    async fn connect_to_endpoint(
         endpoint: tonic::transport::Endpoint,
     ) -> Result<Self, tonic::transport::Error> {
         Ok(MdsGrpcClient::connect(endpoint)
@@ -196,9 +199,9 @@ impl<C: ServiceClient> Client<C> {
                             ));
                         }
 
-                        C::connect(endpoint)
+                        C::connect_to_endpoint(endpoint)
                             .instrument(tracing::debug_span!(
-                                "AggregatedDiscoveryServiceClient::connect"
+                                "AggregatedDiscoveryServiceClient::connect_to_endpoint"
                             ))
                             .await
                             .map_err(RpcSessionError::InitialConnect)
@@ -377,7 +380,7 @@ impl DeltaServerStream {
 
         res_tx
             .send(DeltaDiscoveryResponse {
-                control_plane: Some(crate::net::xds::config::core::v3::ControlPlane { identifier }),
+                control_plane: Some(crate::net::xds::core::ControlPlane { identifier }),
                 ..Default::default()
             })
             .await?;
@@ -755,7 +758,7 @@ impl MdsStream {
 
                 loop {
                     let initial_response = DiscoveryResponse {
-                        control_plane: Some(crate::net::xds::config::core::v3::ControlPlane {
+                        control_plane: Some(crate::net::xds::core::ControlPlane {
                             identifier: (&*identifier).into(),
                         }),
                         ..<_>::default()
@@ -943,7 +946,7 @@ pub fn handle_discovery_responses(
 
             let error_detail = if let Err(error) = result {
                 super::metrics::nacks(&control_plane_identifier, &response.type_url).inc();
-                Some(crate::net::xds::google::rpc::Status {
+                Some(crate::generated::google::rpc::Status {
                     code: 3,
                     message: error.to_string(),
                     ..Default::default()

@@ -18,11 +18,10 @@ mod compressor;
 mod config;
 mod metrics;
 
-crate::include_proto!("quilkin.filters.compress.v1alpha1");
+use crate::generated::quilkin::filters::compress::v1alpha1 as proto;
 
 use crate::{filters::prelude::*, pool::BufferPool};
 
-use self::quilkin::filters::compress::v1alpha1 as proto;
 pub use compressor::Compressor;
 use metrics::Metrics;
 use std::sync::Arc;

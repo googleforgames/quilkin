@@ -186,7 +186,9 @@ impl PartialEq for FilterChain {
     }
 }
 
-impl TryFrom<FilterChain> for crate::net::xds::config::listener::v3::FilterChain {
+use crate::generated::envoy::config::listener::v3::FilterChain as EnvoyFilterChain;
+
+impl TryFrom<FilterChain> for EnvoyFilterChain {
     type Error = CreationError;
 
     fn try_from(chain: FilterChain) -> Result<Self, Self::Error> {
@@ -194,7 +196,7 @@ impl TryFrom<FilterChain> for crate::net::xds::config::listener::v3::FilterChain
     }
 }
 
-impl TryFrom<&'_ FilterChain> for crate::net::xds::config::listener::v3::FilterChain {
+impl TryFrom<&'_ FilterChain> for EnvoyFilterChain {
     type Error = CreationError;
 
     fn try_from(chain: &FilterChain) -> Result<Self, Self::Error> {

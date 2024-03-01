@@ -25,7 +25,7 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use trust_dns_resolver::{AsyncResolver, TokioAsyncResolver};
 
-use crate::net::xds::config::core::v3::{
+use crate::generated::envoy::config::core::v3::{
     address::Address as EnvoyAddress, SocketAddress as EnvoySocketAddress,
 };
 
@@ -214,7 +214,7 @@ impl From<(AddressKind, u16)> for EndpointAddress {
 
 impl From<EndpointAddress> for EnvoySocketAddress {
     fn from(address: EndpointAddress) -> Self {
-        use crate::net::xds::config::core::v3::socket_address::{PortSpecifier, Protocol};
+        use crate::net::xds::socket_address::{PortSpecifier, Protocol};
 
         Self {
             protocol: Protocol::Udp as i32,
@@ -229,7 +229,7 @@ impl TryFrom<EnvoySocketAddress> for EndpointAddress {
     type Error = eyre::Error;
 
     fn try_from(value: EnvoySocketAddress) -> Result<Self, Self::Error> {
-        use crate::net::xds::config::core::v3::socket_address::PortSpecifier;
+        use crate::net::xds::socket_address::PortSpecifier;
 
         let address = Self {
             host: value.address.parse()?,
@@ -246,7 +246,7 @@ impl TryFrom<EnvoySocketAddress> for EndpointAddress {
     }
 }
 
-impl From<EndpointAddress> for crate::net::xds::config::core::v3::Address {
+impl From<EndpointAddress> for crate::net::xds::core::Address {
     fn from(address: EndpointAddress) -> Self {
         Self {
             address: Some(address.into()),
@@ -271,10 +271,10 @@ impl TryFrom<EnvoyAddress> for EndpointAddress {
     }
 }
 
-impl TryFrom<crate::net::xds::config::core::v3::Address> for EndpointAddress {
+impl TryFrom<crate::net::xds::core::Address> for EndpointAddress {
     type Error = eyre::Error;
 
-    fn try_from(value: crate::net::xds::config::core::v3::Address) -> Result<Self, Self::Error> {
+    fn try_from(value: crate::net::xds::core::Address) -> Result<Self, Self::Error> {
         match value.address {
             Some(address) => Self::try_from(address),
             _ => Err(eyre::eyre!("No address found")),
@@ -282,11 +282,11 @@ impl TryFrom<crate::net::xds::config::core::v3::Address> for EndpointAddress {
     }
 }
 
-impl TryFrom<crate::net::xds::config::endpoint::v3::Endpoint> for EndpointAddress {
+impl TryFrom<crate::generated::envoy::config::endpoint::v3::Endpoint> for EndpointAddress {
     type Error = eyre::Error;
 
     fn try_from(
-        value: crate::net::xds::config::endpoint::v3::Endpoint,
+        value: crate::generated::envoy::config::endpoint::v3::Endpoint,
     ) -> Result<Self, Self::Error> {
         match value.address {
             Some(address) => Self::try_from(address),

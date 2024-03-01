@@ -18,7 +18,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use super::compressor::Compressor;
-use super::quilkin::filters::compress::v1alpha1::{
+use crate::generated::quilkin::filters::compress::v1alpha1::{
     compress::{Action as ProtoAction, ActionValue, Mode as ProtoMode, ModeValue},
     Compress as ProtoConfig,
 };

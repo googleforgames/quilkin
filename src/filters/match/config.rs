@@ -168,7 +168,7 @@ impl Default for Fallthrough {
     }
 }
 
-impl TryFrom<Fallthrough> for crate::net::xds::config::listener::v3::Filter {
+impl TryFrom<Fallthrough> for crate::generated::envoy::config::listener::v3::Filter {
     type Error = crate::filters::CreationError;
     fn try_from(fallthrough: Fallthrough) -> Result<Self, Self::Error> {
         fallthrough.0.try_into()

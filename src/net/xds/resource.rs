@@ -16,7 +16,7 @@
 
 use prost::Message;
 
-use crate::net::xds::config::listener::v3::Listener;
+use crate::generated::envoy::config::listener::v3::Listener;
 
 pub type ResourceMap<V> = enum_map::EnumMap<ResourceType, V>;
 

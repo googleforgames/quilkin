@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-use std::convert::TryFrom;
-
 use bytes::Bytes;
 
 use crate::filters::CreationError;

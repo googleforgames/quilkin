@@ -458,7 +458,7 @@ impl DownstreamReceiveWorkerConfig {
                     Ok((_size, mut source)) => {
                         crate::net::to_canonical(&mut source);
                         let packet = DownstreamPacket {
-                            received_at: chrono::Utc::now().timestamp_nanos_opt().unwrap(),
+                            received_at: crate::unix_timestamp(),
                             asn_info: crate::net::maxmind_db::MaxmindDb::lookup(source.ip()),
                             contents,
                             source,

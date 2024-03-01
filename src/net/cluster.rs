@@ -28,8 +28,7 @@ use crate::net::endpoint::{Endpoint, Locality};
 
 const SUBSYSTEM: &str = "cluster";
 
-crate::include_proto!("quilkin.config.v1alpha1");
-pub use self::quilkin::config::v1alpha1 as proto;
+pub use crate::generated::quilkin::config::v1alpha1 as proto;
 
 pub(crate) fn active_clusters() -> &'static prometheus::IntGauge {
     static ACTIVE_CLUSTERS: Lazy<prometheus::IntGauge> = Lazy::new(|| {

@@ -23,7 +23,6 @@ mod proto {
 use quilkin::filters::prelude::*;
 
 use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
 
 // ANCHOR: serde_config
 #[derive(Serialize, Deserialize, Debug, schemars::JsonSchema)]

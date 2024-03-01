@@ -16,16 +16,13 @@
 
 use std::sync::Arc;
 
-use chrono::prelude::*;
-
 use crate::{
     filters::prelude::*,
     metrics::Direction,
     net::endpoint::metadata::{self, Value},
 };
 
-crate::include_proto!("quilkin.filters.timestamp.v1alpha1");
-use self::quilkin::filters::timestamp::v1alpha1 as proto;
+use crate::generated::quilkin::filters::timestamp::v1alpha1 as proto;
 
 /// A filter that reads a metadata value as a timestamp to be observed in
 /// a histogram.
@@ -38,38 +35,28 @@ impl Timestamp {
     /// Observes the duration since a timestamp stored in `metadata` and now,
     /// if present.
     pub fn observe(&self, metadata: &metadata::DynamicMetadata, direction: Direction) {
-        let value = metadata
+        let Some(value) = metadata
             .get(&self.config.metadata_key)
             .and_then(|item| match item {
                 Value::Number(item) => Some(*item as i64),
                 Value::Bytes(vec) => Some(i64::from_be_bytes((**vec).try_into().ok()?)),
                 _ => None,
-            });
-
-        let value = match value {
-            Some(item) => item,
-            None => return,
+            })
+        else {
+            return;
         };
 
-        let naive = match NaiveDateTime::from_timestamp_opt(value, 0) {
-            Some(datetime) => datetime,
-            None => {
-                tracing::warn!(
-                    timestamp = value,
-                    metadata_key = %self.config.metadata_key,
-                    "invalid unix timestamp"
-                );
-                return;
-            }
+        let Ok(datetime) = time::OffsetDateTime::from_unix_timestamp(value) else {
+            tracing::warn!(
+                timestamp = value,
+                metadata_key = %self.config.metadata_key,
+                "invalid unix timestamp"
+            );
+            return;
         };
 
-        // Create a normal DateTime from the NaiveDateTime
-        #[allow(deprecated)]
-        let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
-
-        let now = Utc::now();
-        let seconds = now.signed_duration_since(datetime).num_seconds();
-        self.metric(direction).observe(seconds as f64);
+        let seconds = (time::OffsetDateTime::now_utc() - datetime).as_seconds_f64();
+        self.metric(direction).observe(seconds);
     }
 
     fn metric(&self, direction: Direction) -> prometheus::Histogram {
@@ -178,7 +165,7 @@ mod tests {
         );
         ctx.metadata.insert(
             TIMESTAMP_KEY.into(),
-            Value::Number(Utc::now().timestamp() as u64),
+            Value::Number(crate::unix_timestamp() as u64),
         );
 
         filter.read(&mut ctx).await.unwrap();

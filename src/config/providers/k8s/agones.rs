@@ -21,7 +21,7 @@ use k8s_openapi::{
     },
     apimachinery::pkg::{apis::meta::v1::ObjectMeta, util::intstr::IntOrString},
 };
-use kube::{core::Resource, CustomResource};
+use kube::core::Resource;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -30,7 +30,7 @@ use crate::net::endpoint::Endpoint;
 const QUILKIN_TOKEN_LABEL: &str = "quilkin.dev/tokens";
 
 /// Auto-generated derived type for GameServerSpec via `CustomResource`
-#[derive(Clone, Debug, schemars::JsonSchema)]
+#[derive(Clone, Debug, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct GameServer {
     #[schemars(skip)]
@@ -86,7 +86,7 @@ impl GameServer {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, schemars::JsonSchema)]
+#[derive(Clone, Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Inner {
     #[schemars(skip)]
@@ -193,7 +193,7 @@ impl kube::core::crd::v1::CustomResourceExt for GameServer {
                     s.inline_subschemas = true;
                     s.meta_schema = None;
                 })
-                .with_visitor(kube::core::schema::StructuralSchemaRewriter)
+                .with_visitor(kube_core::schema::StructuralSchemaRewriter)
                 .into_generator()
                 .into_root_schema_for::<Self>(),
         );
@@ -512,17 +512,271 @@ impl Default for Protocol {
     }
 }
 
+#[derive(Clone, Debug, JsonSchema)]
+pub struct Fleet {
+    #[schemars(skip)]
+    pub metadata: ::k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta,
+    pub spec: FleetSpec,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<FleetStatus>,
+}
+
+impl Fleet {
+    /// Spec based constructor for derived custom resource
+    pub fn new(name: &str, spec: FleetSpec) -> Self {
+        Self {
+            metadata: ::k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta {
+                name: Some(name.to_string()),
+                ..Default::default()
+            },
+            spec,
+            status: None,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, JsonSchema)]
+pub struct FleetInner {
+    #[schemars(skip)]
+    metadata: ObjectMeta,
+    spec: FleetSpec,
+    status: Option<FleetStatus>,
+}
+
+impl<'de> serde::Deserialize<'de> for Fleet {
+    fn deserialize<D: serde::Deserializer<'de>>(de: D) -> Result<Self, D::Error> {
+        use serde::de::Error;
+        let value = serde_json::Value::deserialize(de).unwrap();
+
+        serde_json::from_value::<FleetInner>(value.clone())
+            .map_err(|error| {
+                tracing::trace!(%error, %value, "fleet failed");
+                Error::custom(error)
+            })
+            .map(
+                |FleetInner {
+                     metadata,
+                     spec,
+                     status,
+                 }| Self {
+                    metadata,
+                    spec,
+                    status,
+                },
+            )
+    }
+}
+
+impl serde::Serialize for Fleet {
+    fn serialize<S: serde::Serializer>(&self, ser: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeStruct;
+        let mut obj = ser.serialize_struct("Fleet", 5)?;
+        obj.serialize_field("apiVersion", &Fleet::api_version(&()))?;
+        obj.serialize_field("kind", &Fleet::kind(&()))?;
+        obj.serialize_field("metadata", &self.metadata)?;
+        obj.serialize_field("spec", &self.spec)?;
+        obj.serialize_field("status", &self.status)?;
+        obj.end()
+    }
+}
+
+impl ::kube::core::Resource for Fleet {
+    type DynamicType = ();
+    type Scope = ::kube::core::NamespaceResourceScope;
+    fn group(_: &()) -> std::borrow::Cow<'_, str> {
+        "agones.dev".into()
+    }
+    fn kind(_: &()) -> std::borrow::Cow<'_, str> {
+        "Fleet".into()
+    }
+    fn version(_: &()) -> std::borrow::Cow<'_, str> {
+        "v1".into()
+    }
+    fn api_version(_: &()) -> std::borrow::Cow<'_, str> {
+        "agones.dev/v1".into()
+    }
+    fn plural(_: &()) -> std::borrow::Cow<'_, str> {
+        "fleets".into()
+    }
+    fn meta(&self) -> &::k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta {
+        &self.metadata
+    }
+    fn meta_mut(&mut self) -> &mut ::k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta {
+        &mut self.metadata
+    }
+}
+
+impl ::kube::core::crd::v1::CustomResourceExt for Fleet {
+    fn crd() -> ::k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition{
+        let columns: Vec<
+            ::k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceColumnDefinition,
+        > = ::serde_json::from_str("[  ]").expect("valid printer column json");
+        let scale: Option<
+            ::k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceSubresourceScale,
+        > = if "".is_empty() {
+            None
+        } else {
+            ::serde_json::from_str("").expect("valid scale subresource json")
+        };
+        let categories: Vec<String> = ::serde_json::from_str("[]").expect("valid categories");
+        let shorts: Vec<String> = ::serde_json::from_str("[]").expect("valid shortnames");
+        let subres = if true {
+            if scale.is_some() {
+                ::serde_json::Value::Object({
+                    let mut object = ::serde_json::Map::new();
+                    let _ = object.insert(
+                        ("status").into(),
+                        ::serde_json::Value::Object(::serde_json::Map::new()),
+                    );
+                    let _ =
+                        object.insert(("scale").into(), ::serde_json::to_value(&scale).unwrap());
+                    object
+                })
+            } else {
+                ::serde_json::Value::Object({
+                    let mut object = ::serde_json::Map::new();
+                    let _ = object.insert(
+                        ("status").into(),
+                        ::serde_json::Value::Object(::serde_json::Map::new()),
+                    );
+                    object
+                })
+            }
+        } else {
+            ::serde_json::Value::Object(::serde_json::Map::new())
+        };
+        let gen = ::schemars::gen::SchemaSettings::openapi3()
+            .with(|s| {
+                s.inline_subschemas = true;
+                s.meta_schema = None;
+            })
+            .with_visitor(kube_core::schema::StructuralSchemaRewriter)
+            .into_generator();
+        let schema = gen.into_root_schema_for::<Self>();
+        let jsondata = ::serde_json::Value::Object({
+            let mut object = ::serde_json::Map::new();
+            let _ = object.insert(
+                ("metadata").into(),
+                ::serde_json::Value::Object({
+                    let mut object = ::serde_json::Map::new();
+                    let _ = object.insert(
+                        ("name").into(),
+                        ::serde_json::to_value("fleets.agones.dev").unwrap(),
+                    );
+                    object
+                }),
+            );
+            let _ = object.insert(
+                ("spec").into(),
+                ::serde_json::Value::Object({
+                    let mut object = ::serde_json::Map::new();
+                    let _ = object.insert(
+                        ("group").into(),
+                        ::serde_json::to_value("agones.dev").unwrap(),
+                    );
+                    let _ = object.insert(
+                        ("scope").into(),
+                        ::serde_json::to_value("Namespaced").unwrap(),
+                    );
+                    let _ = object.insert(
+                        ("names").into(),
+                        ::serde_json::Value::Object({
+                            let mut object = ::serde_json::Map::new();
+                            let _ = object.insert(
+                                ("categories").into(),
+                                ::serde_json::to_value(categories).unwrap(),
+                            );
+                            let _ = object.insert(
+                                ("plural").into(),
+                                ::serde_json::to_value("fleets").unwrap(),
+                            );
+                            let _ = object.insert(
+                                ("singular").into(),
+                                ::serde_json::to_value("fleet").unwrap(),
+                            );
+                            let _ = object
+                                .insert(("kind").into(), ::serde_json::to_value("Fleet").unwrap());
+                            let _ = object.insert(
+                                ("shortNames").into(),
+                                ::serde_json::to_value(shorts).unwrap(),
+                            );
+                            object
+                        }),
+                    );
+                    let _ = object.insert(
+                        ("versions").into(),
+                        ::serde_json::Value::Array(<[_]>::into_vec(Box::new([
+                            ::serde_json::Value::Object({
+                                let mut object = ::serde_json::Map::new();
+                                let _ = object
+                                    .insert(("name").into(), ::serde_json::to_value("v1").unwrap());
+                                let _ = object
+                                    .insert(("served").into(), ::serde_json::Value::Bool(true));
+                                let _ = object
+                                    .insert(("storage").into(), ::serde_json::Value::Bool(true));
+                                let _ = object.insert(
+                                    ("schema").into(),
+                                    ::serde_json::Value::Object({
+                                        let mut object = ::serde_json::Map::new();
+                                        let _ = object.insert(
+                                            ("openAPIV3Schema").into(),
+                                            ::serde_json::to_value(&schema).unwrap(),
+                                        );
+                                        object
+                                    }),
+                                );
+                                let _ = object.insert(
+                                    ("additionalPrinterColumns").into(),
+                                    ::serde_json::to_value(columns).unwrap(),
+                                );
+                                let _ = object.insert(
+                                    ("subresources").into(),
+                                    ::serde_json::to_value(subres).unwrap(),
+                                );
+                                object
+                            }),
+                        ]))),
+                    );
+                    object
+                }),
+            );
+            object
+        });
+        ::serde_json::from_value(jsondata).expect("valid custom resource from #[kube(attrs..)]")
+    }
+    fn crd_name() -> &'static str {
+        "fleets.agones.dev"
+    }
+    fn api_resource() -> ::kube::core::dynamic::ApiResource {
+        ::kube::core::dynamic::ApiResource::erase::<Self>(&())
+    }
+    fn shortnames() -> &'static [&'static str] {
+        &[]
+    }
+}
+
+impl ::kube::core::object::HasSpec for Fleet {
+    type Spec = FleetSpec;
+    fn spec(&self) -> &FleetSpec {
+        &self.spec
+    }
+    fn spec_mut(&mut self) -> &mut FleetSpec {
+        &mut self.spec
+    }
+}
+
+impl ::kube::core::object::HasStatus for Fleet {
+    type Status = FleetStatus;
+    fn status(&self) -> Option<&FleetStatus> {
+        self.status.as_ref()
+    }
+    fn status_mut(&mut self) -> &mut Option<FleetStatus> {
+        &mut self.status
+    }
+}
+
 /// FleetSpec is the spec for a Fleet. More info: <https://agones.dev/site/docs/reference/agones_crd_api_reference/#agones.dev/v1.Fleet>
-/// Fleet CRD mostly autogenerated with <https://github.com/kube-rs/kopium>
-#[derive(CustomResource, Serialize, Deserialize, Clone, Debug, JsonSchema, Default)]
-#[kube(
-    group = "agones.dev",
-    version = "v1",
-    kind = "Fleet",
-    plural = "fleets"
-)]
-#[kube(namespaced)]
-#[kube(status = "FleetStatus")]
+#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema, Default)]
 pub struct FleetSpec {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub replicas: Option<i64>,

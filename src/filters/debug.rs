@@ -14,15 +14,11 @@
  * limitations under the License.
  */
 
-crate::include_proto!("quilkin.filters.debug.v1alpha1");
-
-use std::convert::TryFrom;
+use crate::generated::quilkin::filters::debug::v1alpha1 as proto;
 
 use crate::filters::prelude::*;
 use serde::{Deserialize, Serialize};
 use tracing::info;
-
-use self::quilkin::filters::debug::v1alpha1 as proto;
 
 /// Debug logs all incoming and outgoing packets
 #[derive(Debug)]

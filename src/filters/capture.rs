@@ -18,11 +18,9 @@ mod affix;
 mod config;
 mod regex;
 
-crate::include_proto!("quilkin.filters.capture.v1alpha1");
+use crate::generated::quilkin::filters::capture::v1alpha1 as proto;
 
 use crate::{filters::prelude::*, net::endpoint::metadata, pool::PoolBuffer};
-
-use self::quilkin::filters::capture::v1alpha1 as proto;
 
 pub use self::{
     affix::{Prefix, Suffix},

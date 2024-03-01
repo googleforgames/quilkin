@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-use std::convert::TryFrom;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
@@ -27,8 +26,7 @@ use crate::{
     net::endpoint::EndpointAddress,
 };
 
-crate::include_proto!("quilkin.filters.local_rate_limit.v1alpha1");
-use self::quilkin::filters::local_rate_limit::v1alpha1 as proto;
+use crate::generated::quilkin::filters::local_rate_limit::v1alpha1 as proto;
 
 // TODO: we should make these values configurable and transparent to the filter.
 /// SESSION_TIMEOUT_SECONDS is the default session timeout.

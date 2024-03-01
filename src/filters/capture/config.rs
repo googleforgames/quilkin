@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-use std::convert::TryFrom;
-
 use serde::{Deserialize, Serialize};
 
 use super::{proto, Prefix, Regex, Suffix};
@@ -264,7 +262,6 @@ impl TryFrom<proto::capture::Strategy> for Strategy {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::convert::TryFrom;
 
     #[test]
     fn convert_proto_config() {

@@ -204,7 +204,7 @@ impl SessionPool {
         port: u16,
         last_received_at: &mut Option<i64>,
     ) {
-        let received_at = chrono::Utc::now().timestamp_nanos_opt().unwrap();
+        let received_at = crate::unix_timestamp();
         crate::net::to_canonical(&mut recv_addr);
         let (downstream_addr, asn_info): (SocketAddr, Option<IpNetEntry>) = {
             let storage = self.storage.read().await;
