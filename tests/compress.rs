@@ -50,6 +50,7 @@ on_write: COMPRESS
     );
     let server_proxy = quilkin::cli::Proxy {
         port: server_addr.port(),
+        qcmp_port: 0,
         ..<_>::default()
     };
     // Run server proxy.
@@ -76,6 +77,7 @@ on_write: DECOMPRESS
     );
     let client_proxy = quilkin::cli::Proxy {
         port: client_addr.port(),
+        qcmp_port: 0,
         ..<_>::default()
     };
     // Run client proxy.
