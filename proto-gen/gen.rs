@@ -41,7 +41,7 @@ fn install() {
         // Fetch the tarball
         let output = Command::new("curl")
             .args(["-L", "--fail"])
-            .arg(format!("https://github.com/EmbarkStudios/proto-gen/releases/download/v{VERSION}/proto-gen-v{VERSION}-x86_64-unknown-linux-musl.tar.gz"))
+            .arg(format!("https://github.com/EmbarkStudios/proto-gen/releases/download/{VERSION}/proto-gen-{VERSION}-x86_64-unknown-linux-musl.tar.gz"))
             .stdout(Stdio::piped())
             .spawn()
             .expect("curl is not installed")
