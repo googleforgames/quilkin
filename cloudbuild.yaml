@@ -14,23 +14,30 @@
 
 steps:
   - name: gcr.io/cloud-builders/git
-    args: [ submodule, update, --init, --recursive ]
+    args: [submodule, update, --init, --recursive]
     id: fetch-git-submodules
     waitFor:
       - "-"
   - name: gcr.io/cloud-builders/docker
-    args: [ pull, "${_BUILD_IMAGE_TAG}" ]
+    args: [pull, "${_BUILD_IMAGE_TAG}"]
     id: pull-build-image
     waitFor:
       - "-" # Run immediately, don't wait for any previous steps
   - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
     dir: ./build
     args:
-      - test-quilkin
-    id: test-quilkin
+      - fetch-quilkin
+    id: fetch-quilkin
     waitFor:
       - fetch-git-submodules
       - pull-build-image
+  - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
+    dir: ./build
+    args:
+      - test-quilkin
+    id: test-quilkin
+    waitFor:
+      - fetch-quilkin
   - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
     dir: ./build
     args:
@@ -44,7 +51,7 @@ steps:
   - name: us-docker.pkg.dev/$PROJECT_ID/ci/make-docker
     dir: ./build
     args:
-      - build
+      - build-image
     id: build
 
   #
@@ -56,7 +63,7 @@ steps:
     dir: ./build
     entrypoint: bash
     args:
-      - '-c'
+      - "-c"
       - 'timeout --signal=INT --preserve-status 5s docker run --rm -v "/workspace/examples/proxy.yaml:/etc/quilkin/quilkin.yaml" ${_REPOSITORY}quilkin:$(make version) proxy'
     id: test-quilkin-image-default-config-file
     waitFor:
@@ -67,7 +74,7 @@ steps:
     dir: ./build
     entrypoint: bash
     args:
-      - '-c'
+      - "-c"
       - 'timeout --signal=INT --preserve-status 5s docker run -v /tmp:/etc/quilkin/ --rm ${_REPOSITORY}quilkin:$(make version) proxy --to="127.0.0.1:0"'
     id: test-quilkin-image-command-line
     waitFor:

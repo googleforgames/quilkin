@@ -17,7 +17,7 @@
 # with auto-merge enabled and update it to the latest `main`, forming a best-effort queue
 # of approved PRs.
 
-name: Validate protobufs
+name: CI
 
 on:
   push:
@@ -30,10 +30,53 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  validate:
+  lint:
+    name: Lint
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: "clippy, rustfmt"
+      - uses: Swatinem/rust-cache@v2
+
+      # make sure all code has been formatted with rustfmt and linted with clippy
+      - name: rustfmt
+        run: cargo fmt -- --check --color always
+
+      # run clippy to verify we have no warnings
+      - run: cargo fetch
+      - name: cargo clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+  validate-proto-bufs:
+    name: Validate proto bufs
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
         with:
             submodules: true
       - run: cargo run -p proto-gen -- validate
+
+  build:
+    name: Build
+    strategy:
+      matrix:
+        os: [windows-2022, macos-14]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fetch
+      - run: cargo build
+
+  deny-check:
+    runs-on: ubuntu-22.04
+    if: false # skip until I've updated the action
+    steps:
+      - uses: actions/checkout@v4
+      - name: deny check
+        uses: EmbarkStudios/cargo-deny-action@v1

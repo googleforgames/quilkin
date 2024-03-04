@@ -78,18 +78,29 @@ version:
 # Run all tests
 test: ensure-build-image test-quilkin test-examples test-docs
 
-# test only the quilkin crate
-test-quilkin: ensure-build-image
+# In CI with split jobs that both fetch they will fail if run in parallel since
+# cargo will be fighting with itself for some the same host directory that is
+# mapped into the container, so instead just split it out to its own job
+fetch-quilkin: ensure-build-image
+	docker run --rm $(common_rust_args)  \
+			--network=host \
+			-e RUST_BACKTRACE=1 --entrypoint=cargo $(BUILD_IMAGE_TAG) fetch
+
+check-quilkin: ensure-build-image
 	docker run --rm $(common_rust_args) \
 			--entrypoint=cargo $(BUILD_IMAGE_TAG) deny check
 	docker run --rm $(common_rust_args) \
 		--entrypoint=cargo $(BUILD_IMAGE_TAG) clippy --tests -- -D warnings
 	docker run --rm $(common_rust_args) \
 		--entrypoint=cargo $(BUILD_IMAGE_TAG) fmt -- --check
+
+# test only the quilkin crate, if you want to see test output regardless of test
+# failure or success, set RUST_TEST_NOCAPTURE to something other than "0"
+test-quilkin: ensure-build-image
 	# --network=host because docker containers are not great at ipv6.
 	docker run --rm $(common_rust_args)  \
 			--network=host \
-			-e RUST_BACKTRACE=1 --entrypoint=cargo $(BUILD_IMAGE_TAG) test -- --nocapture
+			-e RUST_BACKTRACE=1 --entrypoint=cargo $(BUILD_IMAGE_TAG) test
 
 # Run tests against the examples
 test-examples: ensure-build-image
