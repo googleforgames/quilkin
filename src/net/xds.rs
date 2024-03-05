@@ -295,6 +295,7 @@ mod tests {
         let client_proxy = crate::cli::Proxy {
             port: client_addr.port(),
             management_server: vec![format!("http://[::1]:{}", xds_port).parse().unwrap()],
+            qcmp_port: 0,
             ..<_>::default()
         };
 

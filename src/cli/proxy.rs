@@ -618,6 +618,7 @@ mod tests {
         let local_addr = available_addr(&AddressType::Random).await;
         let proxy = crate::cli::Proxy {
             port: local_addr.port(),
+            qcmp_port: 0,
             ..<_>::default()
         };
 
@@ -669,6 +670,7 @@ mod tests {
 
         let proxy = crate::cli::Proxy {
             port: local_addr.port(),
+            qcmp_port: 0,
             ..<_>::default()
         };
 
@@ -720,6 +722,7 @@ mod tests {
             config,
             Some(crate::cli::Proxy {
                 port: local_addr.port(),
+                qcmp_port: 0,
                 ..<_>::default()
             }),
             None,
@@ -792,6 +795,7 @@ mod tests {
         let local_addr = available_addr(&AddressType::Random).await;
         let proxy = crate::cli::Proxy {
             port: local_addr.port(),
+            qcmp_port: 0,
             ..<_>::default()
         };
 
