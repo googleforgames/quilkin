@@ -475,6 +475,7 @@
 <a href="#475" id="475">475</a>
 <a href="#476" id="476">476</a>
 <a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -772,6 +773,7 @@
         <span class="kw">let </span>client_proxy = <span class="kw">crate</span>::cli::Proxy {
             port: client_addr.port(),
             management_server: <span class="macro">vec!</span>[<span class="macro">format!</span>(<span class="string">&quot;http://[::1]:{}&quot;</span>, xds_port).parse().unwrap()],
+            qcmp_port: <span class="number">0</span>,
             ..&lt;<span class="kw">_</span>&gt;::default()
         };
 

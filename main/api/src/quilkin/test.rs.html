@@ -503,6 +503,7 @@
 <a href="#503" id="503">503</a>
 <a href="#504" id="504">504</a>
 <a href="#505" id="505">505</a>
+<a href="#506" id="506">506</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -788,6 +789,7 @@
             <span class="kw">crate</span>::cli::Proxy {
                 <span class="comment">// Use an ephemeral port unless the test specifies otherwise
                 </span>port: <span class="number">0</span>,
+                qcmp_port: <span class="number">0</span>,
                 ..Default::default()
             }
         });
