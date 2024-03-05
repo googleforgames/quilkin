@@ -283,6 +283,7 @@ impl TestHelper {
             crate::cli::Proxy {
                 // Use an ephemeral port unless the test specifies otherwise
                 port: 0,
+                qcmp_port: 0,
                 ..Default::default()
             }
         });

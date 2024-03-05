@@ -75,7 +75,6 @@ jobs:
 
   deny-check:
     runs-on: ubuntu-22.04
-    if: false # skip until I've updated the action
     steps:
       - uses: actions/checkout@v4
       - name: deny check
