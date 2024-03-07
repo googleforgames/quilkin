@@ -260,6 +260,7 @@ async fn collect_pprof(
     Response::builder()
         .header(hyper::header::CONTENT_LENGTH, gzip_body.len() as u64)
         .header(hyper::header::CONTENT_TYPE, "application/octet-stream")
+        .header(hyper::header::CONTENT_ENCODING, "gzip")
         .body(Body::from(gzip_body))
         .map_err(From::from)
 }
