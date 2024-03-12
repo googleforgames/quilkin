@@ -132,9 +132,9 @@ build: binary-archive build-image
 build-all-binaries: ensure-build-image build-linux-binary build-macos-binary build-windows-binary
 
 # Build an archive all binaries
-binary-archive: ensure-build-image build-all-binaries
+binary-archive: ensure-build-image build-licence-report build-all-binaries
 	docker run --rm $(common_rust_args) -w $(CARGO_TARGET_DIR) \
-			--entrypoint=bash $(BUILD_IMAGE_TAG) -c 'zip ../../quilkin-$(package_version).zip ./*/release/quilkin ./*/release/quilkin.exe'
+			--entrypoint=bash $(BUILD_IMAGE_TAG) -c 'cp ../../license.html . && zip ../../quilkin-$(package_version).zip ./*/release/quilkin ./*/release/quilkin.exe ./license.html'
 
 # Build binary for x86_64-unknown-linux-gnu.
 # Use BUILD_LOCAL=1 to build through local cargo rather than through the build container.
@@ -177,7 +177,7 @@ endif
 # Use either `REPOSITORY` to specify a container repository (defaults to blank/none), or use `IMAGE_TAG` argument to specify
 # the entire image name and tag. Defaults to `quilkin:${version}-${git-sha}`.
 # Use BUILD_LOCAL=1 to build the binary through local cargo rather than through the build container.
-build-image: ensure-build-image build-linux-binary
+build-image: ensure-build-image build-licence-report build-linux-binary
 build-image:
 	-mkdir -p "$(project_path)/target/image/"
 ifdef BUILD_LOCAL
@@ -186,10 +186,14 @@ else
 	cp "$(project_path)/target/build-image/x86_64-unknown-linux-gnu/release/quilkin" "$(project_path)/target/image/"
 endif
 	docker run --rm $(common_rust_args) \
-		--entrypoint=bash $(BUILD_IMAGE_TAG) -c 'cargo about generate license.html.hbs > license.html'
-	docker run --rm $(common_rust_args) \
 		--entrypoint=bash $(BUILD_IMAGE_TAG) -c './image/archive_dependencies.sh'
 	docker build --platform=linux/amd64 -t $(IMAGE_TAG) -f $(project_path)/image/Dockerfile $(project_path)
+
+# Generates the HTML report of all open source licence dependencies
+build-licence-report: ensure-build-image
+build-licence-report:
+	docker run --rm $(common_rust_args) \
+		--entrypoint=bash $(BUILD_IMAGE_TAG) -c 'cargo about generate license.html.hbs > license.html'
 
 # Builds Quilkin, pushes it to a repository (use REPOSITORY arg to set value)
 # and then runs the Agones integration tests. See targets `build-images` and `push` for more options and details.
