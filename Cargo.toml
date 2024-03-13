@@ -41,7 +41,7 @@ futures = "0.3.28"
 
 [package]
 name = "quilkin"
-version = "0.8.0-dev"
+version = "0.8.0"
 authors = [
     "Mark Mandel <markmandel@google.com>",
     "Ifeanyi Ubah <ifeanyi.ubah@embark-studios.com>",
@@ -80,7 +80,7 @@ test = false
 
 [dependencies]
 # Local
-quilkin-macros = { version = "0.8.0-dev", path = "./macros" }
+quilkin-macros = { version = "0.8.0", path = "./macros" }
 
 # Crates.io
 arc-swap = { version = "1.6.0", features = ["serde"] }
