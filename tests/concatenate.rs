@@ -32,7 +32,7 @@ async fn concatenate() {
 on_read: APPEND
 bytes: YWJj #abc
 ";
-    let echo = t.run_echo_server(&AddressType::Random).await;
+    let echo = t.run_echo_server(AddressType::Random).await;
 
     let server_config = std::sync::Arc::new(quilkin::Config::default());
     server_config

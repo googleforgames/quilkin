@@ -26,8 +26,8 @@ async fn metrics_server() {
     let mut t = TestHelper::default();
 
     // create an echo server as an endpoint.
-    let echo = t.run_echo_server(&AddressType::Random).await;
-    let metrics_port = quilkin::test::available_addr(&AddressType::Random)
+    let echo = t.run_echo_server(AddressType::Random).await;
+    let metrics_port = quilkin::test::available_addr(AddressType::Random)
         .await
         .port();
 

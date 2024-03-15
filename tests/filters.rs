@@ -33,7 +33,7 @@ async fn test_filter() {
     load_test_filters();
 
     // create an echo server as an endpoint.
-    let echo = t.run_echo_server(&AddressType::Random).await;
+    let echo = t.run_echo_server(AddressType::Random).await;
 
     // create server configuration
     let server_config = std::sync::Arc::new(quilkin::Config::default());
@@ -113,7 +113,7 @@ async fn debug_filter() {
     let factory = Debug::factory();
 
     // create an echo server as an endpoint.
-    let echo = t.run_echo_server(&AddressType::Random).await;
+    let echo = t.run_echo_server(AddressType::Random).await;
 
     tracing::trace!(%echo, "running echo server");
     // create server configuration

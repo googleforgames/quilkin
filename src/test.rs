@@ -45,15 +45,32 @@ pub fn enable_log(filter: impl Into<EnvFilter>) {
 }
 
 /// Which type of Address do you want? Random may give ipv4 or ipv6
+#[derive(Copy, Clone)]
 pub enum AddressType {
     Random,
     Ipv4,
     Ipv6,
 }
 
+impl From<AddressType> for SocketAddr {
+    fn from(value: AddressType) -> Self {
+        match value {
+            AddressType::Random => {
+                if rand::random() {
+                    (std::net::Ipv6Addr::LOCALHOST, 0).into()
+                } else {
+                    (std::net::Ipv4Addr::LOCALHOST, 0).into()
+                }
+            }
+            AddressType::Ipv4 => (std::net::Ipv4Addr::LOCALHOST, 0).into(),
+            AddressType::Ipv6 => (std::net::Ipv6Addr::LOCALHOST, 0).into(),
+        }
+    }
+}
+
 /// Returns a local address on a port that is not assigned to another test.
 /// If Random address tye is used, it might be v4, Might be v6. It's random.
-pub async fn available_addr(address_type: &AddressType) -> SocketAddr {
+pub async fn available_addr(address_type: AddressType) -> SocketAddr {
     let socket = create_socket().await;
     let addr = get_address(address_type, &socket);
 
@@ -61,7 +78,7 @@ pub async fn available_addr(address_type: &AddressType) -> SocketAddr {
     addr
 }
 
-fn get_address(address_type: &AddressType, socket: &DualStackLocalSocket) -> SocketAddr {
+fn get_address(address_type: AddressType, socket: &DualStackLocalSocket) -> SocketAddr {
     let addr = match address_type {
         AddressType::Random => {
             // sometimes give ipv6, sometimes ipv4.
@@ -223,7 +240,7 @@ impl TestHelper {
 
     /// Runs a simple UDP server that echos back payloads.
     /// Returns the server's address.
-    pub async fn run_echo_server(&mut self, address_type: &AddressType) -> EndpointAddress {
+    pub async fn run_echo_server(&mut self, address_type: AddressType) -> EndpointAddress {
         self.run_echo_server_with_tap(address_type, |_, _, _| {})
             .await
     }
@@ -233,7 +250,7 @@ impl TestHelper {
     /// Returns the server's address.
     pub async fn run_echo_server_with_tap<F>(
         &mut self,
-        address_type: &AddressType,
+        address_type: AddressType,
         tap: F,
     ) -> EndpointAddress
     where

@@ -45,7 +45,7 @@ on_write: DECOMPRESS
 ";
 
     let mut echo = t
-        .run_echo_server_with_tap(&AddressType::Random, move |_, bytes, _| {
+        .run_echo_server_with_tap(AddressType::Random, move |_, bytes, _| {
             assert!(
                 from_utf8(bytes).is_err(),
                 "Should be compressed, and therefore unable to be turned into a string"
@@ -123,7 +123,7 @@ async fn multiple_mutations() {
 
     let mut t = TestHelper::default();
     let mut echo = t
-        .run_echo_server_with_tap(&AddressType::Random, move |_, bytes, _| {
+        .run_echo_server_with_tap(AddressType::Random, move |_, bytes, _| {
             assert_eq!(b"hello", bytes);
         })
         .await;

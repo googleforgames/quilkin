@@ -41,7 +41,7 @@ async fn proxy_ping() {
 
 #[tokio::test]
 async fn agent_ping() {
-    let qcmp_port = quilkin::test::available_addr(&AddressType::Random)
+    let qcmp_port = quilkin::test::available_addr(AddressType::Random)
         .await
         .port();
     let agent = quilkin::cli::Agent {

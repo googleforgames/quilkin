@@ -30,7 +30,7 @@ use quilkin::{
 #[tokio::test]
 async fn token_router() {
     let mut t = TestHelper::default();
-    let mut echo = t.run_echo_server(&AddressType::Ipv6).await;
+    let mut echo = t.run_echo_server(AddressType::Ipv6).await;
     quilkin::test::map_to_localhost(&mut echo).await;
 
     let capture_yaml = "

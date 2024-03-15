@@ -33,7 +33,7 @@ async fn local_rate_limit_filter() {
 max_packets: 2
 period: 1
 ";
-    let echo = t.run_echo_server(&AddressType::Random).await;
+    let echo = t.run_echo_server(AddressType::Random).await;
 
     let mut server_addr = available_addr(&AddressType::Random).await;
     quilkin::test::map_addr_to_localhost(&mut server_addr);

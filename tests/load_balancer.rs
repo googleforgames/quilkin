@@ -39,7 +39,7 @@ policy: ROUND_ROBIN
     for _ in 0..2 {
         let selected_endpoint = selected_endpoint.clone();
         echo_addresses.insert(
-            t.run_echo_server_with_tap(&AddressType::Random, move |_, _, echo_addr| {
+            t.run_echo_server_with_tap(AddressType::Random, move |_, _, echo_addr| {
                 let _ = selected_endpoint.lock().unwrap().replace(echo_addr);
             })
             .await,

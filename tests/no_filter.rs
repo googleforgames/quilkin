@@ -27,8 +27,8 @@ async fn echo() {
     let mut t = TestHelper::default();
 
     // create two echo servers as endpoints
-    let server1 = t.run_echo_server(&AddressType::Random).await;
-    let server2 = t.run_echo_server(&AddressType::Random).await;
+    let server1 = t.run_echo_server(AddressType::Random).await;
+    let server2 = t.run_echo_server(AddressType::Random).await;
 
     // create server configuration
     let local_addr = available_addr(&AddressType::Random).await;

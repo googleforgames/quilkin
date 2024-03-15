@@ -26,7 +26,7 @@ use quilkin::{
 #[tokio::test]
 async fn client_and_server() {
     let mut t = TestHelper::default();
-    let echo = t.run_echo_server(&AddressType::Random).await;
+    let echo = t.run_echo_server(AddressType::Random).await;
 
     // create server configuration as
     let mut server_addr = available_addr(&AddressType::Random).await;
