@@ -89,7 +89,7 @@ struct NoValueCaptured;
 #[cfg(test)]
 mod tests {
     use crate::{
-        filters::metadata::CAPTURED_BYTES,
+        filters::CAPTURED_BYTES,
         net::endpoint::{metadata::Value, Endpoint},
         test::{alloc_buffer, assert_write_no_change},
     };

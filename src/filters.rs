@@ -19,7 +19,6 @@
 mod chain;
 mod error;
 mod factory;
-mod metadata;
 mod read;
 mod registry;
 mod set;
@@ -72,6 +71,11 @@ pub use self::{
 };
 
 pub use self::chain::FilterChain;
+
+/// The default key under which the [`super::capture`] filter puts the
+/// byte slices it extracts from each packet.
+/// - **Type** `Vec<u8>`
+pub const CAPTURED_BYTES: &str = "quilkin.dev/capture";
 
 /// Statically safe version of [`Filter`], if you're writing a Rust filter, you
 /// should implement [`StaticFilter`] in addition to [`Filter`], as

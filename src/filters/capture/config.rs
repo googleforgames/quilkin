@@ -17,7 +17,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::{proto, Prefix, Regex, Suffix};
-use crate::filters::{metadata::CAPTURED_BYTES, ConvertProtoConfigError};
+use crate::filters::{ConvertProtoConfigError, CAPTURED_BYTES};
 
 /// Strategy to apply for acquiring a set of bytes in the UDP packet
 #[derive(Serialize, Deserialize, Debug, PartialEq, schemars::JsonSchema)]
