@@ -195,12 +195,7 @@ async fn test(t: &mut TestHelper, yaml: &str, address_type: AddressType) -> mpsc
         .replace("%2", echo.port().to_string().as_str());
     tracing::info!(config = yaml.as_str(), "Config");
 
-    let server_proxy = quilkin::cli::Proxy {
-        port: server_port,
-        qcmp_port: 0,
-        ..<_>::default()
-    };
-    let server_config = std::sync::Arc::new(quilkin::Config::default());
+    let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
     server_config.filters.store(
         quilkin::filters::FilterChain::try_create([Filter {
             name: Firewall::factory().name().into(),
@@ -215,14 +210,18 @@ async fn test(t: &mut TestHelper, yaml: &str, address_type: AddressType) -> mpsc
         .clusters
         .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
 
-    t.run_server(server_config, Some(server_proxy), None).await;
+    let proxy_socket =
+        quilkin::net::raw_socket_with_reuse_and_address(address_type.into()).unwrap();
+    let local_addr = proxy_socket.local_addr().unwrap().as_socket().unwrap();
 
-    let local_addr: SocketAddr = match address_type {
-        AddressType::Ipv4 => (std::net::Ipv4Addr::LOCALHOST, server_port).into(),
-        AddressType::Ipv6 => (Ipv6Addr::LOCALHOST, server_port).into(),
-        AddressType::Random => unreachable!(), // don't do this.
+    let proxy = quilkin::components::proxy::Proxy {
+        socket: proxy_socket,
+        ..Default::default()
     };
+
+    t.run_server(server_config, Some(proxy), None).await;
+
     tracing::info!(source = %client_addr, address = %local_addr, "Sending hello");
-    socket.send_to(b"hello", &local_addr).await.unwrap();
+    socket.send_to(b"hello", local_addr).await.unwrap();
     rx
 }

@@ -72,13 +72,16 @@ impl Measurement for QcmpMeasurement {
     }
 }
 
-pub fn spawn(port: u16, mut shutdown_rx: crate::ShutdownRx) {
+pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) {
+    let port = crate::net::socket_port(&socket);
+
     uring_spawn!(async move {
         // Initialize a buffer for the UDP packet. We use the maximum size of a UDP
         // packet, which is the maximum value of 16 a bit integer.
         let mut input_buf = vec![0; 1 << 16];
-        let mut output_buf = Vec::new();
         let socket = DualStackLocalSocket::new(port).unwrap();
+        let mut output_buf = Vec::new();
+
         loop {
             let result = tokio::select! {
                 result = socket.recv_from(input_buf) => result,
@@ -409,6 +412,8 @@ impl From<nom::Err<nom::error::Error<&'_ [u8]>>> for Error {
 
 #[cfg(test)]
 mod tests {
+    use crate::net::raw_socket_with_reuse;
+
     use super::*;
 
     #[test]
@@ -527,20 +532,17 @@ mod tests {
     #[tokio::test]
     async fn qcmp_measurement() {
         const FIFTY_MILLIS_IN_NANOS: i64 = 50_000_000;
-        let port = crate::test::available_addr(&crate::test::AddressType::Random)
-            .await
-            .port();
+
+        let socket = raw_socket_with_reuse(0).unwrap();
+        let addr = socket.local_addr().unwrap().as_socket().unwrap();
 
         let (_tx, rx) = crate::make_shutdown_channel(Default::default());
-        super::spawn(port, rx);
+        super::spawn(socket, rx);
         tokio::time::sleep(std::time::Duration::from_millis(150)).await;
 
         let node = QcmpMeasurement::new().unwrap();
 
-        let (incoming, outgoing) = node
-            .measure_distance((std::net::Ipv4Addr::LOCALHOST, port).into())
-            .await
-            .unwrap();
+        let (incoming, outgoing) = node.measure_distance(addr).await.unwrap();
 
         assert!(
             FIFTY_MILLIS_IN_NANOS > incoming + outgoing,

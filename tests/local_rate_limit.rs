@@ -22,7 +22,7 @@ use quilkin::{
     config::Filter,
     filters::{LocalRateLimit, StaticFilter},
     net::endpoint::Endpoint,
-    test::{available_addr, AddressType, TestHelper},
+    test::{AddressType, TestHelper},
 };
 
 #[tokio::test]
@@ -35,14 +35,7 @@ period: 1
 ";
     let echo = t.run_echo_server(AddressType::Random).await;
 
-    let mut server_addr = available_addr(&AddressType::Random).await;
-    quilkin::test::map_addr_to_localhost(&mut server_addr);
-    let server_proxy = quilkin::cli::Proxy {
-        port: server_addr.port(),
-        qcmp_port: 0,
-        ..<_>::default()
-    };
-    let server_config = std::sync::Arc::new(quilkin::Config::default());
+    let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
     server_config
         .clusters
         .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
@@ -56,7 +49,8 @@ period: 1
         .unwrap(),
     );
     tracing::trace!("spawning server");
-    t.run_server(server_config, Some(server_proxy), None).await;
+    let server_port = t.run_server(server_config, None, None).await;
+    let server_addr = std::net::SocketAddr::from((std::net::Ipv6Addr::LOCALHOST, server_port));
 
     let msg = "hello";
     let (mut rx, socket) = t.open_socket_and_recv_multiple_packets().await;

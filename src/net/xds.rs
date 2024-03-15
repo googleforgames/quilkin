@@ -14,94 +14,6 @@
  * limitations under the License.
  */
 
-// We don't control the codegen, so disable any code warnings in the
-// proto modules.
-//#[allow(warnings)]
-// mod xds {
-//     pub mod core {
-//         pub mod v3 {
-//             #![doc(hidden)]
-//             tonic::include_proto!("xds.core.v3");
-//         }
-//     }
-
-//     pub mod r#type {
-//         pub mod matcher {
-//             pub mod v3 {
-//                 pub use super::super::super::config::common::matcher::v3::*;
-//                 tonic::include_proto!("envoy.r#type.matcher.v3");
-//             }
-//         }
-//         pub mod metadata {
-//             pub mod v3 {
-//                 tonic::include_proto!("envoy.r#type.metadata.v3");
-//             }
-//         }
-//         pub mod tracing {
-//             pub mod v3 {
-//                 tonic::include_proto!("envoy.r#type.tracing.v3");
-//             }
-//         }
-//         pub mod v3 {
-//             tonic::include_proto!("envoy.r#type.v3");
-//         }
-//     }
-//     pub mod config {
-//         pub mod accesslog {
-//             pub mod v3 {
-//                 tonic::include_proto!("envoy.config.accesslog.v3");
-//             }
-//         }
-//         pub mod cluster {
-//             pub mod v3 {
-//                 tonic::include_proto!("envoy.config.cluster.v3");
-//             }
-//         }
-//         pub mod common {
-//             pub mod matcher {
-//                 pub mod v3 {
-//                     tonic::include_proto!("envoy.config.common.matcher.v3");
-//                 }
-//             }
-//         }
-//         pub mod core {
-//             pub mod v3 {
-//                 tonic::include_proto!("envoy.config.core.v3");
-//             }
-//         }
-//         pub mod endpoint {
-//             pub mod v3 {
-//                 tonic::include_proto!("envoy.config.endpoint.v3");
-//             }
-//         }
-//         pub mod listener {
-//             pub mod v3 {
-//                 tonic::include_proto!("envoy.config.listener.v3");
-//             }
-//         }
-//         pub mod route {
-//             pub mod v3 {
-//                 tonic::include_proto!("envoy.config.route.v3");
-//             }
-//         }
-//     }
-//     pub mod service {
-//         pub mod discovery {
-//             pub mod v3 {
-//                 tonic::include_proto!("envoy.service.discovery.v3");
-//             }
-//         }
-//         pub mod cluster {
-//             pub mod v3 {
-//                 tonic::include_proto!("envoy.service.cluster.v3");
-//             }
-//         }
-//     }
-// }
-
-// use crate::generated::envoy;
-// use crate::generated::xds;
-
 pub(crate) use crate::generated::quilkin::relay::v1alpha1 as relay;
 
 pub(crate) mod client;
@@ -241,7 +153,11 @@ mod tests {
     use std::sync::Arc;
 
     use crate::test::AddressType;
-    use crate::{config::Config, filters::*, net::endpoint::Endpoint};
+    use crate::{
+        config::Config,
+        filters::*,
+        net::{endpoint::Endpoint, TcpListener},
+    };
 
     #[tokio::test]
     async fn token_routing() {
@@ -259,9 +175,6 @@ mod tests {
         clusters.insert_default([address].into());
         tracing::debug!(?clusters);
 
-        let xds_port = crate::test::available_addr(&AddressType::Random)
-            .await
-            .port();
         let xds_config: Arc<crate::Config> = serde_json::from_value(serde_json::json!({
             "version": "v1alpha1",
             "id": "test-proxy",
@@ -278,38 +191,51 @@ mod tests {
         .map(Arc::new)
         .unwrap();
 
+        let xds_one = TcpListener::bind(None).unwrap();
+        let xds_two = TcpListener::bind(None).unwrap();
+
+        let xds_one_port = xds_one.port();
+        let xds_two_port = xds_two.port();
+
         // Test that the client can handle the manager dropping out.
-        let manage_admin = crate::cli::Admin::Manage(<_>::default());
-        let handle = tokio::spawn(server::spawn(
-            xds_port,
-            manage_admin.clone(),
-            xds_config.clone(),
-        ));
+        let handle = tokio::spawn(
+            server::spawn(
+                xds_one,
+                xds_config.clone(),
+                crate::components::admin::IDLE_REQUEST_INTERVAL,
+            )
+            .unwrap(),
+        );
 
         let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(crate::ShutdownKind::Testing);
-        tokio::spawn(server::spawn(
-            xds_port,
-            manage_admin.clone(),
-            xds_config.clone(),
-        ));
+        tokio::spawn(
+            server::spawn(
+                xds_two,
+                xds_config.clone(),
+                crate::components::admin::IDLE_REQUEST_INTERVAL,
+            )
+            .unwrap(),
+        );
         let client_proxy = crate::cli::Proxy {
             port: client_addr.port(),
-            management_server: vec![format!("http://[::1]:{}", xds_port).parse().unwrap()],
+            management_server: vec![
+                format!("http://[::1]:{xds_one_port}").parse().unwrap(),
+                format!("http://[::1]:{xds_two_port}").parse().unwrap(),
+            ],
             qcmp_port: 0,
             ..<_>::default()
         };
 
-        let proxy_admin = crate::cli::Admin::Proxy(<_>::default());
         tokio::spawn(async move {
             client_proxy
-                .run(client_config, proxy_admin, None, shutdown_rx)
+                .run(client_config, Default::default(), None, shutdown_rx)
                 .await
         });
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
         handle.abort();
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-        tokio::spawn(server::spawn(xds_port, manage_admin, xds_config.clone()));
+        let _ = handle.await;
+
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
         const VERSION_KEY: &str = "quilkin.dev/load_balancer/version";
@@ -395,17 +321,19 @@ mod tests {
         .map(Arc::new)
         .unwrap();
 
-        let proxy_mode = crate::cli::Admin::Proxy(<_>::default());
-        tokio::spawn(server::spawn(23456, proxy_mode.clone(), config.clone()));
+        let proxy_config = crate::components::proxy::Ready::default();
+        let listener = TcpListener::bind(None).unwrap();
+        let port = listener.port();
+        tokio::spawn(
+            server::spawn(listener, config.clone(), proxy_config.idle_request_interval).unwrap(),
+        );
         let client = Client::connect(
             "test-client".into(),
-            proxy_mode,
-            vec!["http://127.0.0.1:23456".try_into().unwrap()],
+            vec![format!("http://127.0.0.1:{port}").try_into().unwrap()],
         )
         .await
         .unwrap();
-        let mut stream =
-            client.xds_client_stream(config.clone(), crate::cli::admin::IDLE_REQUEST_INTERVAL);
+        let mut stream = client.xds_client_stream(config.clone(), proxy_config);
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
         // Each time, we create a new upstream endpoint and send a cluster update for it.

@@ -285,40 +285,53 @@ impl TestHelper {
     pub async fn run_server(
         &mut self,
         config: Arc<Config>,
-        server: Option<crate::cli::Proxy>,
+        server: Option<crate::components::proxy::Proxy>,
         with_admin: Option<Option<SocketAddr>>,
     ) -> u16 {
         let (shutdown_tx, shutdown_rx) = crate::make_shutdown_channel(crate::ShutdownKind::Testing);
         self.server_shutdown_tx.push(Some(shutdown_tx));
-        let mode = crate::cli::Admin::Proxy(<_>::default());
+        let mode = crate::components::admin::Admin::Proxy(<_>::default());
 
         if let Some(address) = with_admin {
             mode.server(config.clone(), address);
         }
 
-        let mut server = server.unwrap_or_else(|| {
-            crate::cli::Proxy {
-                // Use an ephemeral port unless the test specifies otherwise
-                port: 0,
-                qcmp_port: 0,
-                ..Default::default()
+        let server = server.unwrap_or_else(|| {
+            let qcmp = crate::net::raw_socket_with_reuse(0).unwrap();
+            let phoenix =
+                crate::net::TcpListener::bind(Some(crate::net::socket_port(&qcmp))).unwrap();
+
+            crate::components::proxy::Proxy {
+                num_workers: std::num::NonZeroUsize::new(1).unwrap(),
+                mmdb: None,
+                management_servers: Vec::new(),
+                to: Vec::new(),
+                socket: crate::net::raw_socket_with_reuse(0).unwrap(),
+                qcmp,
+                phoenix,
             }
         });
 
-        if server.workers.is_none() {
-            server.workers = Some(1.try_into().unwrap());
-        }
-
         let (prox_tx, prox_rx) = tokio::sync::oneshot::channel();
+
+        let port = crate::net::socket_port(&server.socket);
 
         tokio::spawn(async move {
             server
-                .run(config, mode, Some(prox_tx), shutdown_rx)
+                .run(
+                    crate::components::RunArgs {
+                        config,
+                        ready: Default::default(),
+                        shutdown_rx,
+                    },
+                    Some(prox_tx),
+                )
                 .await
                 .unwrap();
         });
 
-        prox_rx.await.unwrap()
+        prox_rx.await.unwrap();
+        port
     }
 
     /// Returns a receiver subscribed to the helper's shutdown event.
@@ -429,6 +442,8 @@ impl TestConfig {
 
     #[track_caller]
     pub fn new() -> Self {
+        load_test_filters();
+
         Self {
             filters: crate::filters::FilterChain::try_create(std::iter::once(
                 crate::config::Filter {

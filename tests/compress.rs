@@ -20,7 +20,7 @@ use quilkin::{
     config::Filter,
     filters::{Compress, StaticFilter},
     net::endpoint::Endpoint,
-    test::{available_addr, AddressType, TestHelper},
+    test::{AddressType, TestHelper},
 };
 
 #[tokio::test]
@@ -29,8 +29,6 @@ async fn client_and_server() {
     let echo = t.run_echo_server(AddressType::Random).await;
 
     // create server configuration as
-    let mut server_addr = available_addr(&AddressType::Random).await;
-    quilkin::test::map_addr_to_localhost(&mut server_addr);
     let yaml = "
 on_read: DECOMPRESS
 on_write: COMPRESS
@@ -48,24 +46,18 @@ on_write: COMPRESS
         .map(std::sync::Arc::new)
         .unwrap(),
     );
-    let server_proxy = quilkin::cli::Proxy {
-        port: server_addr.port(),
-        qcmp_port: 0,
-        ..<_>::default()
-    };
     // Run server proxy.
-    t.run_server(server_config, Some(server_proxy), None).await;
+    let server_port = t.run_server(server_config, None, None).await;
 
     // create a local client
-    let client_addr = available_addr(&AddressType::Random).await;
     let yaml = "
 on_read: COMPRESS
 on_write: DECOMPRESS
 ";
     let client_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
-    client_config
-        .clusters
-        .modify(|clusters| clusters.insert_default([Endpoint::new(server_addr.into())].into()));
+    client_config.clusters.modify(|clusters| {
+        clusters.insert_default([(std::net::Ipv6Addr::LOCALHOST, server_port).into()].into())
+    });
     client_config.filters.store(
         quilkin::filters::FilterChain::try_create([Filter {
             name: Compress::factory().name().into(),
@@ -75,18 +67,15 @@ on_write: DECOMPRESS
         .map(std::sync::Arc::new)
         .unwrap(),
     );
-    let client_proxy = quilkin::cli::Proxy {
-        port: client_addr.port(),
-        qcmp_port: 0,
-        ..<_>::default()
-    };
     // Run client proxy.
-    t.run_server(client_config, Some(client_proxy), None).await;
+    let client_port = t.run_server(client_config, None, None).await;
 
     // let's send the packet
     let (mut rx, tx) = t.open_socket_and_recv_multiple_packets().await;
 
-    tx.send_to(b"hello", &client_addr).await.unwrap();
+    tx.send_to(b"hello", (std::net::Ipv6Addr::LOCALHOST, client_port))
+        .await
+        .unwrap();
     let expected = timeout(Duration::from_millis(500), rx.recv())
         .await
         .expect("should have received a packet")

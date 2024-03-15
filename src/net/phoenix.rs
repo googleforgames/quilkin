@@ -26,7 +26,7 @@ use dashmap::DashMap;
 use crate::config::IcaoCode;
 
 pub fn spawn(
-    port: u16,
+    listener: crate::net::TcpListener,
     config: Arc<crate::Config>,
     mut shutdown_rx: crate::ShutdownRx,
 ) -> crate::Result<()> {
@@ -81,7 +81,7 @@ pub fn spawn(
                     }
                 });
 
-                tokio::spawn(HyperServer::bind(&address).serve(make_svc));
+                tokio::spawn(HyperServer::from_tcp(listener.into())?.serve(make_svc));
 
                 loop {
                     tokio::select! {
@@ -461,6 +461,8 @@ impl Node {
 
 #[cfg(test)]
 mod tests {
+    use crate::net::raw_socket_with_reuse;
+
     use super::*;
     use std::collections::HashMap;
     use std::collections::HashSet;
@@ -679,6 +681,9 @@ mod tests {
     #[tokio::test]
     async fn http_server() {
         let config = Arc::new(crate::Config::default_non_agent());
+        let qcmp_listener = crate::net::TcpListener::bind(None).expect("failed to bind listener");
+        let qcmp_port = qcmp_listener.port();
+        config.datacenters().write().insert(
             std::net::Ipv4Addr::LOCALHOST.into(),
             crate::config::Datacenter {
                 qcmp_port,
@@ -687,9 +692,10 @@ mod tests {
         );
 
         let (_tx, rx) = crate::make_shutdown_channel(Default::default());
-        crate::codec::qcmp::spawn(qcmp_port, rx.clone());
+        let socket = raw_socket_with_reuse(qcmp_port).unwrap();
+        crate::codec::qcmp::spawn(socket, rx.clone());
         tokio::time::sleep(std::time::Duration::from_millis(150)).await;
-        super::spawn(qcmp_port, config.clone(), rx).unwrap();
+        super::spawn(qcmp_listener, config.clone(), rx).unwrap();
         tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
 
         let client = hyper::Client::new();

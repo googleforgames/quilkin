@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::net::SocketAddr;
 
 use quilkin::{
     net::endpoint::Endpoint,
@@ -32,40 +32,43 @@ async fn metrics_server() {
         .port();
 
     // create server configuration
-    let mut server_addr = quilkin::test::available_addr(&AddressType::Random).await;
-    quilkin::test::map_addr_to_localhost(&mut server_addr);
-    let server_proxy = quilkin::cli::Proxy {
-        port: server_addr.port(),
-        qcmp_port: 0,
-        ..<_>::default()
-    };
-    let server_config = std::sync::Arc::new(quilkin::Config::default());
+    let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
     server_config
         .clusters
         .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
-    t.run_server(
-        server_config,
-        Some(server_proxy),
-        Some(Some((std::net::Ipv4Addr::UNSPECIFIED, metrics_port).into())),
-    )
-    .await;
+    let server_port = t
+        .run_server(
+            server_config,
+            None,
+            Some(Some((std::net::Ipv4Addr::UNSPECIFIED, metrics_port).into())),
+        )
+        .await;
 
     // create a local client
-    let client_config = std::sync::Arc::new(quilkin::Config::default());
-    client_config
-        .clusters
-        .modify(|clusters| clusters.insert_default([Endpoint::new(server_addr.into())].into()));
+    let client_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
+    client_config.clusters.modify(|clusters| {
+        clusters.insert_default(
+            [Endpoint::new(
+                (std::net::Ipv6Addr::LOCALHOST, server_port).into(),
+            )]
+            .into(),
+        )
+    });
     let client_port = t.run_server(client_config, None, None).await;
 
     // let's send the packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
 
     // game_client
-    let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), client_port);
+    let local_addr = SocketAddr::from((std::net::Ipv6Addr::LOCALHOST, client_port));
     tracing::info!(address = %local_addr, "Sending hello");
     socket.send_to(b"hello", &local_addr).await.unwrap();
 
-    let _ = recv_chan.recv().await.unwrap();
+    let _ = tokio::time::timeout(std::time::Duration::from_millis(100), recv_chan.recv())
+        .await
+        .unwrap()
+        .unwrap();
+
     let client = hyper::Client::new();
 
     let resp = client
