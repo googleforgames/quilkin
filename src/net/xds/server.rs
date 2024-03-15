@@ -687,7 +687,7 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
 
         tracing::info!(identifier, "new control plane delta discovery stream");
         let config = self.config.clone();
-        let idle_request_interval = self.mode.idle_request_interval();
+        let idle_request_interval = self.idle_request_interval;
 
         let (ds, mut request_stream) = super::client::DeltaClientStream::new();
 
