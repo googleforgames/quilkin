@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
+use std::sync::Arc;
+
+use crate::{
+    components::relay,
+    config::{Config, Providers},
+    net::TcpListener,
 };
-
-use futures::StreamExt;
-
-use crate::config::{Config, Providers};
+pub use relay::Ready;
 
 pub const PORT: u16 = 7900;
 
@@ -39,8 +39,8 @@ pub struct Relay {
     pub xds_port: u16,
     /// The interval in seconds at which the relay will send a discovery request
     /// to an management server after receiving no updates.
-    #[clap(long, env = "QUILKIN_IDLE_REQUEST_INTERVAL_SECS", default_value_t = super::admin::idle_request_interval_secs())]
-    pub idle_request_interval_secs: u64,
+    #[clap(long, env = "QUILKIN_IDLE_REQUEST_INTERVAL_SECS")]
+    pub idle_request_interval_secs: Option<u64>,
     #[clap(subcommand)]
     pub providers: Option<Providers>,
 }
@@ -50,118 +50,32 @@ impl Default for Relay {
         Self {
             mds_port: PORT,
             xds_port: super::manage::PORT,
-            idle_request_interval_secs: super::admin::idle_request_interval_secs(),
+            idle_request_interval_secs: None,
             providers: None,
         }
     }
 }
 
 impl Relay {
-    #[tracing::instrument(skip_all)]
-    pub async fn relay(
-        &self,
+    pub async fn run(
+        self,
         config: Arc<Config>,
-        mode: crate::cli::Admin,
-        mut shutdown_rx: crate::ShutdownRx,
+        ready: Ready,
+        shutdown_rx: crate::ShutdownRx,
     ) -> crate::Result<()> {
-        let xds_server =
-            crate::net::xds::server::spawn(self.xds_port, mode.clone(), config.clone());
-        let mds_server = tokio::spawn(crate::net::xds::server::control_plane_discovery_server(
-            self.mds_port,
-            mode.clone(),
-            config.clone(),
-        ));
-        let runtime_config = mode.unwrap_relay();
+        let xds_listener = TcpListener::bind(Some(self.xds_port))?;
+        let mds_listener = TcpListener::bind(Some(self.mds_port))?;
 
-        let _provider_task = if let Some(Providers::Agones {
-            config_namespace, ..
-        }) = &self.providers
-        {
-            let config = config.clone();
-            let config_namespace = config_namespace.clone();
-            let provider_is_healthy = runtime_config.provider_is_healthy.clone();
-            Some(tokio::spawn(Providers::task(
-                provider_is_healthy.clone(),
-                move || {
-                    let config = config.clone();
-                    let config_namespace = config_namespace.clone();
-                    let provider_is_healthy = provider_is_healthy.clone();
-                    async move {
-                        let client = tokio::time::timeout(
-                            std::time::Duration::from_secs(5),
-                            kube::Client::try_default(),
-                        )
-                        .await??;
-
-                        let configmap_reflector =
-                            crate::config::providers::k8s::update_filters_from_configmap(
-                                client.clone(),
-                                config_namespace,
-                                config.clone(),
-                            );
-
-                        tokio::pin!(configmap_reflector);
-
-                        loop {
-                            match configmap_reflector.next().await {
-                                Some(Ok(_)) => {
-                                    provider_is_healthy.store(true, Ordering::SeqCst);
-                                }
-                                Some(Err(error)) => {
-                                    provider_is_healthy.store(false, Ordering::SeqCst);
-                                    return Err(error);
-                                }
-                                None => {
-                                    provider_is_healthy.store(false, Ordering::SeqCst);
-                                    break;
-                                }
-                            }
-                        }
-
-                        tracing::info!("configmap stream ending");
-                        Ok(())
-                    }
-                },
-            )))
-        } else if let Some(Providers::File { path }) = &self.providers {
-            let config = config.clone();
-            let path = path.clone();
-            let provider_is_healthy = runtime_config.provider_is_healthy.clone();
-            Some(tokio::spawn(Providers::task(
-                provider_is_healthy.clone(),
-                move || {
-                    let config = config.clone();
-                    let path = path.clone();
-                    let provider_is_healthy = provider_is_healthy.clone();
-                    async move {
-                        crate::config::watch::fs(config, provider_is_healthy, path, None).await
-                    }
-                },
-            )))
-        } else {
-            None
-        };
-
-        tokio::select! {
-            result = xds_server => {
-                result
-            }
-            result = mds_server => {
-                result?
-            }
-            result = shutdown_rx.changed() => result.map_err(From::from),
+        relay::Relay {
+            xds_listener,
+            mds_listener,
+            provider: self.providers,
         }
-    }
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct RuntimeConfig {
-    pub idle_request_interval: std::time::Duration,
-    pub provider_is_healthy: Arc<AtomicBool>,
-}
-
-impl RuntimeConfig {
-    pub fn is_ready(&self) -> bool {
-        self.provider_is_healthy.load(Ordering::SeqCst)
+        .run(crate::components::RunArgs {
+            config,
+            ready,
+            shutdown_rx,
+        })
+        .await
     }
 }

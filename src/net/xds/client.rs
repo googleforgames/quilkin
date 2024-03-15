@@ -27,7 +27,6 @@ use tryhard::{
 };
 
 use crate::{
-    cli::Admin,
     config::Config,
     generated::{
         envoy::{
@@ -118,23 +117,17 @@ pub struct Client<C: ServiceClient> {
     management_servers: Vec<Endpoint>,
     /// The management server endpoint the client is currently connected to
     connected_endpoint: Endpoint,
-    mode: Admin,
 }
 
 impl<C: ServiceClient> Client<C> {
     #[tracing::instrument(skip_all, level = "trace", fields(servers = ?management_servers))]
-    pub async fn connect(
-        identifier: String,
-        mode: Admin,
-        management_servers: Vec<Endpoint>,
-    ) -> Result<Self> {
+    pub async fn connect(identifier: String, management_servers: Vec<Endpoint>) -> Result<Self> {
         let (client, connected_endpoint) = Self::connect_with_backoff(&management_servers).await?;
         Ok(Self {
             client,
             identifier: Arc::from(identifier),
             management_servers,
             connected_endpoint,
-            mode,
         })
     }
 
@@ -221,11 +214,19 @@ impl<C: ServiceClient> Client<C> {
 }
 
 impl MdsClient {
-    pub fn mds_client_stream(&self, config: Arc<Config>) -> MdsStream {
-        MdsStream::mds_client_stream(self, config)
+    pub fn mds_client_stream(
+        &self,
+        config: Arc<Config>,
+        rt_config: crate::components::agent::Ready,
+    ) -> MdsStream {
+        MdsStream::mds_client_stream(self, config, rt_config)
     }
 
-    pub async fn delta_stream(self, config: Arc<Config>) -> Result<DeltaSubscription, Self> {
+    pub async fn delta_stream(
+        self,
+        config: Arc<Config>,
+        rt_config: crate::components::agent::Ready,
+    ) -> Result<DeltaSubscription, Self> {
         let identifier = String::from(&*self.identifier);
 
         let (mut ds, mut stream) =
@@ -243,16 +244,14 @@ impl MdsClient {
         let handle = tokio::task::spawn(
             async move {
                 tracing::trace!("starting relay client delta stream task");
-                let mode = self.mode.clone();
-                let agent = self.mode.unwrap_agent();
-                let interval = mode.idle_request_interval();
+                let interval = rt_config.idle_request_interval;
 
                 loop {
                     {
                         let control_plane =
-                            super::server::ControlPlane::from_arc(config.clone(), mode.clone());
+                            super::server::ControlPlane::from_arc(config.clone(), interval);
                         let mut stream = control_plane.delta_aggregated_resources(stream).await?;
-                        agent.relay_is_healthy.store(true, Ordering::SeqCst);
+                        rt_config.relay_is_healthy.store(true, Ordering::SeqCst);
 
                         loop {
                             let timeout = tokio::time::timeout(interval, stream.next());
@@ -268,7 +267,7 @@ impl MdsClient {
                         }
                     }
 
-                    agent.relay_is_healthy.store(false, Ordering::SeqCst);
+                    rt_config.relay_is_healthy.store(false, Ordering::SeqCst);
 
                     tracing::warn!("lost connection to relay server, retrying");
                     let new_client = MdsClient::connect_with_backoff(&self.management_servers)
@@ -416,9 +415,9 @@ impl AdsClient {
     pub fn xds_client_stream(
         &self,
         config: Arc<Config>,
-        idle_request_interval: Duration,
+        rt_config: crate::components::proxy::Ready,
     ) -> AdsStream {
-        AdsStream::xds_client_stream(self, config, idle_request_interval)
+        AdsStream::xds_client_stream(self, config, rt_config)
     }
 
     /// Attempts to start a new delta stream to the xDS management server, if the
@@ -426,7 +425,7 @@ impl AdsClient {
     pub async fn delta_subscribe(
         self,
         config: Arc<Config>,
-        idle_request_interval: Duration,
+        rt_config: crate::components::proxy::Ready,
         resources: impl IntoIterator<Item = (ResourceType, Vec<String>)>,
     ) -> Result<DeltaSubscription, Self> {
         let resource_subscriptions: Vec<_> = resources.into_iter().collect();
@@ -508,7 +507,6 @@ impl AdsClient {
             async move {
                 tracing::trace!("starting xDS delta stream task");
                 let mut stream = stream;
-                let proxy = self.mode.unwrap_proxy();
 
                 loop {
                     tracing::trace!("creating discovery response handler");
@@ -521,12 +519,14 @@ impl AdsClient {
                     );
 
                     loop {
-                        let next_response =
-                            tokio::time::timeout(idle_request_interval, response_stream.next());
+                        let next_response = tokio::time::timeout(
+                            rt_config.idle_request_interval,
+                            response_stream.next(),
+                        );
 
                         match next_response.await {
                             Ok(Some(Ok(response))) => {
-                                proxy
+                                rt_config
                                     .xds_is_healthy
                                     .read()
                                     .as_deref()
@@ -555,7 +555,7 @@ impl AdsClient {
                         }
                     }
 
-                    proxy
+                    rt_config
                         .xds_is_healthy
                         .read()
                         .as_deref()
@@ -603,16 +603,14 @@ impl AdsStream {
             client,
             identifier,
             management_servers,
-            mode,
             ..
         }: &AdsClient,
         config: Arc<Config>,
-        idle_interval: Duration,
+        rt_config: crate::components::proxy::Ready,
     ) -> Self {
         let mut client = client.clone();
         let identifier = identifier.clone();
         let management_servers = management_servers.clone();
-        let mode = mode.clone();
 
         Self::connect(
             identifier.clone(),
@@ -657,14 +655,14 @@ impl AdsStream {
                         stream,
                         move |resource| config.apply(resource),
                     );
-                    let runtime_config = mode.unwrap_proxy();
 
                     loop {
-                        let next_response = tokio::time::timeout(idle_interval, stream.next());
+                        let next_response =
+                            tokio::time::timeout(rt_config.idle_request_interval, stream.next());
 
                         match next_response.await {
                             Ok(Some(Ok(ack))) => {
-                                runtime_config
+                                rt_config
                                     .xds_is_healthy
                                     .read()
                                     .as_deref()
@@ -697,7 +695,7 @@ impl AdsStream {
                         }
                     }
 
-                    runtime_config
+                    rt_config
                         .xds_is_healthy
                         .read()
                         .as_deref()
@@ -741,20 +739,20 @@ impl MdsStream {
             client,
             identifier,
             management_servers,
-            mode,
             ..
         }: &MdsClient,
         config: Arc<Config>,
+        rt_config: crate::components::agent::Ready,
     ) -> Self {
         let mut client = client.clone();
         let identifier = identifier.clone();
         let management_servers = management_servers.clone();
-        let mode = mode.clone();
+
         Self::connect(
             identifier.clone(),
             move |(requests, mut rx), _| async move {
                 tracing::trace!("starting relay client stream task");
-                let idle_interval = mode.idle_request_interval();
+                let idle_interval = rt_config.idle_request_interval;
 
                 loop {
                     let initial_response = DiscoveryResponse {
@@ -778,11 +776,9 @@ impl MdsStream {
                         .into_inner();
 
                     let control_plane =
-                        super::server::ControlPlane::from_arc(config.clone(), mode.clone());
+                        super::server::ControlPlane::from_arc(config.clone(), idle_interval);
                     let mut stream = control_plane.stream_resources(stream).await?;
-                    mode.unwrap_agent()
-                        .relay_is_healthy
-                        .store(true, Ordering::SeqCst);
+                    rt_config.relay_is_healthy.store(true, Ordering::SeqCst);
 
                     loop {
                         let timeout = tokio::time::timeout(idle_interval, stream.next());
@@ -797,9 +793,7 @@ impl MdsStream {
                         }
                     }
 
-                    mode.unwrap_agent()
-                        .relay_is_healthy
-                        .store(false, Ordering::SeqCst);
+                    rt_config.relay_is_healthy.store(false, Ordering::SeqCst);
 
                     tracing::warn!("lost connection to relay server, retrying");
                     client = MdsClient::connect_with_backoff(&management_servers)

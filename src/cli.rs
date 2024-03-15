@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-pub(crate) mod admin;
-
 use std::{
     path::{Path, PathBuf},
     sync::Arc,
@@ -25,12 +23,12 @@ use clap::builder::TypedValueParser;
 use clap::crate_version;
 use tokio::signal;
 
-use crate::Config;
+use crate::{components::admin::Admin, Config};
 use strum_macros::{Display, EnumString};
 
 pub use self::{
-    admin::Admin, agent::Agent, generate_config_schema::GenerateConfigSchema, manage::Manage,
-    proxy::Proxy, qcmp::Qcmp, relay::Relay,
+    agent::Agent, generate_config_schema::GenerateConfigSchema, manage::Manage, proxy::Proxy,
+    qcmp::Qcmp, relay::Relay,
 };
 
 macro_rules! define_port {
@@ -107,38 +105,11 @@ pub enum Commands {
     Relay(Relay),
 }
 
-impl Commands {
-    pub fn admin_mode(&self) -> Option<Admin> {
-        match self {
-            Self::Proxy(proxy) => Some(Admin::Proxy(proxy::RuntimeConfig {
-                idle_request_interval: std::time::Duration::from_secs(
-                    proxy.idle_request_interval_secs,
-                ),
-                ..<_>::default()
-            })),
-            Self::Agent(agent) => Some(Admin::Agent(agent::RuntimeConfig {
-                idle_request_interval: std::time::Duration::from_secs(
-                    agent.idle_request_interval_secs,
-                ),
-                ..<_>::default()
-            })),
-            Self::Relay(relay) => Some(Admin::Relay(relay::RuntimeConfig {
-                idle_request_interval: std::time::Duration::from_secs(
-                    relay.idle_request_interval_secs,
-                ),
-                ..<_>::default()
-            })),
-            Self::Manage(_) => Some(Admin::Manage(<_>::default())),
-            Self::GenerateConfigSchema(_) | Self::Qcmp(_) => None,
-        }
-    }
-}
-
 impl Cli {
     /// Drives the main quilkin application lifecycle using the command line
     /// arguments.
     #[tracing::instrument(skip_all)]
-    pub async fn drive(self, tx: Option<tokio::sync::oneshot::Sender<u16>>) -> crate::Result<()> {
+    pub async fn drive(self, tx: Option<tokio::sync::oneshot::Sender<()>>) -> crate::Result<()> {
         if !self.quiet {
             let env_filter = tracing_subscriber::EnvFilter::builder()
                 .with_default_directive(tracing_subscriber::filter::LevelFilter::INFO.into())
@@ -170,13 +141,50 @@ impl Cli {
 
         // Non-long running commands (e.g. ones with no administration server)
         // are executed here.
-        match self.command {
+        use crate::components::{self, admin as admin_server};
+        let mode = match &self.command {
             Commands::Qcmp(Qcmp::Ping(ping)) => return ping.run().await,
             Commands::GenerateConfigSchema(generator) => {
                 return generator.generate_config_schema();
             }
-            _ => {}
-        }
+            Commands::Agent(agent) => {
+                let ready = components::agent::Ready {
+                    idle_request_interval: agent
+                        .idle_request_interval_secs
+                        .map(std::time::Duration::from_secs)
+                        .unwrap_or(admin_server::IDLE_REQUEST_INTERVAL),
+                    ..Default::default()
+                };
+                Admin::Agent(ready)
+            }
+            Commands::Proxy(proxy) => {
+                let ready = components::proxy::Ready {
+                    idle_request_interval: proxy
+                        .idle_request_interval_secs
+                        .map(std::time::Duration::from_secs)
+                        .unwrap_or(admin_server::IDLE_REQUEST_INTERVAL),
+                    ..Default::default()
+                };
+                Admin::Proxy(ready)
+            }
+            Commands::Manage(_mng) => {
+                let ready = components::manage::Ready {
+                    idle_request_interval: admin_server::IDLE_REQUEST_INTERVAL,
+                    ..Default::default()
+                };
+                Admin::Manage(ready)
+            }
+            Commands::Relay(relay) => {
+                let ready = components::relay::Ready {
+                    idle_request_interval: relay
+                        .idle_request_interval_secs
+                        .map(std::time::Duration::from_secs)
+                        .unwrap_or(admin_server::IDLE_REQUEST_INTERVAL),
+                    ..Default::default()
+                };
+                Admin::Relay(ready)
+            }
+        };
 
         tracing::debug!(cli = ?self, "config parameters");
 
@@ -212,20 +220,20 @@ impl Cli {
             shutdown_tx.send(crate::ShutdownKind::Normal).ok();
         });
 
-        match self.command {
-            Commands::Agent(agent) => agent.run(config.clone(), mode, shutdown_rx.clone()).await,
-            Commands::Proxy(runner) => {
-                runner
-                    .run(config.clone(), mode.clone(), tx, shutdown_rx.clone())
-                    .await
+        match (self.command, mode) {
+            (Commands::Agent(agent), Admin::Agent(ready)) => {
+                agent.run(config, ready, shutdown_rx).await
             }
-            Commands::Manage(manager) => {
-                manager
-                    .manage(config.clone(), mode, shutdown_rx.clone())
-                    .await
+            (Commands::Proxy(runner), Admin::Proxy(ready)) => {
+                runner.run(config, ready, tx, shutdown_rx).await
             }
-            Commands::Relay(relay) => relay.relay(config, mode, shutdown_rx.clone()).await,
-            Commands::GenerateConfigSchema(_) | Commands::Qcmp(_) => unreachable!(),
+            (Commands::Manage(manager), Admin::Manage(ready)) => {
+                manager.run(config, ready, shutdown_rx).await
+            }
+            (Commands::Relay(relay), Admin::Relay(ready)) => {
+                relay.run(config, ready, shutdown_rx).await
+            }
+            _ => unreachable!(),
         }
     }
 
