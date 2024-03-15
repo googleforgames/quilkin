@@ -44,7 +44,7 @@ quilkin.dev:
         - YWJj # abc
         ";
 
-    let server_config = std::sync::Arc::new(quilkin::Config::default());
+    let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
     server_config.clusters.modify(|clusters| {
         clusters.insert_default(
             [Endpoint::with_metadata(

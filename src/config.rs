@@ -69,7 +69,23 @@ pub fn max_grpc_message_size() -> usize {
         .unwrap_or(256 * 1024 * 1024)
 }
 
-/// Config is the configuration of a proxy
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+#[serde(untagged)]
+#[cfg_attr(test, derive(PartialEq))]
+pub enum DatacenterConfig {
+    NonAgent {
+        #[serde(default)]
+        datacenters: Watch<DatacenterMap>,
+    },
+    Agent {
+        #[serde(default)]
+        icao_code: Slot<IcaoCode>,
+        #[serde(default)]
+        qcmp_port: Slot<u16>,
+    },
+}
+
+/// Configuration for a component
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 #[cfg_attr(test, derive(PartialEq))]
 #[serde(deny_unknown_fields)]
@@ -83,12 +99,8 @@ pub struct Config {
     pub id: Slot<String>,
     #[serde(default)]
     pub version: Slot<Version>,
-    #[serde(default)]
-    pub datacenters: Watch<DatacenterMap>,
-    #[serde(default)]
-    pub icao_code: Slot<IcaoCode>,
-    #[serde(default)]
-    pub qcmp_port: Slot<u16>,
+    #[serde(flatten)]
+    pub datacenter: DatacenterConfig,
 }
 
 pub struct DeltaDiscoveryRes {
@@ -142,7 +154,6 @@ impl Config {
 
     pub fn discovery_request(
         &self,
-        mode: &crate::cli::Admin,
         _node_id: &str,
         resource_type: ResourceType,
         names: &[String],
@@ -150,17 +161,21 @@ impl Config {
         let mut resources = Vec::new();
 
         match resource_type {
-            ResourceType::Datacenter => {
-                if mode.is_agent() {
+            ResourceType::Datacenter => match &self.datacenter {
+                DatacenterConfig::Agent {
+                    qcmp_port,
+                    icao_code,
+                } => {
                     resources.push(resource_type.encode_to_any(
                         &crate::net::cluster::proto::Datacenter {
-                            qcmp_port: u16::clone(&self.qcmp_port.load()).into(),
-                            icao_code: self.icao_code.load().to_string(),
-                            ..<_>::default()
+                            qcmp_port: u16::clone(&qcmp_port.load()).into(),
+                            icao_code: icao_code.load().to_string(),
+                            ..Default::default()
                         },
                     )?);
-                } else {
-                    for entry in self.datacenters.read().iter() {
+                }
+                DatacenterConfig::NonAgent { datacenters } => {
+                    for entry in datacenters.read().iter() {
                         resources.push(resource_type.encode_to_any(
                             &crate::net::cluster::proto::Datacenter {
                                 host: entry.key().to_string(),
@@ -170,7 +185,7 @@ impl Config {
                         )?);
                     }
                 }
-            }
+            },
             ResourceType::Listener => {
                 resources.push(resource_type.encode_to_any(&Listener {
                     filter_chains: vec![(&*self.filters.load()).try_into()?],
@@ -210,7 +225,6 @@ impl Config {
     /// from those of the client
     pub fn delta_discovery_request(
         &self,
-        mode: &crate::cli::Admin,
         subscribed: &BTreeSet<String>,
         client_versions: &crate::net::xds::ClientVersions,
     ) -> crate::Result<DeltaDiscoveryRes> {
@@ -232,37 +246,43 @@ impl Config {
                 (crate::net::xds::AwaitingAck::Listener, Vec::new())
             }
             crate::net::xds::ClientVersions::Datacenter => {
-                if mode.is_agent() {
-                    resources.push(XdsResource {
-                        name: "datacenter".into(),
-                        version: "0".into(),
-                        resource: Some(ResourceType::Datacenter.encode_to_any(
-                            &crate::net::cluster::proto::Datacenter {
-                                qcmp_port: *self.qcmp_port.load() as _,
-                                icao_code: self.icao_code.load().to_string(),
-                                ..Default::default()
-                            },
-                        )?),
-                        aliases: Vec::new(),
-                        ttl: None,
-                        cache_control: None,
-                    });
-                } else {
-                    for entry in self.datacenters.read().iter() {
+                match &self.datacenter {
+                    DatacenterConfig::Agent {
+                        qcmp_port,
+                        icao_code,
+                    } => {
                         resources.push(XdsResource {
                             name: "datacenter".into(),
                             version: "0".into(),
                             resource: Some(ResourceType::Datacenter.encode_to_any(
                                 &crate::net::cluster::proto::Datacenter {
-                                    host: entry.key().to_string(),
-                                    qcmp_port: entry.qcmp_port.into(),
-                                    icao_code: entry.icao_code.to_string(),
+                                    qcmp_port: *qcmp_port.load() as _,
+                                    icao_code: icao_code.load().to_string(),
+                                    ..Default::default()
                                 },
                             )?),
                             aliases: Vec::new(),
                             ttl: None,
                             cache_control: None,
                         });
+                    }
+                    DatacenterConfig::NonAgent { datacenters } => {
+                        for entry in datacenters.read().iter() {
+                            resources.push(XdsResource {
+                                name: "datacenter".into(),
+                                version: "0".into(),
+                                resource: Some(ResourceType::Datacenter.encode_to_any(
+                                    &crate::net::cluster::proto::Datacenter {
+                                        host: entry.key().to_string(),
+                                        qcmp_port: entry.qcmp_port.into(),
+                                        icao_code: entry.icao_code.to_string(),
+                                    },
+                                )?),
+                                aliases: Vec::new(),
+                                ttl: None,
+                                cache_control: None,
+                            });
+                        }
                     }
                 }
                 (crate::net::xds::AwaitingAck::Datacenter, Vec::new())
@@ -352,8 +372,12 @@ impl Config {
                 self.filters.store(Arc::new(chain));
             }
             Resource::Datacenter(dc) => {
+                let DatacenterConfig::NonAgent { datacenters } = &self.datacenter else {
+                    eyre::bail!("cannot apply datacenter resource to an agent");
+                };
+
                 let host = dc.host.parse()?;
-                self.datacenters.write().insert(
+                datacenters.write().insert(
                     host,
                     Datacenter {
                         qcmp_port: dc.qcmp_port.try_into()?,
@@ -414,29 +438,35 @@ impl Config {
                     local_versions.insert(listener.name, "".into());
                 }
             }
-            ResourceType::Datacenter => self.datacenters.modify(|wg| {
-                for res in resources {
-                    let (resource, version) = res?;
+            ResourceType::Datacenter => {
+                let DatacenterConfig::NonAgent { datacenters } = &self.datacenter else {
+                    eyre::bail!("cannot apply delta datacenters resource to agent");
+                };
 
-                    let Resource::Datacenter(dc) = resource else {
-                        return Err(eyre::eyre!("a non-datacenter resource was present"));
-                    };
+                datacenters.modify(|wg| {
+                    for res in resources {
+                        let (resource, version) = res?;
 
-                    let host = dc.host.parse()?;
+                        let Resource::Datacenter(dc) = resource else {
+                            return Err(eyre::eyre!("a non-datacenter resource was present"));
+                        };
 
-                    wg.insert(
-                        host,
-                        Datacenter {
-                            qcmp_port: dc.qcmp_port.try_into()?,
-                            icao_code: dc.icao_code.parse()?,
-                        },
-                    );
+                        let host = dc.host.parse()?;
 
-                    local_versions.insert(dc.host, version);
-                }
+                        wg.insert(
+                            host,
+                            Datacenter {
+                                qcmp_port: dc.qcmp_port.try_into()?,
+                                icao_code: dc.icao_code.parse()?,
+                            },
+                        );
 
-                Ok(())
-            })?,
+                        local_versions.insert(dc.host, version);
+                    }
+
+                    Ok(())
+                })?;
+            }
             ResourceType::Cluster => self.clusters.modify(|guard| {
                 for removed in removed_resources {
                     let locality = if removed.is_empty() {
@@ -486,18 +516,40 @@ impl Config {
         crate::net::cluster::active_clusters().set(clusters.len() as i64);
         crate::net::cluster::active_endpoints().set(clusters.num_of_endpoints() as i64);
     }
-}
 
-impl Default for Config {
-    fn default() -> Self {
+    pub fn default_agent() -> Self {
         Self {
-            clusters: <_>::default(),
-            filters: <_>::default(),
+            clusters: Default::default(),
+            filters: Default::default(),
             id: default_proxy_id(),
             version: Slot::with_default(),
-            datacenters: <_>::default(),
-            qcmp_port: <_>::default(),
-            icao_code: <_>::default(),
+            datacenter: DatacenterConfig::Agent {
+                icao_code: Default::default(),
+                qcmp_port: Default::default(),
+            },
+        }
+    }
+
+    pub fn default_non_agent() -> Self {
+        Self {
+            clusters: Default::default(),
+            filters: Default::default(),
+            id: default_proxy_id(),
+            version: Slot::with_default(),
+            datacenter: DatacenterConfig::NonAgent {
+                datacenters: Default::default(),
+            },
+        }
+    }
+
+    /// Gets the datacenters, panicking if this is an agent config
+    #[inline]
+    pub fn datacenters(&self) -> &Watch<DatacenterMap> {
+        match &self.datacenter {
+            DatacenterConfig::NonAgent { datacenters } => datacenters,
+            DatacenterConfig::Agent { .. } => {
+                unreachable!("this should not be called on an agent");
+            }
         }
     }
 }
@@ -747,7 +799,7 @@ mod tests {
 
     #[test]
     fn deserialise_client() {
-        let config = Config::default();
+        let config = Config::default_non_agent();
         config.clusters.modify(|clusters| {
             clusters.insert_default([Endpoint::new("127.0.0.1:25999".parse().unwrap())].into())
         });
@@ -757,7 +809,7 @@ mod tests {
 
     #[test]
     fn deserialise_server() {
-        let config = Config::default();
+        let config = Config::default_non_agent();
         config.clusters.modify(|clusters| {
             clusters.insert_default(
                 [
@@ -870,7 +922,7 @@ id: server-proxy
                 ],
             }]
         }))
-        .unwrap_or_default();
+        .unwrap_or_else(|_| Config::default_agent());
 
         let value = config.clusters.read();
         assert_eq!(

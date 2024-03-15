@@ -169,7 +169,7 @@ on_write:
     ports:
       - %2
 ";
-    let mut rx = test(&mut t, port, yaml, &address_type).await;
+    let mut rx = test(&mut t, yaml, AddressType::Ipv6).await;
 
     let result = timeout(Duration::from_millis(500), rx.recv()).await;
     assert!(result.is_err(), "should not have received a packet");

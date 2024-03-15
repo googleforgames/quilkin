@@ -34,7 +34,7 @@ async fn proxy_ping() {
         to: vec![(Ipv4Addr::UNSPECIFIED, 0).into()],
         ..<_>::default()
     };
-    let server_config = std::sync::Arc::new(quilkin::Config::default());
+    let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
     t.run_server(server_config, Some(server_proxy), None).await;
     ping(server_port).await;
 }
@@ -48,7 +48,7 @@ async fn agent_ping() {
         qcmp_port,
         ..<_>::default()
     };
-    let server_config = std::sync::Arc::new(quilkin::Config::default());
+    let server_config = std::sync::Arc::new(quilkin::Config::default_agent());
     let (_tx, rx) = quilkin::make_shutdown_channel(quilkin::ShutdownKind::Testing);
     let admin = quilkin::cli::Admin::Agent(<_>::default());
     tokio::spawn(async move {

@@ -46,7 +46,7 @@ policy: ROUND_ROBIN
         );
     }
 
-    let server_config = std::sync::Arc::new(quilkin::Config::default());
+    let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
     server_config.clusters.modify(|clusters| {
         clusters.insert_default(echo_addresses.iter().cloned().map(Endpoint::new).collect())
     });

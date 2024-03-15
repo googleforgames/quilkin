@@ -35,14 +35,17 @@ pub fn spawn(
 
     let phoenix = Phoenix::new(crate::codec::qcmp::QcmpMeasurement::new()?);
     phoenix.add_nodes_from_config(&config);
-    let address = (std::net::Ipv6Addr::UNSPECIFIED, port).into();
+
+    let crate::config::DatacenterConfig::NonAgent { datacenters } = &config.datacenter else {
+        unreachable!("this shouldn't be spawned on an agent")
+    };
+    let mut config_watcher = datacenters.watch();
 
     std::thread::spawn(move || -> crate::Result<()> {
         let runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()?;
         runtime.block_on({
-            let mut config_watcher = config.datacenters.watch();
             let mut phoenix_watcher = phoenix.update_watcher();
             let config = config.clone();
 
@@ -302,7 +305,10 @@ impl<M: Measurement + 'static> Phoenix<M> {
     }
 
     pub fn add_nodes_from_config(&self, config: &crate::Config) {
-        for entry in config.datacenters.read().iter() {
+        let crate::config::DatacenterConfig::NonAgent { datacenters } = &config.datacenter else {
+            unreachable!("this shouldn't be called by an agent")
+        };
+        for entry in datacenters.read().iter() {
             let addr = (*entry.key(), entry.value().qcmp_port).into();
             self.add_node_if_not_exists(addr, entry.value().icao_code.clone());
         }
@@ -672,11 +678,7 @@ mod tests {
 
     #[tokio::test]
     async fn http_server() {
-        let config = Arc::new(crate::Config::default());
-        let qcmp_port = crate::test::available_addr(&crate::test::AddressType::Ipv4)
-            .await
-            .port();
-        config.datacenters.write().insert(
+        let config = Arc::new(crate::Config::default_non_agent());
             std::net::Ipv4Addr::LOCALHOST.into(),
             crate::config::Datacenter {
                 qcmp_port,

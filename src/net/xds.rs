@@ -248,7 +248,7 @@ mod tests {
         let mut helper = crate::test::TestHelper::default();
         let token = "mytoken";
         let address = {
-            let mut addr = Endpoint::new(helper.run_echo_server(&AddressType::Ipv6).await);
+            let mut addr = Endpoint::new(helper.run_echo_server(AddressType::Ipv6).await);
             addr.metadata.known.tokens.insert(token.into());
             crate::test::map_to_localhost(&mut addr.address).await;
             addr
@@ -270,7 +270,7 @@ mod tests {
         .map(Arc::new)
         .unwrap();
 
-        let client_addr = crate::test::available_addr(&AddressType::Random).await;
+        let client_addr = crate::test::available_addr(AddressType::Random).await;
         let client_config = serde_json::from_value(serde_json::json!({
             "version": "v1alpha1",
             "id": "test-proxy",

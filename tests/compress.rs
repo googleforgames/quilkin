@@ -35,7 +35,7 @@ async fn client_and_server() {
 on_read: DECOMPRESS
 on_write: COMPRESS
 ";
-    let server_config = std::sync::Arc::new(quilkin::Config::default());
+    let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
     server_config
         .clusters
         .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
@@ -62,7 +62,7 @@ on_write: COMPRESS
 on_read: COMPRESS
 on_write: DECOMPRESS
 ";
-    let client_config = std::sync::Arc::new(quilkin::Config::default());
+    let client_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
     client_config
         .clusters
         .modify(|clusters| clusters.insert_default([Endpoint::new(server_addr.into())].into()));

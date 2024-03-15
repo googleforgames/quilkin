@@ -180,8 +180,11 @@ impl Cli {
 
         tracing::debug!(cli = ?self, "config parameters");
 
-        let config = Arc::new(Self::read_config(self.config)?);
-        let mode = self.command.admin_mode().unwrap();
+        let config = Arc::new(match Self::read_config(self.config)? {
+            Some(config) => config,
+            None if matches!(self.command, Commands::Agent(..)) => Config::default_agent(),
+            None => Config::default_non_agent(),
+        });
 
         if !self.no_admin {
             mode.server(config.clone(), self.admin_address);
@@ -227,9 +230,9 @@ impl Cli {
     }
 
     /// Searches for the configuration file, and panics if not found.
-    fn read_config<A: AsRef<Path>>(path: A) -> Result<Config, eyre::Error> {
+    fn read_config<A: AsRef<Path>>(path: A) -> Result<Option<Config>, eyre::Error> {
         let path = path.as_ref();
-        let from_reader = |file| Config::from_reader(file).map_err(From::from);
+        let from_reader = |file| Config::from_reader(file).map_err(From::from).map(Some);
 
         match std::fs::File::open(path) {
             Ok(file) => (from_reader)(file),
@@ -239,10 +242,10 @@ impl Cli {
                     Some(Ok(file)) => (from_reader)(file),
                     Some(Err(error)) if error.kind() == std::io::ErrorKind::NotFound => {
                         tracing::debug!(path=%path.display(), "/etc path not found");
-                        Ok(Config::default())
+                        Ok(None)
                     }
                     Some(Err(error)) => Err(error.into()),
-                    None => Ok(Config::default()),
+                    None => Ok(None),
                 }
             }
             Err(error) => Err(error.into()),

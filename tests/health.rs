@@ -26,7 +26,7 @@ async fn health_server() {
     let mut t = TestHelper::default();
 
     // create server configuration
-    let server_config = std::sync::Arc::new(quilkin::Config::default());
+    let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
     server_config.clusters.modify(|clusters| {
         clusters.insert_default(["127.0.0.1:0".parse::<Endpoint>().unwrap()].into())
     });

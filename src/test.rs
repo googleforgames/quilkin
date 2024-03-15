@@ -504,7 +504,7 @@ mod tests {
     #[tokio::test]
     async fn test_echo_server() {
         let mut t = TestHelper::default();
-        let echo_addr = t.run_echo_server(&AddressType::Random).await;
+        let echo_addr = t.run_echo_server(AddressType::Random).await;
         let endpoint = t.open_socket_and_recv_single_packet().await;
         let msg = "hello";
         endpoint
