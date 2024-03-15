@@ -163,7 +163,7 @@ impl ControlPlane {
         watchers
             .version
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        tracing::debug!(%resource_type, watchers=watchers.sender.receiver_count(), "pushing update");
+        tracing::trace!(%resource_type, watchers=watchers.sender.receiver_count(), "pushing update");
         if let Err(error) = watchers.sender.send(()) {
             tracing::warn!(%error, "pushing update failed");
         }
@@ -233,7 +233,7 @@ impl ControlPlane {
         let this = Self::clone(self);
         let id = node.id.clone();
 
-        tracing::trace!(id = %node.id, %resource_type, "initial request");
+        tracing::debug!(id = %node.id, %resource_type, "initial request");
         metrics::discovery_requests(&id, resource_type.type_url()).inc();
         let response = this.discovery_response(&id, resource_type, &message.resource_names)?;
         pending_acks.cache_set(response.nonce.clone(), ());
@@ -314,7 +314,7 @@ impl ControlPlane {
         use crate::net::xds::{AwaitingAck, ClientVersions};
         use std::collections::BTreeSet;
 
-        tracing::trace!("starting delta stream");
+        tracing::debug!("starting delta stream");
         let message = streaming.next().await.ok_or_else(|| {
             tracing::error!("No message found");
             tonic::Status::invalid_argument("No message found")
@@ -437,6 +437,7 @@ impl ControlPlane {
 
         let response = {
             if message.type_url == "ignore-me" {
+                tracing::debug!(id = %node_id, "initial delta response");
                 DeltaDiscoveryResponse {
                     resources: Vec::new(),
                     nonce: String::new(),
@@ -448,7 +449,7 @@ impl ControlPlane {
                 }
             } else {
                 let resource_type: ResourceType = message.type_url.parse()?;
-                tracing::trace!(id = %node_id, %resource_type, "initial delta request");
+                tracing::debug!(id = %node_id, %resource_type, "initial delta response");
                 responder(
                     Some(message),
                     &mut trackers[resource_type],
@@ -580,7 +581,6 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
         &self,
         responses: tonic::Request<tonic::Streaming<DiscoveryResponse>>,
     ) -> Result<tonic::Response<Self::StreamAggregatedResourcesStream>, tonic::Status> {
-        tracing::info!("control plane discovery stream attempt");
         let mut remote_addr = responses
             .remote_addr()
             .ok_or_else(|| tonic::Status::invalid_argument("no remote address available"))?;
@@ -635,10 +635,10 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
                         tokio::time::timeout(idle_request_interval, response_handler.next());
 
                     if let Ok(Some(ack)) = next_response.await {
-                        tracing::debug!("sending ack request");
+                        tracing::trace!("sending ack request");
                         requests.send(ack?)?;
                     } else {
-                        tracing::debug!("exceeded idle interval, sending request");
+                        tracing::trace!("exceeded idle interval, sending request");
                         crate::net::xds::client::MdsStream::discovery_request_without_cache(
                             &identifier,
                             &mut requests,
@@ -721,12 +721,12 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
                         tokio::time::timeout(idle_request_interval, response_stream.next());
 
                     if let Ok(Some(ack)) = next_response.await {
-                        tracing::debug!("sending ack request");
+                        tracing::trace!("sending ack request");
                         ds.send_response(ack?)
                             .await
                             .map_err(|_| tonic::Status::internal("this should not be reachable"))?;
                     } else {
-                        tracing::debug!("exceeded idle interval, sending request");
+                        tracing::trace!("exceeded idle interval, sending request");
                         ds.refresh(
                             &identifier,
                             &[

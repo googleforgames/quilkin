@@ -259,7 +259,7 @@ impl MdsClient {
                             match timeout.await {
                                 Ok(Some(result)) => {
                                     let response = result?;
-                                    tracing::debug!("received delta discovery response");
+                                    tracing::trace!("received delta discovery response");
                                     ds.send_response(response).await?;
                                 }
                                 _ => break,
@@ -269,7 +269,7 @@ impl MdsClient {
 
                     rt_config.relay_is_healthy.store(false, Ordering::SeqCst);
 
-                    tracing::warn!("lost connection to relay server, retrying");
+                    //tracing::warn!("lost connection to relay server, retrying");
                     let new_client = MdsClient::connect_with_backoff(&self.management_servers)
                         .await
                         .unwrap()
