@@ -274,7 +274,7 @@ impl<M: Measurement + 'static> Phoenix<M> {
                 continue;
             };
             let distance = origin.distance_to(&coordinates);
-            let icao = entry.value().icao_code.clone();
+            let icao = entry.value().icao_code;
 
             match icao_map.entry(icao) {
                 Entry::Vacant(entry) => {
@@ -310,7 +310,7 @@ impl<M: Measurement + 'static> Phoenix<M> {
         };
         for entry in datacenters.write().iter() {
             let addr = (*entry.key(), entry.value().qcmp_port).into();
-            self.add_node_if_not_exists(addr, entry.value().icao_code.clone());
+            self.add_node_if_not_exists(addr, entry.value().icao_code);
         }
     }
 }

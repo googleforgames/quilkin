@@ -699,13 +699,13 @@ use std::fmt;
 
 impl fmt::Display for IcaoCode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.as_ref())
+        f.write_str(self.as_ref())
     }
 }
 
 impl fmt::Debug for IcaoCode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.as_ref())
+        f.write_str(self.as_ref())
     }
 }
 
