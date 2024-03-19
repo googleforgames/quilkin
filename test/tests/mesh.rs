@@ -46,7 +46,7 @@ trace_test!(relay_routing, {
             config: TestConfig {
                 filters: FilterChain::try_create([
                     Capture::as_filter_config(capture::Config {
-                        metadata_key: filters::CAPTURED_BYTES.into(),
+                        metadata_key: filters::capture::CAPTURED_BYTES.into(),
                         strategy: filters::capture::Strategy::Suffix(capture::Suffix {
                             size: 3,
                             remove: true,
