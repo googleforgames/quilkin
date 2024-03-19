@@ -65,6 +65,7 @@ trace_test!(relay_routing, {
         "agent",
         AgentPailConfig {
             endpoints: vec![("server", &["abc"])],
+            ..Default::default()
         },
         &["server", "relay"],
     );
@@ -93,7 +94,7 @@ trace_test!(relay_routing, {
         let token = Token::new();
         sandbox.sleep(50).await;
 
-        ap.config.update(|config| {
+        ap.config_file.update(|config| {
             config.clusters.insert_default(
                 [Endpoint::with_metadata(
                     (std::net::Ipv6Addr::LOCALHOST, server_port).into(),
@@ -132,114 +133,67 @@ trace_test!(relay_routing, {
     }
 });
 
-// #[tokio::test]
-// async fn datacenter_discovery() {
-//     let relay_xds_port = crate::test::available_addr(&AddressType::Random)
-//         .await
-//         .port();
-//     let relay_mds_port = crate::test::available_addr(&AddressType::Random)
-//         .await
-//         .port();
-//     let relay_config = Arc::new(Config::default_non_agent());
-//     let relay = Relay {
-//         xds_port: relay_xds_port,
-//         mds_port: relay_mds_port,
-//         ..<_>::default()
-//     };
+#[tokio::test]
+async fn datacenter_discovery() {
+    let mut sc = qt::sandbox_config!();
 
-//     let agent_file = tempfile::NamedTempFile::new().unwrap();
-//     let config = Config::default_agent();
+    let icao_code = "EIDW".parse().unwrap();
 
-//     std::fs::write(agent_file.path(), serde_yaml::to_string(&config).unwrap()).unwrap();
+    sc.push("relay", RelayPailConfig::default(), &[]);
+    sc.push(
+        "agent",
+        AgentPailConfig {
+            icao_code,
+            ..Default::default()
+        },
+        &["relay"],
+    );
+    sc.push("proxy", ProxyPailConfig::default(), &["relay"]);
 
-//     let agent_qcmp_port = crate::test::available_addr(&AddressType::Random)
-//         .await
-//         .port();
+    let sandbox = sc.spinup().await;
+    sandbox.sleep(150).await;
 
-//     let icao_code: crate::config::IcaoCode = "EIDW".parse().unwrap();
+    let Pail::Agent(AgentPail { qcmp_port, .. }) = &sandbox.pails["agent"] else {
+        unreachable!()
+    };
 
-//     let agent_config = Arc::new(Config::default_agent());
-//     let agent = Agent {
-//         relay: vec![format!("http://localhost:{relay_mds_port}")
-//             .parse()
-//             .unwrap()],
-//         region: None,
-//         sub_zone: None,
-//         zone: None,
-//         idle_request_interval_secs: admin::idle_request_interval_secs(),
-//         qcmp_port: agent_qcmp_port,
-//         icao_code: icao_code.clone(),
-//         provider: Some(Providers::File {
-//             path: agent_file.path().to_path_buf(),
-//         }),
-//     };
+    let datacenter = quilkin::config::Datacenter {
+        qcmp_port: *qcmp_port,
+        icao_code,
+    };
 
-//     let proxy_config = Arc::new(Config::default_non_agent());
-//     let proxy = Proxy {
-//         management_server: vec![format!("http://localhost:{relay_xds_port}")
-//             .parse()
-//             .unwrap()],
-//         ..<_>::default()
-//     };
+    let Pail::Relay(RelayPail {
+        config: relay_config,
+        ..
+    }) = &sandbox.pails["relay"]
+    else {
+        unreachable!()
+    };
+    let Pail::Proxy(ProxyPail {
+        config: proxy_config,
+        ..
+    }) = &sandbox.pails["proxy"]
+    else {
+        unreachable!()
+    };
 
-//     let (_tx, shutdown_rx) = crate::make_shutdown_channel(Default::default());
-//     tokio::spawn({
-//         let config = relay_config.clone();
-//         let shutdown_rx = shutdown_rx.clone();
-//         async move {
-//             relay
-//                 .run(config, Admin::Relay(<_>::default()), shutdown_rx)
-//                 .await
-//         }
-//     });
-//     tokio::time::sleep(std::time::Duration::from_millis(150)).await;
-//     tokio::spawn({
-//         let config = agent_config.clone();
-//         let shutdown_rx = shutdown_rx.clone();
-//         async move {
-//             agent
-//                 .run(config, Admin::Agent(<_>::default()), shutdown_rx)
-//                 .await
-//         }
-//     });
-//     tokio::time::sleep(std::time::Duration::from_millis(250)).await;
-//     let (tx, proxy_init) = tokio::sync::oneshot::channel();
-//     tokio::spawn({
-//         let config = proxy_config.clone();
-//         let shutdown_rx = shutdown_rx.clone();
-//         async move {
-//             proxy
-//                 .run(config, Admin::Proxy(<_>::default()), Some(tx), shutdown_rx)
-//                 .await
-//         }
-//     });
-//     proxy_init.await.unwrap();
-//     tokio::time::sleep(Duration::from_millis(150)).await;
+    #[track_caller]
+    fn assert_config(config: &quilkin::Config, datacenter: &quilkin::config::Datacenter) {
+        let dcs = config.datacenters().read();
+        let ipv4_dc = dcs.get(&std::net::Ipv4Addr::LOCALHOST.into());
+        let ipv6_dc = dcs.get(&std::net::Ipv6Addr::LOCALHOST.into());
 
-//     let datacenter = crate::config::Datacenter {
-//         qcmp_port: agent_qcmp_port,
-//         icao_code,
-//     };
+        match (ipv4_dc, ipv6_dc) {
+            (Some(dc), None) => assert_eq!(&*dc, datacenter),
+            (None, Some(dc)) => assert_eq!(&*dc, datacenter),
+            (Some(dc1), Some(dc2)) => {
+                assert_eq!(&*dc1, datacenter);
+                assert_eq!(&*dc2, datacenter);
+            }
+            (None, None) => panic!("No datacenter found"),
+        };
+    }
 
-//     assert!(!relay_config.datacenters().read().is_empty());
-//     assert!(!proxy_config.datacenters().read().is_empty());
-
-//     #[track_caller]
-//     fn assert_config(config: &Config, datacenter: &crate::config::Datacenter) {
-//         let dcs = config.datacenters().read();
-//         let ipv4_dc = dcs.get(&std::net::Ipv4Addr::LOCALHOST.into());
-//         let ipv6_dc = dcs.get(&std::net::Ipv6Addr::LOCALHOST.into());
-
-//         match (ipv4_dc, ipv6_dc) {
-//             (Some(dc), None) => assert_eq!(&*dc, datacenter),
-//             (None, Some(dc)) => assert_eq!(&*dc, datacenter),
-//             (Some(dc1), Some(dc2)) => {
-//                 assert_eq!(&*dc1, datacenter);
-//                 assert_eq!(&*dc2, datacenter);
-//             }
-//             (None, None) => panic!("No datacenter found"),
-//         };
-//     }
-//     assert_config(&relay_config, &datacenter);
-//     assert_config(&proxy_config, &datacenter);
-// }
+    assert_config(&relay_config, &datacenter);
+    assert_config(&proxy_config, &datacenter);
+}

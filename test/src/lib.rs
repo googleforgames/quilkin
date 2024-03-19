@@ -103,6 +103,7 @@ pub struct ManagementPailConfig {}
 #[derive(Default)]
 pub struct AgentPailConfig {
     pub endpoints: Vec<(&'static str, &'static [&'static str])>,
+    pub icao_code: quilkin::config::IcaoCode,
 }
 
 pub enum PailConfig {
@@ -192,6 +193,7 @@ pub struct RelayPail {
     pub mds_port: u16,
     pub task: JoinHandle,
     pub shutdown: ShutdownTx,
+    pub config: Arc<Config>,
 }
 
 abort_task!(RelayPail);
@@ -200,7 +202,8 @@ pub struct AgentPail {
     pub qcmp_port: u16,
     pub task: JoinHandle,
     pub shutdown: ShutdownTx,
-    pub config: ConfigFile,
+    pub config_file: ConfigFile,
+    pub config: Arc<Config>,
 }
 
 abort_task!(AgentPail);
@@ -210,6 +213,7 @@ pub struct ProxyPail {
     pub qcmp_port: u16,
     pub task: JoinHandle,
     pub shutdown: ShutdownTx,
+    pub config: Arc<Config>,
 }
 
 abort_task!(ProxyPail);
@@ -221,6 +225,18 @@ pub enum Pail {
     Relay(RelayPail),
     Agent(AgentPail),
     Proxy(ProxyPail),
+}
+
+impl Pail {
+    #[inline]
+    pub fn config(&self) -> Arc<Config> {
+        match self {
+            Self::Relay(p) => p.config.clone(),
+            Self::Agent(p) => p.config.clone(),
+            Self::Proxy(p) => p.config.clone(),
+            Self::Server(_) => panic!("no config"),
+        }
+    }
 }
 
 impl Pail {
@@ -290,6 +306,8 @@ impl Pail {
                 let (shutdown, shutdown_rx) =
                     quilkin::make_shutdown_channel(quilkin::ShutdownKind::Testing);
 
+                let config = Arc::new(Config::default_non_agent());
+
                 let task = tokio::spawn(
                     relay::Relay {
                         xds_listener,
@@ -297,7 +315,7 @@ impl Pail {
                         provider: Some(Providers::File { path }),
                     }
                     .run(RunArgs {
-                        config: Arc::new(Config::default_non_agent()),
+                        config: config.clone(),
                         ready: relay::Ready::default(),
                         shutdown_rx,
                     }),
@@ -308,6 +326,7 @@ impl Pail {
                     mds_port,
                     task,
                     shutdown,
+                    config,
                 })
             }
             PailConfig::Agent(apc) => {
@@ -355,17 +374,19 @@ impl Pail {
                 let qcmp_port = quilkin::net::socket_port(&qcmp_socket);
 
                 let config_path = path.clone();
+                let config = Arc::new(Config::default_agent());
+                let aconfig = Arc::new(Config::default_agent());
 
                 let task = tokio::spawn(async move {
                     components::agent::Agent {
                         locality: None,
-                        icao_code: None,
+                        icao_code: Some(apc.icao_code),
                         relay_servers,
                         qcmp_socket,
                         provider: Some(Providers::File { path }),
                     }
                     .run(RunArgs {
-                        config: Arc::new(Config::default_agent()),
+                        config: aconfig,
                         ready: Default::default(),
                         shutdown_rx,
                     })
@@ -376,10 +397,11 @@ impl Pail {
                     qcmp_port,
                     task,
                     shutdown,
-                    config: ConfigFile {
+                    config_file: ConfigFile {
                         path: config_path,
                         config: tc,
                     },
+                    config,
                 })
             }
             PailConfig::Proxy(_ppc) => {
@@ -412,6 +434,9 @@ impl Pail {
 
                 let (tx, orx) = tokio::sync::oneshot::channel();
 
+                let config = Arc::new(Config::default_non_agent());
+                let pconfig = config.clone();
+
                 let task = tokio::spawn(async move {
                     components::proxy::Proxy {
                         num_workers: NonZeroUsize::new(1).unwrap(),
@@ -424,7 +449,7 @@ impl Pail {
                     }
                     .run(
                         RunArgs {
-                            config: Arc::new(Config::default_non_agent()),
+                            config: pconfig,
                             ready: Default::default(),
                             shutdown_rx,
                         },
@@ -440,6 +465,7 @@ impl Pail {
                     qcmp_port,
                     shutdown,
                     task,
+                    config,
                 })
             }
         };
