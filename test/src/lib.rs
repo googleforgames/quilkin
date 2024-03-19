@@ -63,7 +63,7 @@ macro_rules! trace_test {
         async fn $name() {
             // Get the module name
             let fname = $crate::func_name!();
-            let mname = dbg!(fname.rsplit("::").nth(2).unwrap());
+            let mname = fname.rsplit("::").nth(2).unwrap();
 
             let _guard = init_logging($crate::Level::DEBUG, mname);
 
