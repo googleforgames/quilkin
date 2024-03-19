@@ -435,6 +435,27 @@ impl Pail {
                 let (tx, orx) = tokio::sync::oneshot::channel();
 
                 let config = Arc::new(Config::default_non_agent());
+
+                let endpoints: std::collections::BTreeSet<_> = spc
+                    .dependencies
+                    .into_iter()
+                    .filter_map(|dname| {
+                        let Pail::Server(ServerPail { port, .. }) = &pails[dname] else {
+                            return None;
+                        };
+
+                        Some(quilkin::net::Endpoint::new(
+                            (std::net::Ipv6Addr::LOCALHOST, *port).into(),
+                        ))
+                    })
+                    .collect();
+
+                if !endpoints.is_empty() {
+                    config
+                        .clusters
+                        .modify(|clusters| clusters.insert_default(endpoints));
+                }
+
                 let pconfig = config.clone();
 
                 let task = tokio::spawn(async move {
@@ -566,11 +587,20 @@ impl SandboxConfig {
 }
 
 impl Sandbox {
+    /// Creates an ephemeral socket that can be used to send messages to sandbox
+    /// pails
+    #[inline]
+    pub fn client(&self) -> quilkin::net::DualStackEpollSocket {
+        quilkin::net::DualStackEpollSocket::new(0).unwrap()
+    }
+
+    /// Sleeps for the specified number of milliseconds
     #[inline]
     pub async fn sleep(&self, ms: u64) {
         tokio::time::sleep(std::time::Duration::from_millis(ms)).await
     }
 
+    /// Runs a future, expecting it complete before the specified timeout
     #[inline]
     pub async fn timeout<F>(&self, ms: u64, fut: F) -> F::Output
     where

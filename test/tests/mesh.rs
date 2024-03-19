@@ -2,7 +2,7 @@ use qt::*;
 use quilkin::{
     filters::{self, *},
     net::endpoint::Endpoint,
-    test::*,
+    test::TestConfig,
 };
 use std::net::SocketAddr;
 
@@ -88,7 +88,7 @@ trace_test!(relay_routing, {
         unreachable!()
     };
 
-    let client = create_socket().await;
+    let client = sandbox.client();
 
     for _ in 0..5 {
         let token = Token::new();
@@ -133,8 +133,7 @@ trace_test!(relay_routing, {
     }
 });
 
-#[tokio::test]
-async fn datacenter_discovery() {
+trace_test!(datacenter_discovery, {
     let mut sc = qt::sandbox_config!();
 
     let icao_code = "EIDW".parse().unwrap();
@@ -196,4 +195,4 @@ async fn datacenter_discovery() {
 
     assert_config(&relay_config, &datacenter);
     assert_config(&proxy_config, &datacenter);
-}
+});
