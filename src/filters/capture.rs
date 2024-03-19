@@ -22,6 +22,11 @@ use crate::generated::quilkin::filters::capture::v1alpha1 as proto;
 
 use crate::{filters::prelude::*, net::endpoint::metadata, pool::PoolBuffer};
 
+/// The default key under which the [`Capture`] filter puts the
+/// byte slices it extracts from each packet.
+/// - **Type** `Vec<u8>`
+pub const CAPTURED_BYTES: &str = "quilkin.dev/capture";
+
 pub use self::{
     affix::{Prefix, Suffix},
     config::{Config, Strategy},
@@ -88,8 +93,8 @@ struct NoValueCaptured;
 
 #[cfg(test)]
 mod tests {
+    use super::CAPTURED_BYTES;
     use crate::{
-        filters::CAPTURED_BYTES,
         net::endpoint::{metadata::Value, Endpoint},
         test::{alloc_buffer, assert_write_no_change},
     };
