@@ -6,8 +6,16 @@ use quilkin::{
     Config, ShutdownTx,
 };
 pub use serde_json::json;
-use std::{num::NonZeroUsize, path::PathBuf, sync::Arc};
+use std::{net::SocketAddr, num::NonZeroUsize, path::PathBuf, sync::Arc};
 use tokio::sync::mpsc;
+
+pub static BUFFER_POOL: once_cell::sync::Lazy<Arc<quilkin::pool::BufferPool>> =
+    once_cell::sync::Lazy::new(|| Arc::new(quilkin::pool::BufferPool::default()));
+
+#[inline]
+pub fn alloc_buffer(data: impl AsRef<[u8]>) -> quilkin::pool::PoolBuffer {
+    BUFFER_POOL.clone().alloc_slice(data.as_ref())
+}
 
 /// Macro that can get the function name of the function the macro is invoked
 /// within
@@ -91,11 +99,13 @@ pub struct AdminPailConfig;
 
 #[derive(Default)]
 pub struct RelayPailConfig {
-    pub config: quilkin::test::TestConfig,
+    pub config: Option<quilkin::test::TestConfig>,
 }
 
 #[derive(Default)]
-pub struct ProxyPailConfig {}
+pub struct ProxyPailConfig {
+    pub config: Option<quilkin::test::TestConfig>,
+}
 
 #[derive(Default)]
 pub struct ManagementPailConfig {}
@@ -301,7 +311,9 @@ impl Pail {
                 let mds_port = mds_listener.port();
 
                 let path = td.join(spc.name);
-                rpc.config.write_to_file(&path);
+                if let Some(cfg) = rpc.config {
+                    cfg.write_to_file(&path);
+                }
 
                 let (shutdown, shutdown_rx) =
                     quilkin::make_shutdown_channel(quilkin::ShutdownKind::Testing);
@@ -404,7 +416,7 @@ impl Pail {
                     config,
                 })
             }
-            PailConfig::Proxy(_ppc) => {
+            PailConfig::Proxy(ppc) => {
                 let socket = quilkin::net::raw_socket_with_reuse(0).expect("failed to bind socket");
                 let qcmp =
                     quilkin::net::raw_socket_with_reuse(0).expect("failed to bind qcmp socket");
@@ -435,6 +447,16 @@ impl Pail {
                 let (tx, orx) = tokio::sync::oneshot::channel();
 
                 let config = Arc::new(Config::default_non_agent());
+
+                if let Some(cfg) = ppc.config {
+                    if !cfg.clusters.is_empty() {
+                        panic!("not implemented");
+                    }
+
+                    if !cfg.filters.is_empty() {
+                        config.filters.store(Arc::new(cfg.filters));
+                    }
+                }
 
                 let endpoints: std::collections::BTreeSet<_> = spc
                     .dependencies
@@ -587,6 +609,44 @@ impl SandboxConfig {
 }
 
 impl Sandbox {
+    #[inline]
+    pub fn proxy_addr(&self) -> SocketAddr {
+        let Pail::Proxy(pp) = &self.pails["proxy"] else {
+            unreachable!()
+        };
+        SocketAddr::from((std::net::Ipv6Addr::LOCALHOST, pp.port))
+    }
+
+    #[inline]
+    pub fn packet_rx(&mut self, name: &str) -> mpsc::Receiver<String> {
+        let Some(Pail::Server(pp)) = self.pails.get_mut(name) else {
+            unreachable!()
+        };
+        pp.packet_rx.take().unwrap()
+    }
+
+    #[inline]
+    pub fn server(&mut self, name: &str) -> (mpsc::Receiver<String>, SocketAddr) {
+        let Some(Pail::Server(pp)) = self.pails.get_mut(name) else {
+            unreachable!()
+        };
+        (
+            pp.packet_rx.take().unwrap(),
+            SocketAddr::from((std::net::Ipv6Addr::LOCALHOST, pp.port)),
+        )
+    }
+
+    #[inline]
+    pub fn socket(&self) -> (socket2::Socket, SocketAddr) {
+        let socket = quilkin::net::raw_socket_with_reuse(0).unwrap();
+        let port = quilkin::net::socket_port(&socket);
+
+        (
+            socket,
+            SocketAddr::from((std::net::Ipv6Addr::LOCALHOST, port)),
+        )
+    }
+
     /// Creates an ephemeral socket that can be used to send messages to sandbox
     /// pails
     #[inline]

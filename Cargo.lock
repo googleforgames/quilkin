@@ -2054,9 +2054,12 @@ dependencies = [
 name = "qt"
 version = "0.1.0"
 dependencies = [
+ "async-channel",
+ "once_cell",
  "quilkin",
  "rand",
  "serde_json",
+ "socket2 0.5.6",
  "tempfile",
  "tokio",
  "tracing",

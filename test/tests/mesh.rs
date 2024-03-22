@@ -4,7 +4,6 @@ use quilkin::{
     net::endpoint::Endpoint,
     test::TestConfig,
 };
-use std::net::SocketAddr;
 
 trace_test!(relay_routing, {
     struct Token {
@@ -43,7 +42,7 @@ trace_test!(relay_routing, {
     sc.push(
         "relay",
         RelayPailConfig {
-            config: TestConfig {
+            config: Some(TestConfig {
                 filters: FilterChain::try_create([
                     Capture::as_filter_config(capture::Config {
                         metadata_key: filters::capture::CAPTURED_BYTES.into(),
@@ -57,7 +56,7 @@ trace_test!(relay_routing, {
                 ])
                 .unwrap(),
                 ..Default::default()
-            },
+            }),
         },
         &[],
     );
@@ -69,7 +68,7 @@ trace_test!(relay_routing, {
         },
         &["server", "relay"],
     );
-    sc.push("proxy", ProxyPailConfig {}, &["relay"]);
+    sc.push("proxy", ProxyPailConfig::default(), &["relay"]);
 
     let mut sandbox = sc.spinup().await;
 
@@ -80,10 +79,7 @@ trace_test!(relay_routing, {
 
         (sp.port, sp.packet_rx.take().unwrap())
     };
-    let Pail::Proxy(pp) = &sandbox.pails["proxy"] else {
-        unreachable!()
-    };
-    let proxy_address = SocketAddr::from((std::net::Ipv4Addr::LOCALHOST, pp.port));
+    let proxy_address = sandbox.proxy_addr();
     let Pail::Agent(ap) = &sandbox.pails["agent"] else {
         unreachable!()
     };
