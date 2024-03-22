@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use std::sync::Arc;
+use std::{io, sync::Arc, time::Duration};
 
 use cached::Cached;
 use futures::{Stream, TryFutureExt, TryStreamExt};
@@ -22,57 +22,65 @@ use tokio_stream::StreamExt;
 use tracing_futures::Instrument;
 
 use crate::{
-    cli::Admin,
     config::Config,
-    net::xds::{
-        discovery::{
-            aggregated_discovery_service_server::{
-                AggregatedDiscoveryService, AggregatedDiscoveryServiceServer,
+    net::{
+        xds::{
+            discovery::{
+                aggregated_discovery_service_server::{
+                    AggregatedDiscoveryService, AggregatedDiscoveryServiceServer,
+                },
+                DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
             },
-            DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
+            metrics,
+            relay::aggregated_control_plane_discovery_service_server::{
+                AggregatedControlPlaneDiscoveryService,
+                AggregatedControlPlaneDiscoveryServiceServer,
+            },
+            ResourceType,
         },
-        metrics,
-        relay::aggregated_control_plane_discovery_service_server::{
-            AggregatedControlPlaneDiscoveryService, AggregatedControlPlaneDiscoveryServiceServer,
-        },
-        ResourceType,
+        TcpListener,
     },
 };
 
 #[tracing::instrument(skip_all)]
 pub fn spawn(
-    port: u16,
-    mode: Admin,
+    listener: TcpListener,
     config: std::sync::Arc<crate::Config>,
-) -> impl std::future::Future<Output = crate::Result<()>> {
-    let server = AggregatedDiscoveryServiceServer::new(ControlPlane::from_arc(config, mode))
-        .max_encoding_message_size(crate::config::max_grpc_message_size());
+    idle_request_interval: Duration,
+) -> io::Result<impl std::future::Future<Output = crate::Result<()>>> {
+    let server = AggregatedDiscoveryServiceServer::new(ControlPlane::from_arc(
+        config,
+        idle_request_interval,
+    ))
+    .max_encoding_message_size(crate::config::max_grpc_message_size());
     let server = tonic::transport::Server::builder().add_service(server);
-    tracing::info!("serving management server on port `{port}`");
-    server
-        .serve((std::net::Ipv6Addr::UNSPECIFIED, port).into())
-        .map_err(From::from)
+    tracing::info!("serving management server on port `{}`", listener.port());
+    Ok(server
+        .serve_with_incoming(listener.into_stream()?)
+        .map_err(From::from))
 }
 
 pub(crate) fn control_plane_discovery_server(
-    port: u16,
-    mode: Admin,
+    listener: TcpListener,
     config: Arc<Config>,
-) -> impl std::future::Future<Output = crate::Result<()>> {
-    let server =
-        AggregatedControlPlaneDiscoveryServiceServer::new(ControlPlane::from_arc(config, mode))
-            .max_encoding_message_size(crate::config::max_grpc_message_size());
+    idle_request_interval: Duration,
+) -> io::Result<impl std::future::Future<Output = crate::Result<()>>> {
+    let server = AggregatedControlPlaneDiscoveryServiceServer::new(ControlPlane::from_arc(
+        config,
+        idle_request_interval,
+    ))
+    .max_encoding_message_size(crate::config::max_grpc_message_size());
     let server = tonic::transport::Server::builder().add_service(server);
-    tracing::info!("serving relay server on port `{port}`");
-    server
-        .serve((std::net::Ipv6Addr::UNSPECIFIED, port).into())
-        .map_err(From::from)
+    tracing::info!("serving relay server on port `{}`", listener.port());
+    Ok(server
+        .serve_with_incoming(listener.into_stream()?)
+        .map_err(From::from))
 }
 
 #[derive(Clone)]
 pub struct ControlPlane {
     config: Arc<Config>,
-    mode: Admin,
+    idle_request_interval: Duration,
     watchers: Arc<crate::net::xds::resource::ResourceMap<Watchers>>,
 }
 
@@ -94,31 +102,44 @@ impl Default for Watchers {
 }
 
 impl ControlPlane {
-    pub fn from_arc(config: Arc<Config>, mode: Admin) -> Self {
+    pub fn from_arc(config: Arc<Config>, idle_request_interval: Duration) -> Self {
         let this = Self {
             config,
-            mode,
-            watchers: <_>::default(),
+            idle_request_interval,
+            watchers: Default::default(),
         };
 
         tokio::spawn({
             let this = this.clone();
             async move {
                 let mut cluster_watcher = this.config.clusters.watch();
-                let mut dc_watcher = this.config.datacenters.watch();
-                tracing::debug!("waiting for changes");
-                loop {
-                    tokio::select! {
-                        result = cluster_watcher.changed() => {
-                            match result {
+                tracing::trace!("waiting for changes");
+
+                match &this.config.datacenter {
+                    crate::config::DatacenterConfig::Agent {..} => {
+                        loop {
+                            match cluster_watcher.changed().await {
                                 Ok(()) => this.push_update(ResourceType::Cluster),
                                 Err(error) => tracing::error!(%error, "error watching changes"),
                             }
                         }
-                        result = dc_watcher.changed() => {
-                            match result {
-                                Ok(()) => this.push_update(ResourceType::Datacenter),
-                                Err(error) => tracing::error!(%error, "error watching changes"),
+                    }
+                    crate::config::DatacenterConfig::NonAgent { datacenters } => {
+                        let mut dc_watcher = datacenters.watch();
+                        loop {
+                            tokio::select! {
+                                result = cluster_watcher.changed() => {
+                                    match result {
+                                        Ok(()) => this.push_update(ResourceType::Cluster),
+                                        Err(error) => tracing::error!(%error, "error watching changes"),
+                                    }
+                                }
+                                result = dc_watcher.changed() => {
+                                    match result {
+                                        Ok(()) => this.push_update(ResourceType::Datacenter),
+                                        Err(error) => tracing::error!(%error, "error watching changes"),
+                                    }
+                                }
                             }
                         }
                     }
@@ -142,7 +163,7 @@ impl ControlPlane {
         watchers
             .version
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        tracing::debug!(%resource_type, watchers=watchers.sender.receiver_count(), "pushing update");
+        tracing::trace!(%resource_type, watchers=watchers.sender.receiver_count(), "pushing update");
         if let Err(error) = watchers.sender.send(()) {
             tracing::warn!(%error, "pushing update failed");
         }
@@ -156,7 +177,7 @@ impl ControlPlane {
     ) -> Result<DiscoveryResponse, tonic::Status> {
         let resources = self
             .config
-            .discovery_request(&self.mode, id, resource_type, names)
+            .discovery_request(id, resource_type, names)
             .map_err(|error| tonic::Status::internal(error.to_string()))?;
         let watchers = &self.watchers[resource_type];
 
@@ -212,7 +233,7 @@ impl ControlPlane {
         let this = Self::clone(self);
         let id = node.id.clone();
 
-        tracing::trace!(id = %node.id, %resource_type, "initial request");
+        tracing::debug!(id = %node.id, %resource_type, "initial request");
         metrics::discovery_requests(&id, resource_type.type_url()).inc();
         let response = this.discovery_response(&id, resource_type, &message.resource_names)?;
         pending_acks.cache_set(response.nonce.clone(), ());
@@ -293,7 +314,7 @@ impl ControlPlane {
         use crate::net::xds::{AwaitingAck, ClientVersions};
         use std::collections::BTreeSet;
 
-        tracing::trace!("starting delta stream");
+        tracing::debug!("starting delta stream");
         let message = streaming.next().await.ok_or_else(|| {
             tracing::error!("No message found");
             tonic::Status::invalid_argument("No message found")
@@ -389,7 +410,7 @@ impl ControlPlane {
 
                 let req = this
                     .config
-                    .delta_discovery_request(&this.mode, &tracker.subscribed, &tracker.client)
+                    .delta_discovery_request(&tracker.subscribed, &tracker.client)
                     .map_err(|error| tonic::Status::internal(error.to_string()))?;
 
                 let nonce = uuid::Uuid::new_v4();
@@ -416,6 +437,7 @@ impl ControlPlane {
 
         let response = {
             if message.type_url == "ignore-me" {
+                tracing::debug!(id = %node_id, "initial delta response");
                 DeltaDiscoveryResponse {
                     resources: Vec::new(),
                     nonce: String::new(),
@@ -427,7 +449,7 @@ impl ControlPlane {
                 }
             } else {
                 let resource_type: ResourceType = message.type_url.parse()?;
-                tracing::trace!(id = %node_id, %resource_type, "initial delta request");
+                tracing::debug!(id = %node_id, %resource_type, "initial delta response");
                 responder(
                     Some(message),
                     &mut trackers[resource_type],
@@ -559,7 +581,6 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
         &self,
         responses: tonic::Request<tonic::Streaming<DiscoveryResponse>>,
     ) -> Result<tonic::Response<Self::StreamAggregatedResourcesStream>, tonic::Status> {
-        tracing::info!("control plane discovery stream attempt");
         let mut remote_addr = responses
             .remote_addr()
             .ok_or_else(|| tonic::Status::invalid_argument("no remote address available"))?;
@@ -579,7 +600,7 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
 
         tracing::info!(%identifier, "new control plane discovery stream");
         let config = self.config.clone();
-        let idle_request_interval = self.mode.idle_request_interval();
+        let idle_request_interval = self.idle_request_interval;
         let stream = super::client::AdsStream::connect(
             Arc::from(&*identifier),
             move |(mut requests, _rx), _subscribed_resources| async move {
@@ -614,10 +635,10 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
                         tokio::time::timeout(idle_request_interval, response_handler.next());
 
                     if let Ok(Some(ack)) = next_response.await {
-                        tracing::debug!("sending ack request");
+                        tracing::trace!("sending ack request");
                         requests.send(ack?)?;
                     } else {
-                        tracing::debug!("exceeded idle interval, sending request");
+                        tracing::trace!("exceeded idle interval, sending request");
                         crate::net::xds::client::MdsStream::discovery_request_without_cache(
                             &identifier,
                             &mut requests,
@@ -666,7 +687,7 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
 
         tracing::info!(identifier, "new control plane delta discovery stream");
         let config = self.config.clone();
-        let idle_request_interval = self.mode.idle_request_interval();
+        let idle_request_interval = self.idle_request_interval;
 
         let (ds, mut request_stream) = super::client::DeltaClientStream::new();
 
@@ -700,12 +721,12 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
                         tokio::time::timeout(idle_request_interval, response_stream.next());
 
                     if let Ok(Some(ack)) = next_response.await {
-                        tracing::debug!("sending ack request");
+                        tracing::trace!("sending ack request");
                         ds.send_response(ack?)
                             .await
                             .map_err(|_| tonic::Status::internal("this should not be reachable"))?;
                     } else {
-                        tracing::debug!("exceeded idle interval, sending request");
+                        tracing::trace!("exceeded idle interval, sending request");
                         ds.refresh(
                             &identifier,
                             &[
@@ -777,9 +798,8 @@ mod tests {
             ..<_>::default()
         };
 
-        let manage_admin = crate::cli::Admin::Manage(<_>::default());
-        let config = Arc::new(Config::default());
-        let client = ControlPlane::from_arc(config.clone(), manage_admin);
+        let config = Arc::new(Config::default_non_agent());
+        let client = ControlPlane::from_arc(config.clone(), TIMEOUT_DURATION);
         let (tx, rx) = tokio::sync::mpsc::channel(256);
 
         let mut request = DiscoveryRequest {

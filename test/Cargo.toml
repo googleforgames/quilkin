@@ -1,0 +1,17 @@
+[package]
+name = "qt"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+async-channel.workspace = true
+once_cell.workspace = true
+quilkin = { workspace = true }
+rand.workspace = true
+serde_json.workspace = true
+socket2.workspace = true
+tempfile.workspace = true
+tokio = { workspace = true, features = ["macros"] }
+tracing.workspace = true
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

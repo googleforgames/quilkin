@@ -145,7 +145,6 @@ impl std::hash::Hash for Endpoint {
 #[derive(
     Default, Debug, Deserialize, Serialize, PartialEq, Clone, PartialOrd, Eq, schemars::JsonSchema,
 )]
-#[non_exhaustive]
 pub struct Metadata {
     #[serde(
         serialize_with = "base64_set::serialize",

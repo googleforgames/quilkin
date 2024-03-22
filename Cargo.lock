@@ -2051,6 +2051,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "qt"
+version = "0.1.0"
+dependencies = [
+ "async-channel",
+ "once_cell",
+ "quilkin",
+ "rand",
+ "serde_json",
+ "socket2 0.5.6",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "quick-error"
 version = "1.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"

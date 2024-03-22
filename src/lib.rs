@@ -26,6 +26,7 @@ pub mod net;
 
 pub mod cli;
 pub mod codec;
+pub mod components;
 pub mod config;
 pub mod filters;
 

@@ -582,14 +582,12 @@ mod tests {
     };
     use std::sync::Arc;
 
-    async fn new_pool(
-        config: impl Into<Option<Config>>,
-    ) -> (Arc<SessionPool>, ShutdownTx, DownstreamReceiver) {
+    async fn new_pool() -> (Arc<SessionPool>, ShutdownTx, DownstreamReceiver) {
         let (tx, rx) = crate::make_shutdown_channel(crate::ShutdownKind::Testing);
         let (sender, receiver) = async_channel::unbounded();
         (
             SessionPool::new(
-                Arc::new(config.into().unwrap_or_default()),
+                Arc::new(Config::default_agent()),
                 sender,
                 Arc::new(BufferPool::default()),
                 rx,
@@ -601,7 +599,7 @@ mod tests {
 
     #[tokio::test]
     async fn insert_and_release_single_socket() {
-        let (pool, _sender, _receiver) = new_pool(None).await;
+        let (pool, _sender, _receiver) = new_pool().await;
         let key = (
             (std::net::Ipv4Addr::LOCALHOST, 8080u16).into(),
             (std::net::Ipv4Addr::UNSPECIFIED, 8080u16).into(),
@@ -617,7 +615,7 @@ mod tests {
 
     #[tokio::test]
     async fn insert_and_release_multiple_sockets() {
-        let (pool, _sender, _receiver) = new_pool(None).await;
+        let (pool, _sender, _receiver) = new_pool().await;
         let key1 = (
             (std::net::Ipv4Addr::LOCALHOST, 8080u16).into(),
             (std::net::Ipv4Addr::UNSPECIFIED, 8080u16).into(),
@@ -642,7 +640,7 @@ mod tests {
 
     #[tokio::test]
     async fn same_address_uses_different_sockets() {
-        let (pool, _sender, _receiver) = new_pool(None).await;
+        let (pool, _sender, _receiver) = new_pool().await;
         let key1 = (
             (std::net::Ipv4Addr::LOCALHOST, 8080u16).into(),
             (std::net::Ipv4Addr::UNSPECIFIED, 8080u16).into(),
@@ -667,7 +665,7 @@ mod tests {
 
     #[tokio::test]
     async fn different_addresses_uses_same_socket() {
-        let (pool, _sender, _receiver) = new_pool(None).await;
+        let (pool, _sender, _receiver) = new_pool().await;
         let key1 = (
             (std::net::Ipv4Addr::LOCALHOST, 8080u16).into(),
             (std::net::Ipv4Addr::UNSPECIFIED, 8080u16).into(),
@@ -690,7 +688,7 @@ mod tests {
 
     #[tokio::test]
     async fn spawn_safe_same_destination() {
-        let (pool, _sender, _receiver) = new_pool(None).await;
+        let (pool, _sender, _receiver) = new_pool().await;
         let key1 = (
             (std::net::Ipv4Addr::LOCALHOST, 8080u16).into(),
             (std::net::Ipv4Addr::UNSPECIFIED, 8080u16).into(),
@@ -715,7 +713,7 @@ mod tests {
 
     #[tokio::test]
     async fn spawn_safe_different_destination() {
-        let (pool, _sender, _receiver) = new_pool(None).await;
+        let (pool, _sender, _receiver) = new_pool().await;
         let key1 = (
             (std::net::Ipv4Addr::LOCALHOST, 8080u16).into(),
             (std::net::Ipv4Addr::UNSPECIFIED, 8080u16).into(),
@@ -741,14 +739,14 @@ mod tests {
     #[tokio::test]
     async fn send_and_recv() {
         let mut t = TestHelper::default();
-        let dest = t.run_echo_server(&AddressType::Ipv6).await;
+        let dest = t.run_echo_server(AddressType::Ipv6).await;
         let mut dest = dest.to_socket_addr().await.unwrap();
         crate::test::map_addr_to_localhost(&mut dest);
-        let source = available_addr(&AddressType::Ipv6).await;
+        let source = available_addr(AddressType::Ipv6).await;
         let socket = tokio::net::UdpSocket::bind(source).await.unwrap();
         let mut source = socket.local_addr().unwrap();
         crate::test::map_addr_to_localhost(&mut source);
-        let (pool, _sender, receiver) = new_pool(None).await;
+        let (pool, _sender, receiver) = new_pool().await;
 
         let key: SessionKey = (source, dest).into();
         let msg = b"helloworld";

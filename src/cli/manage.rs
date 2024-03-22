@@ -14,14 +14,8 @@
  * limitations under the License.
  */
 
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
-
-use super::Admin;
-
-use futures::TryFutureExt;
+use crate::components::manage;
+pub use manage::Ready;
 
 define_port!(7800);
 
@@ -54,76 +48,33 @@ pub struct Manage {
 
 impl Manage {
     #[tracing::instrument(skip_all)]
-    pub async fn manage(
-        &self,
+    pub async fn run(
+        self,
         config: std::sync::Arc<crate::Config>,
-        mode: Admin,
-        mut shutdown_rx: crate::ShutdownRx,
+        ready: Ready,
+        shutdown_rx: crate::ShutdownRx,
     ) -> crate::Result<()> {
-        let locality = self.region.as_ref().map(|region| {
+        let locality = self.region.map(|region| {
             crate::net::endpoint::Locality::new(
                 region,
-                self.zone.as_deref().unwrap_or_default(),
-                self.sub_zone.as_deref().unwrap_or_default(),
+                self.zone.unwrap_or_default(),
+                self.sub_zone.unwrap_or_default(),
             )
         });
 
-        if let Some(locality) = &locality {
-            config
-                .clusters
-                .modify(|map| map.update_unlocated_endpoints(locality.clone()));
+        let listener = crate::net::TcpListener::bind(Some(self.port))?;
+
+        manage::Manage {
+            locality,
+            provider: self.provider,
+            relay_servers: self.relay,
+            listener,
         }
-
-        let runtime_config = mode.unwrap_manage();
-        let provider_task = self.provider.spawn(
-            config.clone(),
-            runtime_config.provider_is_healthy.clone(),
-            locality.clone(),
-        );
-
-        let _relay_stream = if !self.relay.is_empty() {
-            tracing::info!("connecting to relay server");
-            let client = crate::net::xds::client::MdsClient::connect(
-                String::clone(&config.id.load()),
-                mode.clone(),
-                self.relay.clone(),
-            )
-            .await?;
-
-            enum XdsTask {
-                Delta(crate::net::xds::client::DeltaSubscription),
-                Aggregated(crate::net::xds::client::MdsStream),
-            }
-
-            // Attempt to connect to a delta stream if the relay has one
-            // available, otherwise fallback to the regular aggregated stream
-            Some(match client.delta_stream(config.clone()).await {
-                Ok(ds) => XdsTask::Delta(ds),
-                Err(client) => XdsTask::Aggregated(client.mds_client_stream(config.clone())),
-            })
-        } else {
-            None
-        };
-
-        let server_task = tokio::spawn(crate::net::xds::server::spawn(self.port, mode, config))
-            .map_err(From::from)
-            .and_then(std::future::ready);
-
-        tokio::select! {
-            result = server_task => result,
-            result = provider_task => result?,
-            result = shutdown_rx.changed() => result.map_err(From::from),
-        }
-    }
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct RuntimeConfig {
-    pub provider_is_healthy: Arc<AtomicBool>,
-}
-
-impl RuntimeConfig {
-    pub fn is_ready(&self) -> bool {
-        self.provider_is_healthy.load(Ordering::SeqCst)
+        .run(crate::components::RunArgs {
+            config,
+            ready,
+            shutdown_rx,
+        })
+        .await
     }
 }

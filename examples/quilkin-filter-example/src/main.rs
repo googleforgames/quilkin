@@ -92,7 +92,7 @@ async fn main() -> quilkin::Result<()> {
 
     let (_shutdown_tx, shutdown_rx) = quilkin::make_shutdown_channel(quilkin::ShutdownKind::Normal);
     let proxy = quilkin::Proxy::default();
-    let config = quilkin::Config::default();
+    let config = quilkin::Config::default_non_agent();
     config.filters.store(std::sync::Arc::new(
         quilkin::filters::FilterChain::try_create([quilkin::config::Filter {
             name: Greet::NAME.into(),
@@ -109,8 +109,8 @@ async fn main() -> quilkin::Result<()> {
         )
     });
 
-    let admin = quilkin::cli::Admin::Proxy(<_>::default());
-
-    proxy.run(config.into(), admin, None, shutdown_rx).await
+    proxy
+        .run(config.into(), Default::default(), None, shutdown_rx)
+        .await
 }
 // ANCHOR_END: run

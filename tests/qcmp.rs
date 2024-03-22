@@ -26,34 +26,32 @@ use quilkin::{
 #[tokio::test]
 async fn proxy_ping() {
     let mut t = TestHelper::default();
-    let server_port = quilkin::test::available_addr(&AddressType::Random)
-        .await
-        .port();
-    let server_proxy = quilkin::cli::Proxy {
-        qcmp_port: server_port,
+    let qcmp = quilkin::net::raw_socket_with_reuse(0).unwrap();
+    let qcmp_port = quilkin::net::socket_port(&qcmp);
+    let server_proxy = quilkin::components::proxy::Proxy {
+        qcmp,
         to: vec![(Ipv4Addr::UNSPECIFIED, 0).into()],
         ..<_>::default()
     };
-    let server_config = std::sync::Arc::new(quilkin::Config::default());
+    let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
     t.run_server(server_config, Some(server_proxy), None).await;
-    ping(server_port).await;
+    ping(qcmp_port).await;
 }
 
 #[tokio::test]
 async fn agent_ping() {
-    let qcmp_port = quilkin::test::available_addr(&AddressType::Random)
+    let qcmp_port = quilkin::test::available_addr(AddressType::Random)
         .await
         .port();
     let agent = quilkin::cli::Agent {
         qcmp_port,
         ..<_>::default()
     };
-    let server_config = std::sync::Arc::new(quilkin::Config::default());
+    let server_config = std::sync::Arc::new(quilkin::Config::default_agent());
     let (_tx, rx) = quilkin::make_shutdown_channel(quilkin::ShutdownKind::Testing);
-    let admin = quilkin::cli::Admin::Agent(<_>::default());
     tokio::spawn(async move {
         agent
-            .run(server_config, admin, rx)
+            .run(server_config, Default::default(), rx)
             .await
             .expect("Agent should run")
     });

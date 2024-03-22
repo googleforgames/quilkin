@@ -32,7 +32,7 @@ pub fn handle_delta_discovery_responses(
 ) -> std::pin::Pin<Box<dyn futures::Stream<Item = crate::Result<DeltaDiscoveryRequest>> + Send>> {
     Box::pin(async_stream::try_stream! {
         let _stream_metrics = metrics::StreamConnectionMetrics::new(identifier.clone());
-        tracing::debug!("awaiting delta response");
+        tracing::trace!("awaiting delta response");
         for await response in stream
         {
             let response = match response {
@@ -50,7 +50,7 @@ pub fn handle_delta_discovery_responses(
             let control_plane_identifier = response.control_plane.as_ref().map(|cp| cp.identifier.as_str()).unwrap_or_default();
 
             metrics::delta_discovery_responses(control_plane_identifier, &response.type_url).inc();
-            tracing::debug!(
+            tracing::trace!(
                 version = &*response.system_version_info,
                 r#type = &*response.type_url,
                 nonce = &*response.nonce,
@@ -61,7 +61,7 @@ pub fn handle_delta_discovery_responses(
             let map = &local.versions[resource_type.into_usize()];
 
             let result = {
-                tracing::debug!(num_resources = response.resources.len(), kind = %resource_type, "applying delta resources");
+                tracing::trace!(num_resources = response.resources.len(), kind = %resource_type, "applying delta resources");
                 let mut lock = map.lock();
 
                 config.apply_delta(

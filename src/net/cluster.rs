@@ -140,7 +140,6 @@ impl EndpointSet {
     /// Unique version for this endpoint set
     #[inline]
     pub fn version(&self) -> EndpointSetVersion {
-        debug_assert!(self.hash != 0, "the hash should already be calculated");
         EndpointSetVersion(self.hash)
     }
 

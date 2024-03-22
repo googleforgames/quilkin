@@ -30,10 +30,10 @@ use quilkin::{
 #[tokio::test]
 async fn token_router() {
     let mut t = TestHelper::default();
-    let mut echo = t.run_echo_server(&AddressType::Random).await;
+    let mut echo = t.run_echo_server(AddressType::Random).await;
     quilkin::test::map_to_localhost(&mut echo).await;
 
-    let server_config = std::sync::Arc::new(quilkin::Config::default());
+    let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
     server_config.filters.store(
         quilkin::filters::FilterChain::try_create([
             Filter {

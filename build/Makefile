@@ -100,7 +100,7 @@ test-quilkin: ensure-build-image
 	# --network=host because docker containers are not great at ipv6.
 	docker run --rm $(common_rust_args)  \
 			--network=host \
-			-e RUST_BACKTRACE=1 --entrypoint=cargo $(BUILD_IMAGE_TAG) test
+			-e RUST_BACKTRACE=1 --entrypoint=cargo $(BUILD_IMAGE_TAG) test -p quilkin -p qt
 
 # Run tests against the examples
 test-examples: ensure-build-image

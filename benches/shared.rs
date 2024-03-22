@@ -324,7 +324,7 @@ impl QuilkinLoop {
 
         let thread = spawn("quilkin", move || {
             let runtime = tokio::runtime::Runtime::new().unwrap();
-            let config = Arc::new(quilkin::Config::default());
+            let config = Arc::new(quilkin::Config::default_non_agent());
             config.clusters.modify(|clusters| {
                 clusters
                     .insert_default([quilkin::net::endpoint::Endpoint::new(endpoint.into())].into())
@@ -334,15 +334,17 @@ impl QuilkinLoop {
                 port,
                 qcmp_port: runtime
                     .block_on(quilkin::test::available_addr(
-                        &quilkin::test::AddressType::Random,
+                        quilkin::test::AddressType::Random,
                     ))
                     .port(),
                 ..<_>::default()
             };
 
             runtime.block_on(async move {
-                let admin = quilkin::cli::Admin::Proxy(<_>::default());
-                proxy.run(config, admin, None, shutdown_rx).await.unwrap();
+                proxy
+                    .run(config, Default::default(), None, shutdown_rx)
+                    .await
+                    .unwrap();
             });
         });
 

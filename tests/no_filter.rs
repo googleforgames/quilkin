@@ -19,7 +19,7 @@ use tokio::time::Duration;
 
 use quilkin::{
     net::endpoint::Endpoint,
-    test::{available_addr, AddressType, TestHelper},
+    test::{AddressType, TestHelper},
 };
 
 #[tokio::test]
@@ -27,17 +27,11 @@ async fn echo() {
     let mut t = TestHelper::default();
 
     // create two echo servers as endpoints
-    let server1 = t.run_echo_server(&AddressType::Random).await;
-    let server2 = t.run_echo_server(&AddressType::Random).await;
+    let server1 = t.run_echo_server(AddressType::Random).await;
+    let server2 = t.run_echo_server(AddressType::Random).await;
 
     // create server configuration
-    let local_addr = available_addr(&AddressType::Random).await;
-    let server_proxy = quilkin::cli::Proxy {
-        port: local_addr.port(),
-        qcmp_port: 0,
-        ..<_>::default()
-    };
-    let server_config = std::sync::Arc::new(quilkin::Config::default());
+    let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
     server_config.clusters.modify(|clusters| {
         clusters.insert_default(
             [
@@ -48,7 +42,8 @@ async fn echo() {
         )
     });
 
-    t.run_server(server_config, Some(server_proxy), None).await;
+    let local_port = t.run_server(server_config, None, None).await;
+    let local_addr = std::net::SocketAddr::from((std::net::Ipv6Addr::LOCALHOST, local_port));
 
     // let's send the packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;

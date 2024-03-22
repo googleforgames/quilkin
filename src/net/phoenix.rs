@@ -26,7 +26,7 @@ use dashmap::DashMap;
 use crate::config::IcaoCode;
 
 pub fn spawn(
-    port: u16,
+    listener: crate::net::TcpListener,
     config: Arc<crate::Config>,
     mut shutdown_rx: crate::ShutdownRx,
 ) -> crate::Result<()> {
@@ -35,14 +35,17 @@ pub fn spawn(
 
     let phoenix = Phoenix::new(crate::codec::qcmp::QcmpMeasurement::new()?);
     phoenix.add_nodes_from_config(&config);
-    let address = (std::net::Ipv6Addr::UNSPECIFIED, port).into();
+
+    let crate::config::DatacenterConfig::NonAgent { datacenters } = &config.datacenter else {
+        unreachable!("this shouldn't be spawned on an agent")
+    };
+    let mut config_watcher = datacenters.watch();
 
     std::thread::spawn(move || -> crate::Result<()> {
         let runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()?;
         runtime.block_on({
-            let mut config_watcher = config.datacenters.watch();
             let mut phoenix_watcher = phoenix.update_watcher();
             let config = config.clone();
 
@@ -78,7 +81,7 @@ pub fn spawn(
                     }
                 });
 
-                tokio::spawn(HyperServer::bind(&address).serve(make_svc));
+                tokio::spawn(HyperServer::from_tcp(listener.into())?.serve(make_svc));
 
                 loop {
                     tokio::select! {
@@ -271,7 +274,7 @@ impl<M: Measurement + 'static> Phoenix<M> {
                 continue;
             };
             let distance = origin.distance_to(&coordinates);
-            let icao = entry.value().icao_code.clone();
+            let icao = entry.value().icao_code;
 
             match icao_map.entry(icao) {
                 Entry::Vacant(entry) => {
@@ -302,9 +305,12 @@ impl<M: Measurement + 'static> Phoenix<M> {
     }
 
     pub fn add_nodes_from_config(&self, config: &crate::Config) {
-        for entry in config.datacenters.read().iter() {
+        let crate::config::DatacenterConfig::NonAgent { datacenters } = &config.datacenter else {
+            unreachable!("this shouldn't be called by an agent")
+        };
+        for entry in datacenters.write().iter() {
             let addr = (*entry.key(), entry.value().qcmp_port).into();
-            self.add_node_if_not_exists(addr, entry.value().icao_code.clone());
+            self.add_node_if_not_exists(addr, entry.value().icao_code);
         }
     }
 }
@@ -455,6 +461,8 @@ impl Node {
 
 #[cfg(test)]
 mod tests {
+    use crate::net::raw_socket_with_reuse;
+
     use super::*;
     use std::collections::HashMap;
     use std::collections::HashSet;
@@ -672,11 +680,10 @@ mod tests {
 
     #[tokio::test]
     async fn http_server() {
-        let config = Arc::new(crate::Config::default());
-        let qcmp_port = crate::test::available_addr(&crate::test::AddressType::Ipv4)
-            .await
-            .port();
-        config.datacenters.write().insert(
+        let config = Arc::new(crate::Config::default_non_agent());
+        let qcmp_listener = crate::net::TcpListener::bind(None).expect("failed to bind listener");
+        let qcmp_port = qcmp_listener.port();
+        config.datacenters().write().insert(
             std::net::Ipv4Addr::LOCALHOST.into(),
             crate::config::Datacenter {
                 qcmp_port,
@@ -685,9 +692,10 @@ mod tests {
         );
 
         let (_tx, rx) = crate::make_shutdown_channel(Default::default());
-        crate::codec::qcmp::spawn(qcmp_port, rx.clone());
+        let socket = raw_socket_with_reuse(qcmp_port).unwrap();
+        crate::codec::qcmp::spawn(socket, rx.clone());
         tokio::time::sleep(std::time::Duration::from_millis(150)).await;
-        super::spawn(qcmp_port, config.clone(), rx).unwrap();
+        super::spawn(qcmp_listener, config.clone(), rx).unwrap();
         tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
 
         let client = hyper::Client::new();

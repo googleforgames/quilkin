@@ -28,7 +28,7 @@ use quilkin::{
 #[tokio::test]
 async fn r#match() {
     let mut t = TestHelper::default();
-    let echo = t.run_echo_server(&AddressType::Random).await;
+    let echo = t.run_echo_server(AddressType::Random).await;
 
     let capture_yaml = "
 suffix:
@@ -57,7 +57,7 @@ on_read:
             bytes: YWJj # abc
 ";
 
-    let server_config = std::sync::Arc::new(quilkin::Config::default());
+    let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
     server_config
         .clusters
         .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));

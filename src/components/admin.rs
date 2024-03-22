@@ -23,8 +23,8 @@ use std::time::Duration;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Method, Request, Response, Server as HyperServer, StatusCode};
 
-use self::health::Health;
 use crate::config::Config;
+use health::Health;
 
 use super::{agent, manage, proxy, relay};
 
@@ -32,58 +32,17 @@ pub const PORT: u16 = 8000;
 
 pub(crate) const IDLE_REQUEST_INTERVAL: Duration = Duration::from_secs(30);
 
-pub(crate) const fn idle_request_interval_secs() -> u64 {
-    IDLE_REQUEST_INTERVAL.as_secs()
-}
-
 /// The runtime mode of Quilkin, which contains various runtime configurations
 /// specific to a mode.
 #[derive(Clone, Debug)]
 pub enum Admin {
-    Proxy(proxy::RuntimeConfig),
-    Relay(relay::RuntimeConfig),
-    Manage(manage::RuntimeConfig),
-    Agent(agent::RuntimeConfig),
+    Proxy(proxy::Ready),
+    Relay(relay::Ready),
+    Manage(manage::Ready),
+    Agent(agent::Ready),
 }
 
 impl Admin {
-    #[track_caller]
-    pub fn unwrap_agent(&self) -> &agent::RuntimeConfig {
-        match self {
-            Self::Agent(config) => config,
-            _ => panic!("attempted to unwrap agent config when not in agent mode"),
-        }
-    }
-
-    #[must_use]
-    pub fn is_agent(&self) -> bool {
-        matches!(self, Self::Agent(_))
-    }
-
-    #[track_caller]
-    pub fn unwrap_proxy(&self) -> &proxy::RuntimeConfig {
-        match self {
-            Self::Proxy(config) => config,
-            _ => panic!("attempted to unwrap proxy config when not in proxy mode"),
-        }
-    }
-
-    #[track_caller]
-    pub fn unwrap_relay(&self) -> &relay::RuntimeConfig {
-        match self {
-            Self::Relay(config) => config,
-            _ => panic!("attempted to unwrap relay config when not in relay mode"),
-        }
-    }
-
-    #[track_caller]
-    pub fn unwrap_manage(&self) -> &manage::RuntimeConfig {
-        match self {
-            Self::Manage(config) => config,
-            _ => panic!("attempted to unwrap relay config when not in relay mode"),
-        }
-    }
-
     pub fn idle_request_interval(&self) -> Duration {
         match self {
             Self::Proxy(config) => config.idle_request_interval,
@@ -136,7 +95,9 @@ impl Admin {
 
     fn is_ready(&self, config: &Config) -> bool {
         match &self {
-            Self::Proxy(proxy) => proxy.is_ready(config),
+            Self::Proxy(proxy) => proxy
+                .is_ready()
+                .unwrap_or_else(|| config.clusters.read().has_endpoints()),
             Self::Agent(agent) => agent.is_ready(),
             Self::Manage(manage) => manage.is_ready(),
             Self::Relay(relay) => relay.is_ready(),
@@ -260,6 +221,7 @@ async fn collect_pprof(
     Response::builder()
         .header(hyper::header::CONTENT_LENGTH, gzip_body.len() as u64)
         .header(hyper::header::CONTENT_TYPE, "application/octet-stream")
+        .header(hyper::header::CONTENT_ENCODING, "gzip")
         .body(Body::from(gzip_body))
         .map_err(From::from)
 }
@@ -285,7 +247,7 @@ mod tests {
 
     #[test]
     fn check_proxy_readiness() {
-        let config = crate::Config::default();
+        let config = crate::Config::default_non_agent();
         assert_eq!(config.clusters.read().endpoints().len(), 0);
 
         let admin = Admin::Proxy(<_>::default());

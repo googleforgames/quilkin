@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-use std::net::{Ipv6Addr, SocketAddr};
-
 use tokio::{
     sync::mpsc,
     time::{timeout, Duration},
@@ -25,14 +23,12 @@ use quilkin::{
     config::Filter,
     filters::{Firewall, StaticFilter},
     net::endpoint::Endpoint,
-    test::{available_addr, AddressType, TestHelper},
+    test::{AddressType, TestHelper},
 };
 
 #[tokio::test]
 async fn ipv4_firewall_allow() {
     let mut t = TestHelper::default();
-    let address_type = AddressType::Ipv4;
-    let port = available_addr(&address_type).await.port();
     let yaml = "
 on_read:
   - action: ALLOW
@@ -47,7 +43,7 @@ on_write:
     ports:
       - %2
 ";
-    let mut rx = test(&mut t, port, yaml, &address_type).await;
+    let mut rx = test(&mut t, yaml, AddressType::Ipv4).await;
 
     assert_eq!(
         "hello",
@@ -61,8 +57,6 @@ on_write:
 #[tokio::test]
 async fn ipv6_firewall_allow() {
     let mut t = TestHelper::default();
-    let address_type = AddressType::Ipv6;
-    let port = available_addr(&address_type).await.port();
     let yaml = "
 on_read:
   - action: ALLOW
@@ -77,7 +71,7 @@ on_write:
     ports:
       - %2
 ";
-    let mut rx = test(&mut t, port, yaml, &address_type).await;
+    let mut rx = test(&mut t, yaml, AddressType::Ipv6).await;
 
     assert_eq!(
         "hello",
@@ -91,8 +85,6 @@ on_write:
 #[tokio::test]
 async fn ipv4_firewall_read_deny() {
     let mut t = TestHelper::default();
-    let address_type = AddressType::Ipv4;
-    let port = available_addr(&address_type).await.port();
     let yaml = "
 on_read:
   - action: DENY
@@ -107,7 +99,7 @@ on_write:
     ports:
       - %2
 ";
-    let mut rx = test(&mut t, port, yaml, &address_type).await;
+    let mut rx = test(&mut t, yaml, AddressType::Ipv4).await;
 
     let result = timeout(Duration::from_millis(500), rx.recv()).await;
     assert!(result.is_err(), "should not have received a packet");
@@ -116,8 +108,6 @@ on_write:
 #[tokio::test]
 async fn ipv6_firewall_read_deny() {
     let mut t = TestHelper::default();
-    let address_type = AddressType::Ipv6;
-    let port = available_addr(&address_type).await.port();
     let yaml = "
 on_read:
   - action: DENY
@@ -132,7 +122,7 @@ on_write:
     ports:
       - %2
 ";
-    let mut rx = test(&mut t, port, yaml, &address_type).await;
+    let mut rx = test(&mut t, yaml, AddressType::Ipv6).await;
 
     let result = timeout(Duration::from_millis(500), rx.recv()).await;
     assert!(result.is_err(), "should not have received a packet");
@@ -141,8 +131,6 @@ on_write:
 #[tokio::test]
 async fn ipv4_firewall_write_deny() {
     let mut t = TestHelper::default();
-    let address_type = AddressType::Ipv4;
-    let port = available_addr(&address_type).await.port();
     let yaml = "
 on_read:
   - action: ALLOW
@@ -157,7 +145,7 @@ on_write:
     ports:
       - %2
 ";
-    let mut rx = test(&mut t, port, yaml, &address_type).await;
+    let mut rx = test(&mut t, yaml, AddressType::Ipv4).await;
 
     let result = timeout(Duration::from_millis(500), rx.recv()).await;
     assert!(result.is_err(), "should not have received a packet");
@@ -166,8 +154,7 @@ on_write:
 #[tokio::test]
 async fn ipv6_firewall_write_deny() {
     let mut t = TestHelper::default();
-    let address_type = AddressType::Ipv6;
-    let port = available_addr(&address_type).await.port();
+
     let yaml = "
 on_read:
   - action: ALLOW
@@ -182,18 +169,13 @@ on_write:
     ports:
       - %2
 ";
-    let mut rx = test(&mut t, port, yaml, &address_type).await;
+    let mut rx = test(&mut t, yaml, AddressType::Ipv6).await;
 
     let result = timeout(Duration::from_millis(500), rx.recv()).await;
     assert!(result.is_err(), "should not have received a packet");
 }
 
-async fn test(
-    t: &mut TestHelper,
-    server_port: u16,
-    yaml: &str,
-    address_type: &AddressType,
-) -> mpsc::Receiver<String> {
+async fn test(t: &mut TestHelper, yaml: &str, address_type: AddressType) -> mpsc::Receiver<String> {
     let echo = t.run_echo_server(address_type).await;
 
     let (rx, socket) = match address_type {
@@ -213,12 +195,7 @@ async fn test(
         .replace("%2", echo.port().to_string().as_str());
     tracing::info!(config = yaml.as_str(), "Config");
 
-    let server_proxy = quilkin::cli::Proxy {
-        port: server_port,
-        qcmp_port: 0,
-        ..<_>::default()
-    };
-    let server_config = std::sync::Arc::new(quilkin::Config::default());
+    let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
     server_config.filters.store(
         quilkin::filters::FilterChain::try_create([Filter {
             name: Firewall::factory().name().into(),
@@ -233,14 +210,18 @@ async fn test(
         .clusters
         .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
 
-    t.run_server(server_config, Some(server_proxy), None).await;
+    let proxy_socket =
+        quilkin::net::raw_socket_with_reuse_and_address(address_type.into()).unwrap();
+    let local_addr = proxy_socket.local_addr().unwrap().as_socket().unwrap();
 
-    let local_addr: SocketAddr = match address_type {
-        AddressType::Ipv4 => (std::net::Ipv4Addr::LOCALHOST, server_port).into(),
-        AddressType::Ipv6 => (Ipv6Addr::LOCALHOST, server_port).into(),
-        AddressType::Random => unreachable!(), // don't do this.
+    let proxy = quilkin::components::proxy::Proxy {
+        socket: proxy_socket,
+        ..Default::default()
     };
+
+    t.run_server(server_config, Some(proxy), None).await;
+
     tracing::info!(source = %client_addr, address = %local_addr, "Sending hello");
-    socket.send_to(b"hello", &local_addr).await.unwrap();
+    socket.send_to(b"hello", local_addr).await.unwrap();
     rx
 }

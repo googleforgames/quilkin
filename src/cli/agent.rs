@@ -14,13 +14,10 @@
  * limitations under the License.
  */
 
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
+use std::sync::Arc;
 
-use super::Admin;
-use crate::config::Config;
+use crate::{components::agent, config::Config};
+pub use agent::Ready;
 
 define_port!(7600);
 
@@ -53,8 +50,8 @@ pub struct Agent {
     pub provider: Option<crate::config::Providers>,
     /// The interval in seconds at which the agent will wait for a discovery
     /// request from a relay server before restarting the connection.
-    #[clap(long, env = "QUILKIN_IDLE_REQUEST_INTERVAL_SECS", default_value_t = super::admin::idle_request_interval_secs())]
-    pub idle_request_interval_secs: u64,
+    #[clap(long, env = "QUILKIN_IDLE_REQUEST_INTERVAL_SECS")]
+    pub idle_request_interval_secs: Option<u64>,
     /// The ICAO code for the agent.
     #[clap(short, long, env, default_value_t = crate::config::IcaoCode::default())]
     pub icao_code: crate::config::IcaoCode,
@@ -69,7 +66,7 @@ impl Default for Agent {
             zone: <_>::default(),
             sub_zone: <_>::default(),
             provider: <_>::default(),
-            idle_request_interval_secs: super::admin::idle_request_interval_secs(),
+            idle_request_interval_secs: None,
             icao_code: <_>::default(),
         }
     }
@@ -78,80 +75,34 @@ impl Default for Agent {
 impl Agent {
     #[tracing::instrument(skip_all)]
     pub async fn run(
-        &self,
+        self,
         config: Arc<Config>,
-        mode: Admin,
-        mut shutdown_rx: crate::ShutdownRx,
+        ready: Ready,
+        shutdown_rx: crate::ShutdownRx,
     ) -> crate::Result<()> {
-        let locality = self.region.as_ref().map(|region| {
+        let locality = self.region.map(|region| {
             crate::net::endpoint::Locality::new(
                 region,
-                self.zone.as_deref().unwrap_or_default(),
-                self.sub_zone.as_deref().unwrap_or_default(),
+                self.zone.unwrap_or_default(),
+                self.sub_zone.unwrap_or_default(),
             )
         });
 
-        config.qcmp_port.store(self.qcmp_port.into());
-        config.icao_code.store(self.icao_code.clone().into());
+        let qcmp_socket = crate::net::raw_socket_with_reuse(self.qcmp_port)?;
+        let icao_code = Some(self.icao_code);
 
-        let runtime_config = mode.unwrap_agent();
-
-        let _mds_task = if !self.relay.is_empty() {
-            let _provider_task = match self.provider.as_ref() {
-                Some(provider) => Some(provider.spawn(
-                    config.clone(),
-                    runtime_config.provider_is_healthy.clone(),
-                    locality.clone(),
-                )),
-                None => return Err(eyre::eyre!("no configuration provider given")),
-            };
-
-            let task = crate::net::xds::client::MdsClient::connect(
-                String::clone(&config.id.load()),
-                mode.clone(),
-                self.relay.clone(),
-            );
-
-            tokio::select! {
-                result = task => {
-                    let client = result?;
-
-                    enum XdsTask {
-                        Delta(crate::net::xds::client::DeltaSubscription),
-                        Aggregated(crate::net::xds::client::MdsStream),
-                    }
-
-                    // Attempt to connect to a delta stream if the relay has one
-                    // available, otherwise fallback to the regular aggregated stream
-                    Some(match client.delta_stream(config.clone()).await {
-                        Ok(ds) => XdsTask::Delta(ds),
-                        Err(client) => {
-                            XdsTask::Aggregated(client.mds_client_stream(config.clone()))
-                        }
-                    })
-                }
-                _ = shutdown_rx.changed() => return Ok(()),
-            }
-        } else {
-            tracing::info!("no relay servers given");
-            None
-        };
-
-        crate::codec::qcmp::spawn(self.qcmp_port, shutdown_rx.clone());
-        shutdown_rx.changed().await.map_err(From::from)
-    }
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct RuntimeConfig {
-    pub idle_request_interval: std::time::Duration,
-    pub provider_is_healthy: Arc<AtomicBool>,
-    pub relay_is_healthy: Arc<AtomicBool>,
-}
-
-impl RuntimeConfig {
-    pub fn is_ready(&self) -> bool {
-        self.provider_is_healthy.load(Ordering::SeqCst)
-            && self.relay_is_healthy.load(Ordering::SeqCst)
+        agent::Agent {
+            locality,
+            qcmp_socket,
+            icao_code,
+            relay_servers: self.relay,
+            provider: self.provider,
+        }
+        .run(crate::components::RunArgs {
+            config,
+            ready,
+            shutdown_rx,
+        })
+        .await
     }
 }

@@ -19,7 +19,6 @@
 mod chain;
 mod error;
 mod factory;
-mod metadata;
 mod read;
 mod registry;
 mod set;

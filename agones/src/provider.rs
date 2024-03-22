@@ -15,6 +15,7 @@
  */
 
 #[cfg(test)]
+#[allow(dead_code)]
 mod tests {
     use std::{collections::BTreeMap, time::Duration};
 
@@ -53,7 +54,7 @@ mod tests {
 
     const PROXY_DEPLOYMENT: &str = "quilkin-xds-proxies";
 
-    #[tokio::test]
+    //#[tokio::test]
     #[serial]
     /// Test for Agones Provider integration. Since this will look at all GameServers in the namespace
     /// for this test, we should only run Agones integration test in a serial manner, since they

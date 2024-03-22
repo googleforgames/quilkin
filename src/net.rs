@@ -105,11 +105,12 @@ fn epoll_socket_with_reuse_and_address(addr: SocketAddr) -> std::io::Result<toki
         .and_then(tokio::net::UdpSocket::from_std)
 }
 
-pub(crate) fn raw_socket_with_reuse(port: u16) -> std::io::Result<Socket> {
+#[inline]
+pub fn raw_socket_with_reuse(port: u16) -> std::io::Result<Socket> {
     raw_socket_with_reuse_and_address((Ipv6Addr::UNSPECIFIED, port).into())
 }
 
-fn raw_socket_with_reuse_and_address(addr: SocketAddr) -> std::io::Result<Socket> {
+pub fn raw_socket_with_reuse_and_address(addr: SocketAddr) -> std::io::Result<Socket> {
     let domain = match addr {
         SocketAddr::V4(_) => socket2::Domain::IPV4,
         SocketAddr::V6(_) => socket2::Domain::IPV6,
@@ -123,7 +124,16 @@ fn raw_socket_with_reuse_and_address(addr: SocketAddr) -> std::io::Result<Socket
         sock.set_only_v6(false)?;
     }
     sock.bind(&addr.into())?;
+
     Ok(sock)
+}
+
+#[inline]
+pub fn socket_port(socket: &socket2::Socket) -> u16 {
+    match socket.local_addr().unwrap().as_socket().unwrap() {
+        SocketAddr::V4(addr) => addr.port(),
+        SocketAddr::V6(addr) => addr.port(),
+    }
 }
 
 #[cfg(not(target_family = "windows"))]
@@ -146,7 +156,7 @@ pub struct DualStackLocalSocket {
 }
 
 impl DualStackLocalSocket {
-    pub fn from_raw(socket: socket2::Socket) -> Self {
+    pub fn from_raw(socket: Socket) -> Self {
         let socket: std::net::UdpSocket = socket.into();
         let local_addr = socket.local_addr().unwrap();
         cfg_if::cfg_if! {
@@ -197,10 +207,6 @@ impl DualStackLocalSocket {
             pub async fn send_to<B: tokio_uring::buf::IoBuf>(&self, buf: B, target: SocketAddr) -> (io::Result<usize>, B) {
                 self.socket.send_to(buf, target).await
             }
-
-            pub fn make_refcnt(self) -> std::rc::Rc<Self> {
-                std::rc::Rc::new(self)
-            }
         } else {
             pub async fn recv_from<B: std::ops::DerefMut<Target = [u8]>>(&self, mut buf: B) -> (io::Result<(usize, SocketAddr)>, B) {
                 let result = self.socket.recv_from(&mut buf).await;
@@ -211,11 +217,19 @@ impl DualStackLocalSocket {
                 let result = self.socket.send_to(&buf, target).await;
                 (result, buf)
             }
-
-            pub fn make_refcnt(self) -> std::sync::Arc<Self> {
-                std::sync::Arc::new(self)
-            }
         }
+    }
+
+    pub fn make_refcnt(self) -> DualStackLocalSocketRc {
+        DualStackLocalSocketRc::new(self)
+    }
+}
+
+cfg_if::cfg_if! {
+    if #[cfg(target_os = "linux")] {
+        pub type DualStackLocalSocketRc = std::rc::Rc<DualStackLocalSocket>;
+    } else {
+        pub type DualStackLocalSocketRc = std::sync::Arc<DualStackLocalSocket>;
     }
 }
 
@@ -281,6 +295,40 @@ impl DualStackEpollSocket {
     }
 }
 
+/// TCP listener for a GRPC service, always binds to the local IPv6 address
+pub struct TcpListener {
+    inner: std::net::TcpListener,
+}
+
+impl TcpListener {
+    /// Binds a TCP listener, if `None` is passed, binds to an ephemeral port
+    #[inline]
+    pub fn bind(port: Option<u16>) -> io::Result<Self> {
+        std::net::TcpListener::bind((std::net::Ipv6Addr::UNSPECIFIED, port.unwrap_or_default()))
+            .map(|inner| Self { inner })
+    }
+
+    /// Retrieves the port the listener is bound to
+    #[inline]
+    pub fn port(&self) -> u16 {
+        self.inner.local_addr().expect("failed to bind").port()
+    }
+
+    #[inline]
+    pub fn into_stream(self) -> io::Result<tokio_stream::wrappers::TcpListenerStream> {
+        self.inner.set_nonblocking(true)?;
+        let tl = tokio::net::TcpListener::from_std(self.inner)?;
+        Ok(tokio_stream::wrappers::TcpListenerStream::new(tl))
+    }
+}
+
+impl From<TcpListener> for std::net::TcpListener {
+    #[inline]
+    fn from(value: TcpListener) -> Self {
+        value.inner
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::{
@@ -295,7 +343,7 @@ mod tests {
 
     #[tokio::test]
     async fn dual_stack_socket_reusable() {
-        let expected = available_addr(&AddressType::Random).await;
+        let expected = available_addr(AddressType::Random).await;
         let socket = super::DualStackEpollSocket::new(expected.port()).unwrap();
         let addr = socket.local_ipv4_addr().unwrap();
 
@@ -323,7 +371,7 @@ mod tests {
         // Since the TestHelper uses the DualStackSocket, we can use it to test ourselves.
         let mut t = TestHelper::default();
 
-        let echo_addr = t.run_echo_server(&AddressType::Random).await;
+        let echo_addr = t.run_echo_server(AddressType::Random).await;
         let (mut rx, socket) = t.open_socket_and_recv_multiple_packets().await;
 
         let msg = "hello";

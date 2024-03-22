@@ -30,7 +30,7 @@ use quilkin::{
 #[tokio::test]
 async fn token_router() {
     let mut t = TestHelper::default();
-    let mut echo = t.run_echo_server(&AddressType::Ipv6).await;
+    let mut echo = t.run_echo_server(AddressType::Ipv6).await;
     quilkin::test::map_to_localhost(&mut echo).await;
 
     let capture_yaml = "
@@ -44,7 +44,7 @@ quilkin.dev:
         - YWJj # abc
         ";
 
-    let server_config = std::sync::Arc::new(quilkin::Config::default());
+    let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
     server_config.clusters.modify(|clusters| {
         clusters.insert_default(
             [Endpoint::with_metadata(

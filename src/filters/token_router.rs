@@ -17,7 +17,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    filters::{metadata::CAPTURED_BYTES, prelude::*},
+    filters::{capture::CAPTURED_BYTES, prelude::*},
     net::endpoint::metadata,
 };
 

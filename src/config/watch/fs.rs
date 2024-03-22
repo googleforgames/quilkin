@@ -95,8 +95,8 @@ mod tests {
 
     #[tokio::test]
     async fn basic() {
-        let source = Arc::new(crate::Config::default());
-        let dest = Arc::new(crate::Config::default());
+        let source = Arc::new(crate::Config::default_non_agent());
+        let dest = Arc::new(crate::Config::default_non_agent());
         let tmp_dir = tempfile::tempdir().unwrap();
         let file_path = tmp_dir.into_path().join("config.yaml");
         tokio::fs::write(&file_path, serde_yaml::to_string(&source).unwrap())
