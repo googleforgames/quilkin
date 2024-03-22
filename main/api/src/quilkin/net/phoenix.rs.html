@@ -714,6 +714,11 @@
 <a href="#714" id="714">714</a>
 <a href="#715" id="715">715</a>
 <a href="#716" id="716">716</a>
+<a href="#717" id="717">717</a>
+<a href="#718" id="718">718</a>
+<a href="#719" id="719">719</a>
+<a href="#720" id="720">720</a>
+<a href="#721" id="721">721</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! # Phoenix Network Coordinate System
 //!
 //! This module provides a framework for estimating network latencies between
@@ -757,66 +762,71 @@
     };
     <span class="kw">let </span><span class="kw-2">mut </span>config_watcher = datacenters.watch();
 
-    std::thread::spawn(<span class="kw">move </span>|| -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
+    std::thread::spawn(<span class="kw">move </span>|| {
         <span class="kw">let </span>runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
-            .build()<span class="question-mark">?</span>;
-        runtime.block_on({
-            <span class="kw">let </span><span class="kw-2">mut </span>phoenix_watcher = phoenix.update_watcher();
-            <span class="kw">let </span>config = config.clone();
+            .build()
+            .unwrap();
+        runtime
+            .block_on({
+                <span class="kw">let </span><span class="kw-2">mut </span>phoenix_watcher = phoenix.update_watcher();
+                <span class="kw">let </span>config = config.clone();
 
-            <span class="kw">async move </span>{
-                <span class="kw">let </span>json = <span class="kw">crate</span>::config::Slot::new(serde_json::Map::default());
+                <span class="kw">async move </span>{
+                    <span class="kw">let </span>json = <span class="kw">crate</span>::config::Slot::new(serde_json::Map::default());
 
-                tokio::spawn({
-                    <span class="kw">let </span>phoenix = phoenix.clone();
-                    <span class="kw">async move </span>{ phoenix.background_update_task().<span class="kw">await </span>}
-                });
+                    tokio::spawn({
+                        <span class="kw">let </span>phoenix = phoenix.clone();
+                        <span class="kw">async move </span>{ phoenix.background_update_task().<span class="kw">await </span>}
+                    });
 
-                <span class="kw">let </span>json2 = json.clone();
-                <span class="kw">let </span>make_svc = make_service_fn(<span class="kw">move </span>|_conn| {
-                    <span class="kw">let </span>json = json2.clone();
-                    <span class="kw">async move </span>{
-                        <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, std::convert::Infallible&gt;(service_fn(<span class="kw">move </span>|<span class="kw">_</span>| {
-                            <span class="kw">let </span>json = json.clone();
-                            <span class="kw">async move </span>{
-                                <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, std::convert::Infallible&gt;(
-                                    Response::builder()
-                                        .status(StatusCode::OK)
-                                        .header(
-                                            <span class="string">&quot;Content-Type&quot;</span>,
-                                            hyper::header::HeaderValue::from_static(
-                                                <span class="string">&quot;application/json&quot;</span>,
-                                            ),
-                                        )
-                                        .body(Body::from(serde_json::to_string(<span class="kw-2">&amp;</span>json).unwrap()))
-                                        .unwrap(),
-                                )
-                            }
-                        }))
+                    <span class="kw">let </span>json2 = json.clone();
+                    <span class="kw">let </span>make_svc = make_service_fn(<span class="kw">move </span>|_conn| {
+                        <span class="kw">let </span>json = json2.clone();
+                        <span class="kw">async move </span>{
+                            <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, std::convert::Infallible&gt;(service_fn(<span class="kw">move </span>|<span class="kw">_</span>| {
+                                <span class="kw">let </span>json = json.clone();
+                                <span class="kw">async move </span>{
+                                    <span class="macro">tracing::trace!</span>(<span class="string">&quot;serving phoenix request&quot;</span>);
+                                    <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, std::convert::Infallible&gt;(
+                                        Response::builder()
+                                            .status(StatusCode::OK)
+                                            .header(
+                                                <span class="string">&quot;Content-Type&quot;</span>,
+                                                hyper::header::HeaderValue::from_static(
+                                                    <span class="string">&quot;application/json&quot;</span>,
+                                                ),
+                                            )
+                                            .body(Body::from(serde_json::to_string(<span class="kw-2">&amp;</span>json).unwrap()))
+                                            .unwrap(),
+                                    )
+                                }
+                            }))
+                        }
+                    });
+
+                    <span class="macro">tracing::info!</span>(addr=%listener.local_addr(), <span class="string">&quot;starting phoenix service&quot;</span>);
+                    tokio::spawn(HyperServer::from_tcp(listener.into())<span class="question-mark">?</span>.serve(make_svc));
+
+                    <span class="kw">loop </span>{
+                        <span class="macro">tokio::select! </span>{
+                            <span class="kw">_ </span>= shutdown_rx.changed() =&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, eyre::Error&gt;(()),
+                            result = config_watcher.changed() =&gt; result<span class="question-mark">?</span>,
+                            result = phoenix_watcher.changed() =&gt; result<span class="question-mark">?</span>,
+                        }
+                        phoenix.add_nodes_from_config(<span class="kw-2">&amp;</span>config);
+                        <span class="kw">let </span>nodes = phoenix.ordered_nodes_by_latency();
+                        <span class="kw">let </span><span class="kw-2">mut </span>new_json = serde_json::Map::default();
+
+                        <span class="kw">for </span>(identifier, latency) <span class="kw">in </span>nodes {
+                            new_json.insert(identifier.to_string(), latency.into());
+                        }
+
+                        json.store(new_json.into());
                     }
-                });
-
-                tokio::spawn(HyperServer::from_tcp(listener.into())<span class="question-mark">?</span>.serve(make_svc));
-
-                <span class="kw">loop </span>{
-                    <span class="macro">tokio::select! </span>{
-                        <span class="kw">_ </span>= shutdown_rx.changed() =&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(()),
-                        result = config_watcher.changed() =&gt; result<span class="question-mark">?</span>,
-                        result = phoenix_watcher.changed() =&gt; result<span class="question-mark">?</span>,
-                    }
-                    phoenix.add_nodes_from_config(<span class="kw-2">&amp;</span>config);
-                    <span class="kw">let </span>nodes = phoenix.ordered_nodes_by_latency();
-                    <span class="kw">let </span><span class="kw-2">mut </span>new_json = serde_json::Map::default();
-
-                    <span class="kw">for </span>(identifier, latency) <span class="kw">in </span>nodes {
-                        new_json.insert(identifier.to_string(), latency.into());
-                    }
-
-                    json.store(new_json.into());
                 }
-            }
-        })
+            })
+            .unwrap()
     });
 
     <span class="prelude-val">Ok</span>(())

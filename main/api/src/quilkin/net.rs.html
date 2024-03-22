@@ -441,6 +441,12 @@
 <a href="#441" id="441">441</a>
 <a href="#442" id="442">442</a>
 <a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -755,6 +761,12 @@
     </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>port(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u16 {
         <span class="self">self</span>.inner.local_addr().expect(<span class="string">&quot;failed to bind&quot;</span>).port()
+    }
+
+    <span class="doccomment">/// Retrieves the local address the listener is bound to
+    </span><span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>local_addr(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SocketAddr {
+        <span class="self">self</span>.inner.local_addr().expect(<span class="string">&quot;failed to bind&quot;</span>)
     }
 
     <span class="attr">#[inline]
