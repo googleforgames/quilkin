@@ -1,5 +1,63 @@
 # Changelog
 
+# v0.8.0 (2024-03-13)
+
+## What's Changed
+### Implemented enhancements
+* Move admin server to separate OS thread by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/841
+* Use ClusterMap for Filter::read by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/855
+* Move game traffic sockets to io-uring by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/850
+* Add lz4 support by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/868
+* Add Configurable gRPC message size environment variable by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/870
+* Move xDS proxy task to its own thread+runtime by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/871
+* Change debug symbols profile release -> bench by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/879
+* Add initial support for delta xDS by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/882
+* Add pprof endpoint by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/875
+* ClusterMap benchmarks by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/856
+* Update Unreal Engine Plugin by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/778
+* Implement Phoenix Network Coordinates by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/854
+* Improve compile times by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/896
+* Move non-linux builds to github by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/899
+### Fixed bugs
+* Update max_delay to 2 sec by @zezhehh in https://github.com/googleforgames/quilkin/pull/840
+* Move pipeline errors from metrics to a fixed interval report by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/843
+* Remove unwraps from proxy::sessions by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/849
+* Commit Cargo.lock by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/867
+* Fix PoolBuffer::split by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/869
+* Fix: warning: failed to get HEAD path by @markmandel in https://github.com/googleforgames/quilkin/pull/878
+* Send back an empty delta response for initial `ignore-me` by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/892
+* Make the ready check has endpoints OR has xDS connection by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/872
+* Fix health_server test by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/897
+* Build: Https on packages.cloud.google.com by @markmandel in https://github.com/googleforgames/quilkin/pull/903
+### Other
+* Prep for 0.8.0 by @markmandel in https://github.com/googleforgames/quilkin/pull/831
+* Remove spawn task for each packet. by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/842
+* Move cluster into net by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/845
+* Update kubernetes watch configuration to prioritise performance by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/844
+* Minor cleanup by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/846
+* Update xds client by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/848
+* Remove built dependency by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/847
+* Refactor benchmarks by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/853
+* Update to Rust 1.74.0 by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/859
+* Remove Watch requirements on Clone/PartialEq by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/876
+* Split out changes by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/883
+* Bump zerocopy from 0.7.26 to 0.7.31 by @dependabot in https://github.com/googleforgames/quilkin/pull/886
+* Bump unsafe-libyaml from 0.2.9 to 0.2.10 by @dependabot in https://github.com/googleforgames/quilkin/pull/888
+* Update dependencies on GitHub Bot by @markmandel in https://github.com/googleforgames/quilkin/pull/889
+* Bump h2 from 0.3.22 to 0.3.24 by @dependabot in https://github.com/googleforgames/quilkin/pull/891
+* Remove agent note by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/894
+* Update CODEOWNERS by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/895
+* Remove protobuf_src from example by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/898
+* Bump mio from 0.8.10 to 0.8.11 by @dependabot in https://github.com/googleforgames/quilkin/pull/900
+* Use newly published deny by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/901
+* Add licence.html to release quilkin.zip by @markmandel in https://github.com/googleforgames/quilkin/pull/905
+
+## New Contributors
+* @zezhehh made their first contribution in https://github.com/googleforgames/quilkin/pull/840
+* @Jake-Shadle made their first contribution in https://github.com/googleforgames/quilkin/pull/846
+
+**Full Changelog**: https://github.com/googleforgames/quilkin/compare/v0.7.0...v0.8.0
+
 # v0.7.0 (2023-10-18)
 
 ## What's Changed

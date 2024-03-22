@@ -16,7 +16,7 @@
 
 [package]
 name = "quilkin"
-version = "0.8.0-dev"
+version = "0.9.0-dev"
 authors = [
     "Mark Mandel <markmandel@google.com>",
     "Ifeanyi Ubah <ifeanyi.ubah@embark-studios.com>",
@@ -55,7 +55,7 @@ test = false
 
 [dependencies]
 # Local
-quilkin-macros = { version = "0.8.0-dev", path = "./macros" }
+quilkin-macros = { version = "0.9.0-dev", path = "./macros" }
 
 # Crates.io
 arc-swap = { version = "1.6.0", features = ["serde"] }
