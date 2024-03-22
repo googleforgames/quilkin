@@ -314,6 +314,12 @@ impl TcpListener {
         self.inner.local_addr().expect("failed to bind").port()
     }
 
+    /// Retrieves the local address the listener is bound to
+    #[inline]
+    pub fn local_addr(&self) -> SocketAddr {
+        self.inner.local_addr().expect("failed to bind")
+    }
+
     #[inline]
     pub fn into_stream(self) -> io::Result<tokio_stream::wrappers::TcpListenerStream> {
         self.inner.set_nonblocking(true)?;
