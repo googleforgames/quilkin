@@ -230,7 +230,7 @@ mod serde {
             resources.push(
                 resource_type
                     .encode_to_any(&Cluster {
-                        locality: cluster.key().clone().map(|l| l.try_into().unwrap()),
+                        locality: cluster.key().clone().map(From::from),
                         endpoints: cluster
                             .endpoints
                             .iter()

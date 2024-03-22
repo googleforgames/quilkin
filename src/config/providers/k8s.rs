@@ -29,7 +29,7 @@ pub fn update_filters_from_configmap(
 
             let configmap = match event {
                 Event::Applied(configmap) => configmap,
-                Event::Restarted(configmaps) => match configmaps.get(0) {
+                Event::Restarted(configmaps) => match configmaps.first() {
                     Some(configmap) => configmap.clone(),
                     None => {
                         yield Ok(());

@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
 pub use std::{
-    net::{Ipv4Addr, SocketAddr, SocketAddrV4, UdpSocket},
-    sync::{atomic, mpsc, Arc},
+    net::{Ipv4Addr, SocketAddr, UdpSocket},
+    sync::{mpsc, Arc},
 };
 
 pub const READ_QUILKIN_PORT: u16 = 9001;

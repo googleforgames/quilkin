@@ -584,7 +584,7 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
         let mut remote_addr = responses
             .remote_addr()
             .ok_or_else(|| tonic::Status::invalid_argument("no remote address available"))?;
-        crate::net::to_canonical(&mut remote_addr);
+        remote_addr.set_ip(remote_addr.ip().to_canonical());
         let mut responses = responses.into_inner();
         let Some(identifier) = responses
             .next()

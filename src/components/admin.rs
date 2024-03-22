@@ -237,6 +237,7 @@ mod tests {
         assert_eq!(response.status(), hyper::StatusCode::OK);
     }
 
+    #[cfg(target_os = "linux")]
     #[tokio::test]
     async fn collect_pprof() {
         // Custom time to make the test fast.

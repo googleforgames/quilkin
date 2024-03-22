@@ -196,20 +196,20 @@ impl Config {
                 if names.is_empty() {
                     for cluster in self.clusters.read().iter() {
                         resources.push(resource_type.encode_to_any(
-                            &crate::net::cluster::proto::Cluster::try_from((
+                            &crate::net::cluster::proto::Cluster::from((
                                 cluster.key(),
                                 &cluster.value().endpoints,
-                            ))?,
+                            )),
                         )?);
                     }
                 } else {
                     for locality in names.iter().filter_map(|name| name.parse().ok()) {
                         if let Some(cluster) = self.clusters.read().get(&Some(locality)) {
                             resources.push(resource_type.encode_to_any(
-                                &crate::net::cluster::proto::Cluster::try_from((
+                                &crate::net::cluster::proto::Cluster::from((
                                     cluster.key(),
                                     &cluster.value().endpoints,
-                                ))?,
+                                )),
                             )?);
                         }
                     }
@@ -305,10 +305,7 @@ impl Config {
                         name: key.as_ref().map(|k| k.to_string()).unwrap_or_default(),
                         version: current_version.to_string(),
                         resource: Some(resource_type.encode_to_any(
-                            &crate::net::cluster::proto::Cluster::try_from((
-                                key,
-                                &value.endpoints,
-                            ))?,
+                            &crate::net::cluster::proto::Cluster::from((key, &value.endpoints)),
                         )?),
                         ..Default::default()
                     });
