@@ -117,10 +117,7 @@ impl<T: Clone + Default> Slot<T> {
     /// slot. Any changes made will update the value in the slot.
     pub fn modify(&self, mut modify: impl FnMut(&mut T)) {
         self.inner.rcu(|value| {
-            let mut current = value
-                .as_deref()
-                .map(|value| T::clone(value))
-                .unwrap_or_default();
+            let mut current = value.as_deref().cloned().unwrap_or_default();
             (modify)(&mut current);
             Some(Arc::new(current))
         });

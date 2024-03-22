@@ -111,7 +111,7 @@ impl DownstreamReceiveWorkerConfig {
                 let (result, contents) = socket.recv_from(buffer).await;
                 match result {
                     Ok((_size, mut source)) => {
-                        crate::net::to_canonical(&mut source);
+                        source.set_ip(source.ip().to_canonical());
                         let packet = DownstreamPacket {
                             received_at: crate::unix_timestamp(),
                             asn_info: crate::net::maxmind_db::MaxmindDb::lookup(source.ip()),
