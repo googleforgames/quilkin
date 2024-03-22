@@ -260,6 +260,7 @@
 <a href="#260" id="260">260</a>
 <a href="#261" id="261">261</a>
 <a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -432,6 +433,7 @@
             Commands::Manage(_mng) =&gt; {
                 <span class="kw">let </span>ready = components::manage::Ready {
                     idle_request_interval: admin_server::IDLE_REQUEST_INTERVAL,
+                    is_manage: <span class="bool-val">true</span>,
                     ..Default::default()
                 };
                 Admin::Manage(ready)
