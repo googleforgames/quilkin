@@ -1512,7 +1512,7 @@
                                 <span class="kw">break</span>;
                             }
                             <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
-                                <span class="macro">tracing::info!</span>(
+                                <span class="macro">tracing::debug!</span>(
                                     <span class="string">"exceeded idle request interval sending new requests"
                                 </span>);
                                 ds.refresh(<span class="kw-2">&amp;</span>identifier, <span class="kw-2">&amp;</span>resource_subscriptions, <span class="kw-2">&amp;</span>local)
@@ -1648,7 +1648,7 @@
                                 <span class="kw">break</span>;
                             }
                             <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
-                                <span class="macro">tracing::info!</span>(
+                                <span class="macro">tracing::debug!</span>(
                                     <span class="string">"exceeded idle request interval sending new requests"
                                 </span>);
                                 <span class="self">Self</span>::refresh_resources(
