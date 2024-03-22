@@ -546,7 +546,7 @@ impl AdsClient {
                                 break;
                             }
                             Err(_) => {
-                                tracing::info!(
+                                tracing::debug!(
                                     "exceeded idle request interval sending new requests"
                                 );
                                 ds.refresh(&identifier, &resource_subscriptions, &local)
@@ -682,7 +682,7 @@ impl AdsStream {
                                 break;
                             }
                             Err(_) => {
-                                tracing::info!(
+                                tracing::warn!(
                                     "exceeded idle request interval sending new requests"
                                 );
                                 Self::refresh_resources(
