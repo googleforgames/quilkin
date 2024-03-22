@@ -962,12 +962,6 @@
 <a href="#962" id="962">962</a>
 <a href="#963" id="963">963</a>
 <a href="#964" id="964">964</a>
-<a href="#965" id="965">965</a>
-<a href="#966" id="966">966</a>
-<a href="#967" id="967">967</a>
-<a href="#968" id="968">968</a>
-<a href="#969" id="969">969</a>
-<a href="#970" id="970">970</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -997,7 +991,6 @@
 };
 
 <span class="kw">use crate</span>::{
-    cli::Admin,
     config::Config,
     generated::{
         envoy::{
@@ -1088,23 +1081,17 @@
     management_servers: Vec&lt;Endpoint&gt;,
     <span class="doccomment">/// The management server endpoint the client is currently connected to
     </span>connected_endpoint: Endpoint,
-    mode: Admin,
 }
 
 <span class="kw">impl</span>&lt;C: ServiceClient&gt; Client&lt;C&gt; {
     <span class="attr">#[tracing::instrument(skip_all, level = <span class="string">&quot;trace&quot;</span>, fields(servers = <span class="question-mark">?</span>management_servers))]
-    </span><span class="kw">pub async fn </span>connect(
-        identifier: String,
-        mode: Admin,
-        management_servers: Vec&lt;Endpoint&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+    </span><span class="kw">pub async fn </span>connect(identifier: String, management_servers: Vec&lt;Endpoint&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span>(client, connected_endpoint) = <span class="self">Self</span>::connect_with_backoff(<span class="kw-2">&amp;</span>management_servers).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             client,
             identifier: Arc::from(identifier),
             management_servers,
             connected_endpoint,
-            mode,
         })
     }
 
@@ -1191,11 +1178,19 @@
 }
 
 <span class="kw">impl </span>MdsClient {
-    <span class="kw">pub fn </span>mds_client_stream(<span class="kw-2">&amp;</span><span class="self">self</span>, config: Arc&lt;Config&gt;) -&gt; MdsStream {
-        MdsStream::mds_client_stream(<span class="self">self</span>, config)
+    <span class="kw">pub fn </span>mds_client_stream(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        config: Arc&lt;Config&gt;,
+        rt_config: <span class="kw">crate</span>::components::agent::Ready,
+    ) -&gt; MdsStream {
+        MdsStream::mds_client_stream(<span class="self">self</span>, config, rt_config)
     }
 
-    <span class="kw">pub async fn </span>delta_stream(<span class="self">self</span>, config: Arc&lt;Config&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;DeltaSubscription, <span class="self">Self</span>&gt; {
+    <span class="kw">pub async fn </span>delta_stream(
+        <span class="self">self</span>,
+        config: Arc&lt;Config&gt;,
+        rt_config: <span class="kw">crate</span>::components::agent::Ready,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;DeltaSubscription, <span class="self">Self</span>&gt; {
         <span class="kw">let </span>identifier = String::from(<span class="kw-2">&amp;*</span><span class="self">self</span>.identifier);
 
         <span class="kw">let </span>(<span class="kw-2">mut </span>ds, <span class="kw-2">mut </span>stream) =
@@ -1213,16 +1208,14 @@
         <span class="kw">let </span>handle = tokio::task::spawn(
             <span class="kw">async move </span>{
                 <span class="macro">tracing::trace!</span>(<span class="string">&quot;starting relay client delta stream task&quot;</span>);
-                <span class="kw">let </span>mode = <span class="self">self</span>.mode.clone();
-                <span class="kw">let </span>agent = <span class="self">self</span>.mode.unwrap_agent();
-                <span class="kw">let </span>interval = mode.idle_request_interval();
+                <span class="kw">let </span>interval = rt_config.idle_request_interval;
 
                 <span class="kw">loop </span>{
                     {
                         <span class="kw">let </span>control_plane =
-                            <span class="kw">super</span>::server::ControlPlane::from_arc(config.clone(), mode.clone());
+                            <span class="kw">super</span>::server::ControlPlane::from_arc(config.clone(), interval);
                         <span class="kw">let </span><span class="kw-2">mut </span>stream = control_plane.delta_aggregated_resources(stream).<span class="kw">await</span><span class="question-mark">?</span>;
-                        agent.relay_is_healthy.store(<span class="bool-val">true</span>, Ordering::SeqCst);
+                        rt_config.relay_is_healthy.store(<span class="bool-val">true</span>, Ordering::SeqCst);
 
                         <span class="kw">loop </span>{
                             <span class="kw">let </span>timeout = tokio::time::timeout(interval, stream.next());
@@ -1230,7 +1223,7 @@
                             <span class="kw">match </span>timeout.<span class="kw">await </span>{
                                 <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(result)) =&gt; {
                                     <span class="kw">let </span>response = result<span class="question-mark">?</span>;
-                                    <span class="macro">tracing::debug!</span>(<span class="string">&quot;received delta discovery response&quot;</span>);
+                                    <span class="macro">tracing::trace!</span>(<span class="string">&quot;received delta discovery response&quot;</span>);
                                     ds.send_response(response).<span class="kw">await</span><span class="question-mark">?</span>;
                                 }
                                 <span class="kw">_ </span>=&gt; <span class="kw">break</span>,
@@ -1238,10 +1231,10 @@
                         }
                     }
 
-                    agent.relay_is_healthy.store(<span class="bool-val">false</span>, Ordering::SeqCst);
+                    rt_config.relay_is_healthy.store(<span class="bool-val">false</span>, Ordering::SeqCst);
 
-                    <span class="macro">tracing::warn!</span>(<span class="string">&quot;lost connection to relay server, retrying&quot;</span>);
-                    <span class="kw">let </span>new_client = MdsClient::connect_with_backoff(<span class="kw-2">&amp;</span><span class="self">self</span>.management_servers)
+                    <span class="comment">//tracing::warn!(&quot;lost connection to relay server, retrying&quot;);
+                    </span><span class="kw">let </span>new_client = MdsClient::connect_with_backoff(<span class="kw-2">&amp;</span><span class="self">self</span>.management_servers)
                         .<span class="kw">await
                         </span>.unwrap()
                         .<span class="number">0</span>;
@@ -1386,9 +1379,9 @@
     </span><span class="kw">pub fn </span>xds_client_stream(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         config: Arc&lt;Config&gt;,
-        idle_request_interval: Duration,
+        rt_config: <span class="kw">crate</span>::components::proxy::Ready,
     ) -&gt; AdsStream {
-        AdsStream::xds_client_stream(<span class="self">self</span>, config, idle_request_interval)
+        AdsStream::xds_client_stream(<span class="self">self</span>, config, rt_config)
     }
 
     <span class="doccomment">/// Attempts to start a new delta stream to the xDS management server, if the
@@ -1396,7 +1389,7 @@
     </span><span class="kw">pub async fn </span>delta_subscribe(
         <span class="self">self</span>,
         config: Arc&lt;Config&gt;,
-        idle_request_interval: Duration,
+        rt_config: <span class="kw">crate</span>::components::proxy::Ready,
         resources: <span class="kw">impl </span>IntoIterator&lt;Item = (ResourceType, Vec&lt;String&gt;)&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;DeltaSubscription, <span class="self">Self</span>&gt; {
         <span class="kw">let </span>resource_subscriptions: Vec&lt;<span class="kw">_</span>&gt; = resources.into_iter().collect();
@@ -1478,7 +1471,6 @@
             <span class="kw">async move </span>{
                 <span class="macro">tracing::trace!</span>(<span class="string">&quot;starting xDS delta stream task&quot;</span>);
                 <span class="kw">let </span><span class="kw-2">mut </span>stream = stream;
-                <span class="kw">let </span>proxy = <span class="self">self</span>.mode.unwrap_proxy();
 
                 <span class="kw">loop </span>{
                     <span class="macro">tracing::trace!</span>(<span class="string">&quot;creating discovery response handler&quot;</span>);
@@ -1491,12 +1483,14 @@
                     );
 
                     <span class="kw">loop </span>{
-                        <span class="kw">let </span>next_response =
-                            tokio::time::timeout(idle_request_interval, response_stream.next());
+                        <span class="kw">let </span>next_response = tokio::time::timeout(
+                            rt_config.idle_request_interval,
+                            response_stream.next(),
+                        );
 
                         <span class="kw">match </span>next_response.<span class="kw">await </span>{
                             <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(response))) =&gt; {
-                                proxy
+                                rt_config
                                     .xds_is_healthy
                                     .read()
                                     .as_deref()
@@ -1525,7 +1519,7 @@
                         }
                     }
 
-                    proxy
+                    rt_config
                         .xds_is_healthy
                         .read()
                         .as_deref()
@@ -1573,16 +1567,14 @@
             client,
             identifier,
             management_servers,
-            mode,
             ..
         }: <span class="kw-2">&amp;</span>AdsClient,
         config: Arc&lt;Config&gt;,
-        idle_interval: Duration,
+        rt_config: <span class="kw">crate</span>::components::proxy::Ready,
     ) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>client = client.clone();
         <span class="kw">let </span>identifier = identifier.clone();
         <span class="kw">let </span>management_servers = management_servers.clone();
-        <span class="kw">let </span>mode = mode.clone();
 
         <span class="self">Self</span>::connect(
             identifier.clone(),
@@ -1627,14 +1619,14 @@
                         stream,
                         <span class="kw">move </span>|resource| config.apply(resource),
                     );
-                    <span class="kw">let </span>runtime_config = mode.unwrap_proxy();
 
                     <span class="kw">loop </span>{
-                        <span class="kw">let </span>next_response = tokio::time::timeout(idle_interval, stream.next());
+                        <span class="kw">let </span>next_response =
+                            tokio::time::timeout(rt_config.idle_request_interval, stream.next());
 
                         <span class="kw">match </span>next_response.<span class="kw">await </span>{
                             <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(ack))) =&gt; {
-                                runtime_config
+                                rt_config
                                     .xds_is_healthy
                                     .read()
                                     .as_deref()
@@ -1667,7 +1659,7 @@
                         }
                     }
 
-                    runtime_config
+                    rt_config
                         .xds_is_healthy
                         .read()
                         .as_deref()
@@ -1711,20 +1703,20 @@
             client,
             identifier,
             management_servers,
-            mode,
             ..
         }: <span class="kw-2">&amp;</span>MdsClient,
         config: Arc&lt;Config&gt;,
+        rt_config: <span class="kw">crate</span>::components::agent::Ready,
     ) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>client = client.clone();
         <span class="kw">let </span>identifier = identifier.clone();
         <span class="kw">let </span>management_servers = management_servers.clone();
-        <span class="kw">let </span>mode = mode.clone();
+
         <span class="self">Self</span>::connect(
             identifier.clone(),
             <span class="kw">move </span>|(requests, <span class="kw-2">mut </span>rx), <span class="kw">_</span>| <span class="kw">async move </span>{
                 <span class="macro">tracing::trace!</span>(<span class="string">&quot;starting relay client stream task&quot;</span>);
-                <span class="kw">let </span>idle_interval = mode.idle_request_interval();
+                <span class="kw">let </span>idle_interval = rt_config.idle_request_interval;
 
                 <span class="kw">loop </span>{
                     <span class="kw">let </span>initial_response = DiscoveryResponse {
@@ -1748,11 +1740,9 @@
                         </span>.into_inner();
 
                     <span class="kw">let </span>control_plane =
-                        <span class="kw">super</span>::server::ControlPlane::from_arc(config.clone(), mode.clone());
+                        <span class="kw">super</span>::server::ControlPlane::from_arc(config.clone(), idle_interval);
                     <span class="kw">let </span><span class="kw-2">mut </span>stream = control_plane.stream_resources(stream).<span class="kw">await</span><span class="question-mark">?</span>;
-                    mode.unwrap_agent()
-                        .relay_is_healthy
-                        .store(<span class="bool-val">true</span>, Ordering::SeqCst);
+                    rt_config.relay_is_healthy.store(<span class="bool-val">true</span>, Ordering::SeqCst);
 
                     <span class="kw">loop </span>{
                         <span class="kw">let </span>timeout = tokio::time::timeout(idle_interval, stream.next());
@@ -1767,9 +1757,7 @@
                         }
                     }
 
-                    mode.unwrap_agent()
-                        .relay_is_healthy
-                        .store(<span class="bool-val">false</span>, Ordering::SeqCst);
+                    rt_config.relay_is_healthy.store(<span class="bool-val">false</span>, Ordering::SeqCst);
 
                     <span class="macro">tracing::warn!</span>(<span class="string">&quot;lost connection to relay server, retrying&quot;</span>);
                     client = MdsClient::connect_with_backoff(<span class="kw-2">&amp;</span>management_servers)

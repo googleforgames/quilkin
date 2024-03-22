@@ -132,7 +132,7 @@
 ) -&gt; std::pin::Pin&lt;Box&lt;<span class="kw">dyn </span>futures::Stream&lt;Item = <span class="kw">crate</span>::Result&lt;DeltaDiscoveryRequest&gt;&gt; + Send&gt;&gt; {
     Box::pin(<span class="macro">async_stream::try_stream! </span>{
         <span class="kw">let </span>_stream_metrics = metrics::StreamConnectionMetrics::new(identifier.clone());
-        <span class="macro">tracing::debug!</span>(<span class="string">&quot;awaiting delta response&quot;</span>);
+        <span class="macro">tracing::trace!</span>(<span class="string">&quot;awaiting delta response&quot;</span>);
         <span class="kw">for await </span>response <span class="kw">in </span>stream
         {
             <span class="kw">let </span>response = <span class="kw">match </span>response {
@@ -150,7 +150,7 @@
             <span class="kw">let </span>control_plane_identifier = response.control_plane.as_ref().map(|cp| cp.identifier.as_str()).unwrap_or_default();
 
             metrics::delta_discovery_responses(control_plane_identifier, <span class="kw-2">&amp;</span>response.type_url).inc();
-            <span class="macro">tracing::debug!</span>(
+            <span class="macro">tracing::trace!</span>(
                 version = <span class="kw-2">&amp;*</span>response.system_version_info,
                 r#type = <span class="kw-2">&amp;*</span>response.type_url,
                 nonce = <span class="kw-2">&amp;*</span>response.nonce,
@@ -161,7 +161,7 @@
             <span class="kw">let </span>map = <span class="kw-2">&amp;</span>local.versions[resource_type.into_usize()];
 
             <span class="kw">let </span>result = {
-                <span class="macro">tracing::debug!</span>(num_resources = response.resources.len(), kind = %resource_type, <span class="string">&quot;applying delta resources&quot;</span>);
+                <span class="macro">tracing::trace!</span>(num_resources = response.resources.len(), kind = %resource_type, <span class="string">&quot;applying delta resources&quot;</span>);
                 <span class="kw">let </span><span class="kw-2">mut </span>lock = map.lock();
 
                 config.apply_delta(

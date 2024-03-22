@@ -315,8 +315,8 @@
 
 </span><span class="kw">use </span>serde::{Deserialize, Serialize};
 
-<span class="kw">use super</span>::{proto, Prefix, Regex, Suffix};
-<span class="kw">use </span><span class="kw">crate</span>::filters::{metadata::CAPTURED_BYTES, ConvertProtoConfigError};
+<span class="kw">use super</span>::{proto, Prefix, Regex, Suffix, CAPTURED_BYTES};
+<span class="kw">use </span><span class="kw">crate</span>::filters::ConvertProtoConfigError;
 
 <span class="doccomment">/// Strategy to apply for acquiring a set of bytes in the UDP packet
 </span><span class="attr">#[derive(Serialize, Deserialize, Debug, PartialEq, schemars::JsonSchema)]

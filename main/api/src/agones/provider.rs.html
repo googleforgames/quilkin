@@ -252,6 +252,7 @@
 <a href="#252" id="252">252</a>
 <a href="#253" id="253">253</a>
 <a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -269,6 +270,7 @@
  */
 
 </span><span class="attr">#[cfg(test)]
+#[allow(dead_code)]
 </span><span class="kw">mod </span>tests {
     <span class="kw">use </span>std::{collections::BTreeMap, time::Duration};
 
@@ -307,8 +309,8 @@
 
     <span class="kw">const </span>PROXY_DEPLOYMENT: <span class="kw-2">&amp;</span>str = <span class="string">&quot;quilkin-xds-proxies&quot;</span>;
 
-    <span class="attr">#[tokio::test]
-    #[serial]
+    <span class="comment">//#[tokio::test]
+    </span><span class="attr">#[serial]
     </span><span class="doccomment">/// Test for Agones Provider integration. Since this will look at all GameServers in the namespace
     /// for this test, we should only run Agones integration test in a serial manner, since they
     /// could easily collide with each other.

@@ -78,55 +78,6 @@
 <a href="#78" id="78">78</a>
 <a href="#79" id="79">79</a>
 <a href="#80" id="80">80</a>
-<a href="#81" id="81">81</a>
-<a href="#82" id="82">82</a>
-<a href="#83" id="83">83</a>
-<a href="#84" id="84">84</a>
-<a href="#85" id="85">85</a>
-<a href="#86" id="86">86</a>
-<a href="#87" id="87">87</a>
-<a href="#88" id="88">88</a>
-<a href="#89" id="89">89</a>
-<a href="#90" id="90">90</a>
-<a href="#91" id="91">91</a>
-<a href="#92" id="92">92</a>
-<a href="#93" id="93">93</a>
-<a href="#94" id="94">94</a>
-<a href="#95" id="95">95</a>
-<a href="#96" id="96">96</a>
-<a href="#97" id="97">97</a>
-<a href="#98" id="98">98</a>
-<a href="#99" id="99">99</a>
-<a href="#100" id="100">100</a>
-<a href="#101" id="101">101</a>
-<a href="#102" id="102">102</a>
-<a href="#103" id="103">103</a>
-<a href="#104" id="104">104</a>
-<a href="#105" id="105">105</a>
-<a href="#106" id="106">106</a>
-<a href="#107" id="107">107</a>
-<a href="#108" id="108">108</a>
-<a href="#109" id="109">109</a>
-<a href="#110" id="110">110</a>
-<a href="#111" id="111">111</a>
-<a href="#112" id="112">112</a>
-<a href="#113" id="113">113</a>
-<a href="#114" id="114">114</a>
-<a href="#115" id="115">115</a>
-<a href="#116" id="116">116</a>
-<a href="#117" id="117">117</a>
-<a href="#118" id="118">118</a>
-<a href="#119" id="119">119</a>
-<a href="#120" id="120">120</a>
-<a href="#121" id="121">121</a>
-<a href="#122" id="122">122</a>
-<a href="#123" id="123">123</a>
-<a href="#124" id="124">124</a>
-<a href="#125" id="125">125</a>
-<a href="#126" id="126">126</a>
-<a href="#127" id="127">127</a>
-<a href="#128" id="128">128</a>
-<a href="#129" id="129">129</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -143,14 +94,8 @@
  * limitations under the License.
  */
 
-</span><span class="kw">use </span>std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
-
-<span class="kw">use </span><span class="kw">super</span>::Admin;
-
-<span class="kw">use </span>futures::TryFutureExt;
+</span><span class="kw">use </span><span class="kw">crate</span>::components::manage;
+<span class="kw">pub use </span>manage::Ready;
 
 <span class="macro">define_port!</span>(<span class="number">7800</span>);
 
@@ -183,77 +128,34 @@
 
 <span class="kw">impl </span>Manage {
     <span class="attr">#[tracing::instrument(skip_all)]
-    </span><span class="kw">pub async fn </span>manage(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
+    </span><span class="kw">pub async fn </span>run(
+        <span class="self">self</span>,
         config: std::sync::Arc&lt;<span class="kw">crate</span>::Config&gt;,
-        mode: Admin,
-        <span class="kw-2">mut </span>shutdown_rx: <span class="kw">crate</span>::ShutdownRx,
+        ready: Ready,
+        shutdown_rx: <span class="kw">crate</span>::ShutdownRx,
     ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
-        <span class="kw">let </span>locality = <span class="self">self</span>.region.as_ref().map(|region| {
+        <span class="kw">let </span>locality = <span class="self">self</span>.region.map(|region| {
             <span class="kw">crate</span>::net::endpoint::Locality::new(
                 region,
-                <span class="self">self</span>.zone.as_deref().unwrap_or_default(),
-                <span class="self">self</span>.sub_zone.as_deref().unwrap_or_default(),
+                <span class="self">self</span>.zone.unwrap_or_default(),
+                <span class="self">self</span>.sub_zone.unwrap_or_default(),
             )
         });
 
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(locality) = <span class="kw-2">&amp;</span>locality {
-            config
-                .clusters
-                .modify(|map| map.update_unlocated_endpoints(locality.clone()));
+        <span class="kw">let </span>listener = <span class="kw">crate</span>::net::TcpListener::bind(<span class="prelude-val">Some</span>(<span class="self">self</span>.port))<span class="question-mark">?</span>;
+
+        manage::Manage {
+            locality,
+            provider: <span class="self">self</span>.provider,
+            relay_servers: <span class="self">self</span>.relay,
+            listener,
         }
-
-        <span class="kw">let </span>runtime_config = mode.unwrap_manage();
-        <span class="kw">let </span>provider_task = <span class="self">self</span>.provider.spawn(
-            config.clone(),
-            runtime_config.provider_is_healthy.clone(),
-            locality.clone(),
-        );
-
-        <span class="kw">let </span>_relay_stream = <span class="kw">if </span>!<span class="self">self</span>.relay.is_empty() {
-            <span class="macro">tracing::info!</span>(<span class="string">&quot;connecting to relay server&quot;</span>);
-            <span class="kw">let </span>client = <span class="kw">crate</span>::net::xds::client::MdsClient::connect(
-                String::clone(<span class="kw-2">&amp;</span>config.id.load()),
-                mode.clone(),
-                <span class="self">self</span>.relay.clone(),
-            )
-            .<span class="kw">await</span><span class="question-mark">?</span>;
-
-            <span class="kw">enum </span>XdsTask {
-                Delta(<span class="kw">crate</span>::net::xds::client::DeltaSubscription),
-                Aggregated(<span class="kw">crate</span>::net::xds::client::MdsStream),
-            }
-
-            <span class="comment">// Attempt to connect to a delta stream if the relay has one
-            // available, otherwise fallback to the regular aggregated stream
-            </span><span class="prelude-val">Some</span>(<span class="kw">match </span>client.delta_stream(config.clone()).<span class="kw">await </span>{
-                <span class="prelude-val">Ok</span>(ds) =&gt; XdsTask::Delta(ds),
-                <span class="prelude-val">Err</span>(client) =&gt; XdsTask::Aggregated(client.mds_client_stream(config.clone())),
-            })
-        } <span class="kw">else </span>{
-            <span class="prelude-val">None
-        </span>};
-
-        <span class="kw">let </span>server_task = tokio::spawn(<span class="kw">crate</span>::net::xds::server::spawn(<span class="self">self</span>.port, mode, config))
-            .map_err(From::from)
-            .and_then(std::future::ready);
-
-        <span class="macro">tokio::select! </span>{
-            result = server_task =&gt; result,
-            result = provider_task =&gt; result<span class="question-mark">?</span>,
-            result = shutdown_rx.changed() =&gt; result.map_err(From::from),
-        }
-    }
-}
-
-<span class="attr">#[derive(Clone, Debug, Default)]
-</span><span class="kw">pub struct </span>RuntimeConfig {
-    <span class="kw">pub </span>provider_is_healthy: Arc&lt;AtomicBool&gt;,
-}
-
-<span class="kw">impl </span>RuntimeConfig {
-    <span class="kw">pub fn </span>is_ready(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
-        <span class="self">self</span>.provider_is_healthy.load(Ordering::SeqCst)
-    }
+        .run(<span class="kw">crate</span>::components::RunArgs {
+            config,
+            ready,
+            shutdown_rx,
+        })
+        .<span class="kw">await
+    </span>}
 }
 </code></pre></div></section></main></body></html>

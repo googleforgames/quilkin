@@ -393,6 +393,54 @@
 <a href="#393" id="393">393</a>
 <a href="#394" id="394">394</a>
 <a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -500,11 +548,12 @@
         .and_then(tokio::net::UdpSocket::from_std)
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>raw_socket_with_reuse(port: u16) -&gt; std::io::Result&lt;Socket&gt; {
+<span class="attr">#[inline]
+</span><span class="kw">pub fn </span>raw_socket_with_reuse(port: u16) -&gt; std::io::Result&lt;Socket&gt; {
     raw_socket_with_reuse_and_address((Ipv6Addr::UNSPECIFIED, port).into())
 }
 
-<span class="kw">fn </span>raw_socket_with_reuse_and_address(addr: SocketAddr) -&gt; std::io::Result&lt;Socket&gt; {
+<span class="kw">pub fn </span>raw_socket_with_reuse_and_address(addr: SocketAddr) -&gt; std::io::Result&lt;Socket&gt; {
     <span class="kw">let </span>domain = <span class="kw">match </span>addr {
         SocketAddr::V4(<span class="kw">_</span>) =&gt; socket2::Domain::IPV4,
         SocketAddr::V6(<span class="kw">_</span>) =&gt; socket2::Domain::IPV6,
@@ -518,7 +567,16 @@
         </span>sock.set_only_v6(<span class="bool-val">false</span>)<span class="question-mark">?</span>;
     }
     sock.bind(<span class="kw-2">&amp;</span>addr.into())<span class="question-mark">?</span>;
+
     <span class="prelude-val">Ok</span>(sock)
+}
+
+<span class="attr">#[inline]
+</span><span class="kw">pub fn </span>socket_port(socket: <span class="kw-2">&amp;</span>socket2::Socket) -&gt; u16 {
+    <span class="kw">match </span>socket.local_addr().unwrap().as_socket().unwrap() {
+        SocketAddr::V4(addr) =&gt; addr.port(),
+        SocketAddr::V6(addr) =&gt; addr.port(),
+    }
 }
 
 <span class="attr">#[cfg(not(target_family = <span class="string">&quot;windows&quot;</span>))]
@@ -541,7 +599,7 @@
 }
 
 <span class="kw">impl </span>DualStackLocalSocket {
-    <span class="kw">pub fn </span>from_raw(socket: socket2::Socket) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>from_raw(socket: Socket) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>socket: std::net::UdpSocket = socket.into();
         <span class="kw">let </span>local_addr = socket.local_addr().unwrap();
         <span class="macro">cfg_if::cfg_if! </span>{
@@ -592,10 +650,6 @@
             <span class="kw">pub async fn </span>send_to&lt;B: tokio_uring::buf::IoBuf&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, buf: B, target: SocketAddr) -&gt; (io::Result&lt;usize&gt;, B) {
                 <span class="self">self</span>.socket.send_to(buf, target).<span class="kw">await
             </span>}
-
-            <span class="kw">pub fn </span>make_refcnt(<span class="self">self</span>) -&gt; std::rc::Rc&lt;<span class="self">Self</span>&gt; {
-                std::rc::Rc::new(<span class="self">self</span>)
-            }
         } <span class="kw">else </span>{
             <span class="kw">pub async fn </span>recv_from&lt;B: std::ops::DerefMut&lt;Target = [u8]&gt;&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut </span>buf: B) -&gt; (io::Result&lt;(usize, SocketAddr)&gt;, B) {
                 <span class="kw">let </span>result = <span class="self">self</span>.socket.recv_from(<span class="kw-2">&amp;mut </span>buf).<span class="kw">await</span>;
@@ -606,11 +660,19 @@
                 <span class="kw">let </span>result = <span class="self">self</span>.socket.send_to(<span class="kw-2">&amp;</span>buf, target).<span class="kw">await</span>;
                 (result, buf)
             }
-
-            <span class="kw">pub fn </span>make_refcnt(<span class="self">self</span>) -&gt; std::sync::Arc&lt;<span class="self">Self</span>&gt; {
-                std::sync::Arc::new(<span class="self">self</span>)
-            }
         }
+    }
+
+    <span class="kw">pub fn </span>make_refcnt(<span class="self">self</span>) -&gt; DualStackLocalSocketRc {
+        DualStackLocalSocketRc::new(<span class="self">self</span>)
+    }
+}
+
+<span class="macro">cfg_if::cfg_if! </span>{
+    <span class="kw">if </span><span class="attr">#[cfg(target_os = <span class="string">&quot;linux&quot;</span>)] </span>{
+        <span class="kw">pub type </span>DualStackLocalSocketRc = std::rc::Rc&lt;DualStackLocalSocket&gt;;
+    } <span class="kw">else </span>{
+        <span class="kw">pub type </span>DualStackLocalSocketRc = std::sync::Arc&lt;DualStackLocalSocket&gt;;
     }
 }
 
@@ -676,6 +738,40 @@
     </span>}
 }
 
+<span class="doccomment">/// TCP listener for a GRPC service, always binds to the local IPv6 address
+</span><span class="kw">pub struct </span>TcpListener {
+    inner: std::net::TcpListener,
+}
+
+<span class="kw">impl </span>TcpListener {
+    <span class="doccomment">/// Binds a TCP listener, if `None` is passed, binds to an ephemeral port
+    </span><span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>bind(port: <span class="prelude-ty">Option</span>&lt;u16&gt;) -&gt; io::Result&lt;<span class="self">Self</span>&gt; {
+        std::net::TcpListener::bind((std::net::Ipv6Addr::UNSPECIFIED, port.unwrap_or_default()))
+            .map(|inner| <span class="self">Self </span>{ inner })
+    }
+
+    <span class="doccomment">/// Retrieves the port the listener is bound to
+    </span><span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>port(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u16 {
+        <span class="self">self</span>.inner.local_addr().expect(<span class="string">&quot;failed to bind&quot;</span>).port()
+    }
+
+    <span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>into_stream(<span class="self">self</span>) -&gt; io::Result&lt;tokio_stream::wrappers::TcpListenerStream&gt; {
+        <span class="self">self</span>.inner.set_nonblocking(<span class="bool-val">true</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>tl = tokio::net::TcpListener::from_std(<span class="self">self</span>.inner)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(tokio_stream::wrappers::TcpListenerStream::new(tl))
+    }
+}
+
+<span class="kw">impl </span>From&lt;TcpListener&gt; <span class="kw">for </span>std::net::TcpListener {
+    <span class="attr">#[inline]
+    </span><span class="kw">fn </span>from(value: TcpListener) -&gt; <span class="self">Self </span>{
+        value.inner
+    }
+}
+
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
     <span class="kw">use </span>std::{
@@ -690,7 +786,7 @@
 
     <span class="attr">#[tokio::test]
     </span><span class="kw">async fn </span>dual_stack_socket_reusable() {
-        <span class="kw">let </span>expected = available_addr(<span class="kw-2">&amp;</span>AddressType::Random).<span class="kw">await</span>;
+        <span class="kw">let </span>expected = available_addr(AddressType::Random).<span class="kw">await</span>;
         <span class="kw">let </span>socket = <span class="kw">super</span>::DualStackEpollSocket::new(expected.port()).unwrap();
         <span class="kw">let </span>addr = socket.local_ipv4_addr().unwrap();
 
@@ -718,7 +814,7 @@
         <span class="comment">// Since the TestHelper uses the DualStackSocket, we can use it to test ourselves.
         </span><span class="kw">let </span><span class="kw-2">mut </span>t = TestHelper::default();
 
-        <span class="kw">let </span>echo_addr = t.run_echo_server(<span class="kw-2">&amp;</span>AddressType::Random).<span class="kw">await</span>;
+        <span class="kw">let </span>echo_addr = t.run_echo_server(AddressType::Random).<span class="kw">await</span>;
         <span class="kw">let </span>(<span class="kw-2">mut </span>rx, socket) = t.open_socket_and_recv_multiple_packets().<span class="kw">await</span>;
 
         <span class="kw">let </span>msg = <span class="string">&quot;hello&quot;</span>;

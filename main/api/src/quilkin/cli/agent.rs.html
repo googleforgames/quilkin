@@ -106,55 +106,6 @@
 <a href="#106" id="106">106</a>
 <a href="#107" id="107">107</a>
 <a href="#108" id="108">108</a>
-<a href="#109" id="109">109</a>
-<a href="#110" id="110">110</a>
-<a href="#111" id="111">111</a>
-<a href="#112" id="112">112</a>
-<a href="#113" id="113">113</a>
-<a href="#114" id="114">114</a>
-<a href="#115" id="115">115</a>
-<a href="#116" id="116">116</a>
-<a href="#117" id="117">117</a>
-<a href="#118" id="118">118</a>
-<a href="#119" id="119">119</a>
-<a href="#120" id="120">120</a>
-<a href="#121" id="121">121</a>
-<a href="#122" id="122">122</a>
-<a href="#123" id="123">123</a>
-<a href="#124" id="124">124</a>
-<a href="#125" id="125">125</a>
-<a href="#126" id="126">126</a>
-<a href="#127" id="127">127</a>
-<a href="#128" id="128">128</a>
-<a href="#129" id="129">129</a>
-<a href="#130" id="130">130</a>
-<a href="#131" id="131">131</a>
-<a href="#132" id="132">132</a>
-<a href="#133" id="133">133</a>
-<a href="#134" id="134">134</a>
-<a href="#135" id="135">135</a>
-<a href="#136" id="136">136</a>
-<a href="#137" id="137">137</a>
-<a href="#138" id="138">138</a>
-<a href="#139" id="139">139</a>
-<a href="#140" id="140">140</a>
-<a href="#141" id="141">141</a>
-<a href="#142" id="142">142</a>
-<a href="#143" id="143">143</a>
-<a href="#144" id="144">144</a>
-<a href="#145" id="145">145</a>
-<a href="#146" id="146">146</a>
-<a href="#147" id="147">147</a>
-<a href="#148" id="148">148</a>
-<a href="#149" id="149">149</a>
-<a href="#150" id="150">150</a>
-<a href="#151" id="151">151</a>
-<a href="#152" id="152">152</a>
-<a href="#153" id="153">153</a>
-<a href="#154" id="154">154</a>
-<a href="#155" id="155">155</a>
-<a href="#156" id="156">156</a>
-<a href="#157" id="157">157</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2023 Google LLC
  *
@@ -171,13 +122,10 @@
  * limitations under the License.
  */
 
-</span><span class="kw">use </span>std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
+</span><span class="kw">use </span>std::sync::Arc;
 
-<span class="kw">use </span><span class="kw">super</span>::Admin;
-<span class="kw">use </span><span class="kw">crate</span>::config::Config;
+<span class="kw">use crate</span>::{components::agent, config::Config};
+<span class="kw">pub use </span>agent::Ready;
 
 <span class="macro">define_port!</span>(<span class="number">7600</span>);
 
@@ -210,8 +158,8 @@
     </span><span class="kw">pub </span>provider: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::config::Providers&gt;,
     <span class="doccomment">/// The interval in seconds at which the agent will wait for a discovery
     /// request from a relay server before restarting the connection.
-    </span><span class="attr">#[clap(long, env = <span class="string">&quot;QUILKIN_IDLE_REQUEST_INTERVAL_SECS&quot;</span>, default_value_t = <span class="kw">super</span>::admin::idle_request_interval_secs())]
-    </span><span class="kw">pub </span>idle_request_interval_secs: u64,
+    </span><span class="attr">#[clap(long, env = <span class="string">&quot;QUILKIN_IDLE_REQUEST_INTERVAL_SECS&quot;</span>)]
+    </span><span class="kw">pub </span>idle_request_interval_secs: <span class="prelude-ty">Option</span>&lt;u64&gt;,
     <span class="doccomment">/// The ICAO code for the agent.
     </span><span class="attr">#[clap(short, long, env, default_value_t = <span class="kw">crate</span>::config::IcaoCode::default())]
     </span><span class="kw">pub </span>icao_code: <span class="kw">crate</span>::config::IcaoCode,
@@ -226,7 +174,7 @@
             zone: &lt;<span class="kw">_</span>&gt;::default(),
             sub_zone: &lt;<span class="kw">_</span>&gt;::default(),
             provider: &lt;<span class="kw">_</span>&gt;::default(),
-            idle_request_interval_secs: <span class="kw">super</span>::admin::idle_request_interval_secs(),
+            idle_request_interval_secs: <span class="prelude-val">None</span>,
             icao_code: &lt;<span class="kw">_</span>&gt;::default(),
         }
     }
@@ -235,81 +183,35 @@
 <span class="kw">impl </span>Agent {
     <span class="attr">#[tracing::instrument(skip_all)]
     </span><span class="kw">pub async fn </span>run(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="self">self</span>,
         config: Arc&lt;Config&gt;,
-        mode: Admin,
-        <span class="kw-2">mut </span>shutdown_rx: <span class="kw">crate</span>::ShutdownRx,
+        ready: Ready,
+        shutdown_rx: <span class="kw">crate</span>::ShutdownRx,
     ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
-        <span class="kw">let </span>locality = <span class="self">self</span>.region.as_ref().map(|region| {
+        <span class="kw">let </span>locality = <span class="self">self</span>.region.map(|region| {
             <span class="kw">crate</span>::net::endpoint::Locality::new(
                 region,
-                <span class="self">self</span>.zone.as_deref().unwrap_or_default(),
-                <span class="self">self</span>.sub_zone.as_deref().unwrap_or_default(),
+                <span class="self">self</span>.zone.unwrap_or_default(),
+                <span class="self">self</span>.sub_zone.unwrap_or_default(),
             )
         });
 
-        config.qcmp_port.store(<span class="self">self</span>.qcmp_port.into());
-        config.icao_code.store(<span class="self">self</span>.icao_code.clone().into());
+        <span class="kw">let </span>qcmp_socket = <span class="kw">crate</span>::net::raw_socket_with_reuse(<span class="self">self</span>.qcmp_port)<span class="question-mark">?</span>;
+        <span class="kw">let </span>icao_code = <span class="prelude-val">Some</span>(<span class="self">self</span>.icao_code);
 
-        <span class="kw">let </span>runtime_config = mode.unwrap_agent();
-
-        <span class="kw">let </span>_mds_task = <span class="kw">if </span>!<span class="self">self</span>.relay.is_empty() {
-            <span class="kw">let </span>_provider_task = <span class="kw">match </span><span class="self">self</span>.provider.as_ref() {
-                <span class="prelude-val">Some</span>(provider) =&gt; <span class="prelude-val">Some</span>(provider.spawn(
-                    config.clone(),
-                    runtime_config.provider_is_healthy.clone(),
-                    locality.clone(),
-                )),
-                <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;no configuration provider given&quot;</span>)),
-            };
-
-            <span class="kw">let </span>task = <span class="kw">crate</span>::net::xds::client::MdsClient::connect(
-                String::clone(<span class="kw-2">&amp;</span>config.id.load()),
-                mode.clone(),
-                <span class="self">self</span>.relay.clone(),
-            );
-
-            <span class="macro">tokio::select! </span>{
-                result = task =&gt; {
-                    <span class="kw">let </span>client = result<span class="question-mark">?</span>;
-
-                    <span class="kw">enum </span>XdsTask {
-                        Delta(<span class="kw">crate</span>::net::xds::client::DeltaSubscription),
-                        Aggregated(<span class="kw">crate</span>::net::xds::client::MdsStream),
-                    }
-
-                    <span class="comment">// Attempt to connect to a delta stream if the relay has one
-                    // available, otherwise fallback to the regular aggregated stream
-                    </span><span class="prelude-val">Some</span>(<span class="kw">match </span>client.delta_stream(config.clone()).<span class="kw">await </span>{
-                        <span class="prelude-val">Ok</span>(ds) =&gt; XdsTask::Delta(ds),
-                        <span class="prelude-val">Err</span>(client) =&gt; {
-                            XdsTask::Aggregated(client.mds_client_stream(config.clone()))
-                        }
-                    })
-                }
-                <span class="kw">_ </span>= shutdown_rx.changed() =&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(()),
-            }
-        } <span class="kw">else </span>{
-            <span class="macro">tracing::info!</span>(<span class="string">&quot;no relay servers given&quot;</span>);
-            <span class="prelude-val">None
-        </span>};
-
-        <span class="kw">crate</span>::codec::qcmp::spawn(<span class="self">self</span>.qcmp_port, shutdown_rx.clone());
-        shutdown_rx.changed().<span class="kw">await</span>.map_err(From::from)
-    }
-}
-
-<span class="attr">#[derive(Clone, Debug, Default)]
-</span><span class="kw">pub struct </span>RuntimeConfig {
-    <span class="kw">pub </span>idle_request_interval: std::time::Duration,
-    <span class="kw">pub </span>provider_is_healthy: Arc&lt;AtomicBool&gt;,
-    <span class="kw">pub </span>relay_is_healthy: Arc&lt;AtomicBool&gt;,
-}
-
-<span class="kw">impl </span>RuntimeConfig {
-    <span class="kw">pub fn </span>is_ready(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
-        <span class="self">self</span>.provider_is_healthy.load(Ordering::SeqCst)
-            &amp;&amp; <span class="self">self</span>.relay_is_healthy.load(Ordering::SeqCst)
-    }
+        agent::Agent {
+            locality,
+            qcmp_socket,
+            icao_code,
+            relay_servers: <span class="self">self</span>.relay,
+            provider: <span class="self">self</span>.provider,
+        }
+        .run(<span class="kw">crate</span>::components::RunArgs {
+            config,
+            ready,
+            shutdown_rx,
+        })
+        .<span class="kw">await
+    </span>}
 }
 </code></pre></div></section></main></body></html>

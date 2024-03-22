@@ -706,6 +706,14 @@
 <a href="#706" id="706">706</a>
 <a href="#707" id="707">707</a>
 <a href="#708" id="708">708</a>
+<a href="#709" id="709">709</a>
+<a href="#710" id="710">710</a>
+<a href="#711" id="711">711</a>
+<a href="#712" id="712">712</a>
+<a href="#713" id="713">713</a>
+<a href="#714" id="714">714</a>
+<a href="#715" id="715">715</a>
+<a href="#716" id="716">716</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! # Phoenix Network Coordinate System
 //!
 //! This module provides a framework for estimating network latencies between
@@ -734,7 +742,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::config::IcaoCode;
 
 <span class="kw">pub fn </span>spawn(
-    port: u16,
+    listener: <span class="kw">crate</span>::net::TcpListener,
     config: Arc&lt;<span class="kw">crate</span>::Config&gt;,
     <span class="kw-2">mut </span>shutdown_rx: <span class="kw">crate</span>::ShutdownRx,
 ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
@@ -743,14 +751,17 @@
 
     <span class="kw">let </span>phoenix = Phoenix::new(<span class="kw">crate</span>::codec::qcmp::QcmpMeasurement::new()<span class="question-mark">?</span>);
     phoenix.add_nodes_from_config(<span class="kw-2">&amp;</span>config);
-    <span class="kw">let </span>address = (std::net::Ipv6Addr::UNSPECIFIED, port).into();
+
+    <span class="kw">let </span><span class="kw">crate</span>::config::DatacenterConfig::NonAgent { datacenters } = <span class="kw-2">&amp;</span>config.datacenter <span class="kw">else </span>{
+        <span class="macro">unreachable!</span>(<span class="string">&quot;this shouldn&#39;t be spawned on an agent&quot;</span>)
+    };
+    <span class="kw">let </span><span class="kw-2">mut </span>config_watcher = datacenters.watch();
 
     std::thread::spawn(<span class="kw">move </span>|| -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
         <span class="kw">let </span>runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()<span class="question-mark">?</span>;
         runtime.block_on({
-            <span class="kw">let </span><span class="kw-2">mut </span>config_watcher = config.datacenters.watch();
             <span class="kw">let </span><span class="kw-2">mut </span>phoenix_watcher = phoenix.update_watcher();
             <span class="kw">let </span>config = config.clone();
 
@@ -786,7 +797,7 @@
                     }
                 });
 
-                tokio::spawn(HyperServer::bind(<span class="kw-2">&amp;</span>address).serve(make_svc));
+                tokio::spawn(HyperServer::from_tcp(listener.into())<span class="question-mark">?</span>.serve(make_svc));
 
                 <span class="kw">loop </span>{
                     <span class="macro">tokio::select! </span>{
@@ -979,7 +990,7 @@
                 <span class="kw">continue</span>;
             };
             <span class="kw">let </span>distance = origin.distance_to(<span class="kw-2">&amp;</span>coordinates);
-            <span class="kw">let </span>icao = entry.value().icao_code.clone();
+            <span class="kw">let </span>icao = entry.value().icao_code;
 
             <span class="kw">match </span>icao_map.entry(icao) {
                 Entry::Vacant(entry) =&gt; {
@@ -1010,9 +1021,12 @@
     }
 
     <span class="kw">pub fn </span>add_nodes_from_config(<span class="kw-2">&amp;</span><span class="self">self</span>, config: <span class="kw-2">&amp;</span><span class="kw">crate</span>::Config) {
-        <span class="kw">for </span>entry <span class="kw">in </span>config.datacenters.read().iter() {
+        <span class="kw">let </span><span class="kw">crate</span>::config::DatacenterConfig::NonAgent { datacenters } = <span class="kw-2">&amp;</span>config.datacenter <span class="kw">else </span>{
+            <span class="macro">unreachable!</span>(<span class="string">&quot;this shouldn&#39;t be called by an agent&quot;</span>)
+        };
+        <span class="kw">for </span>entry <span class="kw">in </span>datacenters.write().iter() {
             <span class="kw">let </span>addr = (<span class="kw-2">*</span>entry.key(), entry.value().qcmp_port).into();
-            <span class="self">self</span>.add_node_if_not_exists(addr, entry.value().icao_code.clone());
+            <span class="self">self</span>.add_node_if_not_exists(addr, entry.value().icao_code);
         }
     }
 }
@@ -1163,6 +1177,8 @@
 
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
+    <span class="kw">use </span><span class="kw">crate</span>::net::raw_socket_with_reuse;
+
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
     <span class="kw">use </span>std::collections::HashMap;
     <span class="kw">use </span>std::collections::HashSet;
@@ -1380,11 +1396,10 @@
 
     <span class="attr">#[tokio::test]
     </span><span class="kw">async fn </span>http_server() {
-        <span class="kw">let </span>config = Arc::new(<span class="kw">crate</span>::Config::default());
-        <span class="kw">let </span>qcmp_port = <span class="kw">crate</span>::test::available_addr(<span class="kw-2">&amp;</span><span class="kw">crate</span>::test::AddressType::Ipv4)
-            .<span class="kw">await
-            </span>.port();
-        config.datacenters.write().insert(
+        <span class="kw">let </span>config = Arc::new(<span class="kw">crate</span>::Config::default_non_agent());
+        <span class="kw">let </span>qcmp_listener = <span class="kw">crate</span>::net::TcpListener::bind(<span class="prelude-val">None</span>).expect(<span class="string">&quot;failed to bind listener&quot;</span>);
+        <span class="kw">let </span>qcmp_port = qcmp_listener.port();
+        config.datacenters().write().insert(
             std::net::Ipv4Addr::LOCALHOST.into(),
             <span class="kw">crate</span>::config::Datacenter {
                 qcmp_port,
@@ -1393,9 +1408,10 @@
         );
 
         <span class="kw">let </span>(_tx, rx) = <span class="kw">crate</span>::make_shutdown_channel(Default::default());
-        <span class="kw">crate</span>::codec::qcmp::spawn(qcmp_port, rx.clone());
+        <span class="kw">let </span>socket = raw_socket_with_reuse(qcmp_port).unwrap();
+        <span class="kw">crate</span>::codec::qcmp::spawn(socket, rx.clone());
         tokio::time::sleep(std::time::Duration::from_millis(<span class="number">150</span>)).<span class="kw">await</span>;
-        <span class="kw">super</span>::spawn(qcmp_port, config.clone(), rx).unwrap();
+        <span class="kw">super</span>::spawn(qcmp_listener, config.clone(), rx).unwrap();
         tokio::time::sleep(std::time::Duration::from_millis(<span class="number">1500</span>)).<span class="kw">await</span>;
 
         <span class="kw">let </span>client = hyper::Client::new();

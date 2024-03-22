@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["PORT"],"struct":["Relay","RuntimeConfig"]};
+window.SIDEBAR_ITEMS = {"constant":["PORT"],"struct":["Relay"]};

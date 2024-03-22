@@ -1,1 +1,1 @@
-window.ALL_CRATES = ["agones","gen","quilkin","quilkin_macros"];
+window.ALL_CRATES = ["agones","gen","qt","quilkin","quilkin_macros"];

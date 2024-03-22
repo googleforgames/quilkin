@@ -223,8 +223,8 @@
 
     <span class="attr">#[tokio::test]
     </span><span class="kw">async fn </span>basic() {
-        <span class="kw">let </span>source = Arc::new(<span class="kw">crate</span>::Config::default());
-        <span class="kw">let </span>dest = Arc::new(<span class="kw">crate</span>::Config::default());
+        <span class="kw">let </span>source = Arc::new(<span class="kw">crate</span>::Config::default_non_agent());
+        <span class="kw">let </span>dest = Arc::new(<span class="kw">crate</span>::Config::default_non_agent());
         <span class="kw">let </span>tmp_dir = tempfile::tempdir().unwrap();
         <span class="kw">let </span>file_path = tmp_dir.into_path().join(<span class="string">&quot;config.yaml&quot;</span>);
         tokio::fs::write(<span class="kw-2">&amp;</span>file_path, serde_yaml::to_string(<span class="kw-2">&amp;</span>source).unwrap())

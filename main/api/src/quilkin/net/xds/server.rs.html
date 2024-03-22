@@ -857,6 +857,26 @@
 <a href="#857" id="857">857</a>
 <a href="#858" id="858">858</a>
 <a href="#859" id="859">859</a>
+<a href="#860" id="860">860</a>
+<a href="#861" id="861">861</a>
+<a href="#862" id="862">862</a>
+<a href="#863" id="863">863</a>
+<a href="#864" id="864">864</a>
+<a href="#865" id="865">865</a>
+<a href="#866" id="866">866</a>
+<a href="#867" id="867">867</a>
+<a href="#868" id="868">868</a>
+<a href="#869" id="869">869</a>
+<a href="#870" id="870">870</a>
+<a href="#871" id="871">871</a>
+<a href="#872" id="872">872</a>
+<a href="#873" id="873">873</a>
+<a href="#874" id="874">874</a>
+<a href="#875" id="875">875</a>
+<a href="#876" id="876">876</a>
+<a href="#877" id="877">877</a>
+<a href="#878" id="878">878</a>
+<a href="#879" id="879">879</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -873,7 +893,7 @@
  * limitations under the License.
  */
 
-</span><span class="kw">use </span>std::sync::Arc;
+</span><span class="kw">use </span>std::{io, sync::Arc, time::Duration};
 
 <span class="kw">use </span>cached::Cached;
 <span class="kw">use </span>futures::{Stream, TryFutureExt, TryStreamExt};
@@ -881,57 +901,65 @@
 <span class="kw">use </span>tracing_futures::Instrument;
 
 <span class="kw">use crate</span>::{
-    cli::Admin,
     config::Config,
-    net::xds::{
-        discovery::{
-            aggregated_discovery_service_server::{
-                AggregatedDiscoveryService, AggregatedDiscoveryServiceServer,
+    net::{
+        xds::{
+            discovery::{
+                aggregated_discovery_service_server::{
+                    AggregatedDiscoveryService, AggregatedDiscoveryServiceServer,
+                },
+                DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
             },
-            DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
+            metrics,
+            relay::aggregated_control_plane_discovery_service_server::{
+                AggregatedControlPlaneDiscoveryService,
+                AggregatedControlPlaneDiscoveryServiceServer,
+            },
+            ResourceType,
         },
-        metrics,
-        relay::aggregated_control_plane_discovery_service_server::{
-            AggregatedControlPlaneDiscoveryService, AggregatedControlPlaneDiscoveryServiceServer,
-        },
-        ResourceType,
+        TcpListener,
     },
 };
 
 <span class="attr">#[tracing::instrument(skip_all)]
 </span><span class="kw">pub fn </span>spawn(
-    port: u16,
-    mode: Admin,
+    listener: TcpListener,
     config: std::sync::Arc&lt;<span class="kw">crate</span>::Config&gt;,
-) -&gt; <span class="kw">impl </span>std::future::Future&lt;Output = <span class="kw">crate</span>::Result&lt;()&gt;&gt; {
-    <span class="kw">let </span>server = AggregatedDiscoveryServiceServer::new(ControlPlane::from_arc(config, mode))
-        .max_encoding_message_size(<span class="kw">crate</span>::config::max_grpc_message_size());
+    idle_request_interval: Duration,
+) -&gt; io::Result&lt;<span class="kw">impl </span>std::future::Future&lt;Output = <span class="kw">crate</span>::Result&lt;()&gt;&gt;&gt; {
+    <span class="kw">let </span>server = AggregatedDiscoveryServiceServer::new(ControlPlane::from_arc(
+        config,
+        idle_request_interval,
+    ))
+    .max_encoding_message_size(<span class="kw">crate</span>::config::max_grpc_message_size());
     <span class="kw">let </span>server = tonic::transport::Server::builder().add_service(server);
-    <span class="macro">tracing::info!</span>(<span class="string">&quot;serving management server on port `{port}`&quot;</span>);
-    server
-        .serve((std::net::Ipv6Addr::UNSPECIFIED, port).into())
-        .map_err(From::from)
+    <span class="macro">tracing::info!</span>(<span class="string">&quot;serving management server on port `{}`&quot;</span>, listener.port());
+    <span class="prelude-val">Ok</span>(server
+        .serve_with_incoming(listener.into_stream()<span class="question-mark">?</span>)
+        .map_err(From::from))
 }
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>control_plane_discovery_server(
-    port: u16,
-    mode: Admin,
+    listener: TcpListener,
     config: Arc&lt;Config&gt;,
-) -&gt; <span class="kw">impl </span>std::future::Future&lt;Output = <span class="kw">crate</span>::Result&lt;()&gt;&gt; {
-    <span class="kw">let </span>server =
-        AggregatedControlPlaneDiscoveryServiceServer::new(ControlPlane::from_arc(config, mode))
-            .max_encoding_message_size(<span class="kw">crate</span>::config::max_grpc_message_size());
+    idle_request_interval: Duration,
+) -&gt; io::Result&lt;<span class="kw">impl </span>std::future::Future&lt;Output = <span class="kw">crate</span>::Result&lt;()&gt;&gt;&gt; {
+    <span class="kw">let </span>server = AggregatedControlPlaneDiscoveryServiceServer::new(ControlPlane::from_arc(
+        config,
+        idle_request_interval,
+    ))
+    .max_encoding_message_size(<span class="kw">crate</span>::config::max_grpc_message_size());
     <span class="kw">let </span>server = tonic::transport::Server::builder().add_service(server);
-    <span class="macro">tracing::info!</span>(<span class="string">&quot;serving relay server on port `{port}`&quot;</span>);
-    server
-        .serve((std::net::Ipv6Addr::UNSPECIFIED, port).into())
-        .map_err(From::from)
+    <span class="macro">tracing::info!</span>(<span class="string">&quot;serving relay server on port `{}`&quot;</span>, listener.port());
+    <span class="prelude-val">Ok</span>(server
+        .serve_with_incoming(listener.into_stream()<span class="question-mark">?</span>)
+        .map_err(From::from))
 }
 
 <span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>ControlPlane {
     config: Arc&lt;Config&gt;,
-    mode: Admin,
+    idle_request_interval: Duration,
     watchers: Arc&lt;<span class="kw">crate</span>::net::xds::resource::ResourceMap&lt;Watchers&gt;&gt;,
 }
 
@@ -953,31 +981,44 @@
 }
 
 <span class="kw">impl </span>ControlPlane {
-    <span class="kw">pub fn </span>from_arc(config: Arc&lt;Config&gt;, mode: Admin) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>from_arc(config: Arc&lt;Config&gt;, idle_request_interval: Duration) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>this = <span class="self">Self </span>{
             config,
-            mode,
-            watchers: &lt;<span class="kw">_</span>&gt;::default(),
+            idle_request_interval,
+            watchers: Default::default(),
         };
 
         tokio::spawn({
             <span class="kw">let </span>this = this.clone();
             <span class="kw">async move </span>{
                 <span class="kw">let </span><span class="kw-2">mut </span>cluster_watcher = this.config.clusters.watch();
-                <span class="kw">let </span><span class="kw-2">mut </span>dc_watcher = this.config.datacenters.watch();
-                <span class="macro">tracing::debug!</span>(<span class="string">&quot;waiting for changes&quot;</span>);
-                <span class="kw">loop </span>{
-                    <span class="macro">tokio::select! </span>{
-                        result = cluster_watcher.changed() =&gt; {
-                            <span class="kw">match </span>result {
+                <span class="macro">tracing::trace!</span>(<span class="string">&quot;waiting for changes&quot;</span>);
+
+                <span class="kw">match </span><span class="kw-2">&amp;</span>this.config.datacenter {
+                    <span class="kw">crate</span>::config::DatacenterConfig::Agent {..} =&gt; {
+                        <span class="kw">loop </span>{
+                            <span class="kw">match </span>cluster_watcher.changed().<span class="kw">await </span>{
                                 <span class="prelude-val">Ok</span>(()) =&gt; this.push_update(ResourceType::Cluster),
                                 <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">tracing::error!</span>(%error, <span class="string">&quot;error watching changes&quot;</span>),
                             }
                         }
-                        result = dc_watcher.changed() =&gt; {
-                            <span class="kw">match </span>result {
-                                <span class="prelude-val">Ok</span>(()) =&gt; this.push_update(ResourceType::Datacenter),
-                                <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">tracing::error!</span>(%error, <span class="string">&quot;error watching changes&quot;</span>),
+                    }
+                    <span class="kw">crate</span>::config::DatacenterConfig::NonAgent { datacenters } =&gt; {
+                        <span class="kw">let </span><span class="kw-2">mut </span>dc_watcher = datacenters.watch();
+                        <span class="kw">loop </span>{
+                            <span class="macro">tokio::select! </span>{
+                                result = cluster_watcher.changed() =&gt; {
+                                    <span class="kw">match </span>result {
+                                        <span class="prelude-val">Ok</span>(()) =&gt; this.push_update(ResourceType::Cluster),
+                                        <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">tracing::error!</span>(%error, <span class="string">&quot;error watching changes&quot;</span>),
+                                    }
+                                }
+                                result = dc_watcher.changed() =&gt; {
+                                    <span class="kw">match </span>result {
+                                        <span class="prelude-val">Ok</span>(()) =&gt; this.push_update(ResourceType::Datacenter),
+                                        <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">tracing::error!</span>(%error, <span class="string">&quot;error watching changes&quot;</span>),
+                                    }
+                                }
                             }
                         }
                     }
@@ -1001,7 +1042,7 @@
         watchers
             .version
             .fetch_add(<span class="number">1</span>, std::sync::atomic::Ordering::Relaxed);
-        <span class="macro">tracing::debug!</span>(%resource_type, watchers=watchers.sender.receiver_count(), <span class="string">&quot;pushing update&quot;</span>);
+        <span class="macro">tracing::trace!</span>(%resource_type, watchers=watchers.sender.receiver_count(), <span class="string">&quot;pushing update&quot;</span>);
         <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = watchers.sender.send(()) {
             <span class="macro">tracing::warn!</span>(%error, <span class="string">&quot;pushing update failed&quot;</span>);
         }
@@ -1015,7 +1056,7 @@
     ) -&gt; <span class="prelude-ty">Result</span>&lt;DiscoveryResponse, tonic::Status&gt; {
         <span class="kw">let </span>resources = <span class="self">self
             </span>.config
-            .discovery_request(<span class="kw-2">&amp;</span><span class="self">self</span>.mode, id, resource_type, names)
+            .discovery_request(id, resource_type, names)
             .map_err(|error| tonic::Status::internal(error.to_string()))<span class="question-mark">?</span>;
         <span class="kw">let </span>watchers = <span class="kw-2">&amp;</span><span class="self">self</span>.watchers[resource_type];
 
@@ -1071,7 +1112,7 @@
         <span class="kw">let </span>this = <span class="self">Self</span>::clone(<span class="self">self</span>);
         <span class="kw">let </span>id = node.id.clone();
 
-        <span class="macro">tracing::trace!</span>(id = %node.id, %resource_type, <span class="string">&quot;initial request&quot;</span>);
+        <span class="macro">tracing::debug!</span>(id = %node.id, %resource_type, <span class="string">&quot;initial request&quot;</span>);
         metrics::discovery_requests(<span class="kw-2">&amp;</span>id, resource_type.type_url()).inc();
         <span class="kw">let </span>response = this.discovery_response(<span class="kw-2">&amp;</span>id, resource_type, <span class="kw-2">&amp;</span>message.resource_names)<span class="question-mark">?</span>;
         pending_acks.cache_set(response.nonce.clone(), ());
@@ -1152,7 +1193,7 @@
         <span class="kw">use </span><span class="kw">crate</span>::net::xds::{AwaitingAck, ClientVersions};
         <span class="kw">use </span>std::collections::BTreeSet;
 
-        <span class="macro">tracing::trace!</span>(<span class="string">&quot;starting delta stream&quot;</span>);
+        <span class="macro">tracing::debug!</span>(<span class="string">&quot;starting delta stream&quot;</span>);
         <span class="kw">let </span>message = streaming.next().<span class="kw">await</span>.ok_or_else(|| {
             <span class="macro">tracing::error!</span>(<span class="string">&quot;No message found&quot;</span>);
             tonic::Status::invalid_argument(<span class="string">&quot;No message found&quot;</span>)
@@ -1248,7 +1289,7 @@
 
                 <span class="kw">let </span>req = this
                     .config
-                    .delta_discovery_request(<span class="kw-2">&amp;</span>this.mode, <span class="kw-2">&amp;</span>tracker.subscribed, <span class="kw-2">&amp;</span>tracker.client)
+                    .delta_discovery_request(<span class="kw-2">&amp;</span>tracker.subscribed, <span class="kw-2">&amp;</span>tracker.client)
                     .map_err(|error| tonic::Status::internal(error.to_string()))<span class="question-mark">?</span>;
 
                 <span class="kw">let </span>nonce = uuid::Uuid::new_v4();
@@ -1275,6 +1316,7 @@
 
         <span class="kw">let </span>response = {
             <span class="kw">if </span>message.type_url == <span class="string">&quot;ignore-me&quot; </span>{
+                <span class="macro">tracing::debug!</span>(id = %node_id, <span class="string">&quot;initial delta response&quot;</span>);
                 DeltaDiscoveryResponse {
                     resources: Vec::new(),
                     nonce: String::new(),
@@ -1286,7 +1328,7 @@
                 }
             } <span class="kw">else </span>{
                 <span class="kw">let </span>resource_type: ResourceType = message.type_url.parse()<span class="question-mark">?</span>;
-                <span class="macro">tracing::trace!</span>(id = %node_id, %resource_type, <span class="string">&quot;initial delta request&quot;</span>);
+                <span class="macro">tracing::debug!</span>(id = %node_id, %resource_type, <span class="string">&quot;initial delta response&quot;</span>);
                 responder(
                     <span class="prelude-val">Some</span>(message),
                     <span class="kw-2">&amp;mut </span>trackers[resource_type],
@@ -1418,7 +1460,6 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         responses: tonic::Request&lt;tonic::Streaming&lt;DiscoveryResponse&gt;&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;<span class="self">Self</span>::StreamAggregatedResourcesStream&gt;, tonic::Status&gt; {
-        <span class="macro">tracing::info!</span>(<span class="string">&quot;control plane discovery stream attempt&quot;</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>remote_addr = responses
             .remote_addr()
             .ok_or_else(|| tonic::Status::invalid_argument(<span class="string">&quot;no remote address available&quot;</span>))<span class="question-mark">?</span>;
@@ -1438,7 +1479,7 @@
 
         <span class="macro">tracing::info!</span>(%identifier, <span class="string">&quot;new control plane discovery stream&quot;</span>);
         <span class="kw">let </span>config = <span class="self">self</span>.config.clone();
-        <span class="kw">let </span>idle_request_interval = <span class="self">self</span>.mode.idle_request_interval();
+        <span class="kw">let </span>idle_request_interval = <span class="self">self</span>.idle_request_interval;
         <span class="kw">let </span>stream = <span class="kw">super</span>::client::AdsStream::connect(
             Arc::from(<span class="kw-2">&amp;*</span>identifier),
             <span class="kw">move </span>|(<span class="kw-2">mut </span>requests, _rx), _subscribed_resources| <span class="kw">async move </span>{
@@ -1473,10 +1514,10 @@
                         tokio::time::timeout(idle_request_interval, response_handler.next());
 
                     <span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(ack)) = next_response.<span class="kw">await </span>{
-                        <span class="macro">tracing::debug!</span>(<span class="string">&quot;sending ack request&quot;</span>);
+                        <span class="macro">tracing::trace!</span>(<span class="string">&quot;sending ack request&quot;</span>);
                         requests.send(ack<span class="question-mark">?</span>)<span class="question-mark">?</span>;
                     } <span class="kw">else </span>{
-                        <span class="macro">tracing::debug!</span>(<span class="string">&quot;exceeded idle interval, sending request&quot;</span>);
+                        <span class="macro">tracing::trace!</span>(<span class="string">&quot;exceeded idle interval, sending request&quot;</span>);
                         <span class="kw">crate</span>::net::xds::client::MdsStream::discovery_request_without_cache(
                             <span class="kw-2">&amp;</span>identifier,
                             <span class="kw-2">&amp;mut </span>requests,
@@ -1525,7 +1566,7 @@
 
         <span class="macro">tracing::info!</span>(identifier, <span class="string">&quot;new control plane delta discovery stream&quot;</span>);
         <span class="kw">let </span>config = <span class="self">self</span>.config.clone();
-        <span class="kw">let </span>idle_request_interval = <span class="self">self</span>.mode.idle_request_interval();
+        <span class="kw">let </span>idle_request_interval = <span class="self">self</span>.idle_request_interval;
 
         <span class="kw">let </span>(ds, <span class="kw-2">mut </span>request_stream) = <span class="kw">super</span>::client::DeltaClientStream::new();
 
@@ -1559,12 +1600,12 @@
                         tokio::time::timeout(idle_request_interval, response_stream.next());
 
                     <span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(ack)) = next_response.<span class="kw">await </span>{
-                        <span class="macro">tracing::debug!</span>(<span class="string">&quot;sending ack request&quot;</span>);
+                        <span class="macro">tracing::trace!</span>(<span class="string">&quot;sending ack request&quot;</span>);
                         ds.send_response(ack<span class="question-mark">?</span>)
                             .<span class="kw">await
                             </span>.map_err(|<span class="kw">_</span>| tonic::Status::internal(<span class="string">&quot;this should not be reachable&quot;</span>))<span class="question-mark">?</span>;
                     } <span class="kw">else </span>{
-                        <span class="macro">tracing::debug!</span>(<span class="string">&quot;exceeded idle interval, sending request&quot;</span>);
+                        <span class="macro">tracing::trace!</span>(<span class="string">&quot;exceeded idle interval, sending request&quot;</span>);
                         ds.refresh(
                             <span class="kw-2">&amp;</span>identifier,
                             <span class="kw-2">&amp;</span>[
@@ -1636,9 +1677,8 @@
             ..&lt;<span class="kw">_</span>&gt;::default()
         };
 
-        <span class="kw">let </span>manage_admin = <span class="kw">crate</span>::cli::Admin::Manage(&lt;<span class="kw">_</span>&gt;::default());
-        <span class="kw">let </span>config = Arc::new(Config::default());
-        <span class="kw">let </span>client = ControlPlane::from_arc(config.clone(), manage_admin);
+        <span class="kw">let </span>config = Arc::new(Config::default_non_agent());
+        <span class="kw">let </span>client = ControlPlane::from_arc(config.clone(), TIMEOUT_DURATION);
         <span class="kw">let </span>(tx, rx) = tokio::sync::mpsc::channel(<span class="number">256</span>);
 
         <span class="kw">let </span><span class="kw-2">mut </span>request = DiscoveryRequest {

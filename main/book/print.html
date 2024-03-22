@@ -251,7 +251,7 @@ your local machine through <a href="installation.html#cargo">Cargo</a>.</p>
 <dl>
   <dt><strong>Source / Method</strong></dt>
   <dd>
-<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.9.0-dev-85652bb
+<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.9.0-dev-2a46b36
 </code></pre>
   </dd>
   <dt><strong>Notes</strong></dt>
@@ -989,7 +989,7 @@ Options:
   -t, --to &lt;TO&gt;
           One or more socket addresses to forward packets to [env: QUILKIN_DEST=]
       --idle-request-interval-secs &lt;IDLE_REQUEST_INTERVAL_SECS&gt;
-          The interval in seconds at which the relay will send a discovery request to an management server after receiving no updates [env: QUILKIN_IDLE_REQUEST_INTERVAL_SECS=] [default: 30]
+          The interval in seconds at which the relay will send a discovery request to an management server after receiving no updates [env: QUILKIN_IDLE_REQUEST_INTERVAL_SECS=]
   -w, --workers &lt;WORKERS&gt;
           Number of worker threads used to process packets. If not specified defaults to number of cpus [env: QUILKIN_WORKERS=]
   -h, --help
@@ -2218,7 +2218,7 @@ async fn main() -&gt; quilkin::Result&lt;()&gt; {
 
     let (_shutdown_tx, shutdown_rx) = quilkin::make_shutdown_channel(quilkin::ShutdownKind::Normal);
     let proxy = quilkin::Proxy::default();
-    let config = quilkin::Config::default();
+    let config = quilkin::Config::default_non_agent();
     config.filters.store(std::sync::Arc::new(
         quilkin::filters::FilterChain::try_create([quilkin::config::Filter {
             name: Greet::NAME.into(),
@@ -2235,9 +2235,9 @@ async fn main() -&gt; quilkin::Result&lt;()&gt; {
         )
     });
 
-    let admin = quilkin::cli::Admin::Proxy(&lt;_&gt;::default());
-
-    proxy.run(config.into(), admin, None, shutdown_rx).await
+    proxy
+        .run(config.into(), Default::default(), None, shutdown_rx)
+        .await
 }</code></pre>
 <p>Now, let's try out the proxy. The following configuration starts our extended
 version of the proxy at port 7777 and forwards all packets to an upstream server
@@ -2907,7 +2907,7 @@ Options:
   -x, --xds-port &lt;XDS_PORT&gt;
           Port for xDS management_server service [env: QUILKIN_PORT=] [default: 7800]
       --idle-request-interval-secs &lt;IDLE_REQUEST_INTERVAL_SECS&gt;
-          The interval in seconds at which the relay will send a discovery request to an management server after receiving no updates [env: QUILKIN_IDLE_REQUEST_INTERVAL_SECS=] [default: 30]
+          The interval in seconds at which the relay will send a discovery request to an management server after receiving no updates [env: QUILKIN_IDLE_REQUEST_INTERVAL_SECS=]
   -h, --help
           Print help
 </code></pre>
@@ -3006,7 +3006,7 @@ Options:
       --sub-zone &lt;SUB_ZONE&gt;
           The `sub_zone` in the `zone` in the `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_SUB_ZONE=]
       --idle-request-interval-secs &lt;IDLE_REQUEST_INTERVAL_SECS&gt;
-          The interval in seconds at which the agent will wait for a discovery request from a relay server before restarting the connection [env: QUILKIN_IDLE_REQUEST_INTERVAL_SECS=] [default: 30]
+          The interval in seconds at which the agent will wait for a discovery request from a relay server before restarting the connection [env: QUILKIN_IDLE_REQUEST_INTERVAL_SECS=]
   -i, --icao-code &lt;ICAO_CODE&gt;
           The ICAO code for the agent [env: ICAO_CODE=] [default: XXXX]
   -h, --help
