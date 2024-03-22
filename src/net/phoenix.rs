@@ -41,66 +41,71 @@ pub fn spawn(
     };
     let mut config_watcher = datacenters.watch();
 
-    std::thread::spawn(move || -> crate::Result<()> {
+    std::thread::spawn(move || {
         let runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
-            .build()?;
-        runtime.block_on({
-            let mut phoenix_watcher = phoenix.update_watcher();
-            let config = config.clone();
+            .build()
+            .unwrap();
+        runtime
+            .block_on({
+                let mut phoenix_watcher = phoenix.update_watcher();
+                let config = config.clone();
 
-            async move {
-                let json = crate::config::Slot::new(serde_json::Map::default());
+                async move {
+                    let json = crate::config::Slot::new(serde_json::Map::default());
 
-                tokio::spawn({
-                    let phoenix = phoenix.clone();
-                    async move { phoenix.background_update_task().await }
-                });
+                    tokio::spawn({
+                        let phoenix = phoenix.clone();
+                        async move { phoenix.background_update_task().await }
+                    });
 
-                let json2 = json.clone();
-                let make_svc = make_service_fn(move |_conn| {
-                    let json = json2.clone();
-                    async move {
-                        Ok::<_, std::convert::Infallible>(service_fn(move |_| {
-                            let json = json.clone();
-                            async move {
-                                Ok::<_, std::convert::Infallible>(
-                                    Response::builder()
-                                        .status(StatusCode::OK)
-                                        .header(
-                                            "Content-Type",
-                                            hyper::header::HeaderValue::from_static(
-                                                "application/json",
-                                            ),
-                                        )
-                                        .body(Body::from(serde_json::to_string(&json).unwrap()))
-                                        .unwrap(),
-                                )
-                            }
-                        }))
+                    let json2 = json.clone();
+                    let make_svc = make_service_fn(move |_conn| {
+                        let json = json2.clone();
+                        async move {
+                            Ok::<_, std::convert::Infallible>(service_fn(move |_| {
+                                let json = json.clone();
+                                async move {
+                                    tracing::trace!("serving phoenix request");
+                                    Ok::<_, std::convert::Infallible>(
+                                        Response::builder()
+                                            .status(StatusCode::OK)
+                                            .header(
+                                                "Content-Type",
+                                                hyper::header::HeaderValue::from_static(
+                                                    "application/json",
+                                                ),
+                                            )
+                                            .body(Body::from(serde_json::to_string(&json).unwrap()))
+                                            .unwrap(),
+                                    )
+                                }
+                            }))
+                        }
+                    });
+
+                    tracing::info!(addr=%listener.local_addr(), "starting phoenix service");
+                    tokio::spawn(HyperServer::from_tcp(listener.into())?.serve(make_svc));
+
+                    loop {
+                        tokio::select! {
+                            _ = shutdown_rx.changed() => return Ok::<_, eyre::Error>(()),
+                            result = config_watcher.changed() => result?,
+                            result = phoenix_watcher.changed() => result?,
+                        }
+                        phoenix.add_nodes_from_config(&config);
+                        let nodes = phoenix.ordered_nodes_by_latency();
+                        let mut new_json = serde_json::Map::default();
+
+                        for (identifier, latency) in nodes {
+                            new_json.insert(identifier.to_string(), latency.into());
+                        }
+
+                        json.store(new_json.into());
                     }
-                });
-
-                tokio::spawn(HyperServer::from_tcp(listener.into())?.serve(make_svc));
-
-                loop {
-                    tokio::select! {
-                        _ = shutdown_rx.changed() => return Ok(()),
-                        result = config_watcher.changed() => result?,
-                        result = phoenix_watcher.changed() => result?,
-                    }
-                    phoenix.add_nodes_from_config(&config);
-                    let nodes = phoenix.ordered_nodes_by_latency();
-                    let mut new_json = serde_json::Map::default();
-
-                    for (identifier, latency) in nodes {
-                        new_json.insert(identifier.to_string(), latency.into());
-                    }
-
-                    json.store(new_json.into());
                 }
-            }
-        })
+            })
+            .unwrap()
     });
 
     Ok(())
