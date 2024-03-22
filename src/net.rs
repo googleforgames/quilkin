@@ -429,21 +429,3 @@ mod tests {
         );
     }
 }
-
-/// Converts a a socket address to its canonical version.
-/// This is just a copy of the method available in std but that is currently
-/// nightly only.
-pub fn to_canonical(addr: &mut SocketAddr) {
-    let ip = match addr.ip() {
-        std::net::IpAddr::V6(ip) => {
-            if let Some(mapped) = ip.to_ipv4_mapped() {
-                std::net::IpAddr::V4(mapped)
-            } else {
-                std::net::IpAddr::V6(ip)
-            }
-        }
-        addr => addr,
-    };
-
-    addr.set_ip(ip);
-}

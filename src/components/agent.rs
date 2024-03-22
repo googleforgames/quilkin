@@ -73,6 +73,8 @@ impl Agent {
                 result = task => {
                     let client = result?;
 
+                    // The inner fields are unused.
+                    #[allow(dead_code)]
                     enum XdsTask {
                         Delta(crate::net::xds::client::DeltaSubscription),
                         Aggregated(crate::net::xds::client::MdsStream),
