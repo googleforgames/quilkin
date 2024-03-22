@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `agones/src/provider.rs`."><title>provider.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="agones" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0 (79e9716c9 2023-11-13)" data-channel="1.74.0" data-search-js="search-8be46b629f5f14a8.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../agones/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `agones/src/provider.rs`."><title>provider.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="agones" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0 (aedd173a2 2024-03-17)" data-channel="1.77.0" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../agones/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -255,14 +257,14 @@
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
- * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -305,7 +307,7 @@
         TOKEN_KEY,
     };
 
-    <span class="kw">const </span>PROXY_DEPLOYMENT: <span class="kw-2">&amp;</span>str = <span class="string">&quot;quilkin-xds-proxies&quot;</span>;
+    <span class="kw">const </span>PROXY_DEPLOYMENT: <span class="kw-2">&amp;</span>str = <span class="string">"quilkin-xds-proxies"</span>;
 
     <span class="attr">#[tokio::test]
     #[serial]
@@ -331,27 +333,27 @@
             deployments.clone(),
             PROXY_DEPLOYMENT.into(),
             <span class="number">7005</span>,
-            <span class="string">&quot;http://quilkin-manage-agones:7800&quot;</span>.into(),
+            <span class="string">"http://quilkin-manage-agones:7800"</span>.into(),
         )
         .<span class="kw">await</span>;
 
-        <span class="kw">let </span>token = <span class="string">&quot;456&quot;</span>; <span class="comment">// NDU2
+        <span class="kw">let </span>token = <span class="string">"456"</span>; <span class="comment">// NDU2
         </span><span class="kw">let </span>gs = create_tokenised_gameserver(fleets, gameservers.clone(), token).<span class="kw">await</span>;
         <span class="kw">let </span>gs_address = <span class="kw">crate</span>::gameserver_address(<span class="kw-2">&amp;</span>gs);
         <span class="comment">// and allocate it such that we have an endpoint.
-        // let&#39;s allocate this specific game server
+        // let's allocate this specific game server
         </span><span class="kw">let </span><span class="kw-2">mut </span>t = TestHelper::default();
         <span class="kw">let </span>(<span class="kw-2">mut </span>rx, socket) = t.open_socket_and_recv_multiple_packets().<span class="kw">await</span>;
         socket
-            .send_to(<span class="string">&quot;ALLOCATE&quot;</span>.as_bytes(), gs_address)
+            .send_to(<span class="string">"ALLOCATE"</span>.as_bytes(), gs_address)
             .<span class="kw">await
             </span>.unwrap();
 
         <span class="kw">let </span>response = timeout(Duration::from_secs(<span class="number">30</span>), rx.recv())
             .<span class="kw">await
-            </span>.expect(<span class="string">&quot;should receive packet from GameServer&quot;</span>)
+            </span>.expect(<span class="string">"should receive packet from GameServer"</span>)
             .unwrap();
-        <span class="macro">assert_eq!</span>(<span class="string">&quot;ACK: ALLOCATE\n&quot;</span>, response);
+        <span class="macro">assert_eq!</span>(<span class="string">"ACK: ALLOCATE\n"</span>, response);
 
         <span class="comment">// Proxy Deployment should be ready, since there is now an endpoint
         </span><span class="kw">if </span>timeout(
@@ -361,19 +363,19 @@
         .<span class="kw">await
         </span>.is_err()
         {
-            debug_pods(<span class="kw-2">&amp;</span>client, <span class="macro">format!</span>(<span class="string">&quot;role={PROXY_DEPLOYMENT}&quot;</span>)).<span class="kw">await</span>;
-            <span class="macro">panic!</span>(<span class="string">&quot;Quilkin proxy deployment should be ready&quot;</span>);
+            debug_pods(<span class="kw-2">&amp;</span>client, <span class="macro">format!</span>(<span class="string">"role={PROXY_DEPLOYMENT}"</span>)).<span class="kw">await</span>;
+            <span class="macro">panic!</span>(<span class="string">"Quilkin proxy deployment should be ready"</span>);
         }
 
         <span class="comment">// keep trying to send the packet to the proxy until it works, since distributed systems are eventually consistent.
-        </span><span class="kw">let </span><span class="kw-2">mut </span>response: String = <span class="string">&quot;not-found&quot;</span>.into();
+        </span><span class="kw">let </span><span class="kw-2">mut </span>response: String = <span class="string">"not-found"</span>.into();
         <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">30 </span>{
-            <span class="macro">println!</span>(<span class="string">&quot;Connection Attempt: {i}&quot;</span>);
+            <span class="macro">println!</span>(<span class="string">"Connection Attempt: {i}"</span>);
 
             <span class="comment">// returns the nae of the GameServer. This proves we are routing the the allocated
             // GameServer with the correct token attached.
             </span>socket
-                .send_to(<span class="macro">format!</span>(<span class="string">&quot;GAMESERVER{token}&quot;</span>).as_bytes(), proxy_address)
+                .send_to(<span class="macro">format!</span>(<span class="string">"GAMESERVER{token}"</span>).as_bytes(), proxy_address)
                 .<span class="kw">await
                 </span>.unwrap();
 
@@ -383,9 +385,9 @@
                 <span class="kw">break</span>;
             }
         }
-        <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">&quot;NAME: {}\n&quot;</span>, gs.name_unchecked()), response);
+        <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">"NAME: {}\n"</span>, gs.name_unchecked()), response);
 
-        <span class="comment">// let&#39;s remove the token from the gameserver, which should remove access.
+        <span class="comment">// let's remove the token from the gameserver, which should remove access.
         </span><span class="kw">let </span><span class="kw-2">mut </span>gs = gameservers.get(gs.name_unchecked().as_str()).<span class="kw">await</span>.unwrap();
         <span class="kw">let </span>name = gs.name_unchecked();
         gs.metadata
@@ -396,9 +398,9 @@
         <span class="comment">// now we should send a packet, and not get a response.
         </span><span class="kw">let </span><span class="kw-2">mut </span>failed = <span class="bool-val">false</span>;
         <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">30 </span>{
-            <span class="macro">println!</span>(<span class="string">&quot;Disconnection Attempt: {i}&quot;</span>);
+            <span class="macro">println!</span>(<span class="string">"Disconnection Attempt: {i}"</span>);
             socket
-                .send_to(<span class="macro">format!</span>(<span class="string">&quot;GAMESERVER{token}&quot;</span>).as_bytes(), proxy_address)
+                .send_to(<span class="macro">format!</span>(<span class="string">"GAMESERVER{token}"</span>).as_bytes(), proxy_address)
                 .<span class="kw">await
                 </span>.unwrap();
 
@@ -409,10 +411,10 @@
             }
         }
         <span class="kw">if </span>!failed {
-            debug_pods(<span class="kw-2">&amp;</span>client, <span class="macro">format!</span>(<span class="string">&quot;role={PROXY_DEPLOYMENT}&quot;</span>)).<span class="kw">await</span>;
-            debug_pods(<span class="kw-2">&amp;</span>client, <span class="string">&quot;role=xds&quot;</span>.into()).<span class="kw">await</span>;
+            debug_pods(<span class="kw-2">&amp;</span>client, <span class="macro">format!</span>(<span class="string">"role={PROXY_DEPLOYMENT}"</span>)).<span class="kw">await</span>;
+            debug_pods(<span class="kw-2">&amp;</span>client, <span class="string">"role=xds"</span>.into()).<span class="kw">await</span>;
         }
-        <span class="macro">assert!</span>(failed, <span class="string">&quot;Packet should have failed&quot;</span>);
+        <span class="macro">assert!</span>(failed, <span class="string">"Packet should have failed"</span>);
 
         <span class="comment">// cleanup
         </span>config_maps
@@ -436,19 +438,19 @@
 
         <span class="comment">// Setup the xDS Agones provider server
         </span><span class="kw">let </span>args = [
-            <span class="string">&quot;manage&quot;</span>,
-            <span class="string">&quot;agones&quot;</span>,
-            <span class="string">&quot;--config-namespace&quot;</span>,
+            <span class="string">"manage"</span>,
+            <span class="string">"agones"</span>,
+            <span class="string">"--config-namespace"</span>,
             client.namespace.as_str(),
-            <span class="string">&quot;--gameservers-namespace&quot;</span>,
+            <span class="string">"--gameservers-namespace"</span>,
             client.namespace.as_str(),
         ]
         .map(String::from)
         .to_vec();
-        <span class="kw">let </span>labels = BTreeMap::from([(<span class="string">&quot;role&quot;</span>.to_string(), <span class="string">&quot;xds&quot;</span>.to_string())]);
+        <span class="kw">let </span>labels = BTreeMap::from([(<span class="string">"role"</span>.to_string(), <span class="string">"xds"</span>.to_string())]);
         <span class="kw">let </span>deployment = Deployment {
             metadata: ObjectMeta {
-                name: <span class="prelude-val">Some</span>(<span class="string">&quot;quilkin-manage-agones&quot;</span>.into()),
+                name: <span class="prelude-val">Some</span>(<span class="string">"quilkin-manage-agones"</span>.into()),
                 labels: <span class="prelude-val">Some</span>(labels.clone()),
                 ..Default::default()
             },
@@ -478,13 +480,13 @@
 
         <span class="kw">let </span>service = Service {
             metadata: ObjectMeta {
-                name: <span class="prelude-val">Some</span>(<span class="string">&quot;quilkin-manage-agones&quot;</span>.into()),
+                name: <span class="prelude-val">Some</span>(<span class="string">"quilkin-manage-agones"</span>.into()),
                 ..Default::default()
             },
             spec: <span class="prelude-val">Some</span>(ServiceSpec {
                 selector: <span class="prelude-val">Some</span>(labels),
                 ports: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[ServicePort {
-                    protocol: <span class="prelude-val">Some</span>(<span class="string">&quot;TCP&quot;</span>.into()),
+                    protocol: <span class="prelude-val">Some</span>(<span class="string">"TCP"</span>.into()),
                     port: <span class="number">7800</span>,
                     target_port: <span class="prelude-val">Some</span>(IntOrString::Int(<span class="number">7800</span>)),
                     ..Default::default()
@@ -502,7 +504,7 @@
             await_condition(deployments.clone(), name.as_str(), is_deployment_ready()),
         )
         .<span class="kw">await
-        </span>.expect(<span class="string">&quot;xDS provider deployment should be ready&quot;</span>)
+        </span>.expect(<span class="string">"xDS provider deployment should be ready"</span>)
         .unwrap();
     }
 }

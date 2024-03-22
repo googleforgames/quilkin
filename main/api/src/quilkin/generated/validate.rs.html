@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/generated/validate.rs`."><title>validate.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="quilkin" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0 (79e9716c9 2023-11-13)" data-channel="1.74.0" data-search-js="search-8be46b629f5f14a8.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/generated/validate.rs`."><title>validate.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="quilkin" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0 (aedd173a2 2024-03-17)" data-channel="1.77.0" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../quilkin/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -547,11 +549,11 @@
 </pre></div><pre class="rust"><code><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>FieldRules {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;17&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"17"</span>)]
     </span><span class="kw">pub </span>message: ::core::option::Option&lt;MessageRules&gt;,
     <span class="attr">#[prost(
-        oneof = <span class="string">&quot;field_rules::Type&quot;</span>,
-        tags = <span class="string">&quot;1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 19, 20, 21, 22&quot;
+        oneof = <span class="string">"field_rules::Type"</span>,
+        tags = <span class="string">"1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 19, 20, 21, 22"
     </span>)]
     </span><span class="kw">pub </span>r#type: ::core::option::Option&lt;field_rules::Type&gt;,
 }
@@ -560,334 +562,334 @@
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     </span><span class="kw">pub enum </span>Type {
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;1&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"1"</span>)]
         </span>Float(<span class="kw">super</span>::FloatRules),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;2&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"2"</span>)]
         </span>Double(<span class="kw">super</span>::DoubleRules),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;3&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"3"</span>)]
         </span>Int32(<span class="kw">super</span>::Int32Rules),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;4&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"4"</span>)]
         </span>Int64(<span class="kw">super</span>::Int64Rules),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;5&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"5"</span>)]
         </span>Uint32(<span class="kw">super</span>::UInt32Rules),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;6&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"6"</span>)]
         </span>Uint64(<span class="kw">super</span>::UInt64Rules),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;7&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"7"</span>)]
         </span>Sint32(<span class="kw">super</span>::SInt32Rules),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;8&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"8"</span>)]
         </span>Sint64(<span class="kw">super</span>::SInt64Rules),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;9&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"9"</span>)]
         </span>Fixed32(<span class="kw">super</span>::Fixed32Rules),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;10&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"10"</span>)]
         </span>Fixed64(<span class="kw">super</span>::Fixed64Rules),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;11&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"11"</span>)]
         </span>Sfixed32(<span class="kw">super</span>::SFixed32Rules),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;12&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"12"</span>)]
         </span>Sfixed64(<span class="kw">super</span>::SFixed64Rules),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;13&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"13"</span>)]
         </span>Bool(<span class="kw">super</span>::BoolRules),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;14&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"14"</span>)]
         </span>String(<span class="kw">super</span>::StringRules),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;15&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"15"</span>)]
         </span>Bytes(<span class="kw">super</span>::BytesRules),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;16&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"16"</span>)]
         </span>Enum(<span class="kw">super</span>::EnumRules),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;18&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"18"</span>)]
         </span>Repeated(::prost::alloc::boxed::Box&lt;<span class="kw">super</span>::RepeatedRules&gt;),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;19&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"19"</span>)]
         </span>Map(::prost::alloc::boxed::Box&lt;<span class="kw">super</span>::MapRules&gt;),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;20&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"20"</span>)]
         </span>Any(<span class="kw">super</span>::AnyRules),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;21&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"21"</span>)]
         </span>Duration(<span class="kw">super</span>::DurationRules),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;22&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"22"</span>)]
         </span>Timestamp(<span class="kw">super</span>::TimestampRules),
     }
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>FloatRules {
-    <span class="attr">#[prost(float, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(float, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>r#const: ::core::option::Option&lt;f32&gt;,
-    <span class="attr">#[prost(float, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(float, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>lt: ::core::option::Option&lt;f32&gt;,
-    <span class="attr">#[prost(float, optional, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(float, optional, tag = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>lte: ::core::option::Option&lt;f32&gt;,
-    <span class="attr">#[prost(float, optional, tag = <span class="string">&quot;4&quot;</span>)]
+    <span class="attr">#[prost(float, optional, tag = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>gt: ::core::option::Option&lt;f32&gt;,
-    <span class="attr">#[prost(float, optional, tag = <span class="string">&quot;5&quot;</span>)]
+    <span class="attr">#[prost(float, optional, tag = <span class="string">"5"</span>)]
     </span><span class="kw">pub </span>gte: ::core::option::Option&lt;f32&gt;,
-    <span class="attr">#[prost(float, repeated, packed = <span class="string">&quot;false&quot;</span>, tag = <span class="string">&quot;6&quot;</span>)]
+    <span class="attr">#[prost(float, repeated, packed = <span class="string">"false"</span>, tag = <span class="string">"6"</span>)]
     </span><span class="kw">pub </span>r#in: ::prost::alloc::vec::Vec&lt;f32&gt;,
-    <span class="attr">#[prost(float, repeated, packed = <span class="string">&quot;false&quot;</span>, tag = <span class="string">&quot;7&quot;</span>)]
+    <span class="attr">#[prost(float, repeated, packed = <span class="string">"false"</span>, tag = <span class="string">"7"</span>)]
     </span><span class="kw">pub </span>not_in: ::prost::alloc::vec::Vec&lt;f32&gt;,
-    <span class="attr">#[prost(bool, optional, tag = <span class="string">&quot;8&quot;</span>)]
+    <span class="attr">#[prost(bool, optional, tag = <span class="string">"8"</span>)]
     </span><span class="kw">pub </span>ignore_empty: ::core::option::Option&lt;bool&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>DoubleRules {
-    <span class="attr">#[prost(double, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(double, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>r#const: ::core::option::Option&lt;f64&gt;,
-    <span class="attr">#[prost(double, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(double, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>lt: ::core::option::Option&lt;f64&gt;,
-    <span class="attr">#[prost(double, optional, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(double, optional, tag = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>lte: ::core::option::Option&lt;f64&gt;,
-    <span class="attr">#[prost(double, optional, tag = <span class="string">&quot;4&quot;</span>)]
+    <span class="attr">#[prost(double, optional, tag = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>gt: ::core::option::Option&lt;f64&gt;,
-    <span class="attr">#[prost(double, optional, tag = <span class="string">&quot;5&quot;</span>)]
+    <span class="attr">#[prost(double, optional, tag = <span class="string">"5"</span>)]
     </span><span class="kw">pub </span>gte: ::core::option::Option&lt;f64&gt;,
-    <span class="attr">#[prost(double, repeated, packed = <span class="string">&quot;false&quot;</span>, tag = <span class="string">&quot;6&quot;</span>)]
+    <span class="attr">#[prost(double, repeated, packed = <span class="string">"false"</span>, tag = <span class="string">"6"</span>)]
     </span><span class="kw">pub </span>r#in: ::prost::alloc::vec::Vec&lt;f64&gt;,
-    <span class="attr">#[prost(double, repeated, packed = <span class="string">&quot;false&quot;</span>, tag = <span class="string">&quot;7&quot;</span>)]
+    <span class="attr">#[prost(double, repeated, packed = <span class="string">"false"</span>, tag = <span class="string">"7"</span>)]
     </span><span class="kw">pub </span>not_in: ::prost::alloc::vec::Vec&lt;f64&gt;,
-    <span class="attr">#[prost(bool, optional, tag = <span class="string">&quot;8&quot;</span>)]
+    <span class="attr">#[prost(bool, optional, tag = <span class="string">"8"</span>)]
     </span><span class="kw">pub </span>ignore_empty: ::core::option::Option&lt;bool&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>Int32Rules {
-    <span class="attr">#[prost(int32, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(int32, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>r#const: ::core::option::Option&lt;i32&gt;,
-    <span class="attr">#[prost(int32, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(int32, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>lt: ::core::option::Option&lt;i32&gt;,
-    <span class="attr">#[prost(int32, optional, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(int32, optional, tag = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>lte: ::core::option::Option&lt;i32&gt;,
-    <span class="attr">#[prost(int32, optional, tag = <span class="string">&quot;4&quot;</span>)]
+    <span class="attr">#[prost(int32, optional, tag = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>gt: ::core::option::Option&lt;i32&gt;,
-    <span class="attr">#[prost(int32, optional, tag = <span class="string">&quot;5&quot;</span>)]
+    <span class="attr">#[prost(int32, optional, tag = <span class="string">"5"</span>)]
     </span><span class="kw">pub </span>gte: ::core::option::Option&lt;i32&gt;,
-    <span class="attr">#[prost(int32, repeated, packed = <span class="string">&quot;false&quot;</span>, tag = <span class="string">&quot;6&quot;</span>)]
+    <span class="attr">#[prost(int32, repeated, packed = <span class="string">"false"</span>, tag = <span class="string">"6"</span>)]
     </span><span class="kw">pub </span>r#in: ::prost::alloc::vec::Vec&lt;i32&gt;,
-    <span class="attr">#[prost(int32, repeated, packed = <span class="string">&quot;false&quot;</span>, tag = <span class="string">&quot;7&quot;</span>)]
+    <span class="attr">#[prost(int32, repeated, packed = <span class="string">"false"</span>, tag = <span class="string">"7"</span>)]
     </span><span class="kw">pub </span>not_in: ::prost::alloc::vec::Vec&lt;i32&gt;,
-    <span class="attr">#[prost(bool, optional, tag = <span class="string">&quot;8&quot;</span>)]
+    <span class="attr">#[prost(bool, optional, tag = <span class="string">"8"</span>)]
     </span><span class="kw">pub </span>ignore_empty: ::core::option::Option&lt;bool&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>Int64Rules {
-    <span class="attr">#[prost(int64, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(int64, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>r#const: ::core::option::Option&lt;i64&gt;,
-    <span class="attr">#[prost(int64, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(int64, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>lt: ::core::option::Option&lt;i64&gt;,
-    <span class="attr">#[prost(int64, optional, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(int64, optional, tag = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>lte: ::core::option::Option&lt;i64&gt;,
-    <span class="attr">#[prost(int64, optional, tag = <span class="string">&quot;4&quot;</span>)]
+    <span class="attr">#[prost(int64, optional, tag = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>gt: ::core::option::Option&lt;i64&gt;,
-    <span class="attr">#[prost(int64, optional, tag = <span class="string">&quot;5&quot;</span>)]
+    <span class="attr">#[prost(int64, optional, tag = <span class="string">"5"</span>)]
     </span><span class="kw">pub </span>gte: ::core::option::Option&lt;i64&gt;,
-    <span class="attr">#[prost(int64, repeated, packed = <span class="string">&quot;false&quot;</span>, tag = <span class="string">&quot;6&quot;</span>)]
+    <span class="attr">#[prost(int64, repeated, packed = <span class="string">"false"</span>, tag = <span class="string">"6"</span>)]
     </span><span class="kw">pub </span>r#in: ::prost::alloc::vec::Vec&lt;i64&gt;,
-    <span class="attr">#[prost(int64, repeated, packed = <span class="string">&quot;false&quot;</span>, tag = <span class="string">&quot;7&quot;</span>)]
+    <span class="attr">#[prost(int64, repeated, packed = <span class="string">"false"</span>, tag = <span class="string">"7"</span>)]
     </span><span class="kw">pub </span>not_in: ::prost::alloc::vec::Vec&lt;i64&gt;,
-    <span class="attr">#[prost(bool, optional, tag = <span class="string">&quot;8&quot;</span>)]
+    <span class="attr">#[prost(bool, optional, tag = <span class="string">"8"</span>)]
     </span><span class="kw">pub </span>ignore_empty: ::core::option::Option&lt;bool&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>UInt32Rules {
-    <span class="attr">#[prost(uint32, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(uint32, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>r#const: ::core::option::Option&lt;u32&gt;,
-    <span class="attr">#[prost(uint32, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(uint32, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>lt: ::core::option::Option&lt;u32&gt;,
-    <span class="attr">#[prost(uint32, optional, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(uint32, optional, tag = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>lte: ::core::option::Option&lt;u32&gt;,
-    <span class="attr">#[prost(uint32, optional, tag = <span class="string">&quot;4&quot;</span>)]
+    <span class="attr">#[prost(uint32, optional, tag = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>gt: ::core::option::Option&lt;u32&gt;,
-    <span class="attr">#[prost(uint32, optional, tag = <span class="string">&quot;5&quot;</span>)]
+    <span class="attr">#[prost(uint32, optional, tag = <span class="string">"5"</span>)]
     </span><span class="kw">pub </span>gte: ::core::option::Option&lt;u32&gt;,
-    <span class="attr">#[prost(uint32, repeated, packed = <span class="string">&quot;false&quot;</span>, tag = <span class="string">&quot;6&quot;</span>)]
+    <span class="attr">#[prost(uint32, repeated, packed = <span class="string">"false"</span>, tag = <span class="string">"6"</span>)]
     </span><span class="kw">pub </span>r#in: ::prost::alloc::vec::Vec&lt;u32&gt;,
-    <span class="attr">#[prost(uint32, repeated, packed = <span class="string">&quot;false&quot;</span>, tag = <span class="string">&quot;7&quot;</span>)]
+    <span class="attr">#[prost(uint32, repeated, packed = <span class="string">"false"</span>, tag = <span class="string">"7"</span>)]
     </span><span class="kw">pub </span>not_in: ::prost::alloc::vec::Vec&lt;u32&gt;,
-    <span class="attr">#[prost(bool, optional, tag = <span class="string">&quot;8&quot;</span>)]
+    <span class="attr">#[prost(bool, optional, tag = <span class="string">"8"</span>)]
     </span><span class="kw">pub </span>ignore_empty: ::core::option::Option&lt;bool&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>UInt64Rules {
-    <span class="attr">#[prost(uint64, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(uint64, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>r#const: ::core::option::Option&lt;u64&gt;,
-    <span class="attr">#[prost(uint64, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(uint64, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>lt: ::core::option::Option&lt;u64&gt;,
-    <span class="attr">#[prost(uint64, optional, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(uint64, optional, tag = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>lte: ::core::option::Option&lt;u64&gt;,
-    <span class="attr">#[prost(uint64, optional, tag = <span class="string">&quot;4&quot;</span>)]
+    <span class="attr">#[prost(uint64, optional, tag = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>gt: ::core::option::Option&lt;u64&gt;,
-    <span class="attr">#[prost(uint64, optional, tag = <span class="string">&quot;5&quot;</span>)]
+    <span class="attr">#[prost(uint64, optional, tag = <span class="string">"5"</span>)]
     </span><span class="kw">pub </span>gte: ::core::option::Option&lt;u64&gt;,
-    <span class="attr">#[prost(uint64, repeated, packed = <span class="string">&quot;false&quot;</span>, tag = <span class="string">&quot;6&quot;</span>)]
+    <span class="attr">#[prost(uint64, repeated, packed = <span class="string">"false"</span>, tag = <span class="string">"6"</span>)]
     </span><span class="kw">pub </span>r#in: ::prost::alloc::vec::Vec&lt;u64&gt;,
-    <span class="attr">#[prost(uint64, repeated, packed = <span class="string">&quot;false&quot;</span>, tag = <span class="string">&quot;7&quot;</span>)]
+    <span class="attr">#[prost(uint64, repeated, packed = <span class="string">"false"</span>, tag = <span class="string">"7"</span>)]
     </span><span class="kw">pub </span>not_in: ::prost::alloc::vec::Vec&lt;u64&gt;,
-    <span class="attr">#[prost(bool, optional, tag = <span class="string">&quot;8&quot;</span>)]
+    <span class="attr">#[prost(bool, optional, tag = <span class="string">"8"</span>)]
     </span><span class="kw">pub </span>ignore_empty: ::core::option::Option&lt;bool&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>SInt32Rules {
-    <span class="attr">#[prost(sint32, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(sint32, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>r#const: ::core::option::Option&lt;i32&gt;,
-    <span class="attr">#[prost(sint32, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(sint32, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>lt: ::core::option::Option&lt;i32&gt;,
-    <span class="attr">#[prost(sint32, optional, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(sint32, optional, tag = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>lte: ::core::option::Option&lt;i32&gt;,
-    <span class="attr">#[prost(sint32, optional, tag = <span class="string">&quot;4&quot;</span>)]
+    <span class="attr">#[prost(sint32, optional, tag = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>gt: ::core::option::Option&lt;i32&gt;,
-    <span class="attr">#[prost(sint32, optional, tag = <span class="string">&quot;5&quot;</span>)]
+    <span class="attr">#[prost(sint32, optional, tag = <span class="string">"5"</span>)]
     </span><span class="kw">pub </span>gte: ::core::option::Option&lt;i32&gt;,
-    <span class="attr">#[prost(sint32, repeated, packed = <span class="string">&quot;false&quot;</span>, tag = <span class="string">&quot;6&quot;</span>)]
+    <span class="attr">#[prost(sint32, repeated, packed = <span class="string">"false"</span>, tag = <span class="string">"6"</span>)]
     </span><span class="kw">pub </span>r#in: ::prost::alloc::vec::Vec&lt;i32&gt;,
-    <span class="attr">#[prost(sint32, repeated, packed = <span class="string">&quot;false&quot;</span>, tag = <span class="string">&quot;7&quot;</span>)]
+    <span class="attr">#[prost(sint32, repeated, packed = <span class="string">"false"</span>, tag = <span class="string">"7"</span>)]
     </span><span class="kw">pub </span>not_in: ::prost::alloc::vec::Vec&lt;i32&gt;,
-    <span class="attr">#[prost(bool, optional, tag = <span class="string">&quot;8&quot;</span>)]
+    <span class="attr">#[prost(bool, optional, tag = <span class="string">"8"</span>)]
     </span><span class="kw">pub </span>ignore_empty: ::core::option::Option&lt;bool&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>SInt64Rules {
-    <span class="attr">#[prost(sint64, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(sint64, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>r#const: ::core::option::Option&lt;i64&gt;,
-    <span class="attr">#[prost(sint64, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(sint64, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>lt: ::core::option::Option&lt;i64&gt;,
-    <span class="attr">#[prost(sint64, optional, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(sint64, optional, tag = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>lte: ::core::option::Option&lt;i64&gt;,
-    <span class="attr">#[prost(sint64, optional, tag = <span class="string">&quot;4&quot;</span>)]
+    <span class="attr">#[prost(sint64, optional, tag = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>gt: ::core::option::Option&lt;i64&gt;,
-    <span class="attr">#[prost(sint64, optional, tag = <span class="string">&quot;5&quot;</span>)]
+    <span class="attr">#[prost(sint64, optional, tag = <span class="string">"5"</span>)]
     </span><span class="kw">pub </span>gte: ::core::option::Option&lt;i64&gt;,
-    <span class="attr">#[prost(sint64, repeated, packed = <span class="string">&quot;false&quot;</span>, tag = <span class="string">&quot;6&quot;</span>)]
+    <span class="attr">#[prost(sint64, repeated, packed = <span class="string">"false"</span>, tag = <span class="string">"6"</span>)]
     </span><span class="kw">pub </span>r#in: ::prost::alloc::vec::Vec&lt;i64&gt;,
-    <span class="attr">#[prost(sint64, repeated, packed = <span class="string">&quot;false&quot;</span>, tag = <span class="string">&quot;7&quot;</span>)]
+    <span class="attr">#[prost(sint64, repeated, packed = <span class="string">"false"</span>, tag = <span class="string">"7"</span>)]
     </span><span class="kw">pub </span>not_in: ::prost::alloc::vec::Vec&lt;i64&gt;,
-    <span class="attr">#[prost(bool, optional, tag = <span class="string">&quot;8&quot;</span>)]
+    <span class="attr">#[prost(bool, optional, tag = <span class="string">"8"</span>)]
     </span><span class="kw">pub </span>ignore_empty: ::core::option::Option&lt;bool&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>Fixed32Rules {
-    <span class="attr">#[prost(fixed32, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(fixed32, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>r#const: ::core::option::Option&lt;u32&gt;,
-    <span class="attr">#[prost(fixed32, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(fixed32, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>lt: ::core::option::Option&lt;u32&gt;,
-    <span class="attr">#[prost(fixed32, optional, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(fixed32, optional, tag = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>lte: ::core::option::Option&lt;u32&gt;,
-    <span class="attr">#[prost(fixed32, optional, tag = <span class="string">&quot;4&quot;</span>)]
+    <span class="attr">#[prost(fixed32, optional, tag = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>gt: ::core::option::Option&lt;u32&gt;,
-    <span class="attr">#[prost(fixed32, optional, tag = <span class="string">&quot;5&quot;</span>)]
+    <span class="attr">#[prost(fixed32, optional, tag = <span class="string">"5"</span>)]
     </span><span class="kw">pub </span>gte: ::core::option::Option&lt;u32&gt;,
-    <span class="attr">#[prost(fixed32, repeated, packed = <span class="string">&quot;false&quot;</span>, tag = <span class="string">&quot;6&quot;</span>)]
+    <span class="attr">#[prost(fixed32, repeated, packed = <span class="string">"false"</span>, tag = <span class="string">"6"</span>)]
     </span><span class="kw">pub </span>r#in: ::prost::alloc::vec::Vec&lt;u32&gt;,
-    <span class="attr">#[prost(fixed32, repeated, packed = <span class="string">&quot;false&quot;</span>, tag = <span class="string">&quot;7&quot;</span>)]
+    <span class="attr">#[prost(fixed32, repeated, packed = <span class="string">"false"</span>, tag = <span class="string">"7"</span>)]
     </span><span class="kw">pub </span>not_in: ::prost::alloc::vec::Vec&lt;u32&gt;,
-    <span class="attr">#[prost(bool, optional, tag = <span class="string">&quot;8&quot;</span>)]
+    <span class="attr">#[prost(bool, optional, tag = <span class="string">"8"</span>)]
     </span><span class="kw">pub </span>ignore_empty: ::core::option::Option&lt;bool&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>Fixed64Rules {
-    <span class="attr">#[prost(fixed64, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(fixed64, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>r#const: ::core::option::Option&lt;u64&gt;,
-    <span class="attr">#[prost(fixed64, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(fixed64, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>lt: ::core::option::Option&lt;u64&gt;,
-    <span class="attr">#[prost(fixed64, optional, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(fixed64, optional, tag = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>lte: ::core::option::Option&lt;u64&gt;,
-    <span class="attr">#[prost(fixed64, optional, tag = <span class="string">&quot;4&quot;</span>)]
+    <span class="attr">#[prost(fixed64, optional, tag = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>gt: ::core::option::Option&lt;u64&gt;,
-    <span class="attr">#[prost(fixed64, optional, tag = <span class="string">&quot;5&quot;</span>)]
+    <span class="attr">#[prost(fixed64, optional, tag = <span class="string">"5"</span>)]
     </span><span class="kw">pub </span>gte: ::core::option::Option&lt;u64&gt;,
-    <span class="attr">#[prost(fixed64, repeated, packed = <span class="string">&quot;false&quot;</span>, tag = <span class="string">&quot;6&quot;</span>)]
+    <span class="attr">#[prost(fixed64, repeated, packed = <span class="string">"false"</span>, tag = <span class="string">"6"</span>)]
     </span><span class="kw">pub </span>r#in: ::prost::alloc::vec::Vec&lt;u64&gt;,
-    <span class="attr">#[prost(fixed64, repeated, packed = <span class="string">&quot;false&quot;</span>, tag = <span class="string">&quot;7&quot;</span>)]
+    <span class="attr">#[prost(fixed64, repeated, packed = <span class="string">"false"</span>, tag = <span class="string">"7"</span>)]
     </span><span class="kw">pub </span>not_in: ::prost::alloc::vec::Vec&lt;u64&gt;,
-    <span class="attr">#[prost(bool, optional, tag = <span class="string">&quot;8&quot;</span>)]
+    <span class="attr">#[prost(bool, optional, tag = <span class="string">"8"</span>)]
     </span><span class="kw">pub </span>ignore_empty: ::core::option::Option&lt;bool&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>SFixed32Rules {
-    <span class="attr">#[prost(sfixed32, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(sfixed32, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>r#const: ::core::option::Option&lt;i32&gt;,
-    <span class="attr">#[prost(sfixed32, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(sfixed32, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>lt: ::core::option::Option&lt;i32&gt;,
-    <span class="attr">#[prost(sfixed32, optional, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(sfixed32, optional, tag = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>lte: ::core::option::Option&lt;i32&gt;,
-    <span class="attr">#[prost(sfixed32, optional, tag = <span class="string">&quot;4&quot;</span>)]
+    <span class="attr">#[prost(sfixed32, optional, tag = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>gt: ::core::option::Option&lt;i32&gt;,
-    <span class="attr">#[prost(sfixed32, optional, tag = <span class="string">&quot;5&quot;</span>)]
+    <span class="attr">#[prost(sfixed32, optional, tag = <span class="string">"5"</span>)]
     </span><span class="kw">pub </span>gte: ::core::option::Option&lt;i32&gt;,
-    <span class="attr">#[prost(sfixed32, repeated, packed = <span class="string">&quot;false&quot;</span>, tag = <span class="string">&quot;6&quot;</span>)]
+    <span class="attr">#[prost(sfixed32, repeated, packed = <span class="string">"false"</span>, tag = <span class="string">"6"</span>)]
     </span><span class="kw">pub </span>r#in: ::prost::alloc::vec::Vec&lt;i32&gt;,
-    <span class="attr">#[prost(sfixed32, repeated, packed = <span class="string">&quot;false&quot;</span>, tag = <span class="string">&quot;7&quot;</span>)]
+    <span class="attr">#[prost(sfixed32, repeated, packed = <span class="string">"false"</span>, tag = <span class="string">"7"</span>)]
     </span><span class="kw">pub </span>not_in: ::prost::alloc::vec::Vec&lt;i32&gt;,
-    <span class="attr">#[prost(bool, optional, tag = <span class="string">&quot;8&quot;</span>)]
+    <span class="attr">#[prost(bool, optional, tag = <span class="string">"8"</span>)]
     </span><span class="kw">pub </span>ignore_empty: ::core::option::Option&lt;bool&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>SFixed64Rules {
-    <span class="attr">#[prost(sfixed64, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(sfixed64, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>r#const: ::core::option::Option&lt;i64&gt;,
-    <span class="attr">#[prost(sfixed64, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(sfixed64, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>lt: ::core::option::Option&lt;i64&gt;,
-    <span class="attr">#[prost(sfixed64, optional, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(sfixed64, optional, tag = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>lte: ::core::option::Option&lt;i64&gt;,
-    <span class="attr">#[prost(sfixed64, optional, tag = <span class="string">&quot;4&quot;</span>)]
+    <span class="attr">#[prost(sfixed64, optional, tag = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>gt: ::core::option::Option&lt;i64&gt;,
-    <span class="attr">#[prost(sfixed64, optional, tag = <span class="string">&quot;5&quot;</span>)]
+    <span class="attr">#[prost(sfixed64, optional, tag = <span class="string">"5"</span>)]
     </span><span class="kw">pub </span>gte: ::core::option::Option&lt;i64&gt;,
-    <span class="attr">#[prost(sfixed64, repeated, packed = <span class="string">&quot;false&quot;</span>, tag = <span class="string">&quot;6&quot;</span>)]
+    <span class="attr">#[prost(sfixed64, repeated, packed = <span class="string">"false"</span>, tag = <span class="string">"6"</span>)]
     </span><span class="kw">pub </span>r#in: ::prost::alloc::vec::Vec&lt;i64&gt;,
-    <span class="attr">#[prost(sfixed64, repeated, packed = <span class="string">&quot;false&quot;</span>, tag = <span class="string">&quot;7&quot;</span>)]
+    <span class="attr">#[prost(sfixed64, repeated, packed = <span class="string">"false"</span>, tag = <span class="string">"7"</span>)]
     </span><span class="kw">pub </span>not_in: ::prost::alloc::vec::Vec&lt;i64&gt;,
-    <span class="attr">#[prost(bool, optional, tag = <span class="string">&quot;8&quot;</span>)]
+    <span class="attr">#[prost(bool, optional, tag = <span class="string">"8"</span>)]
     </span><span class="kw">pub </span>ignore_empty: ::core::option::Option&lt;bool&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>BoolRules {
-    <span class="attr">#[prost(bool, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(bool, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>r#const: ::core::option::Option&lt;bool&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>StringRules {
-    <span class="attr">#[prost(string, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(string, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>r#const: ::core::option::Option&lt;::prost::alloc::string::String&gt;,
-    <span class="attr">#[prost(uint64, optional, tag = <span class="string">&quot;19&quot;</span>)]
+    <span class="attr">#[prost(uint64, optional, tag = <span class="string">"19"</span>)]
     </span><span class="kw">pub </span>len: ::core::option::Option&lt;u64&gt;,
-    <span class="attr">#[prost(uint64, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(uint64, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>min_len: ::core::option::Option&lt;u64&gt;,
-    <span class="attr">#[prost(uint64, optional, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(uint64, optional, tag = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>max_len: ::core::option::Option&lt;u64&gt;,
-    <span class="attr">#[prost(uint64, optional, tag = <span class="string">&quot;20&quot;</span>)]
+    <span class="attr">#[prost(uint64, optional, tag = <span class="string">"20"</span>)]
     </span><span class="kw">pub </span>len_bytes: ::core::option::Option&lt;u64&gt;,
-    <span class="attr">#[prost(uint64, optional, tag = <span class="string">&quot;4&quot;</span>)]
+    <span class="attr">#[prost(uint64, optional, tag = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>min_bytes: ::core::option::Option&lt;u64&gt;,
-    <span class="attr">#[prost(uint64, optional, tag = <span class="string">&quot;5&quot;</span>)]
+    <span class="attr">#[prost(uint64, optional, tag = <span class="string">"5"</span>)]
     </span><span class="kw">pub </span>max_bytes: ::core::option::Option&lt;u64&gt;,
-    <span class="attr">#[prost(string, optional, tag = <span class="string">&quot;6&quot;</span>)]
+    <span class="attr">#[prost(string, optional, tag = <span class="string">"6"</span>)]
     </span><span class="kw">pub </span>pattern: ::core::option::Option&lt;::prost::alloc::string::String&gt;,
-    <span class="attr">#[prost(string, optional, tag = <span class="string">&quot;7&quot;</span>)]
+    <span class="attr">#[prost(string, optional, tag = <span class="string">"7"</span>)]
     </span><span class="kw">pub </span>prefix: ::core::option::Option&lt;::prost::alloc::string::String&gt;,
-    <span class="attr">#[prost(string, optional, tag = <span class="string">&quot;8&quot;</span>)]
+    <span class="attr">#[prost(string, optional, tag = <span class="string">"8"</span>)]
     </span><span class="kw">pub </span>suffix: ::core::option::Option&lt;::prost::alloc::string::String&gt;,
-    <span class="attr">#[prost(string, optional, tag = <span class="string">&quot;9&quot;</span>)]
+    <span class="attr">#[prost(string, optional, tag = <span class="string">"9"</span>)]
     </span><span class="kw">pub </span>contains: ::core::option::Option&lt;::prost::alloc::string::String&gt;,
-    <span class="attr">#[prost(string, optional, tag = <span class="string">&quot;23&quot;</span>)]
+    <span class="attr">#[prost(string, optional, tag = <span class="string">"23"</span>)]
     </span><span class="kw">pub </span>not_contains: ::core::option::Option&lt;::prost::alloc::string::String&gt;,
-    <span class="attr">#[prost(string, repeated, tag = <span class="string">&quot;10&quot;</span>)]
+    <span class="attr">#[prost(string, repeated, tag = <span class="string">"10"</span>)]
     </span><span class="kw">pub </span>r#in: ::prost::alloc::vec::Vec&lt;::prost::alloc::string::String&gt;,
-    <span class="attr">#[prost(string, repeated, tag = <span class="string">&quot;11&quot;</span>)]
+    <span class="attr">#[prost(string, repeated, tag = <span class="string">"11"</span>)]
     </span><span class="kw">pub </span>not_in: ::prost::alloc::vec::Vec&lt;::prost::alloc::string::String&gt;,
-    <span class="attr">#[prost(bool, optional, tag = <span class="string">&quot;25&quot;</span>, default = <span class="string">&quot;true&quot;</span>)]
+    <span class="attr">#[prost(bool, optional, tag = <span class="string">"25"</span>, default = <span class="string">"true"</span>)]
     </span><span class="kw">pub </span>strict: ::core::option::Option&lt;bool&gt;,
-    <span class="attr">#[prost(bool, optional, tag = <span class="string">&quot;26&quot;</span>)]
+    <span class="attr">#[prost(bool, optional, tag = <span class="string">"26"</span>)]
     </span><span class="kw">pub </span>ignore_empty: ::core::option::Option&lt;bool&gt;,
     <span class="attr">#[prost(
-        oneof = <span class="string">&quot;string_rules::WellKnown&quot;</span>,
-        tags = <span class="string">&quot;12, 13, 14, 15, 16, 17, 18, 21, 22, 24&quot;
+        oneof = <span class="string">"string_rules::WellKnown"</span>,
+        tags = <span class="string">"12, 13, 14, 15, 16, 17, 18, 21, 22, 24"
     </span>)]
     </span><span class="kw">pub </span>well_known: ::core::option::Option&lt;string_rules::WellKnown&gt;,
 }
@@ -896,54 +898,54 @@
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     </span><span class="kw">pub enum </span>WellKnown {
-        <span class="attr">#[prost(bool, tag = <span class="string">&quot;12&quot;</span>)]
+        <span class="attr">#[prost(bool, tag = <span class="string">"12"</span>)]
         </span>Email(bool),
-        <span class="attr">#[prost(bool, tag = <span class="string">&quot;13&quot;</span>)]
+        <span class="attr">#[prost(bool, tag = <span class="string">"13"</span>)]
         </span>Hostname(bool),
-        <span class="attr">#[prost(bool, tag = <span class="string">&quot;14&quot;</span>)]
+        <span class="attr">#[prost(bool, tag = <span class="string">"14"</span>)]
         </span>Ip(bool),
-        <span class="attr">#[prost(bool, tag = <span class="string">&quot;15&quot;</span>)]
+        <span class="attr">#[prost(bool, tag = <span class="string">"15"</span>)]
         </span>Ipv4(bool),
-        <span class="attr">#[prost(bool, tag = <span class="string">&quot;16&quot;</span>)]
+        <span class="attr">#[prost(bool, tag = <span class="string">"16"</span>)]
         </span>Ipv6(bool),
-        <span class="attr">#[prost(bool, tag = <span class="string">&quot;17&quot;</span>)]
+        <span class="attr">#[prost(bool, tag = <span class="string">"17"</span>)]
         </span>Uri(bool),
-        <span class="attr">#[prost(bool, tag = <span class="string">&quot;18&quot;</span>)]
+        <span class="attr">#[prost(bool, tag = <span class="string">"18"</span>)]
         </span>UriRef(bool),
-        <span class="attr">#[prost(bool, tag = <span class="string">&quot;21&quot;</span>)]
+        <span class="attr">#[prost(bool, tag = <span class="string">"21"</span>)]
         </span>Address(bool),
-        <span class="attr">#[prost(bool, tag = <span class="string">&quot;22&quot;</span>)]
+        <span class="attr">#[prost(bool, tag = <span class="string">"22"</span>)]
         </span>Uuid(bool),
-        <span class="attr">#[prost(enumeration = <span class="string">&quot;super::KnownRegex&quot;</span>, tag = <span class="string">&quot;24&quot;</span>)]
+        <span class="attr">#[prost(enumeration = <span class="string">"super::KnownRegex"</span>, tag = <span class="string">"24"</span>)]
         </span>WellKnownRegex(i32),
     }
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>BytesRules {
-    <span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(bytes = <span class="string">"vec"</span>, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>r#const: ::core::option::Option&lt;::prost::alloc::vec::Vec&lt;u8&gt;&gt;,
-    <span class="attr">#[prost(uint64, optional, tag = <span class="string">&quot;13&quot;</span>)]
+    <span class="attr">#[prost(uint64, optional, tag = <span class="string">"13"</span>)]
     </span><span class="kw">pub </span>len: ::core::option::Option&lt;u64&gt;,
-    <span class="attr">#[prost(uint64, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(uint64, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>min_len: ::core::option::Option&lt;u64&gt;,
-    <span class="attr">#[prost(uint64, optional, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(uint64, optional, tag = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>max_len: ::core::option::Option&lt;u64&gt;,
-    <span class="attr">#[prost(string, optional, tag = <span class="string">&quot;4&quot;</span>)]
+    <span class="attr">#[prost(string, optional, tag = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>pattern: ::core::option::Option&lt;::prost::alloc::string::String&gt;,
-    <span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, optional, tag = <span class="string">&quot;5&quot;</span>)]
+    <span class="attr">#[prost(bytes = <span class="string">"vec"</span>, optional, tag = <span class="string">"5"</span>)]
     </span><span class="kw">pub </span>prefix: ::core::option::Option&lt;::prost::alloc::vec::Vec&lt;u8&gt;&gt;,
-    <span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, optional, tag = <span class="string">&quot;6&quot;</span>)]
+    <span class="attr">#[prost(bytes = <span class="string">"vec"</span>, optional, tag = <span class="string">"6"</span>)]
     </span><span class="kw">pub </span>suffix: ::core::option::Option&lt;::prost::alloc::vec::Vec&lt;u8&gt;&gt;,
-    <span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, optional, tag = <span class="string">&quot;7&quot;</span>)]
+    <span class="attr">#[prost(bytes = <span class="string">"vec"</span>, optional, tag = <span class="string">"7"</span>)]
     </span><span class="kw">pub </span>contains: ::core::option::Option&lt;::prost::alloc::vec::Vec&lt;u8&gt;&gt;,
-    <span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, repeated, tag = <span class="string">&quot;8&quot;</span>)]
+    <span class="attr">#[prost(bytes = <span class="string">"vec"</span>, repeated, tag = <span class="string">"8"</span>)]
     </span><span class="kw">pub </span>r#in: ::prost::alloc::vec::Vec&lt;::prost::alloc::vec::Vec&lt;u8&gt;&gt;,
-    <span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, repeated, tag = <span class="string">&quot;9&quot;</span>)]
+    <span class="attr">#[prost(bytes = <span class="string">"vec"</span>, repeated, tag = <span class="string">"9"</span>)]
     </span><span class="kw">pub </span>not_in: ::prost::alloc::vec::Vec&lt;::prost::alloc::vec::Vec&lt;u8&gt;&gt;,
-    <span class="attr">#[prost(bool, optional, tag = <span class="string">&quot;14&quot;</span>)]
+    <span class="attr">#[prost(bool, optional, tag = <span class="string">"14"</span>)]
     </span><span class="kw">pub </span>ignore_empty: ::core::option::Option&lt;bool&gt;,
-    <span class="attr">#[prost(oneof = <span class="string">&quot;bytes_rules::WellKnown&quot;</span>, tags = <span class="string">&quot;10, 11, 12&quot;</span>)]
+    <span class="attr">#[prost(oneof = <span class="string">"bytes_rules::WellKnown"</span>, tags = <span class="string">"10, 11, 12"</span>)]
     </span><span class="kw">pub </span>well_known: ::core::option::Option&lt;bytes_rules::WellKnown&gt;,
 }
 <span class="doccomment">/// Nested message and enum types in `BytesRules`.
@@ -951,114 +953,114 @@
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     </span><span class="kw">pub enum </span>WellKnown {
-        <span class="attr">#[prost(bool, tag = <span class="string">&quot;10&quot;</span>)]
+        <span class="attr">#[prost(bool, tag = <span class="string">"10"</span>)]
         </span>Ip(bool),
-        <span class="attr">#[prost(bool, tag = <span class="string">&quot;11&quot;</span>)]
+        <span class="attr">#[prost(bool, tag = <span class="string">"11"</span>)]
         </span>Ipv4(bool),
-        <span class="attr">#[prost(bool, tag = <span class="string">&quot;12&quot;</span>)]
+        <span class="attr">#[prost(bool, tag = <span class="string">"12"</span>)]
         </span>Ipv6(bool),
     }
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>EnumRules {
-    <span class="attr">#[prost(int32, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(int32, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>r#const: ::core::option::Option&lt;i32&gt;,
-    <span class="attr">#[prost(bool, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(bool, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>defined_only: ::core::option::Option&lt;bool&gt;,
-    <span class="attr">#[prost(int32, repeated, packed = <span class="string">&quot;false&quot;</span>, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(int32, repeated, packed = <span class="string">"false"</span>, tag = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>r#in: ::prost::alloc::vec::Vec&lt;i32&gt;,
-    <span class="attr">#[prost(int32, repeated, packed = <span class="string">&quot;false&quot;</span>, tag = <span class="string">&quot;4&quot;</span>)]
+    <span class="attr">#[prost(int32, repeated, packed = <span class="string">"false"</span>, tag = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>not_in: ::prost::alloc::vec::Vec&lt;i32&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>MessageRules {
-    <span class="attr">#[prost(bool, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(bool, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>skip: ::core::option::Option&lt;bool&gt;,
-    <span class="attr">#[prost(bool, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(bool, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>required: ::core::option::Option&lt;bool&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>RepeatedRules {
-    <span class="attr">#[prost(uint64, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(uint64, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>min_items: ::core::option::Option&lt;u64&gt;,
-    <span class="attr">#[prost(uint64, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(uint64, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>max_items: ::core::option::Option&lt;u64&gt;,
-    <span class="attr">#[prost(bool, optional, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(bool, optional, tag = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>unique: ::core::option::Option&lt;bool&gt;,
-    <span class="attr">#[prost(message, optional, boxed, tag = <span class="string">&quot;4&quot;</span>)]
+    <span class="attr">#[prost(message, optional, boxed, tag = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>items: ::core::option::Option&lt;::prost::alloc::boxed::Box&lt;FieldRules&gt;&gt;,
-    <span class="attr">#[prost(bool, optional, tag = <span class="string">&quot;5&quot;</span>)]
+    <span class="attr">#[prost(bool, optional, tag = <span class="string">"5"</span>)]
     </span><span class="kw">pub </span>ignore_empty: ::core::option::Option&lt;bool&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>MapRules {
-    <span class="attr">#[prost(uint64, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(uint64, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>min_pairs: ::core::option::Option&lt;u64&gt;,
-    <span class="attr">#[prost(uint64, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(uint64, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>max_pairs: ::core::option::Option&lt;u64&gt;,
-    <span class="attr">#[prost(bool, optional, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(bool, optional, tag = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>no_sparse: ::core::option::Option&lt;bool&gt;,
-    <span class="attr">#[prost(message, optional, boxed, tag = <span class="string">&quot;4&quot;</span>)]
+    <span class="attr">#[prost(message, optional, boxed, tag = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>keys: ::core::option::Option&lt;::prost::alloc::boxed::Box&lt;FieldRules&gt;&gt;,
-    <span class="attr">#[prost(message, optional, boxed, tag = <span class="string">&quot;5&quot;</span>)]
+    <span class="attr">#[prost(message, optional, boxed, tag = <span class="string">"5"</span>)]
     </span><span class="kw">pub </span>values: ::core::option::Option&lt;::prost::alloc::boxed::Box&lt;FieldRules&gt;&gt;,
-    <span class="attr">#[prost(bool, optional, tag = <span class="string">&quot;6&quot;</span>)]
+    <span class="attr">#[prost(bool, optional, tag = <span class="string">"6"</span>)]
     </span><span class="kw">pub </span>ignore_empty: ::core::option::Option&lt;bool&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>AnyRules {
-    <span class="attr">#[prost(bool, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(bool, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>required: ::core::option::Option&lt;bool&gt;,
-    <span class="attr">#[prost(string, repeated, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(string, repeated, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>r#in: ::prost::alloc::vec::Vec&lt;::prost::alloc::string::String&gt;,
-    <span class="attr">#[prost(string, repeated, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(string, repeated, tag = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>not_in: ::prost::alloc::vec::Vec&lt;::prost::alloc::string::String&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>DurationRules {
-    <span class="attr">#[prost(bool, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(bool, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>required: ::core::option::Option&lt;bool&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>r#const: ::core::option::Option&lt;::prost_types::Duration&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>lt: ::core::option::Option&lt;::prost_types::Duration&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;4&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>lte: ::core::option::Option&lt;::prost_types::Duration&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;5&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"5"</span>)]
     </span><span class="kw">pub </span>gt: ::core::option::Option&lt;::prost_types::Duration&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;6&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"6"</span>)]
     </span><span class="kw">pub </span>gte: ::core::option::Option&lt;::prost_types::Duration&gt;,
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;7&quot;</span>)]
+    <span class="attr">#[prost(message, repeated, tag = <span class="string">"7"</span>)]
     </span><span class="kw">pub </span>r#in: ::prost::alloc::vec::Vec&lt;::prost_types::Duration&gt;,
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;8&quot;</span>)]
+    <span class="attr">#[prost(message, repeated, tag = <span class="string">"8"</span>)]
     </span><span class="kw">pub </span>not_in: ::prost::alloc::vec::Vec&lt;::prost_types::Duration&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>TimestampRules {
-    <span class="attr">#[prost(bool, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(bool, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>required: ::core::option::Option&lt;bool&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>r#const: ::core::option::Option&lt;::prost_types::Timestamp&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>lt: ::core::option::Option&lt;::prost_types::Timestamp&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;4&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>lte: ::core::option::Option&lt;::prost_types::Timestamp&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;5&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"5"</span>)]
     </span><span class="kw">pub </span>gt: ::core::option::Option&lt;::prost_types::Timestamp&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;6&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"6"</span>)]
     </span><span class="kw">pub </span>gte: ::core::option::Option&lt;::prost_types::Timestamp&gt;,
-    <span class="attr">#[prost(bool, optional, tag = <span class="string">&quot;7&quot;</span>)]
+    <span class="attr">#[prost(bool, optional, tag = <span class="string">"7"</span>)]
     </span><span class="kw">pub </span>lt_now: ::core::option::Option&lt;bool&gt;,
-    <span class="attr">#[prost(bool, optional, tag = <span class="string">&quot;8&quot;</span>)]
+    <span class="attr">#[prost(bool, optional, tag = <span class="string">"8"</span>)]
     </span><span class="kw">pub </span>gt_now: ::core::option::Option&lt;bool&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;9&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"9"</span>)]
     </span><span class="kw">pub </span>within: ::core::option::Option&lt;::prost_types::Duration&gt;,
 }
 <span class="attr">#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
@@ -1073,19 +1075,19 @@
     ///
     /// The values are not transformed in any way and thus are considered stable
     /// (if the ProtoBuf definition does not change) and safe for programmatic use.
-    </span><span class="kw">pub fn </span>as_str_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+    </span><span class="kw">pub fn </span>as_str_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
         <span class="kw">match </span><span class="self">self </span>{
-            KnownRegex::Unknown =&gt; <span class="string">&quot;UNKNOWN&quot;</span>,
-            KnownRegex::HttpHeaderName =&gt; <span class="string">&quot;HTTP_HEADER_NAME&quot;</span>,
-            KnownRegex::HttpHeaderValue =&gt; <span class="string">&quot;HTTP_HEADER_VALUE&quot;</span>,
+            KnownRegex::Unknown =&gt; <span class="string">"UNKNOWN"</span>,
+            KnownRegex::HttpHeaderName =&gt; <span class="string">"HTTP_HEADER_NAME"</span>,
+            KnownRegex::HttpHeaderValue =&gt; <span class="string">"HTTP_HEADER_VALUE"</span>,
         }
     }
     <span class="doccomment">/// Creates an enum from field names used in the ProtoBuf definition.
     </span><span class="kw">pub fn </span>from_str_name(value: <span class="kw-2">&amp;</span>str) -&gt; ::core::option::Option&lt;<span class="self">Self</span>&gt; {
         <span class="kw">match </span>value {
-            <span class="string">&quot;UNKNOWN&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Unknown),
-            <span class="string">&quot;HTTP_HEADER_NAME&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::HttpHeaderName),
-            <span class="string">&quot;HTTP_HEADER_VALUE&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::HttpHeaderValue),
+            <span class="string">"UNKNOWN" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Unknown),
+            <span class="string">"HTTP_HEADER_NAME" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::HttpHeaderName),
+            <span class="string">"HTTP_HEADER_VALUE" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::HttpHeaderValue),
             <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
         }
     }

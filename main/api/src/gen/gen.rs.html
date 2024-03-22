@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `proto-gen/gen.rs`."><title>gen.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="gen" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0 (79e9716c9 2023-11-13)" data-channel="1.74.0" data-search-js="search-8be46b629f5f14a8.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../gen/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `proto-gen/gen.rs`."><title>gen.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="gen" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0 (aedd173a2 2024-03-17)" data-channel="1.77.0" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../gen/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -356,237 +358,237 @@
     process::{Command, Stdio},
 };
 
-<span class="kw">const </span>VERSION: <span class="kw-2">&amp;</span>str = <span class="string">&quot;0.2.1&quot;</span>;
+<span class="kw">const </span>VERSION: <span class="kw-2">&amp;</span>str = <span class="string">"0.2.1"</span>;
 
 <span class="kw">fn </span>check_version(name: <span class="kw-2">&amp;</span>str, prefix: <span class="kw-2">&amp;</span>str, wanted: <span class="kw-2">&amp;</span>str) -&gt; bool {
-    <span class="kw">if let </span><span class="prelude-val">Ok</span>(output) = Command::new(name).arg(<span class="string">&quot;--version&quot;</span>).output() {
+    <span class="kw">if let </span><span class="prelude-val">Ok</span>(output) = Command::new(name).arg(<span class="string">"--version"</span>).output() {
         <span class="kw">if </span>output.status.success() {
-            <span class="kw">let </span>version = std::str::from_utf8(<span class="kw-2">&amp;</span>output.stdout).expect(<span class="string">&quot;version output was non-utf8&quot;</span>);
+            <span class="kw">let </span>version = std::str::from_utf8(<span class="kw-2">&amp;</span>output.stdout).expect(<span class="string">"version output was non-utf8"</span>);
 
             <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = version.strip_prefix(prefix) {
                 <span class="kw">if </span>v.trim() == wanted {
                     <span class="kw">return </span><span class="bool-val">true</span>;
                 } <span class="kw">else </span>{
-                    <span class="macro">println!</span>(<span class="string">&quot;{name} version detected as &#39;{v}&#39; which did not match expected version &#39;{wanted}&#39;&quot;</span>);
+                    <span class="macro">println!</span>(<span class="string">"{name} version detected as '{v}' which did not match expected version '{wanted}'"</span>);
                 }
             }
         } <span class="kw">else </span>{
-            <span class="macro">println!</span>(<span class="string">&quot;failed to retrieve {name} version&quot;</span>);
+            <span class="macro">println!</span>(<span class="string">"failed to retrieve {name} version"</span>);
         }
     } <span class="kw">else </span>{
-        <span class="macro">println!</span>(<span class="string">&quot;{name} not installed (or not in PATH)&quot;</span>);
+        <span class="macro">println!</span>(<span class="string">"{name} not installed (or not in PATH)"</span>);
     }
 
     <span class="bool-val">false
 </span>}
 
 <span class="kw">fn </span>install() {
-    <span class="kw">if </span>check_version(<span class="string">&quot;proto-gen&quot;</span>, <span class="string">&quot;proto-gen &quot;</span>, VERSION) {
+    <span class="kw">if </span>check_version(<span class="string">"proto-gen"</span>, <span class="string">"proto-gen "</span>, VERSION) {
         <span class="kw">return</span>;
     }
 
-    <span class="comment">// If we&#39;re in CI use the precompiled binary
-    </span><span class="kw">if </span>std::env::var_os(<span class="string">&quot;CI&quot;</span>).is_some() {
-        <span class="kw">if </span>!<span class="macro">cfg!</span>(target_os = <span class="string">&quot;linux&quot;</span>) {
-            <span class="macro">panic!</span>(<span class="string">&quot;CI running on a non-linux host is not (yet?) supported&quot;</span>);
+    <span class="comment">// If we're in CI use the precompiled binary
+    </span><span class="kw">if </span>std::env::var_os(<span class="string">"CI"</span>).is_some() {
+        <span class="kw">if </span>!<span class="macro">cfg!</span>(target_os = <span class="string">"linux"</span>) {
+            <span class="macro">panic!</span>(<span class="string">"CI running on a non-linux host is not (yet?) supported"</span>);
         }
 
         <span class="comment">// Fetch the tarball
-        </span><span class="kw">let </span>output = Command::new(<span class="string">&quot;curl&quot;</span>)
-            .args([<span class="string">&quot;-L&quot;</span>, <span class="string">&quot;--fail&quot;</span>])
-            .arg(<span class="macro">format!</span>(<span class="string">&quot;https://github.com/EmbarkStudios/proto-gen/releases/download/{VERSION}/proto-gen-{VERSION}-x86_64-unknown-linux-musl.tar.gz&quot;</span>))
+        </span><span class="kw">let </span>output = Command::new(<span class="string">"curl"</span>)
+            .args([<span class="string">"-L"</span>, <span class="string">"--fail"</span>])
+            .arg(<span class="macro">format!</span>(<span class="string">"https://github.com/EmbarkStudios/proto-gen/releases/download/{VERSION}/proto-gen-{VERSION}-x86_64-unknown-linux-musl.tar.gz"</span>))
             .stdout(Stdio::piped())
             .spawn()
-            .expect(<span class="string">&quot;curl is not installed&quot;</span>)
-            .wait_with_output().expect(<span class="string">&quot;curl was killed with a signal&quot;</span>);
+            .expect(<span class="string">"curl is not installed"</span>)
+            .wait_with_output().expect(<span class="string">"curl was killed with a signal"</span>);
 
         <span class="kw">if </span>!output.status.success() {
-            <span class="macro">panic!</span>(<span class="string">&quot;curl failed with {:?}&quot;</span>, output.status);
+            <span class="macro">panic!</span>(<span class="string">"curl failed with {:?}"</span>, output.status);
         } <span class="kw">else if </span>output.stdout.len() &lt; <span class="number">1024 </span>* <span class="number">1024 </span>{
             <span class="macro">panic!</span>(
-                <span class="string">&quot;the binary data for the tarball is less than expected: {}b&quot;</span>,
+                <span class="string">"the binary data for the tarball is less than expected: {}b"</span>,
                 output.stdout.len()
             );
         }
 
         <span class="comment">// Determine the appropriate cargo/bin directory to place the binary in
-        </span><span class="kw">let </span><span class="kw-2">mut </span>cargo_root = std::env::var_os(<span class="string">&quot;CARGO_HOME&quot;</span>)
+        </span><span class="kw">let </span><span class="kw-2">mut </span>cargo_root = std::env::var_os(<span class="string">"CARGO_HOME"</span>)
             .map(PathBuf::from)
             .unwrap_or_else(|| {
-                <span class="kw">let </span>home = std::env::var_os(<span class="string">&quot;HOME&quot;</span>).expect(<span class="string">&quot;failed to locate CARGO_HOME or HOME&quot;</span>);
+                <span class="kw">let </span>home = std::env::var_os(<span class="string">"HOME"</span>).expect(<span class="string">"failed to locate CARGO_HOME or HOME"</span>);
                 <span class="kw">let </span><span class="kw-2">mut </span>home = PathBuf::from(home);
-                home.push(<span class="string">&quot;.cargo&quot;</span>);
+                home.push(<span class="string">".cargo"</span>);
                 home
             });
 
-        cargo_root.push(<span class="string">&quot;bin&quot;</span>);
+        cargo_root.push(<span class="string">"bin"</span>);
 
         <span class="comment">// Untar just the binary to CARGO_HOME/bin
-        </span><span class="kw">let </span><span class="kw-2">mut </span>child = Command::new(<span class="string">&quot;tar&quot;</span>)
-            .args([<span class="string">&quot;xzf&quot;</span>, <span class="string">&quot;-&quot;</span>, <span class="string">&quot;--strip-components=1&quot;</span>, <span class="string">&quot;-C&quot;</span>])
+        </span><span class="kw">let </span><span class="kw-2">mut </span>child = Command::new(<span class="string">"tar"</span>)
+            .args([<span class="string">"xzf"</span>, <span class="string">"-"</span>, <span class="string">"--strip-components=1"</span>, <span class="string">"-C"</span>])
             .arg(cargo_root)
             .arg(<span class="macro">format!</span>(
-                <span class="string">&quot;proto-gen-{VERSION}-x86_64-unknown-linux-musl/proto-gen&quot;
+                <span class="string">"proto-gen-{VERSION}-x86_64-unknown-linux-musl/proto-gen"
             </span>))
             .stdin(Stdio::piped())
             .spawn()
-            .expect(<span class="string">&quot;tar not installed&quot;</span>);
+            .expect(<span class="string">"tar not installed"</span>);
 
         {
             <span class="kw">let </span><span class="kw-2">mut </span>stdin = child.stdin.take().unwrap();
             <span class="kw">use </span>std::io::Write;
             stdin
                 .write_all(<span class="kw-2">&amp;</span>output.stdout)
-                .expect(<span class="string">&quot;failed to write tarball to stdin&quot;</span>);
+                .expect(<span class="string">"failed to write tarball to stdin"</span>);
         }
 
-        <span class="kw">if </span>!child.wait().expect(<span class="string">&quot;tar is not installed&quot;</span>).success() {
-            <span class="macro">panic!</span>(<span class="string">&quot;failed to extract proto-gen binary from tarball&quot;</span>);
+        <span class="kw">if </span>!child.wait().expect(<span class="string">"tar is not installed"</span>).success() {
+            <span class="macro">panic!</span>(<span class="string">"failed to extract proto-gen binary from tarball"</span>);
         }
     } <span class="kw">else </span>{
-        <span class="kw">if </span>!Command::new(<span class="string">&quot;cargo&quot;</span>)
-            .args([<span class="string">&quot;install&quot;</span>, <span class="string">&quot;-f&quot;</span>, <span class="string">&quot;proto-gen&quot;</span>])
+        <span class="kw">if </span>!Command::new(<span class="string">"cargo"</span>)
+            .args([<span class="string">"install"</span>, <span class="string">"-f"</span>, <span class="string">"proto-gen"</span>])
             .status()
-            .expect(<span class="string">&quot;cargo not installed&quot;</span>)
+            .expect(<span class="string">"cargo not installed"</span>)
             .success()
         {
-            <span class="macro">panic!</span>(<span class="string">&quot;failed to install proto-gen via cargo&quot;</span>);
+            <span class="macro">panic!</span>(<span class="string">"failed to install proto-gen via cargo"</span>);
         }
     }
 }
 
-<span class="kw">const </span>VERSION_PROTOC: <span class="kw-2">&amp;</span>str = <span class="string">&quot;25.3&quot;</span>;
+<span class="kw">const </span>VERSION_PROTOC: <span class="kw-2">&amp;</span>str = <span class="string">"25.3"</span>;
 
 <span class="kw">fn </span>install_protoc() {
-    <span class="kw">if </span>std::env::var_os(<span class="string">&quot;CI&quot;</span>).is_none() {
+    <span class="kw">if </span>std::env::var_os(<span class="string">"CI"</span>).is_none() {
         <span class="kw">return</span>;
     }
 
-    <span class="kw">let </span><span class="prelude-val">Some</span>(rt) = std::env::var_os(<span class="string">&quot;RUNNER_TEMP&quot;</span>) <span class="kw">else </span>{
-        <span class="macro">panic!</span>(<span class="string">&quot;failed to get github runner temp dir&quot;</span>);
+    <span class="kw">let </span><span class="prelude-val">Some</span>(rt) = std::env::var_os(<span class="string">"RUNNER_TEMP"</span>) <span class="kw">else </span>{
+        <span class="macro">panic!</span>(<span class="string">"failed to get github runner temp dir"</span>);
     };
 
     <span class="kw">let </span>rt = PathBuf::from(rt);
 
-    <span class="kw">let </span>temp = rt.join(<span class="string">&quot;protoc.zip&quot;</span>);
+    <span class="kw">let </span>temp = rt.join(<span class="string">"protoc.zip"</span>);
 
     <span class="comment">// Install from github releases as eg. ubuntu 22.04 has a 2+ year old version :-/
-    </span><span class="kw">if </span>!Command::new(<span class="string">&quot;curl&quot;</span>)
-        .args([<span class="string">&quot;-L&quot;</span>, <span class="string">&quot;--fail&quot;</span>, <span class="string">&quot;-o&quot;</span>])
+    </span><span class="kw">if </span>!Command::new(<span class="string">"curl"</span>)
+        .args([<span class="string">"-L"</span>, <span class="string">"--fail"</span>, <span class="string">"-o"</span>])
         .arg(<span class="kw-2">&amp;</span>temp)
-        .arg(<span class="macro">format!</span>(<span class="string">&quot;https://github.com/protocolbuffers/protobuf/releases/download/v{VERSION_PROTOC}/protoc-{VERSION_PROTOC}-linux-x86_64.zip&quot;</span>))
+        .arg(<span class="macro">format!</span>(<span class="string">"https://github.com/protocolbuffers/protobuf/releases/download/v{VERSION_PROTOC}/protoc-{VERSION_PROTOC}-linux-x86_64.zip"</span>))
         .status()
-        .expect(<span class="string">&quot;curl is not installed&quot;</span>).success() {
-        <span class="macro">panic!</span>(<span class="string">&quot;curl failed to download protoc zip&quot;</span>);
+        .expect(<span class="string">"curl is not installed"</span>).success() {
+        <span class="macro">panic!</span>(<span class="string">"curl failed to download protoc zip"</span>);
     }
 
-    <span class="kw">let </span><span class="kw-2">mut </span>cargo_root = std::env::var_os(<span class="string">&quot;CARGO_HOME&quot;</span>)
+    <span class="kw">let </span><span class="kw-2">mut </span>cargo_root = std::env::var_os(<span class="string">"CARGO_HOME"</span>)
         .map(PathBuf::from)
         .unwrap_or_else(|| {
-            <span class="kw">let </span>home = std::env::var_os(<span class="string">&quot;HOME&quot;</span>).expect(<span class="string">&quot;failed to locate CARGO_HOME or HOME&quot;</span>);
+            <span class="kw">let </span>home = std::env::var_os(<span class="string">"HOME"</span>).expect(<span class="string">"failed to locate CARGO_HOME or HOME"</span>);
             <span class="kw">let </span><span class="kw-2">mut </span>home = PathBuf::from(home);
-            home.push(<span class="string">&quot;.cargo&quot;</span>);
+            home.push(<span class="string">".cargo"</span>);
             home
         });
 
-    <span class="kw">if </span>!Command::new(<span class="string">&quot;unzip&quot;</span>)
-        .arg(<span class="string">&quot;-q&quot;</span>)
+    <span class="kw">if </span>!Command::new(<span class="string">"unzip"</span>)
+        .arg(<span class="string">"-q"</span>)
         .arg(<span class="kw-2">&amp;</span>temp)
-        .args([<span class="string">&quot;bin/protoc&quot;</span>, <span class="string">&quot;-d&quot;</span>])
+        .args([<span class="string">"bin/protoc"</span>, <span class="string">"-d"</span>])
         .arg(<span class="kw-2">&amp;</span>cargo_root)
         .status()
-        .expect(<span class="string">&quot;unzip not installed&quot;</span>)
+        .expect(<span class="string">"unzip not installed"</span>)
         .success()
     {
-        <span class="macro">panic!</span>(<span class="string">&quot;failed to unzip protoc&quot;</span>);
+        <span class="macro">panic!</span>(<span class="string">"failed to unzip protoc"</span>);
     }
 
-    cargo_root.push(<span class="string">&quot;bin/protoc&quot;</span>);
+    cargo_root.push(<span class="string">"bin/protoc"</span>);
 
-    <span class="kw">if </span>!Command::new(<span class="string">&quot;chmod&quot;</span>)
-        .arg(<span class="string">&quot;+x&quot;</span>)
+    <span class="kw">if </span>!Command::new(<span class="string">"chmod"</span>)
+        .arg(<span class="string">"+x"</span>)
         .arg(cargo_root)
         .status()
-        .expect(<span class="string">&quot;chmod not installed&quot;</span>)
+        .expect(<span class="string">"chmod not installed"</span>)
         .success()
     {
-        <span class="macro">panic!</span>(<span class="string">&quot;failed to enable execution mask on protoc&quot;</span>);
+        <span class="macro">panic!</span>(<span class="string">"failed to enable execution mask on protoc"</span>);
     }
 }
 
 <span class="kw">fn </span>execute(which: <span class="kw-2">&amp;</span>str) {
     <span class="kw">let </span>files: <span class="kw-2">&amp;</span>[(<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str])] = <span class="kw-2">&amp;</span>[
         (
-            <span class="string">&quot;proto&quot;</span>,
+            <span class="string">"proto"</span>,
             <span class="kw-2">&amp;</span>[
-                <span class="string">&quot;envoy/config/accesslog/v3/accesslog&quot;</span>,
-                <span class="string">&quot;envoy/config/listener/v3/listener&quot;</span>,
-                <span class="string">&quot;envoy/config/listener/v3/listener_components&quot;</span>,
-                <span class="string">&quot;envoy/service/discovery/v3/ads&quot;</span>,
-                <span class="string">&quot;envoy/service/discovery/v3/discovery&quot;</span>,
-                <span class="string">&quot;envoy/config/endpoint/v3/endpoint_components&quot;</span>,
+                <span class="string">"envoy/config/accesslog/v3/accesslog"</span>,
+                <span class="string">"envoy/config/listener/v3/listener"</span>,
+                <span class="string">"envoy/config/listener/v3/listener_components"</span>,
+                <span class="string">"envoy/service/discovery/v3/ads"</span>,
+                <span class="string">"envoy/service/discovery/v3/discovery"</span>,
+                <span class="string">"envoy/config/endpoint/v3/endpoint_components"</span>,
             ],
         ),
-        (<span class="string">&quot;proto/xds&quot;</span>, <span class="kw-2">&amp;</span>[<span class="string">&quot;core/v3/resource_name&quot;</span>]),
-        (<span class="string">&quot;proto/google_apis&quot;</span>, <span class="kw-2">&amp;</span>[]),
+        (<span class="string">"proto/xds"</span>, <span class="kw-2">&amp;</span>[<span class="string">"core/v3/resource_name"</span>]),
+        (<span class="string">"proto/google_apis"</span>, <span class="kw-2">&amp;</span>[]),
         <span class="comment">// For google/protobuf
-        </span>(<span class="string">&quot;proto&quot;</span>, <span class="kw-2">&amp;</span>[]),
-        (<span class="string">&quot;proto/protoc-gen-validate&quot;</span>, <span class="kw-2">&amp;</span>[]),
+        </span>(<span class="string">"proto"</span>, <span class="kw-2">&amp;</span>[]),
+        (<span class="string">"proto/protoc-gen-validate"</span>, <span class="kw-2">&amp;</span>[]),
         (
-            <span class="string">&quot;proto/quilkin&quot;</span>,
+            <span class="string">"proto/quilkin"</span>,
             <span class="kw-2">&amp;</span>[
-                <span class="string">&quot;relay/v1alpha1/relay&quot;</span>,
-                <span class="string">&quot;config/v1alpha1/config&quot;</span>,
-                <span class="string">&quot;filters/capture/v1alpha1/capture&quot;</span>,
-                <span class="string">&quot;filters/compress/v1alpha1/compress&quot;</span>,
-                <span class="string">&quot;filters/concatenate/v1alpha1/concatenate&quot;</span>,
-                <span class="string">&quot;filters/debug/v1alpha1/debug&quot;</span>,
-                <span class="string">&quot;filters/drop/v1alpha1/drop&quot;</span>,
-                <span class="string">&quot;filters/firewall/v1alpha1/firewall&quot;</span>,
-                <span class="string">&quot;filters/load_balancer/v1alpha1/load_balancer&quot;</span>,
-                <span class="string">&quot;filters/local_rate_limit/v1alpha1/local_rate_limit&quot;</span>,
-                <span class="string">&quot;filters/match/v1alpha1/match&quot;</span>,
-                <span class="string">&quot;filters/pass/v1alpha1/pass&quot;</span>,
-                <span class="string">&quot;filters/token_router/v1alpha1/token_router&quot;</span>,
-                <span class="string">&quot;filters/timestamp/v1alpha1/timestamp&quot;</span>,
+                <span class="string">"relay/v1alpha1/relay"</span>,
+                <span class="string">"config/v1alpha1/config"</span>,
+                <span class="string">"filters/capture/v1alpha1/capture"</span>,
+                <span class="string">"filters/compress/v1alpha1/compress"</span>,
+                <span class="string">"filters/concatenate/v1alpha1/concatenate"</span>,
+                <span class="string">"filters/debug/v1alpha1/debug"</span>,
+                <span class="string">"filters/drop/v1alpha1/drop"</span>,
+                <span class="string">"filters/firewall/v1alpha1/firewall"</span>,
+                <span class="string">"filters/load_balancer/v1alpha1/load_balancer"</span>,
+                <span class="string">"filters/local_rate_limit/v1alpha1/local_rate_limit"</span>,
+                <span class="string">"filters/match/v1alpha1/match"</span>,
+                <span class="string">"filters/pass/v1alpha1/pass"</span>,
+                <span class="string">"filters/token_router/v1alpha1/token_router"</span>,
+                <span class="string">"filters/timestamp/v1alpha1/timestamp"</span>,
             ],
         ),
     ];
 
-    <span class="kw">let </span><span class="kw-2">mut </span>cmd = Command::new(<span class="string">&quot;proto-gen&quot;</span>);
+    <span class="kw">let </span><span class="kw-2">mut </span>cmd = Command::new(<span class="string">"proto-gen"</span>);
 
     cmd
-        <span class="comment">// Run rustfmt on the output, since they&#39;re committed they might as well be nice
-        </span>.arg(<span class="string">&quot;--format&quot;</span>)
-        .arg(<span class="string">&quot;--build-server&quot;</span>)
-        .arg(<span class="string">&quot;--build-client&quot;</span>)
-        .arg(<span class="string">&quot;--generate-transport&quot;</span>)
-        .args([<span class="string">&quot;--disable-comments&quot;</span>, <span class="string">&quot;.&quot;</span>])
+        <span class="comment">// Run rustfmt on the output, since they're committed they might as well be nice
+        </span>.arg(<span class="string">"--format"</span>)
+        .arg(<span class="string">"--build-server"</span>)
+        .arg(<span class="string">"--build-client"</span>)
+        .arg(<span class="string">"--generate-transport"</span>)
+        .args([<span class="string">"--disable-comments"</span>, <span class="string">"."</span>])
         .arg(which)
-        .args([<span class="string">&quot;-o&quot;</span>, <span class="string">&quot;src/generated&quot;</span>]);
+        .args([<span class="string">"-o"</span>, <span class="string">"src/generated"</span>]);
 
     <span class="kw">for </span>(dir, files) <span class="kw">in </span>files {
-        cmd.arg(<span class="string">&quot;-d&quot;</span>);
+        cmd.arg(<span class="string">"-d"</span>);
         cmd.arg(dir);
 
         <span class="kw">for </span>file <span class="kw">in </span><span class="kw-2">*</span>files {
-            cmd.arg(<span class="string">&quot;-f&quot;</span>);
-            cmd.arg(<span class="macro">format!</span>(<span class="string">&quot;{dir}/{file}.proto&quot;</span>));
+            cmd.arg(<span class="string">"-f"</span>);
+            cmd.arg(<span class="macro">format!</span>(<span class="string">"{dir}/{file}.proto"</span>));
         }
     }
 
-    <span class="kw">if </span>!cmd.status().expect(<span class="string">&quot;proto-gen was not installed&quot;</span>).success() {
-        <span class="macro">panic!</span>(<span class="string">&quot;proto-gen {which} failed&quot;</span>);
+    <span class="kw">if </span>!cmd.status().expect(<span class="string">"proto-gen was not installed"</span>).success() {
+        <span class="macro">panic!</span>(<span class="string">"proto-gen {which} failed"</span>);
     }
 }
 
 <span class="kw">fn </span>copy() {
     <span class="kw">struct </span>Source {
-        name: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
-        repo: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
-        rev: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
-        root: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
-        target: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
+        name: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
+        repo: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
+        rev: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
+        root: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
+        target: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
     }
 
     <span class="kw">impl </span>Source {
@@ -597,60 +599,60 @@
                 <span class="kw">return </span>path;
             }
 
-            <span class="kw">if </span>!Command::new(<span class="string">&quot;git&quot;</span>)
-                .arg(<span class="string">&quot;clone&quot;</span>)
+            <span class="kw">if </span>!Command::new(<span class="string">"git"</span>)
+                .arg(<span class="string">"clone"</span>)
                 .arg(<span class="self">self</span>.repo)
                 .arg(<span class="kw-2">&amp;</span>path)
                 .status()
-                .expect(<span class="string">&quot;git not installed&quot;</span>)
+                .expect(<span class="string">"git not installed"</span>)
                 .success()
             {
-                <span class="macro">panic!</span>(<span class="string">&quot;failed to clone {} from {}&quot;</span>, <span class="self">self</span>.name, <span class="self">self</span>.repo);
+                <span class="macro">panic!</span>(<span class="string">"failed to clone {} from {}"</span>, <span class="self">self</span>.name, <span class="self">self</span>.repo);
             }
 
-            <span class="kw">if </span>!Command::new(<span class="string">&quot;git&quot;</span>)
-                .arg(<span class="string">&quot;-C&quot;</span>)
+            <span class="kw">if </span>!Command::new(<span class="string">"git"</span>)
+                .arg(<span class="string">"-C"</span>)
                 .arg(<span class="kw-2">&amp;</span>path)
-                .arg(<span class="string">&quot;checkout&quot;</span>)
+                .arg(<span class="string">"checkout"</span>)
                 .arg(<span class="self">self</span>.rev)
                 .status()
                 .unwrap()
                 .success()
             {
-                <span class="macro">panic!</span>(<span class="string">&quot;failed to checkout {} from {}&quot;</span>, <span class="self">self</span>.rev, <span class="self">self</span>.repo);
+                <span class="macro">panic!</span>(<span class="string">"failed to checkout {} from {}"</span>, <span class="self">self</span>.rev, <span class="self">self</span>.repo);
             }
 
             path
         }
 
         <span class="kw">fn </span>path(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; PathBuf {
-            <span class="macro">format!</span>(<span class="string">&quot;/tmp/{}-{}&quot;</span>, <span class="self">self</span>.name, <span class="kw-2">&amp;</span><span class="self">self</span>.rev[..<span class="number">7</span>]).into()
+            <span class="macro">format!</span>(<span class="string">"/tmp/{}-{}"</span>, <span class="self">self</span>.name, <span class="kw-2">&amp;</span><span class="self">self</span>.rev[..<span class="number">7</span>]).into()
         }
     }
 
     <span class="kw">const </span>REPOS: <span class="kw-2">&amp;</span>[Source] = <span class="kw-2">&amp;</span>[
         Source {
-            name: <span class="string">&quot;envoy&quot;</span>,
-            repo: <span class="string">&quot;https://github.com/envoyproxy/data-plane-api&quot;</span>,
-            rev: <span class="string">&quot;a04278879ba6eb9264d755936942b23cbf552a04&quot;</span>,
-            root: <span class="string">&quot;envoy&quot;</span>,
-            target: <span class="string">&quot;envoy&quot;</span>,
+            name: <span class="string">"envoy"</span>,
+            repo: <span class="string">"https://github.com/envoyproxy/data-plane-api"</span>,
+            rev: <span class="string">"a04278879ba6eb9264d755936942b23cbf552a04"</span>,
+            root: <span class="string">"envoy"</span>,
+            target: <span class="string">"envoy"</span>,
         },
         Source {
-            name: <span class="string">&quot;xds&quot;</span>,
-            repo: <span class="string">&quot;https://github.com/cncf/xds&quot;</span>,
-            rev: <span class="string">&quot;4a2b9fdd466b16721f8c058d7cadf5a54e229d66&quot;</span>,
-            root: <span class="string">&quot;xds&quot;</span>,
-            target: <span class="string">&quot;xds&quot;</span>,
+            name: <span class="string">"xds"</span>,
+            repo: <span class="string">"https://github.com/cncf/xds"</span>,
+            rev: <span class="string">"4a2b9fdd466b16721f8c058d7cadf5a54e229d66"</span>,
+            root: <span class="string">"xds"</span>,
+            target: <span class="string">"xds"</span>,
         },
     ];
 
     <span class="kw">let </span>args: Vec&lt;<span class="kw">_</span>&gt; = std::env::args().skip(<span class="number">2</span>).collect();
-    <span class="kw">let </span>name = args.get(<span class="number">0</span>).expect(<span class="string">&quot;must provide source name&quot;</span>);
-    <span class="kw">let </span>path = args.get(<span class="number">1</span>).expect(<span class="string">&quot;must provide path&quot;</span>);
+    <span class="kw">let </span>name = args.get(<span class="number">0</span>).expect(<span class="string">"must provide source name"</span>);
+    <span class="kw">let </span>path = args.get(<span class="number">1</span>).expect(<span class="string">"must provide path"</span>);
 
     <span class="kw">let </span><span class="prelude-val">Some</span>(ri) = REPOS.iter().find(|r| r.name == name) <span class="kw">else </span>{
-        <span class="macro">panic!</span>(<span class="string">&quot;unknown repo &#39;{name}&#39;&quot;</span>)
+        <span class="macro">panic!</span>(<span class="string">"unknown repo '{name}'"</span>)
     };
 
     <span class="kw">let </span><span class="kw-2">mut </span>pb = ri.sync();
@@ -658,13 +660,13 @@
     pb.push(path);
 
     <span class="kw">if </span>!pb.exists() {
-        <span class="macro">panic!</span>(<span class="string">&quot;failed to find {pb:?}&quot;</span>);
+        <span class="macro">panic!</span>(<span class="string">"failed to find {pb:?}"</span>);
     }
 
-    <span class="kw">let </span>tp = path.replace(<span class="string">&quot;type&quot;</span>, <span class="string">&quot;kind&quot;</span>);
+    <span class="kw">let </span>tp = path.replace(<span class="string">"type"</span>, <span class="string">"kind"</span>);
 
     <span class="kw">let </span><span class="kw-2">mut </span>tbp = PathBuf::new();
-    tbp.push(<span class="string">&quot;proto&quot;</span>);
+    tbp.push(<span class="string">"proto"</span>);
     tbp.push(ri.target);
     tbp.push(tp);
 
@@ -672,28 +674,28 @@
         <span class="kw">let </span>parent = tbp.parent().unwrap();
         <span class="kw">if </span>!parent.exists() {
             <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = std::fs::create_dir_all(parent) {
-                <span class="macro">panic!</span>(<span class="string">&quot;failed to create directory {parent:?}: {err}&quot;</span>);
+                <span class="macro">panic!</span>(<span class="string">"failed to create directory {parent:?}: {err}"</span>);
             }
         }
     }
 
     <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = std::fs::copy(<span class="kw-2">&amp;</span>pb, <span class="kw-2">&amp;</span>tbp) {
-        <span class="macro">panic!</span>(<span class="string">&quot;failed to copy {pb:?} -&gt; {tbp:?}: {err}&quot;</span>);
+        <span class="macro">panic!</span>(<span class="string">"failed to copy {pb:?} -&gt; {tbp:?}: {err}"</span>);
     } <span class="kw">else </span>{
-        <span class="macro">println!</span>(<span class="string">&quot;copied {pb:?} -&gt; {tbp:?}&quot;</span>);
+        <span class="macro">println!</span>(<span class="string">"copied {pb:?} -&gt; {tbp:?}"</span>);
     }
 }
 
 <span class="kw">fn </span>main() {
     <span class="kw">let </span>subcmd = std::env::args()
         .nth(<span class="number">1</span>)
-        .expect(<span class="string">&quot;expected a subcommand to execute&quot;</span>);
+        .expect(<span class="string">"expected a subcommand to execute"</span>);
 
-    <span class="kw">if </span>!<span class="macro">matches!</span>(subcmd.as_str(), <span class="string">&quot;generate&quot; </span>| <span class="string">&quot;validate&quot; </span>| <span class="string">&quot;copy&quot;</span>) {
-        <span class="macro">panic!</span>(<span class="string">&quot;unexpected subcommmand &#39;{subcmd}&#39;, expected &#39;generate&#39;, &#39;validate&#39;, or &#39;copy&#39;&quot;</span>);
+    <span class="kw">if </span>!<span class="macro">matches!</span>(subcmd.as_str(), <span class="string">"generate" </span>| <span class="string">"validate" </span>| <span class="string">"copy"</span>) {
+        <span class="macro">panic!</span>(<span class="string">"unexpected subcommmand '{subcmd}', expected 'generate', 'validate', or 'copy'"</span>);
     }
 
-    <span class="kw">if </span>subcmd == <span class="string">&quot;copy&quot; </span>{
+    <span class="kw">if </span>subcmd == <span class="string">"copy" </span>{
         copy();
         <span class="kw">return</span>;
     }

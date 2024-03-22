@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `test/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="qt" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0 (79e9716c9 2023-11-13)" data-channel="1.74.0" data-search-js="search-8be46b629f5f14a8.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../qt/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `test/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="qt" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0 (aedd173a2 2024-03-17)" data-channel="1.77.0" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../qt/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -709,7 +711,7 @@
 </span><span class="macro">macro_rules! </span>func_name {
     () =&gt; {{
         <span class="kw">fn </span>f() {}
-        <span class="kw">fn </span>type_name_of&lt;T&gt;(<span class="kw">_</span>: T) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+        <span class="kw">fn </span>type_name_of&lt;T&gt;(<span class="kw">_</span>: T) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
             std::any::type_name::&lt;T&gt;()
         }
         <span class="kw">let </span>name = type_name_of(f);
@@ -724,24 +726,24 @@
 </span><span class="macro">macro_rules! </span>temp_file {
     (<span class="macro-nonterminal">$prefix</span>:expr) =&gt; {{
         <span class="kw">let </span>name = <span class="macro-nonterminal">$</span><span class="macro">crate::func_name!</span>();
-        <span class="kw">let </span><span class="macro-nonterminal">name </span>= name.strip_suffix(<span class="string">&quot;::{{closure}}&quot;</span>).unwrap_or(name);
-        <span class="kw">let </span><span class="kw-2">mut </span>name = name.replace(<span class="string">&quot;::&quot;</span>, <span class="string">&quot;.&quot;</span>);
-        name.push(<span class="string">&#39;-&#39;</span>);
+        <span class="kw">let </span><span class="macro-nonterminal">name </span>= name.strip_suffix(<span class="string">"::{{closure}}"</span>).unwrap_or(name);
+        <span class="kw">let </span><span class="kw-2">mut </span>name = name.replace(<span class="string">"::"</span>, <span class="string">"."</span>);
+        name.push(<span class="string">'-'</span>);
         name.push_str(<span class="macro-nonterminal">$prefix</span>);
-        name.push(<span class="string">&#39;-&#39;</span>);
+        name.push(<span class="string">'-'</span>);
         tempfile::NamedTempFile::with_prefix(name).unwrap()
     }};
 }
 
 <span class="kw">pub use </span>tracing::{subscriber::DefaultGuard, Level};
 
-<span class="kw">pub fn </span>init_logging(level: Level, test_pkg: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str) -&gt; DefaultGuard {
+<span class="kw">pub fn </span>init_logging(level: Level, test_pkg: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str) -&gt; DefaultGuard {
     <span class="kw">use </span>tracing_subscriber::{layer::SubscriberExt <span class="kw">as _</span>, Layer <span class="kw">as _</span>};
     <span class="kw">let </span>layer = tracing_subscriber::fmt::layer()
         .with_test_writer()
         .with_filter(tracing_subscriber::filter::LevelFilter::from_level(level))
         .with_filter(tracing_subscriber::EnvFilter::new(<span class="macro">format!</span>(
-            <span class="string">&quot;{test_pkg}=trace,qt=trace,quilkin=trace&quot;
+            <span class="string">"{test_pkg}=trace,qt=trace,quilkin=trace"
         </span>)));
     <span class="kw">let </span>sub = tracing_subscriber::Registry::default().with(layer);
     <span class="kw">let </span>disp = tracing::dispatcher::Dispatch::new(sub);
@@ -757,7 +759,7 @@
         </span><span class="kw">async fn </span><span class="macro-nonterminal">$name</span>() {
             <span class="comment">// Get the module name
             </span><span class="kw">let </span>fname = <span class="macro-nonterminal">$</span><span class="macro">crate::func_name!</span>();
-            <span class="kw">let </span><span class="macro-nonterminal">mname </span>= fname.rsplit(<span class="string">&quot;::&quot;</span>).nth(<span class="number">2</span>).unwrap();
+            <span class="kw">let </span><span class="macro-nonterminal">mname </span>= fname.rsplit(<span class="string">"::"</span>).nth(<span class="number">2</span>).unwrap();
 
             <span class="kw">let </span>_guard = init_logging(<span class="macro-nonterminal">$crate::Level::DEBUG</span>, mname);
 
@@ -798,7 +800,7 @@
 
 <span class="attr">#[derive(Default)]
 </span><span class="kw">pub struct </span>AgentPailConfig {
-    <span class="kw">pub </span>endpoints: Vec&lt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str])&gt;,
+    <span class="kw">pub </span>endpoints: Vec&lt;(<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str])&gt;,
     <span class="kw">pub </span>icao_code: quilkin::config::IcaoCode,
 }
 
@@ -861,9 +863,9 @@
 }
 
 <span class="kw">pub struct </span>SandboxPailConfig {
-    <span class="kw">pub </span>name: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
+    <span class="kw">pub </span>name: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
     <span class="kw">pub </span>config: PailConfig,
-    <span class="kw">pub </span>dependencies: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str],
+    <span class="kw">pub </span>dependencies: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str],
 }
 
 <span class="kw">pub struct </span>SandboxConfig {
@@ -874,7 +876,7 @@
 <span class="kw">pub type </span>JoinHandle = tokio::task::JoinHandle&lt;quilkin::Result&lt;()&gt;&gt;;
 
 <span class="kw">pub struct </span>ServerPail {
-    <span class="doccomment">/// The server socket&#39;s ephmeral port
+    <span class="doccomment">/// The server socket's ephmeral port
     </span><span class="kw">pub </span>port: u16,
     <span class="kw">pub </span>packet_rx: <span class="prelude-ty">Option</span>&lt;mpsc::Receiver&lt;String&gt;&gt;,
     <span class="doccomment">/// The join handle to the task driving the socket. Used to both cancel the task
@@ -914,7 +916,7 @@
 
 <span class="macro">abort_task!</span>(ProxyPail);
 
-<span class="kw">pub type </span>Pails = std::collections::BTreeMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, Pail&gt;;
+<span class="kw">pub type </span>Pails = std::collections::BTreeMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, Pail&gt;;
 
 <span class="kw">pub enum </span>Pail {
     Server(ServerPail),
@@ -930,7 +932,7 @@
             <span class="self">Self</span>::Relay(p) =&gt; p.config.clone(),
             <span class="self">Self</span>::Agent(p) =&gt; p.config.clone(),
             <span class="self">Self</span>::Proxy(p) =&gt; p.config.clone(),
-            <span class="self">Self</span>::Server(<span class="kw">_</span>) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;no config&quot;</span>),
+            <span class="self">Self</span>::Server(<span class="kw">_</span>) =&gt; <span class="macro">panic!</span>(<span class="string">"no config"</span>),
         }
     }
 }
@@ -947,14 +949,14 @@
             PailConfig::Server(sspc) =&gt; {
                 <span class="kw">let </span>(packet_tx, packet_rx) = mpsc::channel::&lt;String&gt;(<span class="number">10</span>);
                 <span class="kw">let </span>socket = quilkin::net::DualStackEpollSocket::new(<span class="number">0</span>)
-                    .expect(<span class="string">&quot;failed to create server socket&quot;</span>);
+                    .expect(<span class="string">"failed to create server socket"</span>);
 
                 <span class="kw">let </span>port = socket
                     .local_addr()
-                    .expect(<span class="string">&quot;failed to bind server socket&quot;</span>)
+                    .expect(<span class="string">"failed to bind server socket"</span>)
                     .port();
 
-                <span class="macro">tracing::debug!</span>(port, spc.name, <span class="string">&quot;bound server socket&quot;</span>);
+                <span class="macro">tracing::debug!</span>(port, spc.name, <span class="string">"bound server socket"</span>);
 
                 <span class="kw">let </span>packet_size = sspc.packet_size <span class="kw">as </span>usize;
                 <span class="kw">let </span><span class="kw-2">mut </span>num_packets = sspc.num_packets.unwrap_or(usize::MAX);
@@ -967,13 +969,13 @@
                         <span class="kw">let </span>(size, <span class="kw">_</span>) = socket
                             .recv_from(<span class="kw-2">&amp;mut </span>buf)
                             .<span class="kw">await
-                            </span>.expect(<span class="string">&quot;failed to receive packet&quot;</span>);
+                            </span>.expect(<span class="string">"failed to receive packet"</span>);
                         received += size;
                         <span class="kw">let </span>pstr = std::str::from_utf8(<span class="kw-2">&amp;</span>buf[..size])
-                            .expect(<span class="string">&quot;received non-utf8 string in packet&quot;</span>)
+                            .expect(<span class="string">"received non-utf8 string in packet"</span>)
                             .to_owned();
 
-                        packet_tx.send(pstr).<span class="kw">await</span>.expect(<span class="string">&quot;packet receiver dropped&quot;</span>);
+                        packet_tx.send(pstr).<span class="kw">await</span>.expect(<span class="string">"packet receiver dropped"</span>);
 
                         num_packets -= <span class="number">1</span>;
                     }
@@ -1032,7 +1034,7 @@
 
                 <span class="kw">for </span>(dep_name, tokens) <span class="kw">in </span>apc.endpoints {
                     <span class="kw">let </span>Pail::Server(server) = <span class="kw-2">&amp;</span>pails[dep_name] <span class="kw">else </span>{
-                        <span class="macro">panic!</span>(<span class="string">&quot;expected &#39;{dep_name}&#39; to be a server pail for endpoint&quot;</span>);
+                        <span class="macro">panic!</span>(<span class="string">"expected '{dep_name}' to be a server pail for endpoint"</span>);
                     };
 
                     endpoints.insert(quilkin::net::Endpoint::with_metadata(
@@ -1057,9 +1059,9 @@
                             <span class="kw">return </span><span class="prelude-val">None</span>;
                         };
                         <span class="prelude-val">Some</span>(
-                            <span class="macro">format!</span>(<span class="string">&quot;http://localhost:{mds_port}&quot;</span>)
+                            <span class="macro">format!</span>(<span class="string">"http://localhost:{mds_port}"</span>)
                                 .parse()
-                                .expect(<span class="string">&quot;failed to parse endpoint&quot;</span>),
+                                .expect(<span class="string">"failed to parse endpoint"</span>),
                         )
                     })
                     .collect();
@@ -1068,7 +1070,7 @@
                     quilkin::make_shutdown_channel(quilkin::ShutdownKind::Testing);
 
                 <span class="kw">let </span>qcmp_socket =
-                    quilkin::net::raw_socket_with_reuse(<span class="number">0</span>).expect(<span class="string">&quot;failed to bind qcmp socket&quot;</span>);
+                    quilkin::net::raw_socket_with_reuse(<span class="number">0</span>).expect(<span class="string">"failed to bind qcmp socket"</span>);
                 <span class="kw">let </span>qcmp_port = quilkin::net::socket_port(<span class="kw-2">&amp;</span>qcmp_socket);
 
                 <span class="kw">let </span>config_path = path.clone();
@@ -1103,12 +1105,12 @@
                 })
             }
             PailConfig::Proxy(ppc) =&gt; {
-                <span class="kw">let </span>socket = quilkin::net::raw_socket_with_reuse(<span class="number">0</span>).expect(<span class="string">&quot;failed to bind socket&quot;</span>);
+                <span class="kw">let </span>socket = quilkin::net::raw_socket_with_reuse(<span class="number">0</span>).expect(<span class="string">"failed to bind socket"</span>);
                 <span class="kw">let </span>qcmp =
-                    quilkin::net::raw_socket_with_reuse(<span class="number">0</span>).expect(<span class="string">&quot;failed to bind qcmp socket&quot;</span>);
+                    quilkin::net::raw_socket_with_reuse(<span class="number">0</span>).expect(<span class="string">"failed to bind qcmp socket"</span>);
                 <span class="kw">let </span>qcmp_port = quilkin::net::socket_port(<span class="kw-2">&amp;</span>qcmp);
                 <span class="kw">let </span>phoenix =
-                    TcpListener::bind(<span class="prelude-val">Some</span>(qcmp_port)).expect(<span class="string">&quot;failed to bind phoenix socket&quot;</span>);
+                    TcpListener::bind(<span class="prelude-val">Some</span>(qcmp_port)).expect(<span class="string">"failed to bind phoenix socket"</span>);
 
                 <span class="kw">let </span>port = quilkin::net::socket_port(<span class="kw-2">&amp;</span>socket);
 
@@ -1120,9 +1122,9 @@
                             <span class="kw">return </span><span class="prelude-val">None</span>;
                         };
                         <span class="prelude-val">Some</span>(
-                            <span class="macro">format!</span>(<span class="string">&quot;http://localhost:{xds_port}&quot;</span>)
+                            <span class="macro">format!</span>(<span class="string">"http://localhost:{xds_port}"</span>)
                                 .parse()
-                                .expect(<span class="string">&quot;failed to parse endpoint&quot;</span>),
+                                .expect(<span class="string">"failed to parse endpoint"</span>),
                         )
                     })
                     .collect();
@@ -1136,7 +1138,7 @@
 
                 <span class="kw">if let </span><span class="prelude-val">Some</span>(cfg) = ppc.config {
                     <span class="kw">if </span>!cfg.clusters.is_empty() {
-                        <span class="macro">panic!</span>(<span class="string">&quot;not implemented&quot;</span>);
+                        <span class="macro">panic!</span>(<span class="string">"not implemented"</span>);
                     }
 
                     <span class="kw">if </span>!cfg.filters.is_empty() {
@@ -1212,13 +1214,13 @@
     () =&gt; {{
         <span class="kw">let </span>fname = <span class="macro-nonterminal">$</span><span class="macro">crate::func_name!</span>();
         <span class="kw">let </span><span class="kw-2">mut </span><span class="macro-nonterminal">name </span>= String::new();
-        <span class="kw">for </span>comp <span class="kw">in </span>fname.split(<span class="string">&quot;::&quot;</span>) {
-            <span class="kw">if </span>comp.starts_with(<span class="string">&quot;{{&quot;</span>) {
+        <span class="kw">for </span>comp <span class="kw">in </span>fname.split(<span class="string">"::"</span>) {
+            <span class="kw">if </span>comp.starts_with(<span class="string">"{{"</span>) {
                 <span class="kw">continue</span>;
             }
 
             <span class="kw">if </span>!name.is_empty() {
-                name.push(<span class="string">&#39;.&#39;</span>);
+                name.push(<span class="string">'.'</span>);
             }
 
             name.push_str(comp);
@@ -1237,9 +1239,9 @@
 
     <span class="kw">pub fn </span>push(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        name: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
+        name: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
         config: <span class="kw">impl </span>Into&lt;PailConfig&gt;,
-        deps: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str],
+        deps: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str],
     ) {
         <span class="self">self</span>.pails.push(SandboxPailConfig {
             name,
@@ -1256,14 +1258,14 @@
             <span class="kw">for </span>dep <span class="kw">in </span>deps {
                 <span class="kw">if </span>!<span class="self">self</span>.pails[..i].iter().any(|sp| sp.name == <span class="kw-2">*</span>dep) {
                     <span class="macro">panic!</span>(
-                        <span class="string">&quot;failed to locate dependency &#39;{dep}&#39; for &#39;{}&#39;&quot;</span>,
+                        <span class="string">"failed to locate dependency '{dep}' for '{}'"</span>,
                         <span class="self">self</span>.pails[i].name
                     );
                 }
             }
         }
 
-        <span class="macro">tracing::trace!</span>(<span class="string">&quot;dependencies resolved&quot;</span>);
+        <span class="macro">tracing::trace!</span>(<span class="string">"dependencies resolved"</span>);
 
         <span class="comment">// Create a channel that is used to communicate readiness of each pail we create
         //let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
@@ -1272,7 +1274,7 @@
         </span><span class="kw">let </span>td = <span class="kw">match </span>tempfile::TempDir::with_prefix(<span class="kw-2">&amp;</span><span class="self">self</span>.name) {
             <span class="prelude-val">Ok</span>(td) =&gt; td,
             <span class="prelude-val">Err</span>(err) =&gt; {
-                <span class="macro">panic!</span>(<span class="string">&quot;failed to create temp dir &#39;{}&#39;: {err:#}&quot;</span>, <span class="self">self</span>.name);
+                <span class="macro">panic!</span>(<span class="string">"failed to create temp dir '{}': {err:#}"</span>, <span class="self">self</span>.name);
             }
         };
 
@@ -1286,7 +1288,7 @@
             }
 
             <span class="kw">if </span>pails.insert(name, pail).is_some() {
-                <span class="macro">panic!</span>(<span class="string">&quot;{name} already existed&quot;</span>);
+                <span class="macro">panic!</span>(<span class="string">"{name} already existed"</span>);
             }
         }
 
@@ -1297,7 +1299,7 @@
 <span class="kw">impl </span>Sandbox {
     <span class="attr">#[inline]
     </span><span class="kw">pub fn </span>proxy_addr(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SocketAddr {
-        <span class="kw">let </span>Pail::Proxy(pp) = <span class="kw-2">&amp;</span><span class="self">self</span>.pails[<span class="string">&quot;proxy&quot;</span>] <span class="kw">else </span>{
+        <span class="kw">let </span>Pail::Proxy(pp) = <span class="kw-2">&amp;</span><span class="self">self</span>.pails[<span class="string">"proxy"</span>] <span class="kw">else </span>{
             <span class="macro">unreachable!</span>()
         };
         SocketAddr::from((std::net::Ipv6Addr::LOCALHOST, pp.port))
@@ -1354,7 +1356,7 @@
     {
         tokio::time::timeout(std::time::Duration::from_millis(ms), fut)
             .<span class="kw">await
-            </span>.expect(<span class="string">&quot;operation timed out&quot;</span>)
+            </span>.expect(<span class="string">"operation timed out"</span>)
     }
 
     <span class="doccomment">/// Runs a future, expecting it to timeout instead of resolving, panics if
@@ -1367,7 +1369,7 @@
     {
         tokio::time::timeout(std::time::Duration::from_millis(ms), fut)
             .<span class="kw">await
-            </span>.expect_err(<span class="string">&quot;expected future to timeout&quot;</span>);
+            </span>.expect_err(<span class="string">"expected future to timeout"</span>);
     }
 }
 </code></pre></div></section></main></body></html>

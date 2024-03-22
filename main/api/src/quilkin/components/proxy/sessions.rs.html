@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/components/proxy/sessions.rs`."><title>sessions.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="quilkin" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0 (79e9716c9 2023-11-13)" data-channel="1.74.0" data-search-js="search-8be46b629f5f14a8.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../quilkin/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/components/proxy/sessions.rs`."><title>sessions.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="quilkin" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0 (aedd173a2 2024-03-17)" data-channel="1.77.0" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../quilkin/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -766,14 +768,14 @@
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
- * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -837,7 +839,7 @@
 }
 
 <span class="kw">impl </span>SessionPool {
-    <span class="doccomment">/// Constructs a new session pool, it&#39;s created with an `Arc` as that&#39;s
+    <span class="doccomment">/// Constructs a new session pool, it's created with an `Arc` as that's
     /// required for the pool to provide a reference to the children to be able
     /// to release their sockets back to the parent.
     </span><span class="kw">pub fn </span>new(
@@ -861,17 +863,17 @@
     }
 
     <span class="doccomment">/// Allocates a new upstream socket from a new socket from the system.
-    </span><span class="kw">async fn </span>create_new_session_from_new_socket&lt;<span class="lifetime">&#39;pool</span>&gt;(
-        <span class="self">self</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;pool </span>Arc&lt;<span class="self">Self</span>&gt;,
+    </span><span class="kw">async fn </span>create_new_session_from_new_socket&lt;<span class="lifetime">'pool</span>&gt;(
+        <span class="self">self</span>: <span class="kw-2">&amp;</span><span class="lifetime">'pool </span>Arc&lt;<span class="self">Self</span>&gt;,
         key: SessionKey,
         asn_info: <span class="prelude-ty">Option</span>&lt;IpNetEntry&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;UpstreamSender, <span class="kw">super</span>::PipelineError&gt; {
-        <span class="macro">tracing::trace!</span>(source=%key.source, dest=%key.dest, <span class="string">&quot;creating new socket for session&quot;</span>);
+        <span class="macro">tracing::trace!</span>(source=%key.source, dest=%key.dest, <span class="string">"creating new socket for session"</span>);
         <span class="kw">let </span>raw_socket = <span class="kw">crate</span>::net::raw_socket_with_reuse(<span class="number">0</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>port = raw_socket
             .local_addr()<span class="question-mark">?
             </span>.as_socket()
-            .ok_or_else(|| <span class="macro">eyre::eyre!</span>(<span class="string">&quot;couldn&#39;t get socket address from raw socket&quot;</span>))
+            .ok_or_else(|| <span class="macro">eyre::eyre!</span>(<span class="string">"couldn't get socket address from raw socket"</span>))
             .map_err(<span class="kw">super</span>::PipelineError::Session)<span class="question-mark">?
             </span>.port();
         <span class="kw">let </span>(tx, <span class="kw-2">mut </span>downstream_receiver) = mpsc::channel::&lt;UpstreamChannelData&gt;(<span class="number">5</span>);
@@ -882,7 +884,7 @@
             <span class="kw">let </span><span class="kw-2">mut </span>last_received_at = <span class="prelude-val">None</span>;
             <span class="kw">let </span><span class="kw-2">mut </span>shutdown_rx = pool.shutdown_rx.clone();
             <span class="macro">cfg_if::cfg_if! </span>{
-                <span class="kw">if </span><span class="attr">#[cfg(target_os = <span class="string">&quot;linux&quot;</span>)] </span>{
+                <span class="kw">if </span><span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)] </span>{
                     <span class="kw">let </span>socket = std::rc::Rc::new(DualStackLocalSocket::from_raw(raw_socket));
                 } <span class="kw">else </span>{
                     <span class="kw">let </span>socket = std::sync::Arc::new(DualStackLocalSocket::from_raw(raw_socket));
@@ -896,13 +898,13 @@
                         <span class="prelude-val">None </span>=&gt; {
                             <span class="kw">crate</span>::metrics::errors_total(
                                 <span class="kw">crate</span>::metrics::WRITE,
-                                <span class="string">&quot;downstream channel closed&quot;</span>,
+                                <span class="string">"downstream channel closed"</span>,
                                 <span class="prelude-val">None</span>,
                             )
                             .inc();
                         }
                         <span class="prelude-val">Some</span>((data, asn_info, send_addr)) =&gt; {
-                            <span class="macro">tracing::trace!</span>(%send_addr, length = data.len(), <span class="string">&quot;sending packet upstream&quot;</span>);
+                            <span class="macro">tracing::trace!</span>(%send_addr, length = data.len(), <span class="string">"sending packet upstream"</span>);
                             <span class="kw">let </span>(result, <span class="kw">_</span>) = socket2.send_to(data, send_addr).<span class="kw">await</span>;
                             <span class="kw">let </span>asn_info = asn_info.as_ref();
                             <span class="kw">match </span>result {
@@ -913,7 +915,7 @@
                                         .inc_by(size <span class="kw">as </span>u64);
                                 }
                                 <span class="prelude-val">Err</span>(error) =&gt; {
-                                    <span class="macro">tracing::trace!</span>(%error, <span class="string">&quot;sending packet upstream failed&quot;</span>);
+                                    <span class="macro">tracing::trace!</span>(%error, <span class="string">"sending packet upstream failed"</span>);
                                     <span class="kw">let </span>source = error.to_string();
                                     <span class="kw">crate</span>::metrics::errors_total(
                                         <span class="kw">crate</span>::metrics::READ,
@@ -941,14 +943,14 @@
                         <span class="kw">let </span>(result, buf) = received;
                         <span class="kw">match </span>result {
                             <span class="prelude-val">Err</span>(error) =&gt; {
-                                <span class="macro">tracing::trace!</span>(%error, <span class="string">&quot;error receiving packet&quot;</span>);
+                                <span class="macro">tracing::trace!</span>(%error, <span class="string">"error receiving packet"</span>);
                                 <span class="kw">crate</span>::metrics::errors_total(<span class="kw">crate</span>::metrics::WRITE, <span class="kw-2">&amp;</span>error.to_string(), <span class="prelude-val">None</span>).inc();
                             },
                             <span class="prelude-val">Ok</span>((_size, recv_addr)) =&gt; pool.process_received_upstream_packet(buf, recv_addr, port, <span class="kw-2">&amp;mut </span>last_received_at).<span class="kw">await</span>,
                         }
                     }
                     <span class="kw">_ </span>= shutdown_rx.changed() =&gt; {
-                        <span class="macro">tracing::debug!</span>(<span class="string">&quot;Closing upstream socket loop&quot;</span>);
+                        <span class="macro">tracing::debug!</span>(<span class="string">"Closing upstream socket loop"</span>);
                         <span class="kw">return</span>;
                     }
                 }
@@ -970,12 +972,12 @@
         last_received_at: <span class="kw-2">&amp;mut </span><span class="prelude-ty">Option</span>&lt;i64&gt;,
     ) {
         <span class="kw">let </span>received_at = <span class="kw">crate</span>::unix_timestamp();
-        <span class="kw">crate</span>::net::to_canonical(<span class="kw-2">&amp;mut </span>recv_addr);
+        recv_addr.set_ip(recv_addr.ip().to_canonical());
         <span class="kw">let </span>(downstream_addr, asn_info): (SocketAddr, <span class="prelude-ty">Option</span>&lt;IpNetEntry&gt;) = {
             <span class="kw">let </span>storage = <span class="self">self</span>.storage.read().<span class="kw">await</span>;
             <span class="kw">let </span><span class="prelude-val">Some</span>(downstream_addr) = storage.destination_to_sources.get(<span class="kw-2">&amp;</span>(recv_addr, port))
             <span class="kw">else </span>{
-                <span class="macro">tracing::debug!</span>(address=%recv_addr, <span class="string">&quot;received traffic from a server that has no downstream&quot;</span>);
+                <span class="macro">tracing::debug!</span>(address=%recv_addr, <span class="string">"received traffic from a server that has no downstream"</span>);
                 <span class="kw">return</span>;
             };
             <span class="kw">let </span>asn_info = storage.sources_to_asn_info.get(downstream_addr);
@@ -1004,7 +1006,7 @@
         timer.stop_and_record();
         <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = result {
             error.log();
-            <span class="kw">let </span>label = <span class="macro">format!</span>(<span class="string">&quot;proxy::Session::process_recv_packet: {error}&quot;</span>);
+            <span class="kw">let </span>label = <span class="macro">format!</span>(<span class="string">"proxy::Session::process_recv_packet: {error}"</span>);
             <span class="kw">crate</span>::metrics::packets_dropped_total(<span class="kw">crate</span>::metrics::WRITE, <span class="kw-2">&amp;</span>label, asn_info).inc();
             <span class="kw">crate</span>::metrics::errors_total(<span class="kw">crate</span>::metrics::WRITE, <span class="kw-2">&amp;</span>label, asn_info).inc();
         }
@@ -1014,19 +1016,19 @@
     /// creates a new session either from a fresh socket, or if there are sockets
     /// allocated that are not reserved by an existing destination, using the
     /// existing socket.
-    </span><span class="kw">pub async fn </span>get&lt;<span class="lifetime">&#39;pool</span>&gt;(
-        <span class="self">self</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;pool </span>Arc&lt;<span class="self">Self</span>&gt;,
+    </span><span class="kw">pub async fn </span>get&lt;<span class="lifetime">'pool</span>&gt;(
+        <span class="self">self</span>: <span class="kw-2">&amp;</span><span class="lifetime">'pool </span>Arc&lt;<span class="self">Self</span>&gt;,
         key @ SessionKey { dest, .. }: SessionKey,
         asn_info: <span class="prelude-ty">Option</span>&lt;IpNetEntry&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;UpstreamSender, <span class="kw">super</span>::PipelineError&gt; {
-        <span class="macro">tracing::trace!</span>(source=%key.source, dest=%key.dest, <span class="string">&quot;SessionPool::get&quot;</span>);
+        <span class="macro">tracing::trace!</span>(source=%key.source, dest=%key.dest, <span class="string">"SessionPool::get"</span>);
         <span class="comment">// If we already have a session for the key pairing, return that session.
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(entry) = <span class="self">self</span>.session_map.get(<span class="kw-2">&amp;</span>key) {
-            <span class="macro">tracing::trace!</span>(<span class="string">&quot;returning existing session&quot;</span>);
+            <span class="macro">tracing::trace!</span>(<span class="string">"returning existing session"</span>);
             <span class="kw">return </span><span class="prelude-val">Ok</span>(entry.upstream_sender.clone());
         }
 
-        <span class="comment">// If there&#39;s a socket_set available, it means there are sockets
+        <span class="comment">// If there's a socket_set available, it means there are sockets
         // allocated to the address that we want to avoid.
         </span><span class="kw">let </span>storage = <span class="self">self</span>.storage.read().<span class="kw">await</span>;
         <span class="kw">let </span><span class="prelude-val">Some</span>(socket_set) = storage.destination_to_sockets.get(<span class="kw-2">&amp;</span>dest) <span class="kw">else </span>{
@@ -1046,7 +1048,7 @@
                     .next()
                     .map(|(port, socket)| (<span class="kw-2">*</span>port, socket.clone()))
                     .ok_or_else(|| {
-                        <span class="macro">eyre::eyre!</span>(<span class="string">&quot;couldn&#39;t obtain any allocated socket, should be unreachable&quot;</span>)
+                        <span class="macro">eyre::eyre!</span>(<span class="string">"couldn't obtain any allocated socket, should be unreachable"</span>)
                     })
                     .map_err(<span class="kw">super</span>::PipelineError::Session)<span class="question-mark">?</span>;
 
@@ -1071,7 +1073,7 @@
                 </span>.destination_to_sockets
                 .get_mut(<span class="kw-2">&amp;</span>dest)
                 .ok_or_else(|| {
-                    <span class="macro">eyre::eyre!</span>(<span class="string">&quot;couldn&#39;t obtain any socket for destination, should be unreachable&quot;</span>)
+                    <span class="macro">eyre::eyre!</span>(<span class="string">"couldn't obtain any socket for destination, should be unreachable"</span>)
                 })
                 .map_err(<span class="kw">super</span>::PipelineError::Session)<span class="question-mark">?
                 </span>.insert(port);
@@ -1084,14 +1086,14 @@
     }
 
     <span class="doccomment">/// Using an existing socket, reserves the socket for a new session.
-    </span><span class="kw">async fn </span>create_session_from_existing_socket&lt;<span class="lifetime">&#39;session</span>&gt;(
-        <span class="self">self</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;session </span>Arc&lt;<span class="self">Self</span>&gt;,
+    </span><span class="kw">async fn </span>create_session_from_existing_socket&lt;<span class="lifetime">'session</span>&gt;(
+        <span class="self">self</span>: <span class="kw-2">&amp;</span><span class="lifetime">'session </span>Arc&lt;<span class="self">Self</span>&gt;,
         key: SessionKey,
         upstream_sender: UpstreamSender,
         socket_port: u16,
         asn_info: <span class="prelude-ty">Option</span>&lt;IpNetEntry&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;UpstreamSender, <span class="kw">super</span>::PipelineError&gt; {
-        <span class="macro">tracing::trace!</span>(source=%key.source, dest=%key.dest, <span class="string">&quot;reusing socket for session&quot;</span>);
+        <span class="macro">tracing::trace!</span>(source=%key.source, dest=%key.dest, <span class="string">"reusing socket for session"</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>storage = <span class="self">self</span>.storage.write().<span class="kw">await</span>;
         storage
             .destination_to_sockets
@@ -1121,9 +1123,9 @@
             <span class="self">self</span>.clone(),
             asn_info,
         )<span class="question-mark">?</span>;
-        <span class="macro">tracing::trace!</span>(<span class="string">&quot;inserting session into map&quot;</span>);
+        <span class="macro">tracing::trace!</span>(<span class="string">"inserting session into map"</span>);
         <span class="self">self</span>.session_map.insert(key, session);
-        <span class="macro">tracing::trace!</span>(<span class="string">&quot;session inserted&quot;</span>);
+        <span class="macro">tracing::trace!</span>(<span class="string">"session inserted"</span>);
         <span class="prelude-val">Ok</span>(upstream_sender)
     }
 
@@ -1136,14 +1138,14 @@
         asn_info: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>IpNetEntry&gt;,
         packet: PoolBuffer,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-        <span class="macro">tracing::trace!</span>(%source, %dest, length = packet.len(), <span class="string">&quot;received packet from upstream&quot;</span>);
+        <span class="macro">tracing::trace!</span>(%source, %dest, length = packet.len(), <span class="string">"received packet from upstream"</span>);
 
         <span class="kw">let </span><span class="kw-2">mut </span>context = <span class="kw">crate</span>::filters::WriteContext::new(source.into(), dest.into(), packet);
 
         config.filters.load().write(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span><span class="question-mark">?</span>;
 
         <span class="kw">let </span>packet = context.contents;
-        <span class="macro">tracing::trace!</span>(%source, %dest, length = packet.len(), <span class="string">&quot;sending packet downstream&quot;</span>);
+        <span class="macro">tracing::trace!</span>(%source, %dest, length = packet.len(), <span class="string">"sending packet downstream"</span>);
         downstream_sender
             .try_send((packet, asn_info.cloned(), dest))
             .map_err(|error| <span class="kw">match </span>error {
@@ -1190,7 +1192,7 @@
     </span><span class="attr">#[cfg(test)]
     </span><span class="kw">async fn </span>drop_session(<span class="kw-2">&amp;</span><span class="self">self</span>, key: SessionKey) -&gt; bool {
         <span class="kw">let </span>is_removed = <span class="self">self</span>.session_map.remove(key);
-        <span class="comment">// Sleep because there&#39;s no async drop.
+        <span class="comment">// Sleep because there's no async drop.
         </span>tokio::time::sleep(Duration::from_millis(<span class="number">100</span>)).<span class="kw">await</span>;
         is_removed
     }
@@ -1204,7 +1206,7 @@
         }: SessionKey,
         port: u16,
     ) {
-        <span class="macro">tracing::trace!</span>(<span class="string">&quot;releasing socket&quot;</span>);
+        <span class="macro">tracing::trace!</span>(<span class="string">"releasing socket"</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>storage = <span class="self">self</span>.storage.write().<span class="kw">await</span>;
         <span class="kw">let </span><span class="prelude-val">Some</span>(socket_set) = storage.destination_to_sockets.get_mut(dest) <span class="kw">else </span>{
             <span class="kw">return</span>;
@@ -1229,7 +1231,7 @@
         <span class="comment">// Not asserted because the source might not have GeoIP info.
         </span>storage.sources_to_asn_info.remove(source);
         storage.destination_to_sources.remove(<span class="kw-2">&amp;</span>(<span class="kw-2">*</span>dest, port));
-        <span class="macro">tracing::trace!</span>(<span class="string">&quot;socket released&quot;</span>);
+        <span class="macro">tracing::trace!</span>(<span class="string">"socket released"</span>);
     }
 }
 
@@ -1281,13 +1283,13 @@
                 prefix = asn.prefix,
                 prefix_entity = asn.prefix_entity,
                 prefix_name = asn.prefix_name,
-                <span class="string">&quot;maxmind information&quot;
+                <span class="string">"maxmind information"
             </span>);
         }
 
         <span class="self">self</span>::metrics::total_sessions().inc();
         s.active_session_metric().inc();
-        <span class="macro">tracing::debug!</span>(source = %key.source, dest = %key.dest, <span class="string">&quot;Session created&quot;</span>);
+        <span class="macro">tracing::debug!</span>(source = %key.source, dest = %key.dest, <span class="string">"Session created"</span>);
         <span class="prelude-val">Ok</span>(s)
     }
 
@@ -1298,7 +1300,7 @@
     <span class="kw">fn </span>async_drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw">impl </span>std::future::Future&lt;Output = ()&gt; {
         <span class="self">self</span>.active_session_metric().dec();
         metrics::duration_secs().observe(<span class="self">self</span>.created_at.elapsed().as_secs() <span class="kw">as </span>f64);
-        <span class="macro">tracing::debug!</span>(source = %<span class="self">self</span>.key.source, dest_address = %<span class="self">self</span>.key.dest, <span class="string">&quot;Session closed&quot;</span>);
+        <span class="macro">tracing::debug!</span>(source = %<span class="self">self</span>.key.source, dest_address = %<span class="self">self</span>.key.dest, <span class="string">"Session closed"</span>);
         SessionPool::release_socket(<span class="self">self</span>.pool.clone(), <span class="self">self</span>.key, <span class="self">self</span>.socket_port)
     }
 }
@@ -1324,17 +1326,17 @@
 
 <span class="attr">#[derive(Debug, thiserror::Error)]
 </span><span class="kw">pub enum </span>Error {
-    <span class="attr">#[error(<span class="string">&quot;downstream channel closed&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"downstream channel closed"</span>)]
     </span>ChannelClosed,
-    <span class="attr">#[error(<span class="string">&quot;downstream channel full&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"downstream channel full"</span>)]
     </span>ChannelFull,
-    <span class="attr">#[error(<span class="string">&quot;filter {0}&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"filter {0}"</span>)]
     </span>Filter(<span class="attr">#[from] </span><span class="kw">crate</span>::filters::FilterError),
 }
 
 <span class="kw">impl </span>Loggable <span class="kw">for </span>Error {
     <span class="kw">fn </span>log(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-        <span class="macro">tracing::error!</span>(<span class="string">&quot;{}&quot;</span>, <span class="self">self</span>);
+        <span class="macro">tracing::error!</span>(<span class="string">"{}"</span>, <span class="self">self</span>);
     }
 }
 
@@ -1514,7 +1516,7 @@
         <span class="kw">let </span>(pool, _sender, receiver) = new_pool().<span class="kw">await</span>;
 
         <span class="kw">let </span>key: SessionKey = (source, dest).into();
-        <span class="kw">let </span>msg = <span class="string">b&quot;helloworld&quot;</span>;
+        <span class="kw">let </span>msg = <span class="string">b"helloworld"</span>;
 
         pool.send(key, <span class="prelude-val">None</span>, alloc_buffer(msg).freeze())
             .<span class="kw">await

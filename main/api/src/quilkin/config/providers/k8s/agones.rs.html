@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/config/providers/k8s/agones.rs`."><title>agones.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="quilkin" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0 (79e9716c9 2023-11-13)" data-channel="1.74.0" data-search-js="search-8be46b629f5f14a8.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../../quilkin/index.html"><img class="rust-logo" src="../../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/config/providers/k8s/agones.rs`."><title>agones.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="quilkin" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0 (aedd173a2 2024-03-17)" data-channel="1.77.0" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../../quilkin/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -861,14 +863,14 @@
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
- * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -887,11 +889,11 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::net::endpoint::Endpoint;
 
-<span class="kw">const </span>QUILKIN_TOKEN_LABEL: <span class="kw-2">&amp;</span>str = <span class="string">&quot;quilkin.dev/tokens&quot;</span>;
+<span class="kw">const </span>QUILKIN_TOKEN_LABEL: <span class="kw-2">&amp;</span>str = <span class="string">"quilkin.dev/tokens"</span>;
 
 <span class="doccomment">/// Auto-generated derived type for GameServerSpec via `CustomResource`
 </span><span class="attr">#[derive(Clone, Debug, JsonSchema)]
-#[serde(rename_all = <span class="string">&quot;camelCase&quot;</span>)]
+#[serde(rename_all = <span class="string">"camelCase"</span>)]
 </span><span class="kw">pub struct </span>GameServer {
     <span class="attr">#[schemars(skip)]
     </span><span class="kw">pub </span>metadata: ObjectMeta,
@@ -912,7 +914,7 @@
             <span class="kw">let </span>extra_metadata = {
                 <span class="kw">let </span><span class="kw-2">mut </span>map = serde_json::Map::default();
                 map.insert(
-                    <span class="string">&quot;name&quot;</span>.into(),
+                    <span class="string">"name"</span>.into(),
                     <span class="self">self</span>.metadata.name.clone().unwrap_or_default().into(),
                 );
                 map
@@ -936,7 +938,7 @@
             .and_then(|anno| {
                 anno.get(QUILKIN_TOKEN_LABEL).map(|value| {
                     value
-                        .split(<span class="string">&#39;,&#39;</span>)
+                        .split(<span class="string">','</span>)
                         .map(<span class="kw">crate</span>::codec::base64::decode)
                         .filter_map(Result::ok)
                         .collect()
@@ -947,7 +949,7 @@
 }
 
 <span class="attr">#[derive(Clone, Debug, Deserialize, JsonSchema)]
-#[serde(rename_all = <span class="string">&quot;camelCase&quot;</span>)]
+#[serde(rename_all = <span class="string">"camelCase"</span>)]
 </span><span class="kw">pub struct </span>Inner {
     <span class="attr">#[schemars(skip)]
     </span>metadata: ObjectMeta,
@@ -955,14 +957,14 @@
     status: <span class="prelude-ty">Option</span>&lt;GameServerStatus&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;de</span>&gt; serde::Deserialize&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>GameServer {
-    <span class="kw">fn </span>deserialize&lt;D: serde::Deserializer&lt;<span class="lifetime">&#39;de</span>&gt;&gt;(de: D) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, D::Error&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'de</span>&gt; serde::Deserialize&lt;<span class="lifetime">'de</span>&gt; <span class="kw">for </span>GameServer {
+    <span class="kw">fn </span>deserialize&lt;D: serde::Deserializer&lt;<span class="lifetime">'de</span>&gt;&gt;(de: D) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, D::Error&gt; {
         <span class="kw">use </span>serde::de::Error;
         <span class="kw">let </span>value = serde_json::Value::deserialize(de).unwrap();
 
         serde_json::from_value::&lt;Inner&gt;(value.clone())
             .map_err(|error| {
-                <span class="macro">tracing::trace!</span>(%error, %value, <span class="string">&quot;gameserver failed&quot;</span>);
+                <span class="macro">tracing::trace!</span>(%error, %value, <span class="string">"gameserver failed"</span>);
                 Error::custom(error)
             })
             .map(
@@ -993,7 +995,7 @@
 
     <span class="kw">pub fn </span>is_allocated(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
         <span class="self">self</span>.status.as_ref().map_or(<span class="bool-val">false</span>, |status| {
-            <span class="macro">tracing::trace!</span>(%status.address, <span class="question-mark">?</span>status.state, <span class="string">&quot;checking gameserver&quot;</span>);
+            <span class="macro">tracing::trace!</span>(%status.address, <span class="question-mark">?</span>status.state, <span class="string">"checking gameserver"</span>);
             <span class="macro">matches!</span>(status.state, GameServerState::Allocated)
         })
     }
@@ -1002,12 +1004,12 @@
 <span class="kw">impl </span>serde::Serialize <span class="kw">for </span>GameServer {
     <span class="kw">fn </span>serialize&lt;S: serde::Serializer&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, ser: S) -&gt; <span class="prelude-ty">Result</span>&lt;S::Ok, S::Error&gt; {
         <span class="kw">use </span>serde::ser::SerializeStruct;
-        <span class="kw">let </span><span class="kw-2">mut </span>obj = ser.serialize_struct(<span class="string">&quot;GameServer&quot;</span>, <span class="number">5</span>)<span class="question-mark">?</span>;
-        obj.serialize_field(<span class="string">&quot;apiVersion&quot;</span>, <span class="kw-2">&amp;</span>GameServer::api_version(<span class="kw-2">&amp;</span>()))<span class="question-mark">?</span>;
-        obj.serialize_field(<span class="string">&quot;kind&quot;</span>, <span class="kw-2">&amp;</span>GameServer::kind(<span class="kw-2">&amp;</span>()))<span class="question-mark">?</span>;
-        obj.serialize_field(<span class="string">&quot;metadata&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.metadata)<span class="question-mark">?</span>;
-        obj.serialize_field(<span class="string">&quot;spec&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.spec)<span class="question-mark">?</span>;
-        obj.serialize_field(<span class="string">&quot;status&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.status)<span class="question-mark">?</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>obj = ser.serialize_struct(<span class="string">"GameServer"</span>, <span class="number">5</span>)<span class="question-mark">?</span>;
+        obj.serialize_field(<span class="string">"apiVersion"</span>, <span class="kw-2">&amp;</span>GameServer::api_version(<span class="kw-2">&amp;</span>()))<span class="question-mark">?</span>;
+        obj.serialize_field(<span class="string">"kind"</span>, <span class="kw-2">&amp;</span>GameServer::kind(<span class="kw-2">&amp;</span>()))<span class="question-mark">?</span>;
+        obj.serialize_field(<span class="string">"metadata"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.metadata)<span class="question-mark">?</span>;
+        obj.serialize_field(<span class="string">"spec"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.spec)<span class="question-mark">?</span>;
+        obj.serialize_field(<span class="string">"status"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.status)<span class="question-mark">?</span>;
         obj.end()
     }
 }
@@ -1016,24 +1018,24 @@
     <span class="kw">type </span>DynamicType = ();
     <span class="kw">type </span>Scope = kube::core::NamespaceResourceScope;
 
-    <span class="kw">fn </span>group(<span class="kw">_</span>: <span class="kw-2">&amp;</span>()) -&gt; std::borrow::Cow&lt;<span class="lifetime">&#39;_</span>, str&gt; {
-        <span class="string">&quot;agones.dev&quot;</span>.into()
+    <span class="kw">fn </span>group(<span class="kw">_</span>: <span class="kw-2">&amp;</span>()) -&gt; std::borrow::Cow&lt;<span class="lifetime">'_</span>, str&gt; {
+        <span class="string">"agones.dev"</span>.into()
     }
 
-    <span class="kw">fn </span>kind(<span class="kw">_</span>: <span class="kw-2">&amp;</span>()) -&gt; std::borrow::Cow&lt;<span class="lifetime">&#39;_</span>, str&gt; {
-        <span class="string">&quot;GameServer&quot;</span>.into()
+    <span class="kw">fn </span>kind(<span class="kw">_</span>: <span class="kw-2">&amp;</span>()) -&gt; std::borrow::Cow&lt;<span class="lifetime">'_</span>, str&gt; {
+        <span class="string">"GameServer"</span>.into()
     }
 
-    <span class="kw">fn </span>version(<span class="kw">_</span>: <span class="kw-2">&amp;</span>()) -&gt; std::borrow::Cow&lt;<span class="lifetime">&#39;_</span>, str&gt; {
-        <span class="string">&quot;v1&quot;</span>.into()
+    <span class="kw">fn </span>version(<span class="kw">_</span>: <span class="kw-2">&amp;</span>()) -&gt; std::borrow::Cow&lt;<span class="lifetime">'_</span>, str&gt; {
+        <span class="string">"v1"</span>.into()
     }
 
-    <span class="kw">fn </span>api_version(<span class="kw">_</span>: <span class="kw-2">&amp;</span>()) -&gt; std::borrow::Cow&lt;<span class="lifetime">&#39;_</span>, str&gt; {
-        <span class="string">&quot;agones.dev/v1&quot;</span>.into()
+    <span class="kw">fn </span>api_version(<span class="kw">_</span>: <span class="kw-2">&amp;</span>()) -&gt; std::borrow::Cow&lt;<span class="lifetime">'_</span>, str&gt; {
+        <span class="string">"agones.dev/v1"</span>.into()
     }
 
-    <span class="kw">fn </span>plural(<span class="kw">_</span>: <span class="kw-2">&amp;</span>()) -&gt; std::borrow::Cow&lt;<span class="lifetime">&#39;_</span>, str&gt; {
-        <span class="string">&quot;gameservers&quot;</span>.into()
+    <span class="kw">fn </span>plural(<span class="kw">_</span>: <span class="kw-2">&amp;</span>()) -&gt; std::borrow::Cow&lt;<span class="lifetime">'_</span>, str&gt; {
+        <span class="string">"gameservers"</span>.into()
     }
 
     <span class="kw">fn </span>meta(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>ObjectMeta {
@@ -1060,20 +1062,20 @@
 
         CustomResourceDefinition {
             metadata: ObjectMeta {
-                name: <span class="prelude-val">Some</span>(<span class="string">&quot;gameservers.agones.dev&quot;</span>.into()),
+                name: <span class="prelude-val">Some</span>(<span class="string">"gameservers.agones.dev"</span>.into()),
                 ..&lt;<span class="kw">_</span>&gt;::default()
             },
             spec: CustomResourceDefinitionSpec {
-                group: <span class="string">&quot;agones.dev&quot;</span>.into(),
-                scope: <span class="string">&quot;Namespaced&quot;</span>.into(),
+                group: <span class="string">"agones.dev"</span>.into(),
+                scope: <span class="string">"Namespaced"</span>.into(),
                 names: CustomResourceDefinitionNames {
-                    plural: <span class="string">&quot;gameservers&quot;</span>.into(),
-                    singular: <span class="prelude-val">Some</span>(<span class="string">&quot;gameserver&quot;</span>.into()),
-                    kind: <span class="string">&quot;GameServer&quot;</span>.into(),
+                    plural: <span class="string">"gameservers"</span>.into(),
+                    singular: <span class="prelude-val">Some</span>(<span class="string">"gameserver"</span>.into()),
+                    kind: <span class="string">"GameServer"</span>.into(),
                     ..&lt;<span class="kw">_</span>&gt;::default()
                 },
                 versions: <span class="macro">vec!</span>[CustomResourceDefinitionVersion {
-                    name: <span class="string">&quot;v1&quot;</span>.into(),
+                    name: <span class="string">"v1"</span>.into(),
                     served: <span class="bool-val">true</span>,
                     storage: <span class="bool-val">true</span>,
                     schema: <span class="prelude-val">Some</span>(CustomResourceValidation {
@@ -1092,15 +1094,15 @@
         }
     }
 
-    <span class="kw">fn </span>crd_name() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
-        <span class="string">&quot;gameservers.agones.dev&quot;
+    <span class="kw">fn </span>crd_name() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
+        <span class="string">"gameservers.agones.dev"
     </span>}
 
     <span class="kw">fn </span>api_resource() -&gt; kube::core::dynamic::ApiResource {
         kube::core::dynamic::ApiResource::erase::&lt;<span class="self">Self</span>&gt;(<span class="kw-2">&amp;</span>())
     }
 
-    <span class="kw">fn </span>shortnames() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str] {
+    <span class="kw">fn </span>shortnames() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str] {
         <span class="kw-2">&amp;</span>[]
     }
 }
@@ -1117,18 +1119,18 @@
 }
 
 <span class="attr">#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
-#[serde(rename_all = <span class="string">&quot;camelCase&quot;</span>)]
+#[serde(rename_all = <span class="string">"camelCase"</span>)]
 </span><span class="kw">pub struct </span>GameServerSpec {
     <span class="doccomment">/// Container specifies which Pod container is the game server. Only
     /// required if there is more than one container defined.
-    </span><span class="attr">#[serde(default, skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
+    </span><span class="attr">#[serde(default, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
     </span><span class="kw">pub </span>container: <span class="prelude-ty">Option</span>&lt;String&gt;,
     <span class="doccomment">/// Ports are the array of ports that can be exposed via the game server
     </span><span class="attr">#[serde(default)]
     </span><span class="kw">pub </span>ports: Vec&lt;GameServerPort&gt;,
     <span class="doccomment">/// Configures health checking
     </span><span class="kw">pub </span>health: Health,
-    <span class="doccomment">/// Scheduling strategy. Defaults to &quot;Packed&quot;
+    <span class="doccomment">/// Scheduling strategy. Defaults to "Packed"
     </span><span class="kw">pub </span>scheduling: SchedulingStrategy,
     <span class="doccomment">/// Specifies parameters for the Agones SDK Server sidecar container.
     </span><span class="kw">pub </span>sdk_server: SdkServer,
@@ -1155,7 +1157,7 @@
     <span class="kw">fn </span>try_from(server: GameServer) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
         server
             .endpoint()
-            .ok_or_else(|| tonic::Status::internal(<span class="string">&quot;No status found for game server&quot;</span>))
+            .ok_or_else(|| tonic::Status::internal(<span class="string">"No status found for game server"</span>))
     }
 }
 
@@ -1165,15 +1167,15 @@
     </span><span class="attr">#[serde(default)]
     </span>disabled: bool,
     <span class="doccomment">/// The number of seconds each health ping has to occur in
-    </span><span class="attr">#[serde(rename = <span class="string">&quot;periodSeconds&quot;</span>, default = <span class="string">&quot;default_period_seconds&quot;</span>)]
+    </span><span class="attr">#[serde(rename = <span class="string">"periodSeconds"</span>, default = <span class="string">"default_period_seconds"</span>)]
     </span>period_seconds: i32,
     <span class="doccomment">/// How many failures in a row constitutes unhealthy
-    </span><span class="attr">#[serde(rename = <span class="string">&quot;failureThreshold&quot;</span>, default = <span class="string">&quot;default_failure_threshold&quot;</span>)]
+    </span><span class="attr">#[serde(rename = <span class="string">"failureThreshold"</span>, default = <span class="string">"default_failure_threshold"</span>)]
     </span>failure_threshold: i32,
     <span class="doccomment">/// Initial delay before checking health
     </span><span class="attr">#[serde(
-        rename = <span class="string">&quot;initialDelaySeconds&quot;</span>,
-        default = <span class="string">&quot;default_initial_delay_seconds&quot;
+        rename = <span class="string">"initialDelaySeconds"</span>,
+        default = <span class="string">"default_initial_delay_seconds"
     </span>)]
     </span>initial_delay_seconds: i32,
 }
@@ -1201,7 +1203,7 @@
 
 <span class="doccomment">/// Defines a set of Ports that are to be exposed via the [`GameServer`].
 </span><span class="attr">#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
-#[serde(rename_all = <span class="string">&quot;camelCase&quot;</span>)]
+#[serde(rename_all = <span class="string">"camelCase"</span>)]
 </span><span class="kw">pub struct </span>GameServerPort {
     <span class="doccomment">/// Name is the descriptive name of the port
     </span><span class="kw">pub </span>name: String,
@@ -1214,12 +1216,12 @@
     </span><span class="kw">pub </span>port_policy: PortPolicy,
     <span class="doccomment">/// The name of the container on which to open the port. Defaults to the
     /// game server container.
-    </span><span class="attr">#[serde(default, skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
+    </span><span class="attr">#[serde(default, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
     </span><span class="kw">pub </span>container: <span class="prelude-ty">Option</span>&lt;String&gt;,
-    <span class="doccomment">/// The port that is being opened on the specified container&#39;s process
+    <span class="doccomment">/// The port that is being opened on the specified container's process
     </span><span class="kw">pub </span>container_port: u16,
     <span class="doccomment">/// The port exposed on the host for clients to connect to
-    </span><span class="attr">#[serde(default, skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
+    </span><span class="attr">#[serde(default, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
     </span><span class="kw">pub </span>host_port: <span class="prelude-ty">Option</span>&lt;u16&gt;,
     <span class="doccomment">/// Protocol is the network protocol being used. Defaults to UDP. TCP and TCPUDP are other options.
     </span><span class="attr">#[serde(default)]
@@ -1228,7 +1230,7 @@
 
 <span class="doccomment">/// The status for a [`GameServer`] resource.
 </span><span class="attr">#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
-#[serde(rename_all = <span class="string">&quot;camelCase&quot;</span>)]
+#[serde(rename_all = <span class="string">"camelCase"</span>)]
 </span><span class="kw">pub struct </span>GameServerStatus {
     <span class="doccomment">/// The current state of a [`GameServer`].
     </span><span class="kw">pub </span>state: GameServerState,
@@ -1275,16 +1277,16 @@
 
 <span class="doccomment">/// Parameters for the Agones SDK Server sidecar container
 </span><span class="attr">#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
-#[serde(rename_all = <span class="string">&quot;camelCase&quot;</span>)]
+#[serde(rename_all = <span class="string">"camelCase"</span>)]
 </span><span class="kw">pub struct </span>SdkServer {
-    <span class="doccomment">/// LogLevel for SDK server (sidecar) logs. Defaults to &quot;Info&quot;
+    <span class="doccomment">/// LogLevel for SDK server (sidecar) logs. Defaults to "Info"
     </span><span class="attr">#[serde(default)]
     </span><span class="kw">pub </span>log_level: SdkServerLogLevel,
     <span class="doccomment">/// GRPCPort is the port on which the SDK Server binds the gRPC server to accept incoming connections
-    </span><span class="attr">#[serde(default = <span class="string">&quot;default_sdk_grpc_port&quot;</span>)]
+    </span><span class="attr">#[serde(default = <span class="string">"default_sdk_grpc_port"</span>)]
     </span><span class="kw">pub </span>grpc_port: u16,
     <span class="doccomment">/// HTTPPort is the port on which the SDK Server binds the HTTP gRPC gateway server to accept incoming connections
-    </span><span class="attr">#[serde(default = <span class="string">&quot;default_sdk_http_port&quot;</span>)]
+    </span><span class="attr">#[serde(default = <span class="string">"default_sdk_http_port"</span>)]
     </span><span class="kw">pub </span>http_port: u16,
 }
 
@@ -1340,7 +1342,7 @@
 }
 
 <span class="doccomment">/// the strategy that a Fleet &amp; GameServers will use when scheduling
-/// GameServers&#39; Pods across a cluster. In future versions, this will also
+/// GameServers' Pods across a cluster. In future versions, this will also
 /// impact Fleet scale down, and Pod Scheduling.
 </span><span class="attr">#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 </span><span class="kw">pub enum </span>SchedulingStrategy {
@@ -1358,11 +1360,11 @@
 
 <span class="attr">#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 </span><span class="kw">pub enum </span>Protocol {
-    <span class="attr">#[serde(rename = <span class="string">&quot;UDP&quot;</span>)]
+    <span class="attr">#[serde(rename = <span class="string">"UDP"</span>)]
     </span>Udp,
-    <span class="attr">#[serde(rename = <span class="string">&quot;TCP&quot;</span>)]
+    <span class="attr">#[serde(rename = <span class="string">"TCP"</span>)]
     </span>Tcp,
-    <span class="attr">#[serde(rename = <span class="string">&quot;TCPUDP&quot;</span>)]
+    <span class="attr">#[serde(rename = <span class="string">"TCPUDP"</span>)]
     </span>UdpTcp,
 }
 
@@ -1377,7 +1379,7 @@
     <span class="attr">#[schemars(skip)]
     </span><span class="kw">pub </span>metadata: ::k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta,
     <span class="kw">pub </span>spec: FleetSpec,
-    <span class="attr">#[serde(skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
+    <span class="attr">#[serde(skip_serializing_if = <span class="string">"Option::is_none"</span>)]
     </span><span class="kw">pub </span>status: <span class="prelude-ty">Option</span>&lt;FleetStatus&gt;,
 }
 
@@ -1403,14 +1405,14 @@
     status: <span class="prelude-ty">Option</span>&lt;FleetStatus&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;de</span>&gt; serde::Deserialize&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>Fleet {
-    <span class="kw">fn </span>deserialize&lt;D: serde::Deserializer&lt;<span class="lifetime">&#39;de</span>&gt;&gt;(de: D) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, D::Error&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'de</span>&gt; serde::Deserialize&lt;<span class="lifetime">'de</span>&gt; <span class="kw">for </span>Fleet {
+    <span class="kw">fn </span>deserialize&lt;D: serde::Deserializer&lt;<span class="lifetime">'de</span>&gt;&gt;(de: D) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, D::Error&gt; {
         <span class="kw">use </span>serde::de::Error;
         <span class="kw">let </span>value = serde_json::Value::deserialize(de).unwrap();
 
         serde_json::from_value::&lt;FleetInner&gt;(value.clone())
             .map_err(|error| {
-                <span class="macro">tracing::trace!</span>(%error, %value, <span class="string">&quot;fleet failed&quot;</span>);
+                <span class="macro">tracing::trace!</span>(%error, %value, <span class="string">"fleet failed"</span>);
                 Error::custom(error)
             })
             .map(
@@ -1430,12 +1432,12 @@
 <span class="kw">impl </span>serde::Serialize <span class="kw">for </span>Fleet {
     <span class="kw">fn </span>serialize&lt;S: serde::Serializer&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, ser: S) -&gt; <span class="prelude-ty">Result</span>&lt;S::Ok, S::Error&gt; {
         <span class="kw">use </span>serde::ser::SerializeStruct;
-        <span class="kw">let </span><span class="kw-2">mut </span>obj = ser.serialize_struct(<span class="string">&quot;Fleet&quot;</span>, <span class="number">5</span>)<span class="question-mark">?</span>;
-        obj.serialize_field(<span class="string">&quot;apiVersion&quot;</span>, <span class="kw-2">&amp;</span>Fleet::api_version(<span class="kw-2">&amp;</span>()))<span class="question-mark">?</span>;
-        obj.serialize_field(<span class="string">&quot;kind&quot;</span>, <span class="kw-2">&amp;</span>Fleet::kind(<span class="kw-2">&amp;</span>()))<span class="question-mark">?</span>;
-        obj.serialize_field(<span class="string">&quot;metadata&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.metadata)<span class="question-mark">?</span>;
-        obj.serialize_field(<span class="string">&quot;spec&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.spec)<span class="question-mark">?</span>;
-        obj.serialize_field(<span class="string">&quot;status&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.status)<span class="question-mark">?</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>obj = ser.serialize_struct(<span class="string">"Fleet"</span>, <span class="number">5</span>)<span class="question-mark">?</span>;
+        obj.serialize_field(<span class="string">"apiVersion"</span>, <span class="kw-2">&amp;</span>Fleet::api_version(<span class="kw-2">&amp;</span>()))<span class="question-mark">?</span>;
+        obj.serialize_field(<span class="string">"kind"</span>, <span class="kw-2">&amp;</span>Fleet::kind(<span class="kw-2">&amp;</span>()))<span class="question-mark">?</span>;
+        obj.serialize_field(<span class="string">"metadata"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.metadata)<span class="question-mark">?</span>;
+        obj.serialize_field(<span class="string">"spec"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.spec)<span class="question-mark">?</span>;
+        obj.serialize_field(<span class="string">"status"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.status)<span class="question-mark">?</span>;
         obj.end()
     }
 }
@@ -1443,20 +1445,20 @@
 <span class="kw">impl </span>::kube::core::Resource <span class="kw">for </span>Fleet {
     <span class="kw">type </span>DynamicType = ();
     <span class="kw">type </span>Scope = ::kube::core::NamespaceResourceScope;
-    <span class="kw">fn </span>group(<span class="kw">_</span>: <span class="kw-2">&amp;</span>()) -&gt; std::borrow::Cow&lt;<span class="lifetime">&#39;_</span>, str&gt; {
-        <span class="string">&quot;agones.dev&quot;</span>.into()
+    <span class="kw">fn </span>group(<span class="kw">_</span>: <span class="kw-2">&amp;</span>()) -&gt; std::borrow::Cow&lt;<span class="lifetime">'_</span>, str&gt; {
+        <span class="string">"agones.dev"</span>.into()
     }
-    <span class="kw">fn </span>kind(<span class="kw">_</span>: <span class="kw-2">&amp;</span>()) -&gt; std::borrow::Cow&lt;<span class="lifetime">&#39;_</span>, str&gt; {
-        <span class="string">&quot;Fleet&quot;</span>.into()
+    <span class="kw">fn </span>kind(<span class="kw">_</span>: <span class="kw-2">&amp;</span>()) -&gt; std::borrow::Cow&lt;<span class="lifetime">'_</span>, str&gt; {
+        <span class="string">"Fleet"</span>.into()
     }
-    <span class="kw">fn </span>version(<span class="kw">_</span>: <span class="kw-2">&amp;</span>()) -&gt; std::borrow::Cow&lt;<span class="lifetime">&#39;_</span>, str&gt; {
-        <span class="string">&quot;v1&quot;</span>.into()
+    <span class="kw">fn </span>version(<span class="kw">_</span>: <span class="kw-2">&amp;</span>()) -&gt; std::borrow::Cow&lt;<span class="lifetime">'_</span>, str&gt; {
+        <span class="string">"v1"</span>.into()
     }
-    <span class="kw">fn </span>api_version(<span class="kw">_</span>: <span class="kw-2">&amp;</span>()) -&gt; std::borrow::Cow&lt;<span class="lifetime">&#39;_</span>, str&gt; {
-        <span class="string">&quot;agones.dev/v1&quot;</span>.into()
+    <span class="kw">fn </span>api_version(<span class="kw">_</span>: <span class="kw-2">&amp;</span>()) -&gt; std::borrow::Cow&lt;<span class="lifetime">'_</span>, str&gt; {
+        <span class="string">"agones.dev/v1"</span>.into()
     }
-    <span class="kw">fn </span>plural(<span class="kw">_</span>: <span class="kw-2">&amp;</span>()) -&gt; std::borrow::Cow&lt;<span class="lifetime">&#39;_</span>, str&gt; {
-        <span class="string">&quot;fleets&quot;</span>.into()
+    <span class="kw">fn </span>plural(<span class="kw">_</span>: <span class="kw-2">&amp;</span>()) -&gt; std::borrow::Cow&lt;<span class="lifetime">'_</span>, str&gt; {
+        <span class="string">"fleets"</span>.into()
     }
     <span class="kw">fn </span>meta(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>::k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta {
         <span class="kw-2">&amp;</span><span class="self">self</span>.metadata
@@ -1470,33 +1472,33 @@
     <span class="kw">fn </span>crd() -&gt; ::k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition{
         <span class="kw">let </span>columns: Vec&lt;
             ::k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceColumnDefinition,
-        &gt; = ::serde_json::from_str(<span class="string">&quot;[  ]&quot;</span>).expect(<span class="string">&quot;valid printer column json&quot;</span>);
+        &gt; = ::serde_json::from_str(<span class="string">"[  ]"</span>).expect(<span class="string">"valid printer column json"</span>);
         <span class="kw">let </span>scale: <span class="prelude-ty">Option</span>&lt;
             ::k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceSubresourceScale,
-        &gt; = <span class="kw">if </span><span class="string">&quot;&quot;</span>.is_empty() {
+        &gt; = <span class="kw">if </span><span class="string">""</span>.is_empty() {
             <span class="prelude-val">None
         </span>} <span class="kw">else </span>{
-            ::serde_json::from_str(<span class="string">&quot;&quot;</span>).expect(<span class="string">&quot;valid scale subresource json&quot;</span>)
+            ::serde_json::from_str(<span class="string">""</span>).expect(<span class="string">"valid scale subresource json"</span>)
         };
-        <span class="kw">let </span>categories: Vec&lt;String&gt; = ::serde_json::from_str(<span class="string">&quot;[]&quot;</span>).expect(<span class="string">&quot;valid categories&quot;</span>);
-        <span class="kw">let </span>shorts: Vec&lt;String&gt; = ::serde_json::from_str(<span class="string">&quot;[]&quot;</span>).expect(<span class="string">&quot;valid shortnames&quot;</span>);
+        <span class="kw">let </span>categories: Vec&lt;String&gt; = ::serde_json::from_str(<span class="string">"[]"</span>).expect(<span class="string">"valid categories"</span>);
+        <span class="kw">let </span>shorts: Vec&lt;String&gt; = ::serde_json::from_str(<span class="string">"[]"</span>).expect(<span class="string">"valid shortnames"</span>);
         <span class="kw">let </span>subres = <span class="kw">if </span><span class="bool-val">true </span>{
             <span class="kw">if </span>scale.is_some() {
                 ::serde_json::Value::Object({
                     <span class="kw">let </span><span class="kw-2">mut </span>object = ::serde_json::Map::new();
                     <span class="kw">let _ </span>= object.insert(
-                        (<span class="string">&quot;status&quot;</span>).into(),
+                        (<span class="string">"status"</span>).into(),
                         ::serde_json::Value::Object(::serde_json::Map::new()),
                     );
                     <span class="kw">let _ </span>=
-                        object.insert((<span class="string">&quot;scale&quot;</span>).into(), ::serde_json::to_value(<span class="kw-2">&amp;</span>scale).unwrap());
+                        object.insert((<span class="string">"scale"</span>).into(), ::serde_json::to_value(<span class="kw-2">&amp;</span>scale).unwrap());
                     object
                 })
             } <span class="kw">else </span>{
                 ::serde_json::Value::Object({
                     <span class="kw">let </span><span class="kw-2">mut </span>object = ::serde_json::Map::new();
                     <span class="kw">let _ </span>= object.insert(
-                        (<span class="string">&quot;status&quot;</span>).into(),
+                        (<span class="string">"status"</span>).into(),
                         ::serde_json::Value::Object(::serde_json::Map::new()),
                     );
                     object
@@ -1516,81 +1518,81 @@
         <span class="kw">let </span>jsondata = ::serde_json::Value::Object({
             <span class="kw">let </span><span class="kw-2">mut </span>object = ::serde_json::Map::new();
             <span class="kw">let _ </span>= object.insert(
-                (<span class="string">&quot;metadata&quot;</span>).into(),
+                (<span class="string">"metadata"</span>).into(),
                 ::serde_json::Value::Object({
                     <span class="kw">let </span><span class="kw-2">mut </span>object = ::serde_json::Map::new();
                     <span class="kw">let _ </span>= object.insert(
-                        (<span class="string">&quot;name&quot;</span>).into(),
-                        ::serde_json::to_value(<span class="string">&quot;fleets.agones.dev&quot;</span>).unwrap(),
+                        (<span class="string">"name"</span>).into(),
+                        ::serde_json::to_value(<span class="string">"fleets.agones.dev"</span>).unwrap(),
                     );
                     object
                 }),
             );
             <span class="kw">let _ </span>= object.insert(
-                (<span class="string">&quot;spec&quot;</span>).into(),
+                (<span class="string">"spec"</span>).into(),
                 ::serde_json::Value::Object({
                     <span class="kw">let </span><span class="kw-2">mut </span>object = ::serde_json::Map::new();
                     <span class="kw">let _ </span>= object.insert(
-                        (<span class="string">&quot;group&quot;</span>).into(),
-                        ::serde_json::to_value(<span class="string">&quot;agones.dev&quot;</span>).unwrap(),
+                        (<span class="string">"group"</span>).into(),
+                        ::serde_json::to_value(<span class="string">"agones.dev"</span>).unwrap(),
                     );
                     <span class="kw">let _ </span>= object.insert(
-                        (<span class="string">&quot;scope&quot;</span>).into(),
-                        ::serde_json::to_value(<span class="string">&quot;Namespaced&quot;</span>).unwrap(),
+                        (<span class="string">"scope"</span>).into(),
+                        ::serde_json::to_value(<span class="string">"Namespaced"</span>).unwrap(),
                     );
                     <span class="kw">let _ </span>= object.insert(
-                        (<span class="string">&quot;names&quot;</span>).into(),
+                        (<span class="string">"names"</span>).into(),
                         ::serde_json::Value::Object({
                             <span class="kw">let </span><span class="kw-2">mut </span>object = ::serde_json::Map::new();
                             <span class="kw">let _ </span>= object.insert(
-                                (<span class="string">&quot;categories&quot;</span>).into(),
+                                (<span class="string">"categories"</span>).into(),
                                 ::serde_json::to_value(categories).unwrap(),
                             );
                             <span class="kw">let _ </span>= object.insert(
-                                (<span class="string">&quot;plural&quot;</span>).into(),
-                                ::serde_json::to_value(<span class="string">&quot;fleets&quot;</span>).unwrap(),
+                                (<span class="string">"plural"</span>).into(),
+                                ::serde_json::to_value(<span class="string">"fleets"</span>).unwrap(),
                             );
                             <span class="kw">let _ </span>= object.insert(
-                                (<span class="string">&quot;singular&quot;</span>).into(),
-                                ::serde_json::to_value(<span class="string">&quot;fleet&quot;</span>).unwrap(),
+                                (<span class="string">"singular"</span>).into(),
+                                ::serde_json::to_value(<span class="string">"fleet"</span>).unwrap(),
                             );
                             <span class="kw">let _ </span>= object
-                                .insert((<span class="string">&quot;kind&quot;</span>).into(), ::serde_json::to_value(<span class="string">&quot;Fleet&quot;</span>).unwrap());
+                                .insert((<span class="string">"kind"</span>).into(), ::serde_json::to_value(<span class="string">"Fleet"</span>).unwrap());
                             <span class="kw">let _ </span>= object.insert(
-                                (<span class="string">&quot;shortNames&quot;</span>).into(),
+                                (<span class="string">"shortNames"</span>).into(),
                                 ::serde_json::to_value(shorts).unwrap(),
                             );
                             object
                         }),
                     );
                     <span class="kw">let _ </span>= object.insert(
-                        (<span class="string">&quot;versions&quot;</span>).into(),
+                        (<span class="string">"versions"</span>).into(),
                         ::serde_json::Value::Array(&lt;[<span class="kw">_</span>]&gt;::into_vec(Box::new([
                             ::serde_json::Value::Object({
                                 <span class="kw">let </span><span class="kw-2">mut </span>object = ::serde_json::Map::new();
                                 <span class="kw">let _ </span>= object
-                                    .insert((<span class="string">&quot;name&quot;</span>).into(), ::serde_json::to_value(<span class="string">&quot;v1&quot;</span>).unwrap());
+                                    .insert((<span class="string">"name"</span>).into(), ::serde_json::to_value(<span class="string">"v1"</span>).unwrap());
                                 <span class="kw">let _ </span>= object
-                                    .insert((<span class="string">&quot;served&quot;</span>).into(), ::serde_json::Value::Bool(<span class="bool-val">true</span>));
+                                    .insert((<span class="string">"served"</span>).into(), ::serde_json::Value::Bool(<span class="bool-val">true</span>));
                                 <span class="kw">let _ </span>= object
-                                    .insert((<span class="string">&quot;storage&quot;</span>).into(), ::serde_json::Value::Bool(<span class="bool-val">true</span>));
+                                    .insert((<span class="string">"storage"</span>).into(), ::serde_json::Value::Bool(<span class="bool-val">true</span>));
                                 <span class="kw">let _ </span>= object.insert(
-                                    (<span class="string">&quot;schema&quot;</span>).into(),
+                                    (<span class="string">"schema"</span>).into(),
                                     ::serde_json::Value::Object({
                                         <span class="kw">let </span><span class="kw-2">mut </span>object = ::serde_json::Map::new();
                                         <span class="kw">let _ </span>= object.insert(
-                                            (<span class="string">&quot;openAPIV3Schema&quot;</span>).into(),
+                                            (<span class="string">"openAPIV3Schema"</span>).into(),
                                             ::serde_json::to_value(<span class="kw-2">&amp;</span>schema).unwrap(),
                                         );
                                         object
                                     }),
                                 );
                                 <span class="kw">let _ </span>= object.insert(
-                                    (<span class="string">&quot;additionalPrinterColumns&quot;</span>).into(),
+                                    (<span class="string">"additionalPrinterColumns"</span>).into(),
                                     ::serde_json::to_value(columns).unwrap(),
                                 );
                                 <span class="kw">let _ </span>= object.insert(
-                                    (<span class="string">&quot;subresources&quot;</span>).into(),
+                                    (<span class="string">"subresources"</span>).into(),
                                     ::serde_json::to_value(subres).unwrap(),
                                 );
                                 object
@@ -1602,15 +1604,15 @@
             );
             object
         });
-        ::serde_json::from_value(jsondata).expect(<span class="string">&quot;valid custom resource from #[kube(attrs..)]&quot;</span>)
+        ::serde_json::from_value(jsondata).expect(<span class="string">"valid custom resource from #[kube(attrs..)]"</span>)
     }
-    <span class="kw">fn </span>crd_name() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
-        <span class="string">&quot;fleets.agones.dev&quot;
+    <span class="kw">fn </span>crd_name() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
+        <span class="string">"fleets.agones.dev"
     </span>}
     <span class="kw">fn </span>api_resource() -&gt; ::kube::core::dynamic::ApiResource {
         ::kube::core::dynamic::ApiResource::erase::&lt;<span class="self">Self</span>&gt;(<span class="kw-2">&amp;</span>())
     }
-    <span class="kw">fn </span>shortnames() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str] {
+    <span class="kw">fn </span>shortnames() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str] {
         <span class="kw-2">&amp;</span>[]
     }
 }
@@ -1638,11 +1640,11 @@
 <span class="doccomment">/// FleetSpec is the spec for a Fleet. More info: &lt;https://agones.dev/site/docs/reference/agones_crd_api_reference/#agones.dev/v1.Fleet&gt;
 </span><span class="attr">#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema, Default)]
 </span><span class="kw">pub struct </span>FleetSpec {
-    <span class="attr">#[serde(default, skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
+    <span class="attr">#[serde(default, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
     </span><span class="kw">pub </span>replicas: <span class="prelude-ty">Option</span>&lt;i64&gt;,
-    <span class="attr">#[serde(default, skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
+    <span class="attr">#[serde(default, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
     </span><span class="kw">pub </span>scheduling: <span class="prelude-ty">Option</span>&lt;FleetScheduling&gt;,
-    <span class="attr">#[serde(default, skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
+    <span class="attr">#[serde(default, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
     </span><span class="kw">pub </span>strategy: <span class="prelude-ty">Option</span>&lt;FleetStrategy&gt;,
     <span class="doccomment">/// GameServer is the data structure for a GameServer resource.
     </span><span class="kw">pub </span>template: GameServerTemplateSpec,
@@ -1659,22 +1661,22 @@
 </span><span class="kw">pub struct </span>FleetStrategy {
     <span class="attr">#[serde(
         default,
-        skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>,
-        rename = <span class="string">&quot;rollingUpdate&quot;
+        skip_serializing_if = <span class="string">"Option::is_none"</span>,
+        rename = <span class="string">"rollingUpdate"
     </span>)]
     </span><span class="kw">pub </span>rolling_update: <span class="prelude-ty">Option</span>&lt;FleetStrategyRollingUpdate&gt;,
-    <span class="attr">#[serde(default, skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
+    <span class="attr">#[serde(default, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
     </span><span class="kw">pub </span>r#type: <span class="prelude-ty">Option</span>&lt;FleetStrategyType&gt;,
 }
 
 <span class="attr">#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
 </span><span class="kw">pub struct </span>FleetStrategyRollingUpdate {
-    <span class="attr">#[serde(default, skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>, rename = <span class="string">&quot;maxSurge&quot;</span>)]
+    <span class="attr">#[serde(default, skip_serializing_if = <span class="string">"Option::is_none"</span>, rename = <span class="string">"maxSurge"</span>)]
     </span><span class="kw">pub </span>max_surge: <span class="prelude-ty">Option</span>&lt;IntOrString&gt;,
     <span class="attr">#[serde(
         default,
-        skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>,
-        rename = <span class="string">&quot;maxUnavailable&quot;
+        skip_serializing_if = <span class="string">"Option::is_none"</span>,
+        rename = <span class="string">"maxUnavailable"
     </span>)]
     </span><span class="kw">pub </span>max_unavailable: <span class="prelude-ty">Option</span>&lt;IntOrString&gt;,
 }
@@ -1688,7 +1690,7 @@
 <span class="doccomment">/// GameServer is the data structure for a GameServer resource.
 </span><span class="attr">#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema, Default)]
 </span><span class="kw">pub struct </span>GameServerTemplateSpec {
-    <span class="attr">#[serde(default, skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
+    <span class="attr">#[serde(default, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
     </span><span class="kw">pub </span>metadata: <span class="prelude-ty">Option</span>&lt;ObjectMeta&gt;,
     <span class="doccomment">/// GameServerSpec is the spec for a GameServer resource. More info: &lt;https://agones.dev/site/docs/reference/agones_crd_api_reference/#agones.dev/v1.GameServer&gt;
     </span><span class="kw">pub </span>spec: GameServerSpec,
@@ -1699,22 +1701,22 @@
 </span><span class="kw">pub struct </span>FleetStatus {
     <span class="attr">#[serde(
         default,
-        skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>,
-        rename = <span class="string">&quot;allocatedReplicas&quot;
+        skip_serializing_if = <span class="string">"Option::is_none"</span>,
+        rename = <span class="string">"allocatedReplicas"
     </span>)]
     </span><span class="kw">pub </span>allocated_replicas: <span class="prelude-ty">Option</span>&lt;i64&gt;,
     <span class="attr">#[serde(
         default,
-        skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>,
-        rename = <span class="string">&quot;readyReplicas&quot;
+        skip_serializing_if = <span class="string">"Option::is_none"</span>,
+        rename = <span class="string">"readyReplicas"
     </span>)]
     </span><span class="kw">pub </span>ready_replicas: <span class="prelude-ty">Option</span>&lt;i64&gt;,
-    <span class="attr">#[serde(default, skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>)]
+    <span class="attr">#[serde(default, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
     </span><span class="kw">pub </span>replicas: <span class="prelude-ty">Option</span>&lt;i64&gt;,
     <span class="attr">#[serde(
         default,
-        skip_serializing_if = <span class="string">&quot;Option::is_none&quot;</span>,
-        rename = <span class="string">&quot;reservedReplicas&quot;
+        skip_serializing_if = <span class="string">"Option::is_none"</span>,
+        rename = <span class="string">"reservedReplicas"
     </span>)]
     </span><span class="kw">pub </span>reserved_replicas: <span class="prelude-ty">Option</span>&lt;i64&gt;,
 }

@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/filters/compress.rs`."><title>compress.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="quilkin" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0 (79e9716c9 2023-11-13)" data-channel="1.74.0" data-search-js="search-8be46b629f5f14a8.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/filters/compress.rs`."><title>compress.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="quilkin" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0 (aedd173a2 2024-03-17)" data-channel="1.77.0" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../quilkin/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -409,14 +411,14 @@
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
- * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
@@ -464,7 +466,7 @@
 
 <span class="attr">#[async_trait::async_trait]
 </span><span class="kw">impl </span>Filter <span class="kw">for </span>Compress {
-    <span class="attr">#[cfg_attr(feature = <span class="string">&quot;instrument&quot;</span>, tracing::instrument(skip(<span class="self">self</span>, ctx)))]
+    <span class="attr">#[cfg_attr(feature = <span class="string">"instrument"</span>, tracing::instrument(skip(<span class="self">self</span>, ctx)))]
     </span><span class="kw">async fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="kw">let </span>original_size = ctx.contents.len();
 
@@ -501,7 +503,7 @@
         }
     }
 
-    <span class="attr">#[cfg_attr(feature = <span class="string">&quot;instrument&quot;</span>, tracing::instrument(skip(<span class="self">self</span>, ctx)))]
+    <span class="attr">#[cfg_attr(feature = <span class="string">"instrument"</span>, tracing::instrument(skip(<span class="self">self</span>, ctx)))]
     </span><span class="kw">async fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="kw">let </span>original_size = ctx.contents.len();
         <span class="kw">match </span><span class="self">self</span>.on_write {
@@ -540,7 +542,7 @@
 }
 
 <span class="kw">impl </span>StaticFilter <span class="kw">for </span>Compress {
-    <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = <span class="string">&quot;quilkin.filters.compress.v1alpha1.Compress&quot;</span>;
+    <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str = <span class="string">"quilkin.filters.compress.v1alpha1.Compress"</span>;
     <span class="kw">type </span>Configuration = Config;
     <span class="kw">type </span>BinaryConfiguration = proto::Compress;
 
@@ -565,8 +567,8 @@
     <span class="attr">#[tokio::test]
     </span><span class="kw">async fn </span>default_mode_factory() {
         <span class="kw">let </span>config = <span class="macro">serde_json::json!</span>({
-            <span class="string">&quot;on_read&quot;</span>: <span class="string">&quot;DECOMPRESS&quot;</span>.to_string(),
-            <span class="string">&quot;on_write&quot;</span>: <span class="string">&quot;COMPRESS&quot;</span>.to_string(),
+            <span class="string">"on_read"</span>: <span class="string">"DECOMPRESS"</span>.to_string(),
+            <span class="string">"on_write"</span>: <span class="string">"COMPRESS"</span>.to_string(),
 
         });
         <span class="kw">let </span>filter = Compress::from_config(<span class="prelude-val">Some</span>(serde_json::from_value(config).unwrap()));
@@ -576,9 +578,9 @@
     <span class="attr">#[tokio::test]
     </span><span class="kw">async fn </span>config_factory_snappy() {
         <span class="kw">let </span>config = <span class="macro">serde_json::json!</span>({
-            <span class="string">&quot;mode&quot;</span>: <span class="string">&quot;SNAPPY&quot;</span>.to_string(),
-            <span class="string">&quot;on_read&quot;</span>: <span class="string">&quot;DECOMPRESS&quot;</span>.to_string(),
-            <span class="string">&quot;on_write&quot;</span>: <span class="string">&quot;COMPRESS&quot;</span>.to_string(),
+            <span class="string">"mode"</span>: <span class="string">"SNAPPY"</span>.to_string(),
+            <span class="string">"on_read"</span>: <span class="string">"DECOMPRESS"</span>.to_string(),
+            <span class="string">"on_write"</span>: <span class="string">"COMPRESS"</span>.to_string(),
 
         });
         <span class="kw">let </span>filter = Compress::from_config(<span class="prelude-val">Some</span>(serde_json::from_value(config).unwrap()));
@@ -588,9 +590,9 @@
     <span class="attr">#[tokio::test]
     </span><span class="kw">async fn </span>config_factory_lz4() {
         <span class="kw">let </span>config = <span class="macro">serde_json::json!</span>({
-            <span class="string">&quot;mode&quot;</span>: <span class="string">&quot;LZ4&quot;</span>.to_string(),
-            <span class="string">&quot;on_read&quot;</span>: <span class="string">&quot;DECOMPRESS&quot;</span>.to_string(),
-            <span class="string">&quot;on_write&quot;</span>: <span class="string">&quot;COMPRESS&quot;</span>.to_string(),
+            <span class="string">"mode"</span>: <span class="string">"LZ4"</span>.to_string(),
+            <span class="string">"on_read"</span>: <span class="string">"DECOMPRESS"</span>.to_string(),
+            <span class="string">"on_write"</span>: <span class="string">"COMPRESS"</span>.to_string(),
 
         });
         <span class="kw">let </span>filter = Compress::from_config(<span class="prelude-val">Some</span>(serde_json::from_value(config).unwrap()));
@@ -611,37 +613,37 @@
 
         <span class="comment">// read compress
         </span><span class="kw">let </span>endpoints = <span class="kw">crate</span>::net::cluster::ClusterMap::new_default(
-            [Endpoint::new(<span class="string">&quot;127.0.0.1:81&quot;</span>.parse().unwrap())].into(),
+            [Endpoint::new(<span class="string">"127.0.0.1:81"</span>.parse().unwrap())].into(),
         );
         <span class="kw">let </span><span class="kw-2">mut </span>read_context = ReadContext::new(
             endpoints.into(),
-            <span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(),
+            <span class="string">"127.0.0.1:8080"</span>.parse().unwrap(),
             alloc_buffer(<span class="kw-2">&amp;</span>expected),
         );
         compress
             .read(<span class="kw-2">&amp;mut </span>read_context)
             .<span class="kw">await
-            </span>.expect(<span class="string">&quot;should compress&quot;</span>);
+            </span>.expect(<span class="string">"should compress"</span>);
 
         <span class="macro">assert_ne!</span>(expected, <span class="kw-2">&amp;*</span>read_context.contents);
         <span class="macro">assert!</span>(
             expected.len() &gt; read_context.contents.len(),
-            <span class="string">&quot;Original: {}. Compressed: {}&quot;</span>,
+            <span class="string">"Original: {}. Compressed: {}"</span>,
             expected.len(),
             read_context.contents.len()
         );
 
         <span class="comment">// write decompress
         </span><span class="kw">let </span><span class="kw-2">mut </span>write_context = WriteContext::new(
-            <span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(),
-            <span class="string">&quot;127.0.0.1:8081&quot;</span>.parse().unwrap(),
+            <span class="string">"127.0.0.1:8080"</span>.parse().unwrap(),
+            <span class="string">"127.0.0.1:8081"</span>.parse().unwrap(),
             read_context.contents,
         );
 
         compress
             .write(<span class="kw-2">&amp;mut </span>write_context)
             .<span class="kw">await
-            </span>.expect(<span class="string">&quot;should decompress&quot;</span>);
+            </span>.expect(<span class="string">"should decompress"</span>);
 
         <span class="macro">assert_eq!</span>(expected, <span class="kw-2">&amp;*</span>write_context.contents);
     }
@@ -659,9 +661,9 @@
 
         <span class="macro">assert!</span>(compression
             .write(<span class="kw-2">&amp;mut </span>WriteContext::new(
-                <span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(),
-                <span class="string">&quot;127.0.0.1:8081&quot;</span>.parse().unwrap(),
-                alloc_buffer(<span class="string">b&quot;hello&quot;</span>),
+                <span class="string">"127.0.0.1:8080"</span>.parse().unwrap(),
+                <span class="string">"127.0.0.1:8081"</span>.parse().unwrap(),
+                alloc_buffer(<span class="string">b"hello"</span>),
             ))
             .<span class="kw">await
             </span>.is_err());
@@ -676,13 +678,13 @@
         );
 
         <span class="kw">let </span>endpoints = <span class="kw">crate</span>::net::cluster::ClusterMap::new_default(
-            [Endpoint::new(<span class="string">&quot;127.0.0.1:81&quot;</span>.parse().unwrap())].into(),
+            [Endpoint::new(<span class="string">"127.0.0.1:81"</span>.parse().unwrap())].into(),
         );
         <span class="macro">assert!</span>(compression
             .read(<span class="kw-2">&amp;mut </span>ReadContext::new(
                 endpoints.into(),
-                <span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(),
-                alloc_buffer(<span class="string">b&quot;hello&quot;</span>),
+                <span class="string">"127.0.0.1:8080"</span>.parse().unwrap(),
+                alloc_buffer(<span class="string">b"hello"</span>),
             ))
             .<span class="kw">await
             </span>.is_err());
@@ -700,25 +702,25 @@
         );
 
         <span class="kw">let </span>endpoints = <span class="kw">crate</span>::net::cluster::ClusterMap::new_default(
-            [Endpoint::new(<span class="string">&quot;127.0.0.1:81&quot;</span>.parse().unwrap())].into(),
+            [Endpoint::new(<span class="string">"127.0.0.1:81"</span>.parse().unwrap())].into(),
         );
         <span class="kw">let </span><span class="kw-2">mut </span>read_context = ReadContext::new(
             endpoints.into(),
-            <span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(),
-            alloc_buffer(<span class="string">b&quot;hello&quot;</span>),
+            <span class="string">"127.0.0.1:8080"</span>.parse().unwrap(),
+            alloc_buffer(<span class="string">b"hello"</span>),
         );
         compression.read(<span class="kw-2">&amp;mut </span>read_context).<span class="kw">await</span>.unwrap();
-        <span class="macro">assert_eq!</span>(<span class="string">b&quot;hello&quot;</span>, <span class="kw-2">&amp;*</span>read_context.contents);
+        <span class="macro">assert_eq!</span>(<span class="string">b"hello"</span>, <span class="kw-2">&amp;*</span>read_context.contents);
 
         <span class="kw">let </span><span class="kw-2">mut </span>write_context = WriteContext::new(
-            <span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(),
-            <span class="string">&quot;127.0.0.1:8081&quot;</span>.parse().unwrap(),
-            alloc_buffer(<span class="string">b&quot;hello&quot;</span>),
+            <span class="string">"127.0.0.1:8080"</span>.parse().unwrap(),
+            <span class="string">"127.0.0.1:8081"</span>.parse().unwrap(),
+            alloc_buffer(<span class="string">b"hello"</span>),
         );
 
         compression.write(<span class="kw-2">&amp;mut </span>write_context).<span class="kw">await</span>.unwrap();
 
-        <span class="macro">assert_eq!</span>(<span class="string">b&quot;hello&quot;</span>.to_vec(), <span class="kw-2">&amp;*</span>write_context.contents)
+        <span class="macro">assert_eq!</span>(<span class="string">b"hello"</span>.to_vec(), <span class="kw-2">&amp;*</span>write_context.contents)
     }
 
     <span class="kw">fn </span>roundtrip_compression(compressor: Compressor) {
@@ -727,28 +729,28 @@
 
         compressor
             .encode(BUFFER_POOL.clone(), <span class="kw-2">&amp;mut </span>contents)
-            .expect(<span class="string">&quot;failed to compress&quot;</span>);
+            .expect(<span class="string">"failed to compress"</span>);
         <span class="macro">assert!</span>(
             !contents.is_empty(),
-            <span class="string">&quot;compressed array should be greater than 0&quot;
+            <span class="string">"compressed array should be greater than 0"
         </span>);
         <span class="macro">assert_ne!</span>(
             expected, <span class="kw-2">&amp;*</span>contents,
-            <span class="string">&quot;should not be equal, as one should be compressed&quot;
+            <span class="string">"should not be equal, as one should be compressed"
         </span>);
         <span class="macro">assert!</span>(
             expected.len() &gt; contents.len(),
-            <span class="string">&quot;Original: {}. Compressed: {}&quot;</span>,
+            <span class="string">"Original: {}. Compressed: {}"</span>,
             expected.len(),
             contents.len()
         ); <span class="comment">// 45000 bytes uncompressed, 276 bytes compressed
 
         </span>compressor
             .decode(BUFFER_POOL.clone(), <span class="kw-2">&amp;mut </span>contents)
-            .expect(<span class="string">&quot;failed to decompress&quot;</span>);
+            .expect(<span class="string">"failed to decompress"</span>);
         <span class="macro">assert_eq!</span>(
             expected, <span class="kw-2">&amp;*</span>contents,
-            <span class="string">&quot;should be equal, as decompressed state should go back to normal&quot;
+            <span class="string">"should be equal, as decompressed state should go back to normal"
         </span>);
     }
 
@@ -762,9 +764,9 @@
         roundtrip_compression(Mode::Lz4.into());
     }
 
-    <span class="doccomment">/// At small data packets, compression will add data, so let&#39;s give a bigger data packet!
+    <span class="doccomment">/// At small data packets, compression will add data, so let's give a bigger data packet!
     </span><span class="kw">fn </span>contents_fixture() -&gt; Vec&lt;u8&gt; {
-        <span class="string">&quot;hello my name is mark and I like to do things&quot;
+        <span class="string">"hello my name is mark and I like to do things"
             </span>.repeat(<span class="number">100</span>)
             .into_bytes()
     }
@@ -778,38 +780,38 @@
         <span class="kw">let </span>expected = contents_fixture();
         <span class="comment">// write compress
         </span><span class="kw">let </span><span class="kw-2">mut </span>write_context = WriteContext::new(
-            <span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(),
-            <span class="string">&quot;127.0.0.1:8081&quot;</span>.parse().unwrap(),
+            <span class="string">"127.0.0.1:8080"</span>.parse().unwrap(),
+            <span class="string">"127.0.0.1:8081"</span>.parse().unwrap(),
             alloc_buffer(<span class="kw-2">&amp;</span>expected),
         );
 
         filter
             .write(<span class="kw-2">&amp;mut </span>write_context)
             .<span class="kw">await
-            </span>.expect(<span class="string">&quot;should compress&quot;</span>);
+            </span>.expect(<span class="string">"should compress"</span>);
 
         <span class="macro">assert_ne!</span>(expected, <span class="kw-2">&amp;*</span>write_context.contents);
         <span class="macro">assert!</span>(
             expected.len() &gt; write_context.contents.len(),
-            <span class="string">&quot;Original: {}. Compressed: {}&quot;</span>,
+            <span class="string">"Original: {}. Compressed: {}"</span>,
             expected.len(),
             write_context.contents.len()
         );
 
         <span class="comment">// read decompress
         </span><span class="kw">let </span>endpoints = <span class="kw">crate</span>::net::cluster::ClusterMap::new_default(
-            [Endpoint::new(<span class="string">&quot;127.0.0.1:81&quot;</span>.parse().unwrap())].into(),
+            [Endpoint::new(<span class="string">"127.0.0.1:81"</span>.parse().unwrap())].into(),
         );
         <span class="kw">let </span><span class="kw-2">mut </span>read_context = ReadContext::new(
             endpoints.into(),
-            <span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(),
+            <span class="string">"127.0.0.1:8080"</span>.parse().unwrap(),
             write_context.contents,
         );
 
         filter
             .read(<span class="kw-2">&amp;mut </span>read_context)
             .<span class="kw">await
-            </span>.expect(<span class="string">&quot;should decompress&quot;</span>);
+            </span>.expect(<span class="string">"should decompress"</span>);
 
         <span class="macro">assert_eq!</span>(expected, <span class="kw-2">&amp;*</span>read_context.contents);
     }

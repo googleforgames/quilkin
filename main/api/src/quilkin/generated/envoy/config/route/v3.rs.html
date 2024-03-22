@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/generated/envoy/config/route/v3.rs`."><title>v3.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="quilkin" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0 (79e9716c9 2023-11-13)" data-channel="1.74.0" data-search-js="search-8be46b629f5f14a8.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../../../src-files.js"></script><script defer src="../../../../../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../../../quilkin/index.html"><img class="rust-logo" src="../../../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/generated/envoy/config/route/v3.rs`."><title>v3.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="quilkin" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0 (aedd173a2 2024-03-17)" data-channel="1.77.0" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../../../src-files.js"></script><script defer src="../../../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../../../quilkin/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -999,46 +1001,46 @@
 </pre></div><pre class="rust"><code><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>VirtualHost {
-    <span class="attr">#[prost(string, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(string, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>name: ::prost::alloc::string::String,
-    <span class="attr">#[prost(string, repeated, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(string, repeated, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>domains: ::prost::alloc::vec::Vec&lt;::prost::alloc::string::String&gt;,
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(message, repeated, tag = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>routes: ::prost::alloc::vec::Vec&lt;Route&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;21&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"21"</span>)]
     </span><span class="kw">pub </span>matcher:
         ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::xds::kind::matcher::v3::Matcher&gt;,
-    <span class="attr">#[prost(enumeration = <span class="string">&quot;virtual_host::TlsRequirementType&quot;</span>, tag = <span class="string">&quot;4&quot;</span>)]
+    <span class="attr">#[prost(enumeration = <span class="string">"virtual_host::TlsRequirementType"</span>, tag = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>require_tls: i32,
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;5&quot;</span>)]
+    <span class="attr">#[prost(message, repeated, tag = <span class="string">"5"</span>)]
     </span><span class="kw">pub </span>virtual_clusters: ::prost::alloc::vec::Vec&lt;VirtualCluster&gt;,
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;6&quot;</span>)]
+    <span class="attr">#[prost(message, repeated, tag = <span class="string">"6"</span>)]
     </span><span class="kw">pub </span>rate_limits: ::prost::alloc::vec::Vec&lt;RateLimit&gt;,
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;7&quot;</span>)]
+    <span class="attr">#[prost(message, repeated, tag = <span class="string">"7"</span>)]
     </span><span class="kw">pub </span>request_headers_to_add: ::prost::alloc::vec::Vec&lt;<span class="kw">super</span>::<span class="kw">super</span>::core::v3::HeaderValueOption&gt;,
-    <span class="attr">#[prost(string, repeated, tag = <span class="string">&quot;13&quot;</span>)]
+    <span class="attr">#[prost(string, repeated, tag = <span class="string">"13"</span>)]
     </span><span class="kw">pub </span>request_headers_to_remove: ::prost::alloc::vec::Vec&lt;::prost::alloc::string::String&gt;,
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;10&quot;</span>)]
+    <span class="attr">#[prost(message, repeated, tag = <span class="string">"10"</span>)]
     </span><span class="kw">pub </span>response_headers_to_add:
         ::prost::alloc::vec::Vec&lt;<span class="kw">super</span>::<span class="kw">super</span>::core::v3::HeaderValueOption&gt;,
-    <span class="attr">#[prost(string, repeated, tag = <span class="string">&quot;11&quot;</span>)]
+    <span class="attr">#[prost(string, repeated, tag = <span class="string">"11"</span>)]
     </span><span class="kw">pub </span>response_headers_to_remove: ::prost::alloc::vec::Vec&lt;::prost::alloc::string::String&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;8&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"8"</span>)]
     </span><span class="kw">pub </span>cors: ::core::option::Option&lt;CorsPolicy&gt;,
-    <span class="attr">#[prost(map = <span class="string">&quot;string, message&quot;</span>, tag = <span class="string">&quot;15&quot;</span>)]
+    <span class="attr">#[prost(map = <span class="string">"string, message"</span>, tag = <span class="string">"15"</span>)]
     </span><span class="kw">pub </span>typed_per_filter_config:
         ::std::collections::HashMap&lt;::prost::alloc::string::String, ::prost_types::Any&gt;,
-    <span class="attr">#[prost(bool, tag = <span class="string">&quot;14&quot;</span>)]
+    <span class="attr">#[prost(bool, tag = <span class="string">"14"</span>)]
     </span><span class="kw">pub </span>include_request_attempt_count: bool,
-    <span class="attr">#[prost(bool, tag = <span class="string">&quot;19&quot;</span>)]
+    <span class="attr">#[prost(bool, tag = <span class="string">"19"</span>)]
     </span><span class="kw">pub </span>include_attempt_count_in_response: bool,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;16&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"16"</span>)]
     </span><span class="kw">pub </span>retry_policy: ::core::option::Option&lt;RetryPolicy&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;20&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"20"</span>)]
     </span><span class="kw">pub </span>retry_policy_typed_config: ::core::option::Option&lt;::prost_types::Any&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;17&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"17"</span>)]
     </span><span class="kw">pub </span>hedge_policy: ::core::option::Option&lt;HedgePolicy&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;18&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"18"</span>)]
     </span><span class="kw">pub </span>per_request_buffer_limit_bytes: ::core::option::Option&lt;u32&gt;,
 }
 <span class="doccomment">/// Nested message and enum types in `VirtualHost`.
@@ -1055,19 +1057,19 @@
         ///
         /// The values are not transformed in any way and thus are considered stable
         /// (if the ProtoBuf definition does not change) and safe for programmatic use.
-        </span><span class="kw">pub fn </span>as_str_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+        </span><span class="kw">pub fn </span>as_str_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
             <span class="kw">match </span><span class="self">self </span>{
-                TlsRequirementType::None =&gt; <span class="string">&quot;NONE&quot;</span>,
-                TlsRequirementType::ExternalOnly =&gt; <span class="string">&quot;EXTERNAL_ONLY&quot;</span>,
-                TlsRequirementType::All =&gt; <span class="string">&quot;ALL&quot;</span>,
+                TlsRequirementType::None =&gt; <span class="string">"NONE"</span>,
+                TlsRequirementType::ExternalOnly =&gt; <span class="string">"EXTERNAL_ONLY"</span>,
+                TlsRequirementType::All =&gt; <span class="string">"ALL"</span>,
             }
         }
         <span class="doccomment">/// Creates an enum from field names used in the ProtoBuf definition.
         </span><span class="kw">pub fn </span>from_str_name(value: <span class="kw-2">&amp;</span>str) -&gt; ::core::option::Option&lt;<span class="self">Self</span>&gt; {
             <span class="kw">match </span>value {
-                <span class="string">&quot;NONE&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::None),
-                <span class="string">&quot;EXTERNAL_ONLY&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::ExternalOnly),
-                <span class="string">&quot;ALL&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::All),
+                <span class="string">"NONE" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::None),
+                <span class="string">"EXTERNAL_ONLY" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::ExternalOnly),
+                <span class="string">"ALL" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::All),
                 <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
             }
         }
@@ -1076,37 +1078,37 @@
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>FilterAction {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>action: ::core::option::Option&lt;::prost_types::Any&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>Route {
-    <span class="attr">#[prost(string, tag = <span class="string">&quot;14&quot;</span>)]
+    <span class="attr">#[prost(string, tag = <span class="string">"14"</span>)]
     </span><span class="kw">pub </span>name: ::prost::alloc::string::String,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>r#match: ::core::option::Option&lt;RouteMatch&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;4&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>metadata: ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::core::v3::Metadata&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;5&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"5"</span>)]
     </span><span class="kw">pub </span>decorator: ::core::option::Option&lt;Decorator&gt;,
-    <span class="attr">#[prost(map = <span class="string">&quot;string, message&quot;</span>, tag = <span class="string">&quot;13&quot;</span>)]
+    <span class="attr">#[prost(map = <span class="string">"string, message"</span>, tag = <span class="string">"13"</span>)]
     </span><span class="kw">pub </span>typed_per_filter_config:
         ::std::collections::HashMap&lt;::prost::alloc::string::String, ::prost_types::Any&gt;,
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;9&quot;</span>)]
+    <span class="attr">#[prost(message, repeated, tag = <span class="string">"9"</span>)]
     </span><span class="kw">pub </span>request_headers_to_add: ::prost::alloc::vec::Vec&lt;<span class="kw">super</span>::<span class="kw">super</span>::core::v3::HeaderValueOption&gt;,
-    <span class="attr">#[prost(string, repeated, tag = <span class="string">&quot;12&quot;</span>)]
+    <span class="attr">#[prost(string, repeated, tag = <span class="string">"12"</span>)]
     </span><span class="kw">pub </span>request_headers_to_remove: ::prost::alloc::vec::Vec&lt;::prost::alloc::string::String&gt;,
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;10&quot;</span>)]
+    <span class="attr">#[prost(message, repeated, tag = <span class="string">"10"</span>)]
     </span><span class="kw">pub </span>response_headers_to_add:
         ::prost::alloc::vec::Vec&lt;<span class="kw">super</span>::<span class="kw">super</span>::core::v3::HeaderValueOption&gt;,
-    <span class="attr">#[prost(string, repeated, tag = <span class="string">&quot;11&quot;</span>)]
+    <span class="attr">#[prost(string, repeated, tag = <span class="string">"11"</span>)]
     </span><span class="kw">pub </span>response_headers_to_remove: ::prost::alloc::vec::Vec&lt;::prost::alloc::string::String&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;15&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"15"</span>)]
     </span><span class="kw">pub </span>tracing: ::core::option::Option&lt;Tracing&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;16&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"16"</span>)]
     </span><span class="kw">pub </span>per_request_buffer_limit_bytes: ::core::option::Option&lt;u32&gt;,
-    <span class="attr">#[prost(oneof = <span class="string">&quot;route::Action&quot;</span>, tags = <span class="string">&quot;2, 3, 7, 17, 18&quot;</span>)]
+    <span class="attr">#[prost(oneof = <span class="string">"route::Action"</span>, tags = <span class="string">"2, 3, 7, 17, 18"</span>)]
     </span><span class="kw">pub </span>action: ::core::option::Option&lt;route::Action&gt;,
 }
 <span class="doccomment">/// Nested message and enum types in `Route`.
@@ -1114,28 +1116,28 @@
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     </span><span class="kw">pub enum </span>Action {
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;2&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"2"</span>)]
         </span>Route(<span class="kw">super</span>::RouteAction),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;3&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"3"</span>)]
         </span>Redirect(<span class="kw">super</span>::RedirectAction),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;7&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"7"</span>)]
         </span>DirectResponse(<span class="kw">super</span>::DirectResponseAction),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;17&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"17"</span>)]
         </span>FilterAction(<span class="kw">super</span>::FilterAction),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;18&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"18"</span>)]
         </span>NonForwardingAction(<span class="kw">super</span>::NonForwardingAction),
     }
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>WeightedCluster {
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(message, repeated, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>clusters: ::prost::alloc::vec::Vec&lt;weighted_cluster::ClusterWeight&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>total_weight: ::core::option::Option&lt;u32&gt;,
-    <span class="attr">#[prost(string, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(string, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>runtime_key_prefix: ::prost::alloc::string::String,
-    <span class="attr">#[prost(oneof = <span class="string">&quot;weighted_cluster::RandomValueSpecifier&quot;</span>, tags = <span class="string">&quot;4&quot;</span>)]
+    <span class="attr">#[prost(oneof = <span class="string">"weighted_cluster::RandomValueSpecifier"</span>, tags = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>random_value_specifier: ::core::option::Option&lt;weighted_cluster::RandomValueSpecifier&gt;,
 }
 <span class="doccomment">/// Nested message and enum types in `WeightedCluster`.
@@ -1143,28 +1145,28 @@
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Message)]
     </span><span class="kw">pub struct </span>ClusterWeight {
-        <span class="attr">#[prost(string, tag = <span class="string">&quot;1&quot;</span>)]
+        <span class="attr">#[prost(string, tag = <span class="string">"1"</span>)]
         </span><span class="kw">pub </span>name: ::prost::alloc::string::String,
-        <span class="attr">#[prost(string, tag = <span class="string">&quot;12&quot;</span>)]
+        <span class="attr">#[prost(string, tag = <span class="string">"12"</span>)]
         </span><span class="kw">pub </span>cluster_header: ::prost::alloc::string::String,
-        <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+        <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
         </span><span class="kw">pub </span>weight: ::core::option::Option&lt;u32&gt;,
-        <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;3&quot;</span>)]
+        <span class="attr">#[prost(message, optional, tag = <span class="string">"3"</span>)]
         </span><span class="kw">pub </span>metadata_match: ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::core::v3::Metadata&gt;,
-        <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;4&quot;</span>)]
+        <span class="attr">#[prost(message, repeated, tag = <span class="string">"4"</span>)]
         </span><span class="kw">pub </span>request_headers_to_add:
             ::prost::alloc::vec::Vec&lt;<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::core::v3::HeaderValueOption&gt;,
-        <span class="attr">#[prost(string, repeated, tag = <span class="string">&quot;9&quot;</span>)]
+        <span class="attr">#[prost(string, repeated, tag = <span class="string">"9"</span>)]
         </span><span class="kw">pub </span>request_headers_to_remove: ::prost::alloc::vec::Vec&lt;::prost::alloc::string::String&gt;,
-        <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;5&quot;</span>)]
+        <span class="attr">#[prost(message, repeated, tag = <span class="string">"5"</span>)]
         </span><span class="kw">pub </span>response_headers_to_add:
             ::prost::alloc::vec::Vec&lt;<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::core::v3::HeaderValueOption&gt;,
-        <span class="attr">#[prost(string, repeated, tag = <span class="string">&quot;6&quot;</span>)]
+        <span class="attr">#[prost(string, repeated, tag = <span class="string">"6"</span>)]
         </span><span class="kw">pub </span>response_headers_to_remove: ::prost::alloc::vec::Vec&lt;::prost::alloc::string::String&gt;,
-        <span class="attr">#[prost(map = <span class="string">&quot;string, message&quot;</span>, tag = <span class="string">&quot;10&quot;</span>)]
+        <span class="attr">#[prost(map = <span class="string">"string, message"</span>, tag = <span class="string">"10"</span>)]
         </span><span class="kw">pub </span>typed_per_filter_config:
             ::std::collections::HashMap&lt;::prost::alloc::string::String, ::prost_types::Any&gt;,
-        <span class="attr">#[prost(oneof = <span class="string">&quot;cluster_weight::HostRewriteSpecifier&quot;</span>, tags = <span class="string">&quot;11&quot;</span>)]
+        <span class="attr">#[prost(oneof = <span class="string">"cluster_weight::HostRewriteSpecifier"</span>, tags = <span class="string">"11"</span>)]
         </span><span class="kw">pub </span>host_rewrite_specifier: ::core::option::Option&lt;cluster_weight::HostRewriteSpecifier&gt;,
     }
     <span class="doccomment">/// Nested message and enum types in `ClusterWeight`.
@@ -1172,36 +1174,36 @@
         <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
         #[derive(Clone, PartialEq, ::prost::Oneof)]
         </span><span class="kw">pub enum </span>HostRewriteSpecifier {
-            <span class="attr">#[prost(string, tag = <span class="string">&quot;11&quot;</span>)]
+            <span class="attr">#[prost(string, tag = <span class="string">"11"</span>)]
             </span>HostRewriteLiteral(::prost::alloc::string::String),
         }
     }
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     </span><span class="kw">pub enum </span>RandomValueSpecifier {
-        <span class="attr">#[prost(string, tag = <span class="string">&quot;4&quot;</span>)]
+        <span class="attr">#[prost(string, tag = <span class="string">"4"</span>)]
         </span>HeaderName(::prost::alloc::string::String),
     }
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>RouteMatch {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;4&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>case_sensitive: ::core::option::Option&lt;bool&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;9&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"9"</span>)]
     </span><span class="kw">pub </span>runtime_fraction: ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::core::v3::RuntimeFractionalPercent&gt;,
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;6&quot;</span>)]
+    <span class="attr">#[prost(message, repeated, tag = <span class="string">"6"</span>)]
     </span><span class="kw">pub </span>headers: ::prost::alloc::vec::Vec&lt;HeaderMatcher&gt;,
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;7&quot;</span>)]
+    <span class="attr">#[prost(message, repeated, tag = <span class="string">"7"</span>)]
     </span><span class="kw">pub </span>query_parameters: ::prost::alloc::vec::Vec&lt;QueryParameterMatcher&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;8&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"8"</span>)]
     </span><span class="kw">pub </span>grpc: ::core::option::Option&lt;route_match::GrpcRouteMatchOptions&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;11&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"11"</span>)]
     </span><span class="kw">pub </span>tls_context: ::core::option::Option&lt;route_match::TlsContextMatchOptions&gt;,
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;13&quot;</span>)]
+    <span class="attr">#[prost(message, repeated, tag = <span class="string">"13"</span>)]
     </span><span class="kw">pub </span>dynamic_metadata:
         ::prost::alloc::vec::Vec&lt;<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::kind::matcher::v3::MetadataMatcher&gt;,
-    <span class="attr">#[prost(oneof = <span class="string">&quot;route_match::PathSpecifier&quot;</span>, tags = <span class="string">&quot;1, 2, 10, 12&quot;</span>)]
+    <span class="attr">#[prost(oneof = <span class="string">"route_match::PathSpecifier"</span>, tags = <span class="string">"1, 2, 10, 12"</span>)]
     </span><span class="kw">pub </span>path_specifier: ::core::option::Option&lt;route_match::PathSpecifier&gt;,
 }
 <span class="doccomment">/// Nested message and enum types in `RouteMatch`.
@@ -1212,9 +1214,9 @@
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Message)]
     </span><span class="kw">pub struct </span>TlsContextMatchOptions {
-        <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
+        <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
         </span><span class="kw">pub </span>presented: ::core::option::Option&lt;bool&gt;,
-        <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+        <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
         </span><span class="kw">pub </span>validated: ::core::option::Option&lt;bool&gt;,
     }
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
@@ -1223,35 +1225,35 @@
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     </span><span class="kw">pub enum </span>PathSpecifier {
-        <span class="attr">#[prost(string, tag = <span class="string">&quot;1&quot;</span>)]
+        <span class="attr">#[prost(string, tag = <span class="string">"1"</span>)]
         </span>Prefix(::prost::alloc::string::String),
-        <span class="attr">#[prost(string, tag = <span class="string">&quot;2&quot;</span>)]
+        <span class="attr">#[prost(string, tag = <span class="string">"2"</span>)]
         </span>Path(::prost::alloc::string::String),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;10&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"10"</span>)]
         </span>SafeRegex(<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::kind::matcher::v3::RegexMatcher),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;12&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"12"</span>)]
         </span>ConnectMatcher(ConnectMatcher),
     }
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>CorsPolicy {
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;11&quot;</span>)]
+    <span class="attr">#[prost(message, repeated, tag = <span class="string">"11"</span>)]
     </span><span class="kw">pub </span>allow_origin_string_match:
         ::prost::alloc::vec::Vec&lt;<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::kind::matcher::v3::StringMatcher&gt;,
-    <span class="attr">#[prost(string, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(string, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>allow_methods: ::prost::alloc::string::String,
-    <span class="attr">#[prost(string, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(string, tag = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>allow_headers: ::prost::alloc::string::String,
-    <span class="attr">#[prost(string, tag = <span class="string">&quot;4&quot;</span>)]
+    <span class="attr">#[prost(string, tag = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>expose_headers: ::prost::alloc::string::String,
-    <span class="attr">#[prost(string, tag = <span class="string">&quot;5&quot;</span>)]
+    <span class="attr">#[prost(string, tag = <span class="string">"5"</span>)]
     </span><span class="kw">pub </span>max_age: ::prost::alloc::string::String,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;6&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"6"</span>)]
     </span><span class="kw">pub </span>allow_credentials: ::core::option::Option&lt;bool&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;10&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"10"</span>)]
     </span><span class="kw">pub </span>shadow_enabled: ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::core::v3::RuntimeFractionalPercent&gt;,
-    <span class="attr">#[prost(oneof = <span class="string">&quot;cors_policy::EnabledSpecifier&quot;</span>, tags = <span class="string">&quot;9&quot;</span>)]
+    <span class="attr">#[prost(oneof = <span class="string">"cors_policy::EnabledSpecifier"</span>, tags = <span class="string">"9"</span>)]
     </span><span class="kw">pub </span>enabled_specifier: ::core::option::Option&lt;cors_policy::EnabledSpecifier&gt;,
 }
 <span class="doccomment">/// Nested message and enum types in `CorsPolicy`.
@@ -1259,68 +1261,68 @@
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     </span><span class="kw">pub enum </span>EnabledSpecifier {
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;9&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"9"</span>)]
         </span>FilterEnabled(<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::core::v3::RuntimeFractionalPercent),
     }
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>RouteAction {
-    <span class="attr">#[prost(enumeration = <span class="string">&quot;route_action::ClusterNotFoundResponseCode&quot;</span>, tag = <span class="string">&quot;20&quot;</span>)]
+    <span class="attr">#[prost(enumeration = <span class="string">"route_action::ClusterNotFoundResponseCode"</span>, tag = <span class="string">"20"</span>)]
     </span><span class="kw">pub </span>cluster_not_found_response_code: i32,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;4&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>metadata_match: ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::core::v3::Metadata&gt;,
-    <span class="attr">#[prost(string, tag = <span class="string">&quot;5&quot;</span>)]
+    <span class="attr">#[prost(string, tag = <span class="string">"5"</span>)]
     </span><span class="kw">pub </span>prefix_rewrite: ::prost::alloc::string::String,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;32&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"32"</span>)]
     </span><span class="kw">pub </span>regex_rewrite:
         ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::kind::matcher::v3::RegexMatchAndSubstitute&gt;,
-    <span class="attr">#[prost(bool, tag = <span class="string">&quot;38&quot;</span>)]
+    <span class="attr">#[prost(bool, tag = <span class="string">"38"</span>)]
     </span><span class="kw">pub </span>append_x_forwarded_host: bool,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;8&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"8"</span>)]
     </span><span class="kw">pub </span>timeout: ::core::option::Option&lt;::prost_types::Duration&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;24&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"24"</span>)]
     </span><span class="kw">pub </span>idle_timeout: ::core::option::Option&lt;::prost_types::Duration&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;9&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"9"</span>)]
     </span><span class="kw">pub </span>retry_policy: ::core::option::Option&lt;RetryPolicy&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;33&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"33"</span>)]
     </span><span class="kw">pub </span>retry_policy_typed_config: ::core::option::Option&lt;::prost_types::Any&gt;,
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;30&quot;</span>)]
+    <span class="attr">#[prost(message, repeated, tag = <span class="string">"30"</span>)]
     </span><span class="kw">pub </span>request_mirror_policies: ::prost::alloc::vec::Vec&lt;route_action::RequestMirrorPolicy&gt;,
-    <span class="attr">#[prost(enumeration = <span class="string">&quot;super::super::core::v3::RoutingPriority&quot;</span>, tag = <span class="string">&quot;11&quot;</span>)]
+    <span class="attr">#[prost(enumeration = <span class="string">"super::super::core::v3::RoutingPriority"</span>, tag = <span class="string">"11"</span>)]
     </span><span class="kw">pub </span>priority: i32,
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;13&quot;</span>)]
+    <span class="attr">#[prost(message, repeated, tag = <span class="string">"13"</span>)]
     </span><span class="kw">pub </span>rate_limits: ::prost::alloc::vec::Vec&lt;RateLimit&gt;,
     <span class="attr">#[deprecated]
-    #[prost(message, optional, tag = <span class="string">&quot;14&quot;</span>)]
+    #[prost(message, optional, tag = <span class="string">"14"</span>)]
     </span><span class="kw">pub </span>include_vh_rate_limits: ::core::option::Option&lt;bool&gt;,
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;15&quot;</span>)]
+    <span class="attr">#[prost(message, repeated, tag = <span class="string">"15"</span>)]
     </span><span class="kw">pub </span>hash_policy: ::prost::alloc::vec::Vec&lt;route_action::HashPolicy&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;17&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"17"</span>)]
     </span><span class="kw">pub </span>cors: ::core::option::Option&lt;CorsPolicy&gt;,
     <span class="attr">#[deprecated]
-    #[prost(message, optional, tag = <span class="string">&quot;23&quot;</span>)]
+    #[prost(message, optional, tag = <span class="string">"23"</span>)]
     </span><span class="kw">pub </span>max_grpc_timeout: ::core::option::Option&lt;::prost_types::Duration&gt;,
     <span class="attr">#[deprecated]
-    #[prost(message, optional, tag = <span class="string">&quot;28&quot;</span>)]
+    #[prost(message, optional, tag = <span class="string">"28"</span>)]
     </span><span class="kw">pub </span>grpc_timeout_offset: ::core::option::Option&lt;::prost_types::Duration&gt;,
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;25&quot;</span>)]
+    <span class="attr">#[prost(message, repeated, tag = <span class="string">"25"</span>)]
     </span><span class="kw">pub </span>upgrade_configs: ::prost::alloc::vec::Vec&lt;route_action::UpgradeConfig&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;34&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"34"</span>)]
     </span><span class="kw">pub </span>internal_redirect_policy: ::core::option::Option&lt;InternalRedirectPolicy&gt;,
     <span class="attr">#[deprecated]
-    #[prost(enumeration = <span class="string">&quot;route_action::InternalRedirectAction&quot;</span>, tag = <span class="string">&quot;26&quot;</span>)]
+    #[prost(enumeration = <span class="string">"route_action::InternalRedirectAction"</span>, tag = <span class="string">"26"</span>)]
     </span><span class="kw">pub </span>internal_redirect_action: i32,
     <span class="attr">#[deprecated]
-    #[prost(message, optional, tag = <span class="string">&quot;31&quot;</span>)]
+    #[prost(message, optional, tag = <span class="string">"31"</span>)]
     </span><span class="kw">pub </span>max_internal_redirects: ::core::option::Option&lt;u32&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;27&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"27"</span>)]
     </span><span class="kw">pub </span>hedge_policy: ::core::option::Option&lt;HedgePolicy&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;36&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"36"</span>)]
     </span><span class="kw">pub </span>max_stream_duration: ::core::option::Option&lt;route_action::MaxStreamDuration&gt;,
-    <span class="attr">#[prost(oneof = <span class="string">&quot;route_action::ClusterSpecifier&quot;</span>, tags = <span class="string">&quot;1, 2, 3, 37&quot;</span>)]
+    <span class="attr">#[prost(oneof = <span class="string">"route_action::ClusterSpecifier"</span>, tags = <span class="string">"1, 2, 3, 37"</span>)]
     </span><span class="kw">pub </span>cluster_specifier: ::core::option::Option&lt;route_action::ClusterSpecifier&gt;,
-    <span class="attr">#[prost(oneof = <span class="string">&quot;route_action::HostRewriteSpecifier&quot;</span>, tags = <span class="string">&quot;6, 7, 29, 35&quot;</span>)]
+    <span class="attr">#[prost(oneof = <span class="string">"route_action::HostRewriteSpecifier"</span>, tags = <span class="string">"6, 7, 29, 35"</span>)]
     </span><span class="kw">pub </span>host_rewrite_specifier: ::core::option::Option&lt;route_action::HostRewriteSpecifier&gt;,
 }
 <span class="doccomment">/// Nested message and enum types in `RouteAction`.
@@ -1328,20 +1330,20 @@
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Message)]
     </span><span class="kw">pub struct </span>RequestMirrorPolicy {
-        <span class="attr">#[prost(string, tag = <span class="string">&quot;1&quot;</span>)]
+        <span class="attr">#[prost(string, tag = <span class="string">"1"</span>)]
         </span><span class="kw">pub </span>cluster: ::prost::alloc::string::String,
-        <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;3&quot;</span>)]
+        <span class="attr">#[prost(message, optional, tag = <span class="string">"3"</span>)]
         </span><span class="kw">pub </span>runtime_fraction:
             ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::core::v3::RuntimeFractionalPercent&gt;,
-        <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;4&quot;</span>)]
+        <span class="attr">#[prost(message, optional, tag = <span class="string">"4"</span>)]
         </span><span class="kw">pub </span>trace_sampled: ::core::option::Option&lt;bool&gt;,
     }
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Message)]
     </span><span class="kw">pub struct </span>HashPolicy {
-        <span class="attr">#[prost(bool, tag = <span class="string">&quot;4&quot;</span>)]
+        <span class="attr">#[prost(bool, tag = <span class="string">"4"</span>)]
         </span><span class="kw">pub </span>terminal: bool,
-        <span class="attr">#[prost(oneof = <span class="string">&quot;hash_policy::PolicySpecifier&quot;</span>, tags = <span class="string">&quot;1, 2, 3, 5, 6&quot;</span>)]
+        <span class="attr">#[prost(oneof = <span class="string">"hash_policy::PolicySpecifier"</span>, tags = <span class="string">"1, 2, 3, 5, 6"</span>)]
         </span><span class="kw">pub </span>policy_specifier: ::core::option::Option&lt;hash_policy::PolicySpecifier&gt;,
     }
     <span class="doccomment">/// Nested message and enum types in `HashPolicy`.
@@ -1349,9 +1351,9 @@
         <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
         #[derive(Clone, PartialEq, ::prost::Message)]
         </span><span class="kw">pub struct </span>Header {
-            <span class="attr">#[prost(string, tag = <span class="string">&quot;1&quot;</span>)]
+            <span class="attr">#[prost(string, tag = <span class="string">"1"</span>)]
             </span><span class="kw">pub </span>header_name: ::prost::alloc::string::String,
-            <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+            <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
             </span><span class="kw">pub </span>regex_rewrite: ::core::option::Option&lt;
                 <span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::kind::matcher::v3::RegexMatchAndSubstitute,
             &gt;,
@@ -1359,54 +1361,54 @@
         <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
         #[derive(Clone, PartialEq, ::prost::Message)]
         </span><span class="kw">pub struct </span>Cookie {
-            <span class="attr">#[prost(string, tag = <span class="string">&quot;1&quot;</span>)]
+            <span class="attr">#[prost(string, tag = <span class="string">"1"</span>)]
             </span><span class="kw">pub </span>name: ::prost::alloc::string::String,
-            <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+            <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
             </span><span class="kw">pub </span>ttl: ::core::option::Option&lt;::prost_types::Duration&gt;,
-            <span class="attr">#[prost(string, tag = <span class="string">&quot;3&quot;</span>)]
+            <span class="attr">#[prost(string, tag = <span class="string">"3"</span>)]
             </span><span class="kw">pub </span>path: ::prost::alloc::string::String,
         }
         <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
         #[derive(Clone, PartialEq, ::prost::Message)]
         </span><span class="kw">pub struct </span>ConnectionProperties {
-            <span class="attr">#[prost(bool, tag = <span class="string">&quot;1&quot;</span>)]
+            <span class="attr">#[prost(bool, tag = <span class="string">"1"</span>)]
             </span><span class="kw">pub </span>source_ip: bool,
         }
         <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
         #[derive(Clone, PartialEq, ::prost::Message)]
         </span><span class="kw">pub struct </span>QueryParameter {
-            <span class="attr">#[prost(string, tag = <span class="string">&quot;1&quot;</span>)]
+            <span class="attr">#[prost(string, tag = <span class="string">"1"</span>)]
             </span><span class="kw">pub </span>name: ::prost::alloc::string::String,
         }
         <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
         #[derive(Clone, PartialEq, ::prost::Message)]
         </span><span class="kw">pub struct </span>FilterState {
-            <span class="attr">#[prost(string, tag = <span class="string">&quot;1&quot;</span>)]
+            <span class="attr">#[prost(string, tag = <span class="string">"1"</span>)]
             </span><span class="kw">pub </span>key: ::prost::alloc::string::String,
         }
         <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
         #[derive(Clone, PartialEq, ::prost::Oneof)]
         </span><span class="kw">pub enum </span>PolicySpecifier {
-            <span class="attr">#[prost(message, tag = <span class="string">&quot;1&quot;</span>)]
+            <span class="attr">#[prost(message, tag = <span class="string">"1"</span>)]
             </span>Header(Header),
-            <span class="attr">#[prost(message, tag = <span class="string">&quot;2&quot;</span>)]
+            <span class="attr">#[prost(message, tag = <span class="string">"2"</span>)]
             </span>Cookie(Cookie),
-            <span class="attr">#[prost(message, tag = <span class="string">&quot;3&quot;</span>)]
+            <span class="attr">#[prost(message, tag = <span class="string">"3"</span>)]
             </span>ConnectionProperties(ConnectionProperties),
-            <span class="attr">#[prost(message, tag = <span class="string">&quot;5&quot;</span>)]
+            <span class="attr">#[prost(message, tag = <span class="string">"5"</span>)]
             </span>QueryParameter(QueryParameter),
-            <span class="attr">#[prost(message, tag = <span class="string">&quot;6&quot;</span>)]
+            <span class="attr">#[prost(message, tag = <span class="string">"6"</span>)]
             </span>FilterState(FilterState),
         }
     }
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Message)]
     </span><span class="kw">pub struct </span>UpgradeConfig {
-        <span class="attr">#[prost(string, tag = <span class="string">&quot;1&quot;</span>)]
+        <span class="attr">#[prost(string, tag = <span class="string">"1"</span>)]
         </span><span class="kw">pub </span>upgrade_type: ::prost::alloc::string::String,
-        <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+        <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
         </span><span class="kw">pub </span>enabled: ::core::option::Option&lt;bool&gt;,
-        <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;3&quot;</span>)]
+        <span class="attr">#[prost(message, optional, tag = <span class="string">"3"</span>)]
         </span><span class="kw">pub </span>connect_config: ::core::option::Option&lt;upgrade_config::ConnectConfig&gt;,
     }
     <span class="doccomment">/// Nested message and enum types in `UpgradeConfig`.
@@ -1414,21 +1416,21 @@
         <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
         #[derive(Clone, PartialEq, ::prost::Message)]
         </span><span class="kw">pub struct </span>ConnectConfig {
-            <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
+            <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
             </span><span class="kw">pub </span>proxy_protocol_config:
                 ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::core::v3::ProxyProtocolConfig&gt;,
-            <span class="attr">#[prost(bool, tag = <span class="string">&quot;2&quot;</span>)]
+            <span class="attr">#[prost(bool, tag = <span class="string">"2"</span>)]
             </span><span class="kw">pub </span>allow_post: bool,
         }
     }
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Message)]
     </span><span class="kw">pub struct </span>MaxStreamDuration {
-        <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
+        <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
         </span><span class="kw">pub </span>max_stream_duration: ::core::option::Option&lt;::prost_types::Duration&gt;,
-        <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+        <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
         </span><span class="kw">pub </span>grpc_timeout_header_max: ::core::option::Option&lt;::prost_types::Duration&gt;,
-        <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;3&quot;</span>)]
+        <span class="attr">#[prost(message, optional, tag = <span class="string">"3"</span>)]
         </span><span class="kw">pub </span>grpc_timeout_header_offset: ::core::option::Option&lt;::prost_types::Duration&gt;,
     }
     <span class="attr">#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
@@ -1442,17 +1444,17 @@
         ///
         /// The values are not transformed in any way and thus are considered stable
         /// (if the ProtoBuf definition does not change) and safe for programmatic use.
-        </span><span class="kw">pub fn </span>as_str_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+        </span><span class="kw">pub fn </span>as_str_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
             <span class="kw">match </span><span class="self">self </span>{
-                ClusterNotFoundResponseCode::ServiceUnavailable =&gt; <span class="string">&quot;SERVICE_UNAVAILABLE&quot;</span>,
-                ClusterNotFoundResponseCode::NotFound =&gt; <span class="string">&quot;NOT_FOUND&quot;</span>,
+                ClusterNotFoundResponseCode::ServiceUnavailable =&gt; <span class="string">"SERVICE_UNAVAILABLE"</span>,
+                ClusterNotFoundResponseCode::NotFound =&gt; <span class="string">"NOT_FOUND"</span>,
             }
         }
         <span class="doccomment">/// Creates an enum from field names used in the ProtoBuf definition.
         </span><span class="kw">pub fn </span>from_str_name(value: <span class="kw-2">&amp;</span>str) -&gt; ::core::option::Option&lt;<span class="self">Self</span>&gt; {
             <span class="kw">match </span>value {
-                <span class="string">&quot;SERVICE_UNAVAILABLE&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::ServiceUnavailable),
-                <span class="string">&quot;NOT_FOUND&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::NotFound),
+                <span class="string">"SERVICE_UNAVAILABLE" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::ServiceUnavailable),
+                <span class="string">"NOT_FOUND" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::NotFound),
                 <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
             }
         }
@@ -1468,19 +1470,19 @@
         ///
         /// The values are not transformed in any way and thus are considered stable
         /// (if the ProtoBuf definition does not change) and safe for programmatic use.
-        </span><span class="kw">pub fn </span>as_str_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+        </span><span class="kw">pub fn </span>as_str_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
             <span class="kw">match </span><span class="self">self </span>{
                 InternalRedirectAction::PassThroughInternalRedirect =&gt; {
-                    <span class="string">&quot;PASS_THROUGH_INTERNAL_REDIRECT&quot;
+                    <span class="string">"PASS_THROUGH_INTERNAL_REDIRECT"
                 </span>}
-                InternalRedirectAction::HandleInternalRedirect =&gt; <span class="string">&quot;HANDLE_INTERNAL_REDIRECT&quot;</span>,
+                InternalRedirectAction::HandleInternalRedirect =&gt; <span class="string">"HANDLE_INTERNAL_REDIRECT"</span>,
             }
         }
         <span class="doccomment">/// Creates an enum from field names used in the ProtoBuf definition.
         </span><span class="kw">pub fn </span>from_str_name(value: <span class="kw-2">&amp;</span>str) -&gt; ::core::option::Option&lt;<span class="self">Self</span>&gt; {
             <span class="kw">match </span>value {
-                <span class="string">&quot;PASS_THROUGH_INTERNAL_REDIRECT&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::PassThroughInternalRedirect),
-                <span class="string">&quot;HANDLE_INTERNAL_REDIRECT&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::HandleInternalRedirect),
+                <span class="string">"PASS_THROUGH_INTERNAL_REDIRECT" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::PassThroughInternalRedirect),
+                <span class="string">"HANDLE_INTERNAL_REDIRECT" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::HandleInternalRedirect),
                 <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
             }
         }
@@ -1488,25 +1490,25 @@
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     </span><span class="kw">pub enum </span>ClusterSpecifier {
-        <span class="attr">#[prost(string, tag = <span class="string">&quot;1&quot;</span>)]
+        <span class="attr">#[prost(string, tag = <span class="string">"1"</span>)]
         </span>Cluster(::prost::alloc::string::String),
-        <span class="attr">#[prost(string, tag = <span class="string">&quot;2&quot;</span>)]
+        <span class="attr">#[prost(string, tag = <span class="string">"2"</span>)]
         </span>ClusterHeader(::prost::alloc::string::String),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;3&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"3"</span>)]
         </span>WeightedClusters(<span class="kw">super</span>::WeightedCluster),
-        <span class="attr">#[prost(string, tag = <span class="string">&quot;37&quot;</span>)]
+        <span class="attr">#[prost(string, tag = <span class="string">"37"</span>)]
         </span>ClusterSpecifierPlugin(::prost::alloc::string::String),
     }
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     </span><span class="kw">pub enum </span>HostRewriteSpecifier {
-        <span class="attr">#[prost(string, tag = <span class="string">&quot;6&quot;</span>)]
+        <span class="attr">#[prost(string, tag = <span class="string">"6"</span>)]
         </span>HostRewriteLiteral(::prost::alloc::string::String),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;7&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"7"</span>)]
         </span>AutoHostRewrite(bool),
-        <span class="attr">#[prost(string, tag = <span class="string">&quot;29&quot;</span>)]
+        <span class="attr">#[prost(string, tag = <span class="string">"29"</span>)]
         </span>HostRewriteHeader(::prost::alloc::string::String),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;35&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"35"</span>)]
         </span>HostRewritePathRegex(
             <span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::kind::matcher::v3::RegexMatchAndSubstitute,
         ),
@@ -1515,32 +1517,32 @@
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>RetryPolicy {
-    <span class="attr">#[prost(string, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(string, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>retry_on: ::prost::alloc::string::String,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>num_retries: ::core::option::Option&lt;u32&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>per_try_timeout: ::core::option::Option&lt;::prost_types::Duration&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;13&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"13"</span>)]
     </span><span class="kw">pub </span>per_try_idle_timeout: ::core::option::Option&lt;::prost_types::Duration&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;4&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>retry_priority: ::core::option::Option&lt;retry_policy::RetryPriority&gt;,
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;5&quot;</span>)]
+    <span class="attr">#[prost(message, repeated, tag = <span class="string">"5"</span>)]
     </span><span class="kw">pub </span>retry_host_predicate: ::prost::alloc::vec::Vec&lt;retry_policy::RetryHostPredicate&gt;,
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;12&quot;</span>)]
+    <span class="attr">#[prost(message, repeated, tag = <span class="string">"12"</span>)]
     </span><span class="kw">pub </span>retry_options_predicates:
         ::prost::alloc::vec::Vec&lt;<span class="kw">super</span>::<span class="kw">super</span>::core::v3::TypedExtensionConfig&gt;,
-    <span class="attr">#[prost(int64, tag = <span class="string">&quot;6&quot;</span>)]
+    <span class="attr">#[prost(int64, tag = <span class="string">"6"</span>)]
     </span><span class="kw">pub </span>host_selection_retry_max_attempts: i64,
-    <span class="attr">#[prost(uint32, repeated, tag = <span class="string">&quot;7&quot;</span>)]
+    <span class="attr">#[prost(uint32, repeated, tag = <span class="string">"7"</span>)]
     </span><span class="kw">pub </span>retriable_status_codes: ::prost::alloc::vec::Vec&lt;u32&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;8&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"8"</span>)]
     </span><span class="kw">pub </span>retry_back_off: ::core::option::Option&lt;retry_policy::RetryBackOff&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;11&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"11"</span>)]
     </span><span class="kw">pub </span>rate_limited_retry_back_off: ::core::option::Option&lt;retry_policy::RateLimitedRetryBackOff&gt;,
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;9&quot;</span>)]
+    <span class="attr">#[prost(message, repeated, tag = <span class="string">"9"</span>)]
     </span><span class="kw">pub </span>retriable_headers: ::prost::alloc::vec::Vec&lt;HeaderMatcher&gt;,
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;10&quot;</span>)]
+    <span class="attr">#[prost(message, repeated, tag = <span class="string">"10"</span>)]
     </span><span class="kw">pub </span>retriable_request_headers: ::prost::alloc::vec::Vec&lt;HeaderMatcher&gt;,
 }
 <span class="doccomment">/// Nested message and enum types in `RetryPolicy`.
@@ -1548,9 +1550,9 @@
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Message)]
     </span><span class="kw">pub struct </span>RetryPriority {
-        <span class="attr">#[prost(string, tag = <span class="string">&quot;1&quot;</span>)]
+        <span class="attr">#[prost(string, tag = <span class="string">"1"</span>)]
         </span><span class="kw">pub </span>name: ::prost::alloc::string::String,
-        <span class="attr">#[prost(oneof = <span class="string">&quot;retry_priority::ConfigType&quot;</span>, tags = <span class="string">&quot;3&quot;</span>)]
+        <span class="attr">#[prost(oneof = <span class="string">"retry_priority::ConfigType"</span>, tags = <span class="string">"3"</span>)]
         </span><span class="kw">pub </span>config_type: ::core::option::Option&lt;retry_priority::ConfigType&gt;,
     }
     <span class="doccomment">/// Nested message and enum types in `RetryPriority`.
@@ -1558,16 +1560,16 @@
         <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
         #[derive(Clone, PartialEq, ::prost::Oneof)]
         </span><span class="kw">pub enum </span>ConfigType {
-            <span class="attr">#[prost(message, tag = <span class="string">&quot;3&quot;</span>)]
+            <span class="attr">#[prost(message, tag = <span class="string">"3"</span>)]
             </span>TypedConfig(::prost_types::Any),
         }
     }
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Message)]
     </span><span class="kw">pub struct </span>RetryHostPredicate {
-        <span class="attr">#[prost(string, tag = <span class="string">&quot;1&quot;</span>)]
+        <span class="attr">#[prost(string, tag = <span class="string">"1"</span>)]
         </span><span class="kw">pub </span>name: ::prost::alloc::string::String,
-        <span class="attr">#[prost(oneof = <span class="string">&quot;retry_host_predicate::ConfigType&quot;</span>, tags = <span class="string">&quot;3&quot;</span>)]
+        <span class="attr">#[prost(oneof = <span class="string">"retry_host_predicate::ConfigType"</span>, tags = <span class="string">"3"</span>)]
         </span><span class="kw">pub </span>config_type: ::core::option::Option&lt;retry_host_predicate::ConfigType&gt;,
     }
     <span class="doccomment">/// Nested message and enum types in `RetryHostPredicate`.
@@ -1575,32 +1577,32 @@
         <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
         #[derive(Clone, PartialEq, ::prost::Oneof)]
         </span><span class="kw">pub enum </span>ConfigType {
-            <span class="attr">#[prost(message, tag = <span class="string">&quot;3&quot;</span>)]
+            <span class="attr">#[prost(message, tag = <span class="string">"3"</span>)]
             </span>TypedConfig(::prost_types::Any),
         }
     }
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Message)]
     </span><span class="kw">pub struct </span>RetryBackOff {
-        <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
+        <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
         </span><span class="kw">pub </span>base_interval: ::core::option::Option&lt;::prost_types::Duration&gt;,
-        <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+        <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
         </span><span class="kw">pub </span>max_interval: ::core::option::Option&lt;::prost_types::Duration&gt;,
     }
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Message)]
     </span><span class="kw">pub struct </span>ResetHeader {
-        <span class="attr">#[prost(string, tag = <span class="string">&quot;1&quot;</span>)]
+        <span class="attr">#[prost(string, tag = <span class="string">"1"</span>)]
         </span><span class="kw">pub </span>name: ::prost::alloc::string::String,
-        <span class="attr">#[prost(enumeration = <span class="string">&quot;ResetHeaderFormat&quot;</span>, tag = <span class="string">&quot;2&quot;</span>)]
+        <span class="attr">#[prost(enumeration = <span class="string">"ResetHeaderFormat"</span>, tag = <span class="string">"2"</span>)]
         </span><span class="kw">pub </span>format: i32,
     }
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Message)]
     </span><span class="kw">pub struct </span>RateLimitedRetryBackOff {
-        <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;1&quot;</span>)]
+        <span class="attr">#[prost(message, repeated, tag = <span class="string">"1"</span>)]
         </span><span class="kw">pub </span>reset_headers: ::prost::alloc::vec::Vec&lt;ResetHeader&gt;,
-        <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+        <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
         </span><span class="kw">pub </span>max_interval: ::core::option::Option&lt;::prost_types::Duration&gt;,
     }
     <span class="attr">#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
@@ -1614,17 +1616,17 @@
         ///
         /// The values are not transformed in any way and thus are considered stable
         /// (if the ProtoBuf definition does not change) and safe for programmatic use.
-        </span><span class="kw">pub fn </span>as_str_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+        </span><span class="kw">pub fn </span>as_str_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
             <span class="kw">match </span><span class="self">self </span>{
-                ResetHeaderFormat::Seconds =&gt; <span class="string">&quot;SECONDS&quot;</span>,
-                ResetHeaderFormat::UnixTimestamp =&gt; <span class="string">&quot;UNIX_TIMESTAMP&quot;</span>,
+                ResetHeaderFormat::Seconds =&gt; <span class="string">"SECONDS"</span>,
+                ResetHeaderFormat::UnixTimestamp =&gt; <span class="string">"UNIX_TIMESTAMP"</span>,
             }
         }
         <span class="doccomment">/// Creates an enum from field names used in the ProtoBuf definition.
         </span><span class="kw">pub fn </span>from_str_name(value: <span class="kw-2">&amp;</span>str) -&gt; ::core::option::Option&lt;<span class="self">Self</span>&gt; {
             <span class="kw">match </span>value {
-                <span class="string">&quot;SECONDS&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Seconds),
-                <span class="string">&quot;UNIX_TIMESTAMP&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::UnixTimestamp),
+                <span class="string">"SECONDS" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Seconds),
+                <span class="string">"UNIX_TIMESTAMP" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::UnixTimestamp),
                 <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
             }
         }
@@ -1633,28 +1635,28 @@
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>HedgePolicy {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>initial_requests: ::core::option::Option&lt;u32&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>additional_request_chance:
         ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::kind::v3::FractionalPercent&gt;,
-    <span class="attr">#[prost(bool, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(bool, tag = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>hedge_on_per_try_timeout: bool,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>RedirectAction {
-    <span class="attr">#[prost(string, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(string, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>host_redirect: ::prost::alloc::string::String,
-    <span class="attr">#[prost(uint32, tag = <span class="string">&quot;8&quot;</span>)]
+    <span class="attr">#[prost(uint32, tag = <span class="string">"8"</span>)]
     </span><span class="kw">pub </span>port_redirect: u32,
-    <span class="attr">#[prost(enumeration = <span class="string">&quot;redirect_action::RedirectResponseCode&quot;</span>, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(enumeration = <span class="string">"redirect_action::RedirectResponseCode"</span>, tag = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>response_code: i32,
-    <span class="attr">#[prost(bool, tag = <span class="string">&quot;6&quot;</span>)]
+    <span class="attr">#[prost(bool, tag = <span class="string">"6"</span>)]
     </span><span class="kw">pub </span>strip_query: bool,
-    <span class="attr">#[prost(oneof = <span class="string">&quot;redirect_action::SchemeRewriteSpecifier&quot;</span>, tags = <span class="string">&quot;4, 7&quot;</span>)]
+    <span class="attr">#[prost(oneof = <span class="string">"redirect_action::SchemeRewriteSpecifier"</span>, tags = <span class="string">"4, 7"</span>)]
     </span><span class="kw">pub </span>scheme_rewrite_specifier: ::core::option::Option&lt;redirect_action::SchemeRewriteSpecifier&gt;,
-    <span class="attr">#[prost(oneof = <span class="string">&quot;redirect_action::PathRewriteSpecifier&quot;</span>, tags = <span class="string">&quot;2, 5, 9&quot;</span>)]
+    <span class="attr">#[prost(oneof = <span class="string">"redirect_action::PathRewriteSpecifier"</span>, tags = <span class="string">"2, 5, 9"</span>)]
     </span><span class="kw">pub </span>path_rewrite_specifier: ::core::option::Option&lt;redirect_action::PathRewriteSpecifier&gt;,
 }
 <span class="doccomment">/// Nested message and enum types in `RedirectAction`.
@@ -1673,23 +1675,23 @@
         ///
         /// The values are not transformed in any way and thus are considered stable
         /// (if the ProtoBuf definition does not change) and safe for programmatic use.
-        </span><span class="kw">pub fn </span>as_str_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+        </span><span class="kw">pub fn </span>as_str_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
             <span class="kw">match </span><span class="self">self </span>{
-                RedirectResponseCode::MovedPermanently =&gt; <span class="string">&quot;MOVED_PERMANENTLY&quot;</span>,
-                RedirectResponseCode::Found =&gt; <span class="string">&quot;FOUND&quot;</span>,
-                RedirectResponseCode::SeeOther =&gt; <span class="string">&quot;SEE_OTHER&quot;</span>,
-                RedirectResponseCode::TemporaryRedirect =&gt; <span class="string">&quot;TEMPORARY_REDIRECT&quot;</span>,
-                RedirectResponseCode::PermanentRedirect =&gt; <span class="string">&quot;PERMANENT_REDIRECT&quot;</span>,
+                RedirectResponseCode::MovedPermanently =&gt; <span class="string">"MOVED_PERMANENTLY"</span>,
+                RedirectResponseCode::Found =&gt; <span class="string">"FOUND"</span>,
+                RedirectResponseCode::SeeOther =&gt; <span class="string">"SEE_OTHER"</span>,
+                RedirectResponseCode::TemporaryRedirect =&gt; <span class="string">"TEMPORARY_REDIRECT"</span>,
+                RedirectResponseCode::PermanentRedirect =&gt; <span class="string">"PERMANENT_REDIRECT"</span>,
             }
         }
         <span class="doccomment">/// Creates an enum from field names used in the ProtoBuf definition.
         </span><span class="kw">pub fn </span>from_str_name(value: <span class="kw-2">&amp;</span>str) -&gt; ::core::option::Option&lt;<span class="self">Self</span>&gt; {
             <span class="kw">match </span>value {
-                <span class="string">&quot;MOVED_PERMANENTLY&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::MovedPermanently),
-                <span class="string">&quot;FOUND&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Found),
-                <span class="string">&quot;SEE_OTHER&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::SeeOther),
-                <span class="string">&quot;TEMPORARY_REDIRECT&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::TemporaryRedirect),
-                <span class="string">&quot;PERMANENT_REDIRECT&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::PermanentRedirect),
+                <span class="string">"MOVED_PERMANENTLY" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::MovedPermanently),
+                <span class="string">"FOUND" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Found),
+                <span class="string">"SEE_OTHER" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::SeeOther),
+                <span class="string">"TEMPORARY_REDIRECT" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::TemporaryRedirect),
+                <span class="string">"PERMANENT_REDIRECT" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::PermanentRedirect),
                 <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
             }
         }
@@ -1697,28 +1699,28 @@
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     </span><span class="kw">pub enum </span>SchemeRewriteSpecifier {
-        <span class="attr">#[prost(bool, tag = <span class="string">&quot;4&quot;</span>)]
+        <span class="attr">#[prost(bool, tag = <span class="string">"4"</span>)]
         </span>HttpsRedirect(bool),
-        <span class="attr">#[prost(string, tag = <span class="string">&quot;7&quot;</span>)]
+        <span class="attr">#[prost(string, tag = <span class="string">"7"</span>)]
         </span>SchemeRedirect(::prost::alloc::string::String),
     }
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     </span><span class="kw">pub enum </span>PathRewriteSpecifier {
-        <span class="attr">#[prost(string, tag = <span class="string">&quot;2&quot;</span>)]
+        <span class="attr">#[prost(string, tag = <span class="string">"2"</span>)]
         </span>PathRedirect(::prost::alloc::string::String),
-        <span class="attr">#[prost(string, tag = <span class="string">&quot;5&quot;</span>)]
+        <span class="attr">#[prost(string, tag = <span class="string">"5"</span>)]
         </span>PrefixRewrite(::prost::alloc::string::String),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;9&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"9"</span>)]
         </span>RegexRewrite(<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::kind::matcher::v3::RegexMatchAndSubstitute),
     }
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>DirectResponseAction {
-    <span class="attr">#[prost(uint32, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(uint32, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>status: u32,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>body: ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::core::v3::DataSource&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
@@ -1727,41 +1729,41 @@
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>Decorator {
-    <span class="attr">#[prost(string, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(string, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>operation: ::prost::alloc::string::String,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>propagate: ::core::option::Option&lt;bool&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>Tracing {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>client_sampling: ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::kind::v3::FractionalPercent&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>random_sampling: ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::kind::v3::FractionalPercent&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>overall_sampling: ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::kind::v3::FractionalPercent&gt;,
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;4&quot;</span>)]
+    <span class="attr">#[prost(message, repeated, tag = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>custom_tags: ::prost::alloc::vec::Vec&lt;<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::kind::tracing::v3::CustomTag&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>VirtualCluster {
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;4&quot;</span>)]
+    <span class="attr">#[prost(message, repeated, tag = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>headers: ::prost::alloc::vec::Vec&lt;HeaderMatcher&gt;,
-    <span class="attr">#[prost(string, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(string, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>name: ::prost::alloc::string::String,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>RateLimit {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>stage: ::core::option::Option&lt;u32&gt;,
-    <span class="attr">#[prost(string, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(string, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>disable_key: ::prost::alloc::string::String,
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(message, repeated, tag = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>actions: ::prost::alloc::vec::Vec&lt;rate_limit::Action&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;4&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>limit: ::core::option::Option&lt;rate_limit::Override&gt;,
 }
 <span class="doccomment">/// Nested message and enum types in `RateLimit`.
@@ -1769,7 +1771,7 @@
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Message)]
     </span><span class="kw">pub struct </span>Action {
-        <span class="attr">#[prost(oneof = <span class="string">&quot;action::ActionSpecifier&quot;</span>, tags = <span class="string">&quot;1, 2, 3, 4, 5, 6, 7, 8, 9&quot;</span>)]
+        <span class="attr">#[prost(oneof = <span class="string">"action::ActionSpecifier"</span>, tags = <span class="string">"1, 2, 3, 4, 5, 6, 7, 8, 9"</span>)]
         </span><span class="kw">pub </span>action_specifier: ::core::option::Option&lt;action::ActionSpecifier&gt;,
     }
     <span class="doccomment">/// Nested message and enum types in `Action`.
@@ -1783,11 +1785,11 @@
         <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
         #[derive(Clone, PartialEq, ::prost::Message)]
         </span><span class="kw">pub struct </span>RequestHeaders {
-            <span class="attr">#[prost(string, tag = <span class="string">&quot;1&quot;</span>)]
+            <span class="attr">#[prost(string, tag = <span class="string">"1"</span>)]
             </span><span class="kw">pub </span>header_name: ::prost::alloc::string::String,
-            <span class="attr">#[prost(string, tag = <span class="string">&quot;2&quot;</span>)]
+            <span class="attr">#[prost(string, tag = <span class="string">"2"</span>)]
             </span><span class="kw">pub </span>descriptor_key: ::prost::alloc::string::String,
-            <span class="attr">#[prost(bool, tag = <span class="string">&quot;3&quot;</span>)]
+            <span class="attr">#[prost(bool, tag = <span class="string">"3"</span>)]
             </span><span class="kw">pub </span>skip_if_absent: bool,
         }
         <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
@@ -1796,45 +1798,45 @@
         <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
         #[derive(Clone, PartialEq, ::prost::Message)]
         </span><span class="kw">pub struct </span>GenericKey {
-            <span class="attr">#[prost(string, tag = <span class="string">&quot;1&quot;</span>)]
+            <span class="attr">#[prost(string, tag = <span class="string">"1"</span>)]
             </span><span class="kw">pub </span>descriptor_value: ::prost::alloc::string::String,
-            <span class="attr">#[prost(string, tag = <span class="string">&quot;2&quot;</span>)]
+            <span class="attr">#[prost(string, tag = <span class="string">"2"</span>)]
             </span><span class="kw">pub </span>descriptor_key: ::prost::alloc::string::String,
         }
         <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
         #[derive(Clone, PartialEq, ::prost::Message)]
         </span><span class="kw">pub struct </span>HeaderValueMatch {
-            <span class="attr">#[prost(string, tag = <span class="string">&quot;1&quot;</span>)]
+            <span class="attr">#[prost(string, tag = <span class="string">"1"</span>)]
             </span><span class="kw">pub </span>descriptor_value: ::prost::alloc::string::String,
-            <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+            <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
             </span><span class="kw">pub </span>expect_match: ::core::option::Option&lt;bool&gt;,
-            <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;3&quot;</span>)]
+            <span class="attr">#[prost(message, repeated, tag = <span class="string">"3"</span>)]
             </span><span class="kw">pub </span>headers: ::prost::alloc::vec::Vec&lt;<span class="kw">super</span>::<span class="kw">super</span>::HeaderMatcher&gt;,
         }
         <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
         #[derive(Clone, PartialEq, ::prost::Message)]
         </span><span class="kw">pub struct </span>DynamicMetaData {
-            <span class="attr">#[prost(string, tag = <span class="string">&quot;1&quot;</span>)]
+            <span class="attr">#[prost(string, tag = <span class="string">"1"</span>)]
             </span><span class="kw">pub </span>descriptor_key: ::prost::alloc::string::String,
-            <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+            <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
             </span><span class="kw">pub </span>metadata_key: ::core::option::Option&lt;
                 <span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::kind::metadata::v3::MetadataKey,
             &gt;,
-            <span class="attr">#[prost(string, tag = <span class="string">&quot;3&quot;</span>)]
+            <span class="attr">#[prost(string, tag = <span class="string">"3"</span>)]
             </span><span class="kw">pub </span>default_value: ::prost::alloc::string::String,
         }
         <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
         #[derive(Clone, PartialEq, ::prost::Message)]
         </span><span class="kw">pub struct </span>MetaData {
-            <span class="attr">#[prost(string, tag = <span class="string">&quot;1&quot;</span>)]
+            <span class="attr">#[prost(string, tag = <span class="string">"1"</span>)]
             </span><span class="kw">pub </span>descriptor_key: ::prost::alloc::string::String,
-            <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+            <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
             </span><span class="kw">pub </span>metadata_key: ::core::option::Option&lt;
                 <span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::kind::metadata::v3::MetadataKey,
             &gt;,
-            <span class="attr">#[prost(string, tag = <span class="string">&quot;3&quot;</span>)]
+            <span class="attr">#[prost(string, tag = <span class="string">"3"</span>)]
             </span><span class="kw">pub </span>default_value: ::prost::alloc::string::String,
-            <span class="attr">#[prost(enumeration = <span class="string">&quot;meta_data::Source&quot;</span>, tag = <span class="string">&quot;4&quot;</span>)]
+            <span class="attr">#[prost(enumeration = <span class="string">"meta_data::Source"</span>, tag = <span class="string">"4"</span>)]
             </span><span class="kw">pub </span>source: i32,
         }
         <span class="doccomment">/// Nested message and enum types in `MetaData`.
@@ -1852,17 +1854,17 @@
                 ///
                 /// The values are not transformed in any way and thus are considered stable
                 /// (if the ProtoBuf definition does not change) and safe for programmatic use.
-                </span><span class="kw">pub fn </span>as_str_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+                </span><span class="kw">pub fn </span>as_str_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
                     <span class="kw">match </span><span class="self">self </span>{
-                        Source::Dynamic =&gt; <span class="string">&quot;DYNAMIC&quot;</span>,
-                        Source::RouteEntry =&gt; <span class="string">&quot;ROUTE_ENTRY&quot;</span>,
+                        Source::Dynamic =&gt; <span class="string">"DYNAMIC"</span>,
+                        Source::RouteEntry =&gt; <span class="string">"ROUTE_ENTRY"</span>,
                     }
                 }
                 <span class="doccomment">/// Creates an enum from field names used in the ProtoBuf definition.
                 </span><span class="kw">pub fn </span>from_str_name(value: <span class="kw-2">&amp;</span>str) -&gt; ::core::option::Option&lt;<span class="self">Self</span>&gt; {
                     <span class="kw">match </span>value {
-                        <span class="string">&quot;DYNAMIC&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Dynamic),
-                        <span class="string">&quot;ROUTE_ENTRY&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::RouteEntry),
+                        <span class="string">"DYNAMIC" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Dynamic),
+                        <span class="string">"ROUTE_ENTRY" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::RouteEntry),
                         <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
                     }
                 }
@@ -1871,30 +1873,30 @@
         <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
         #[derive(Clone, PartialEq, ::prost::Oneof)]
         </span><span class="kw">pub enum </span>ActionSpecifier {
-            <span class="attr">#[prost(message, tag = <span class="string">&quot;1&quot;</span>)]
+            <span class="attr">#[prost(message, tag = <span class="string">"1"</span>)]
             </span>SourceCluster(SourceCluster),
-            <span class="attr">#[prost(message, tag = <span class="string">&quot;2&quot;</span>)]
+            <span class="attr">#[prost(message, tag = <span class="string">"2"</span>)]
             </span>DestinationCluster(DestinationCluster),
-            <span class="attr">#[prost(message, tag = <span class="string">&quot;3&quot;</span>)]
+            <span class="attr">#[prost(message, tag = <span class="string">"3"</span>)]
             </span>RequestHeaders(RequestHeaders),
-            <span class="attr">#[prost(message, tag = <span class="string">&quot;4&quot;</span>)]
+            <span class="attr">#[prost(message, tag = <span class="string">"4"</span>)]
             </span>RemoteAddress(RemoteAddress),
-            <span class="attr">#[prost(message, tag = <span class="string">&quot;5&quot;</span>)]
+            <span class="attr">#[prost(message, tag = <span class="string">"5"</span>)]
             </span>GenericKey(GenericKey),
-            <span class="attr">#[prost(message, tag = <span class="string">&quot;6&quot;</span>)]
+            <span class="attr">#[prost(message, tag = <span class="string">"6"</span>)]
             </span>HeaderValueMatch(HeaderValueMatch),
-            <span class="attr">#[prost(message, tag = <span class="string">&quot;7&quot;</span>)]
+            <span class="attr">#[prost(message, tag = <span class="string">"7"</span>)]
             </span>DynamicMetadata(DynamicMetaData),
-            <span class="attr">#[prost(message, tag = <span class="string">&quot;8&quot;</span>)]
+            <span class="attr">#[prost(message, tag = <span class="string">"8"</span>)]
             </span>Metadata(MetaData),
-            <span class="attr">#[prost(message, tag = <span class="string">&quot;9&quot;</span>)]
+            <span class="attr">#[prost(message, tag = <span class="string">"9"</span>)]
             </span>Extension(<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::core::v3::TypedExtensionConfig),
         }
     }
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Message)]
     </span><span class="kw">pub struct </span>Override {
-        <span class="attr">#[prost(oneof = <span class="string">&quot;r#override::OverrideSpecifier&quot;</span>, tags = <span class="string">&quot;1&quot;</span>)]
+        <span class="attr">#[prost(oneof = <span class="string">"r#override::OverrideSpecifier"</span>, tags = <span class="string">"1"</span>)]
         </span><span class="kw">pub </span>override_specifier: ::core::option::Option&lt;r#override::OverrideSpecifier&gt;,
     }
     <span class="doccomment">/// Nested message and enum types in `Override`.
@@ -1902,7 +1904,7 @@
         <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
         #[derive(Clone, PartialEq, ::prost::Message)]
         </span><span class="kw">pub struct </span>DynamicMetadata {
-            <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
+            <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
             </span><span class="kw">pub </span>metadata_key: ::core::option::Option&lt;
                 <span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::kind::metadata::v3::MetadataKey,
             &gt;,
@@ -1910,7 +1912,7 @@
         <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
         #[derive(Clone, PartialEq, ::prost::Oneof)]
         </span><span class="kw">pub enum </span>OverrideSpecifier {
-            <span class="attr">#[prost(message, tag = <span class="string">&quot;1&quot;</span>)]
+            <span class="attr">#[prost(message, tag = <span class="string">"1"</span>)]
             </span>DynamicMetadata(DynamicMetadata),
         }
     }
@@ -1918,13 +1920,13 @@
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>HeaderMatcher {
-    <span class="attr">#[prost(string, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(string, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>name: ::prost::alloc::string::String,
-    <span class="attr">#[prost(bool, tag = <span class="string">&quot;8&quot;</span>)]
+    <span class="attr">#[prost(bool, tag = <span class="string">"8"</span>)]
     </span><span class="kw">pub </span>invert_match: bool,
     <span class="attr">#[prost(
-        oneof = <span class="string">&quot;header_matcher::HeaderMatchSpecifier&quot;</span>,
-        tags = <span class="string">&quot;4, 11, 6, 7, 9, 10, 12, 13&quot;
+        oneof = <span class="string">"header_matcher::HeaderMatchSpecifier"</span>,
+        tags = <span class="string">"4, 11, 6, 7, 9, 10, 12, 13"
     </span>)]
     </span><span class="kw">pub </span>header_match_specifier: ::core::option::Option&lt;header_matcher::HeaderMatchSpecifier&gt;,
 }
@@ -1933,32 +1935,32 @@
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     </span><span class="kw">pub enum </span>HeaderMatchSpecifier {
-        <span class="attr">#[prost(string, tag = <span class="string">&quot;4&quot;</span>)]
+        <span class="attr">#[prost(string, tag = <span class="string">"4"</span>)]
         </span>ExactMatch(::prost::alloc::string::String),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;11&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"11"</span>)]
         </span>SafeRegexMatch(<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::kind::matcher::v3::RegexMatcher),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;6&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"6"</span>)]
         </span>RangeMatch(<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::kind::v3::Int64Range),
-        <span class="attr">#[prost(bool, tag = <span class="string">&quot;7&quot;</span>)]
+        <span class="attr">#[prost(bool, tag = <span class="string">"7"</span>)]
         </span>PresentMatch(bool),
-        <span class="attr">#[prost(string, tag = <span class="string">&quot;9&quot;</span>)]
+        <span class="attr">#[prost(string, tag = <span class="string">"9"</span>)]
         </span>PrefixMatch(::prost::alloc::string::String),
-        <span class="attr">#[prost(string, tag = <span class="string">&quot;10&quot;</span>)]
+        <span class="attr">#[prost(string, tag = <span class="string">"10"</span>)]
         </span>SuffixMatch(::prost::alloc::string::String),
-        <span class="attr">#[prost(string, tag = <span class="string">&quot;12&quot;</span>)]
+        <span class="attr">#[prost(string, tag = <span class="string">"12"</span>)]
         </span>ContainsMatch(::prost::alloc::string::String),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;13&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"13"</span>)]
         </span>StringMatch(<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::kind::matcher::v3::StringMatcher),
     }
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>QueryParameterMatcher {
-    <span class="attr">#[prost(string, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(string, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>name: ::prost::alloc::string::String,
     <span class="attr">#[prost(
-        oneof = <span class="string">&quot;query_parameter_matcher::QueryParameterMatchSpecifier&quot;</span>,
-        tags = <span class="string">&quot;5, 6&quot;
+        oneof = <span class="string">"query_parameter_matcher::QueryParameterMatchSpecifier"</span>,
+        tags = <span class="string">"5, 6"
     </span>)]
     </span><span class="kw">pub </span>query_parameter_match_specifier:
         ::core::option::Option&lt;query_parameter_matcher::QueryParameterMatchSpecifier&gt;,
@@ -1968,30 +1970,30 @@
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     </span><span class="kw">pub enum </span>QueryParameterMatchSpecifier {
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;5&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"5"</span>)]
         </span>StringMatch(<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::kind::matcher::v3::StringMatcher),
-        <span class="attr">#[prost(bool, tag = <span class="string">&quot;6&quot;</span>)]
+        <span class="attr">#[prost(bool, tag = <span class="string">"6"</span>)]
         </span>PresentMatch(bool),
     }
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>InternalRedirectPolicy {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>max_internal_redirects: ::core::option::Option&lt;u32&gt;,
-    <span class="attr">#[prost(uint32, repeated, packed = <span class="string">&quot;false&quot;</span>, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(uint32, repeated, packed = <span class="string">"false"</span>, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>redirect_response_codes: ::prost::alloc::vec::Vec&lt;u32&gt;,
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(message, repeated, tag = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>predicates: ::prost::alloc::vec::Vec&lt;<span class="kw">super</span>::<span class="kw">super</span>::core::v3::TypedExtensionConfig&gt;,
-    <span class="attr">#[prost(bool, tag = <span class="string">&quot;4&quot;</span>)]
+    <span class="attr">#[prost(bool, tag = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>allow_cross_scheme_redirect: bool,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>FilterConfig {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>config: ::core::option::Option&lt;::prost_types::Any&gt;,
-    <span class="attr">#[prost(bool, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(bool, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>is_optional: bool,
 }
 </code></pre></div></section></main></body></html>

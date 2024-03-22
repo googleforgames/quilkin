@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/test.rs`."><title>test.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="quilkin" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0 (79e9716c9 2023-11-13)" data-channel="1.74.0" data-search-js="search-8be46b629f5f14a8.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../quilkin/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/test.rs`."><title>test.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="quilkin" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0 (aedd173a2 2024-03-17)" data-channel="1.77.0" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../quilkin/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -539,14 +541,14 @@
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
- * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -571,7 +573,7 @@
 
 <span class="kw">static </span>LOG_ONCE: Once = Once::new();
 
-<span class="doccomment">/// Call to safely enable logging calls with a given tracing env filter, e.g. &quot;quilkin=debug&quot;
+<span class="doccomment">/// Call to safely enable logging calls with a given tracing env filter, e.g. "quilkin=debug"
 /// This can be very useful when attempting to debug unit and integration tests.
 </span><span class="kw">pub fn </span>enable_log(filter: <span class="kw">impl </span>Into&lt;EnvFilter&gt;) {
     LOG_ONCE.call_once(|| {
@@ -607,12 +609,12 @@
 }
 
 <span class="doccomment">/// Returns a local address on a port that is not assigned to another test.
-/// If Random address tye is used, it might be v4, Might be v6. It&#39;s random.
+/// If Random address tye is used, it might be v4, Might be v6. It's random.
 </span><span class="kw">pub async fn </span>available_addr(address_type: AddressType) -&gt; SocketAddr {
     <span class="kw">let </span>socket = create_socket().<span class="kw">await</span>;
     <span class="kw">let </span>addr = get_address(address_type, <span class="kw-2">&amp;</span>socket);
 
-    <span class="macro">tracing::debug!</span>(addr = <span class="question-mark">?</span>addr, <span class="string">&quot;test_util::available_addr&quot;</span>);
+    <span class="macro">tracing::debug!</span>(addr = <span class="question-mark">?</span>addr, <span class="string">"test_util::available_addr"</span>);
     addr
 }
 
@@ -628,7 +630,7 @@
         AddressType::Ipv4 =&gt; socket.local_ipv4_addr().unwrap(),
         AddressType::Ipv6 =&gt; socket.local_ipv6_addr().unwrap(),
     };
-    <span class="macro">tracing::debug!</span>(addr = <span class="question-mark">?</span>addr, <span class="string">&quot;test_util::get_address&quot;</span>);
+    <span class="macro">tracing::debug!</span>(addr = <span class="question-mark">?</span>addr, <span class="string">"test_util::get_address"</span>);
     addr
 }
 
@@ -640,30 +642,30 @@
     <span class="kw">async fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="comment">// append values on each run
         </span>ctx.metadata
-            .entry(<span class="string">&quot;downstream&quot;</span>.into())
-            .and_modify(|e| e.as_mut_string().unwrap().push_str(<span class="string">&quot;:receive&quot;</span>))
-            .or_insert_with(|| Value::String(<span class="string">&quot;receive&quot;</span>.into()));
+            .entry(<span class="string">"downstream"</span>.into())
+            .and_modify(|e| e.as_mut_string().unwrap().push_str(<span class="string">":receive"</span>))
+            .or_insert_with(|| Value::String(<span class="string">"receive"</span>.into()));
 
         ctx.contents
-            .extend_from_slice(<span class="macro">format!</span>(<span class="string">&quot;:odr:{}&quot;</span>, ctx.source).as_bytes());
+            .extend_from_slice(<span class="macro">format!</span>(<span class="string">":odr:{}"</span>, ctx.source).as_bytes());
         <span class="prelude-val">Ok</span>(())
     }
 
     <span class="kw">async fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="comment">// append values on each run
         </span>ctx.metadata
-            .entry(<span class="string">&quot;upstream&quot;</span>.into())
-            .and_modify(|e| e.as_mut_string().unwrap().push_str(<span class="string">&quot;:receive&quot;</span>))
-            .or_insert_with(|| Value::String(<span class="string">&quot;receive&quot;</span>.to_string()));
+            .entry(<span class="string">"upstream"</span>.into())
+            .and_modify(|e| e.as_mut_string().unwrap().push_str(<span class="string">":receive"</span>))
+            .or_insert_with(|| Value::String(<span class="string">"receive"</span>.to_string()));
 
         ctx.contents
-            .extend_from_slice(<span class="macro">format!</span>(<span class="string">&quot;:our:{}:{}&quot;</span>, ctx.source, ctx.dest).as_bytes());
+            .extend_from_slice(<span class="macro">format!</span>(<span class="string">":our:{}:{}"</span>, ctx.source, ctx.dest).as_bytes());
         <span class="prelude-val">Ok</span>(())
     }
 }
 
 <span class="kw">impl </span>StaticFilter <span class="kw">for </span>TestFilter {
-    <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = <span class="string">&quot;TestFilter&quot;</span>;
+    <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str = <span class="string">"TestFilter"</span>;
     <span class="kw">type </span>Configuration = ();
     <span class="kw">type </span>BinaryConfiguration = ();
 
@@ -695,7 +697,7 @@
                 .map_err(|error| {
                     <span class="macro">tracing::warn!</span>(
                         %error,
-                        <span class="string">&quot;Failed to send server shutdown over channel&quot;
+                        <span class="string">"Failed to send server shutdown over channel"
                     </span>)
                 })
                 .ok();
@@ -762,7 +764,7 @@
                         <span class="kw">match </span>packet_tx.send(str).<span class="kw">await </span>{
                             <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; {}
                             <span class="prelude-val">Err</span>(error) =&gt; {
-                                <span class="macro">tracing::warn!</span>(target: <span class="string">&quot;recv_multiple_packets&quot;</span>, %error, <span class="string">&quot;recv_chan dropped&quot;</span>);
+                                <span class="macro">tracing::warn!</span>(target: <span class="string">"recv_multiple_packets"</span>, %error, <span class="string">"recv_chan dropped"</span>);
                                 <span class="kw">return</span>;
                             }
                         };
@@ -777,7 +779,7 @@
     }
 
     <span class="doccomment">/// Runs a simple UDP server that echos back payloads.
-    /// Returns the server&#39;s address.
+    /// Returns the server's address.
     </span><span class="kw">pub async fn </span>run_echo_server(<span class="kw-2">&amp;mut </span><span class="self">self</span>, address_type: AddressType) -&gt; EndpointAddress {
         <span class="self">self</span>.run_echo_server_with_tap(address_type, |<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>| {})
             .<span class="kw">await
@@ -785,14 +787,14 @@
 
     <span class="doccomment">/// Runs a simple UDP server that echos back payloads.
     /// The provided function is invoked for each received payload.
-    /// Returns the server&#39;s address.
+    /// Returns the server's address.
     </span><span class="kw">pub async fn </span>run_echo_server_with_tap&lt;F&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         address_type: AddressType,
         tap: F,
     ) -&gt; EndpointAddress
     <span class="kw">where
-        </span>F: Fn(SocketAddr, <span class="kw-2">&amp;</span>[u8], SocketAddr) + Send + <span class="lifetime">&#39;static</span>,
+        </span>F: Fn(SocketAddr, <span class="kw-2">&amp;</span>[u8], SocketAddr) + Send + <span class="lifetime">'static</span>,
     {
         <span class="kw">let </span>socket = create_socket().<span class="kw">await</span>;
         <span class="comment">// sometimes give ipv6, sometimes ipv4.
@@ -807,7 +809,7 @@
                     recvd = socket.recv_from(<span class="kw-2">&amp;mut </span>buf) =&gt; {
                         <span class="kw">let </span>(size, sender) = recvd.unwrap();
                         <span class="kw">let </span>packet = <span class="kw-2">&amp;</span>buf[..size];
-                        <span class="macro">tracing::trace!</span>(%sender, %size, <span class="string">&quot;echo server received and returning packet&quot;</span>);
+                        <span class="macro">tracing::trace!</span>(%sender, %size, <span class="string">"echo server received and returning packet"</span>);
                         tap(sender, packet, local_addr);
                         socket.send_to(packet, sender).<span class="kw">await</span>.unwrap();
                     },
@@ -872,7 +874,7 @@
         port
     }
 
-    <span class="doccomment">/// Returns a receiver subscribed to the helper&#39;s shutdown event.
+    <span class="doccomment">/// Returns a receiver subscribed to the helper's shutdown event.
     </span><span class="kw">async fn </span>get_shutdown_subscriber(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; ShutdownRx {
         <span class="comment">// If this is the first call, then we set up the channel first.
         </span><span class="kw">match </span><span class="self">self</span>.shutdown_ch {
@@ -902,11 +904,11 @@
     </span>F: Filter,
 {
     <span class="kw">let </span>endpoints = std::sync::Arc::new(<span class="kw">crate</span>::net::cluster::ClusterMap::default());
-    endpoints.insert_default(std::collections::BTreeSet::from([<span class="string">&quot;127.0.0.1:80&quot;
+    endpoints.insert_default(std::collections::BTreeSet::from([<span class="string">"127.0.0.1:80"
         </span>.parse::&lt;Endpoint&gt;()
         .unwrap()]));
-    <span class="kw">let </span>source = <span class="string">&quot;127.0.0.1:90&quot;</span>.parse().unwrap();
-    <span class="kw">let </span>contents = <span class="string">b&quot;hello&quot;</span>;
+    <span class="kw">let </span>source = <span class="string">"127.0.0.1:90"</span>.parse().unwrap();
+    <span class="kw">let </span>contents = <span class="string">b"hello"</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>context = ReadContext::new(endpoints.clone(), source, alloc_buffer(contents));
 
     filter.read(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span>.unwrap();
@@ -920,11 +922,11 @@
 <span class="kw">where
     </span>F: Filter,
 {
-    <span class="kw">let </span>endpoint = <span class="string">&quot;127.0.0.1:90&quot;</span>.parse::&lt;Endpoint&gt;().unwrap();
-    <span class="kw">let </span>contents = <span class="string">b&quot;hello&quot;</span>;
+    <span class="kw">let </span>endpoint = <span class="string">"127.0.0.1:90"</span>.parse::&lt;Endpoint&gt;().unwrap();
+    <span class="kw">let </span>contents = <span class="string">b"hello"</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>context = WriteContext::new(
         endpoint.address,
-        <span class="string">&quot;127.0.0.1:70&quot;</span>.parse().unwrap(),
+        <span class="string">"127.0.0.1:70"</span>.parse().unwrap(),
         alloc_buffer(contents),
     );
 
@@ -951,7 +953,7 @@
 }
 
 <span class="kw">fn </span>test_proxy_id() -&gt; String {
-    <span class="string">&quot;test-proxy-id&quot;</span>.to_owned()
+    <span class="string">"test-proxy-id"</span>.to_owned()
 }
 
 <span class="doccomment">/// Copy of [`crate::config::Config`] without all of the watcher things making
@@ -962,7 +964,7 @@
     </span><span class="kw">pub </span>clusters: <span class="kw">crate</span>::net::ClusterMap,
     <span class="attr">#[serde(default)]
     </span><span class="kw">pub </span>filters: <span class="kw">crate</span>::filters::FilterChain,
-    <span class="attr">#[serde(default = <span class="string">&quot;test_proxy_id&quot;</span>)]
+    <span class="attr">#[serde(default = <span class="string">"test_proxy_id"</span>)]
     </span><span class="kw">pub </span>id: String,
     <span class="attr">#[serde(default)]
     </span><span class="kw">pub </span>version: <span class="kw">crate</span>::config::Version,
@@ -985,7 +987,7 @@
         <span class="self">Self </span>{
             filters: <span class="kw">crate</span>::filters::FilterChain::try_create(std::iter::once(
                 <span class="kw">crate</span>::config::Filter {
-                    name: <span class="string">&quot;TestFilter&quot;</span>.into(),
+                    name: <span class="string">"TestFilter"</span>.into(),
                     label: <span class="prelude-val">None</span>,
                     config: <span class="prelude-val">None</span>,
                 },
@@ -998,9 +1000,9 @@
     <span class="kw">pub fn </span>write_to_file(<span class="kw-2">&amp;</span><span class="self">self</span>, path: <span class="kw">impl </span>AsRef&lt;std::path::Path&gt;) {
         std::fs::write(
             path,
-            serde_yaml::to_string(<span class="self">self</span>).expect(<span class="string">&quot;failed to serialize TestConfig&quot;</span>),
+            serde_yaml::to_string(<span class="self">self</span>).expect(<span class="string">"failed to serialize TestConfig"</span>),
         )
-        .expect(<span class="string">&quot;failed to write TestConfig to path&quot;</span>);
+        .expect(<span class="string">"failed to write TestConfig to path"</span>);
     }
 }
 
@@ -1022,7 +1024,7 @@
 </span><span class="macro">macro_rules! </span>__func_name {
     () =&gt; {{
         <span class="kw">fn </span>f() {}
-        <span class="kw">fn </span>type_name_of&lt;T&gt;(<span class="kw">_</span>: T) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+        <span class="kw">fn </span>type_name_of&lt;T&gt;(<span class="kw">_</span>: T) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
             std::any::type_name::&lt;T&gt;()
         }
         <span class="kw">let </span>name = type_name_of(f);
@@ -1037,11 +1039,11 @@
 </span><span class="macro">macro_rules! </span>temp_file {
     (<span class="macro-nonterminal">$prefix</span>:expr) =&gt; {{
         <span class="kw">let </span>name = <span class="macro-nonterminal">$</span><span class="macro">crate::__func_name!</span>();
-        <span class="kw">let </span><span class="macro-nonterminal">name </span>= name.strip_suffix(<span class="string">&quot;::{{closure}}&quot;</span>).unwrap_or(name);
-        <span class="kw">let </span><span class="kw-2">mut </span>name = name.replace(<span class="string">&quot;::&quot;</span>, <span class="string">&quot;.&quot;</span>);
-        name.push(<span class="string">&#39;-&#39;</span>);
+        <span class="kw">let </span><span class="macro-nonterminal">name </span>= name.strip_suffix(<span class="string">"::{{closure}}"</span>).unwrap_or(name);
+        <span class="kw">let </span><span class="kw-2">mut </span>name = name.replace(<span class="string">"::"</span>, <span class="string">"."</span>);
+        name.push(<span class="string">'-'</span>);
         name.push_str(<span class="macro-nonterminal">$prefix</span>);
-        name.push(<span class="string">&#39;-&#39;</span>);
+        name.push(<span class="string">'-'</span>);
         tempfile::NamedTempFile::with_prefix(name).unwrap()
     }};
 }
@@ -1059,7 +1061,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>t = TestHelper::default();
         <span class="kw">let </span>echo_addr = t.run_echo_server(AddressType::Random).<span class="kw">await</span>;
         <span class="kw">let </span>endpoint = t.open_socket_and_recv_single_packet().<span class="kw">await</span>;
-        <span class="kw">let </span>msg = <span class="string">&quot;hello&quot;</span>;
+        <span class="kw">let </span>msg = <span class="string">"hello"</span>;
         endpoint
             .socket
             .send_to(msg.as_bytes(), <span class="kw-2">&amp;</span>echo_addr.to_socket_addr().<span class="kw">await</span>.unwrap())
@@ -1069,7 +1071,7 @@
             msg,
             timeout(Duration::from_secs(<span class="number">5</span>), endpoint.packet_rx)
                 .<span class="kw">await
-                </span>.expect(<span class="string">&quot;should not timeout&quot;</span>)
+                </span>.expect(<span class="string">"should not timeout"</span>)
                 .unwrap()
         );
     }

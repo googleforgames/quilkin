@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/config.rs`."><title>config.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="quilkin" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0 (79e9716c9 2023-11-13)" data-channel="1.74.0" data-search-js="search-8be46b629f5f14a8.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../quilkin/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/config.rs`."><title>config.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="quilkin" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0 (aedd173a2 2024-03-17)" data-channel="1.77.0" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../quilkin/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1091,20 +1093,17 @@
 <a href="#1091" id="1091">1091</a>
 <a href="#1092" id="1092">1092</a>
 <a href="#1093" id="1093">1093</a>
-<a href="#1094" id="1094">1094</a>
-<a href="#1095" id="1095">1095</a>
-<a href="#1096" id="1096">1096</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
- * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -1158,7 +1157,7 @@
 /// When using State Of The World xDS, the message size can get large enough
 /// that it can exceed the default limits.
 </span><span class="kw">pub fn </span>max_grpc_message_size() -&gt; usize {
-    std::env::var(<span class="string">&quot;QUILKIN_MAX_GRPC_MESSAGE_SIZE&quot;</span>)
+    std::env::var(<span class="string">"QUILKIN_MAX_GRPC_MESSAGE_SIZE"</span>)
         .as_deref()
         .ok()
         .and_then(|var| var.parse().ok())
@@ -1191,7 +1190,7 @@
     </span><span class="kw">pub </span>clusters: Watch&lt;ClusterMap&gt;,
     <span class="attr">#[serde(default)]
     </span><span class="kw">pub </span>filters: Slot&lt;<span class="kw">crate</span>::filters::FilterChain&gt;,
-    <span class="attr">#[serde(default = <span class="string">&quot;default_proxy_id&quot;</span>)]
+    <span class="attr">#[serde(default = <span class="string">"default_proxy_id"</span>)]
     </span><span class="kw">pub </span>id: Slot&lt;String&gt;,
     <span class="attr">#[serde(default)]
     </span><span class="kw">pub </span>version: Slot&lt;Version&gt;,
@@ -1220,7 +1219,7 @@
             ($(<span class="macro-nonterminal">$field</span>:ident),+) =&gt; {
                 $(
                     <span class="kw">if let </span><span class="prelude-val">Some</span>(value) = map.remove(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$field</span>)) {
-                        <span class="macro">tracing::trace!</span>(%value, <span class="string">&quot;replacing {}&quot;</span>, <span class="macro">stringify!</span>(<span class="macro-nonterminal">$field</span>));
+                        <span class="macro">tracing::trace!</span>(%value, <span class="string">"replacing {}"</span>, <span class="macro">stringify!</span>(<span class="macro-nonterminal">$field</span>));
                         <span class="self">self</span>.<span class="macro-nonterminal">$field</span>.try_replace(serde_json::from_value(value)<span class="question-mark">?</span>);
                     }
                 )+
@@ -1229,9 +1228,9 @@
 
         <span class="macro">replace_if_present!</span>(filters, id);
 
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(value) = map.remove(<span class="string">&quot;clusters&quot;</span>) {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(value) = map.remove(<span class="string">"clusters"</span>) {
             <span class="kw">let </span>cmd: cluster::ClusterMapDeser = serde_json::from_value(value)<span class="question-mark">?</span>;
-            <span class="macro">tracing::trace!</span>(len = cmd.endpoints.len(), <span class="string">&quot;replacing clusters&quot;</span>);
+            <span class="macro">tracing::trace!</span>(len = cmd.endpoints.len(), <span class="string">"replacing clusters"</span>);
             <span class="self">self</span>.clusters.modify(|clusters| {
                 <span class="kw">for </span>cluster <span class="kw">in </span>cmd.endpoints {
                     clusters.insert(cluster.locality, cluster.endpoints);
@@ -1292,20 +1291,20 @@
                 <span class="kw">if </span>names.is_empty() {
                     <span class="kw">for </span>cluster <span class="kw">in </span><span class="self">self</span>.clusters.read().iter() {
                         resources.push(resource_type.encode_to_any(
-                            <span class="kw-2">&amp;</span><span class="kw">crate</span>::net::cluster::proto::Cluster::try_from((
+                            <span class="kw-2">&amp;</span><span class="kw">crate</span>::net::cluster::proto::Cluster::from((
                                 cluster.key(),
                                 <span class="kw-2">&amp;</span>cluster.value().endpoints,
-                            ))<span class="question-mark">?</span>,
+                            )),
                         )<span class="question-mark">?</span>);
                     }
                 } <span class="kw">else </span>{
                     <span class="kw">for </span>locality <span class="kw">in </span>names.iter().filter_map(|name| name.parse().ok()) {
                         <span class="kw">if let </span><span class="prelude-val">Some</span>(cluster) = <span class="self">self</span>.clusters.read().get(<span class="kw-2">&amp;</span><span class="prelude-val">Some</span>(locality)) {
                             resources.push(resource_type.encode_to_any(
-                                <span class="kw-2">&amp;</span><span class="kw">crate</span>::net::cluster::proto::Cluster::try_from((
+                                <span class="kw-2">&amp;</span><span class="kw">crate</span>::net::cluster::proto::Cluster::from((
                                     cluster.key(),
                                     <span class="kw-2">&amp;</span>cluster.value().endpoints,
-                                ))<span class="question-mark">?</span>,
+                                )),
                             )<span class="question-mark">?</span>);
                         }
                     }
@@ -1329,8 +1328,8 @@
         <span class="kw">let </span>(awaiting_ack, removed) = <span class="kw">match </span>client_versions {
             <span class="kw">crate</span>::net::xds::ClientVersions::Listener =&gt; {
                 resources.push(XdsResource {
-                    name: <span class="string">&quot;listener&quot;</span>.into(),
-                    version: <span class="string">&quot;0&quot;</span>.into(),
+                    name: <span class="string">"listener"</span>.into(),
+                    version: <span class="string">"0"</span>.into(),
                     resource: <span class="prelude-val">Some</span>(ResourceType::Listener.encode_to_any(<span class="kw-2">&amp;</span>Listener {
                         filter_chains: <span class="macro">vec!</span>[(<span class="kw-2">&amp;*</span><span class="self">self</span>.filters.load()).try_into()<span class="question-mark">?</span>],
                         ..&lt;<span class="kw">_</span>&gt;::default()
@@ -1348,8 +1347,8 @@
                         icao_code,
                     } =&gt; {
                         resources.push(XdsResource {
-                            name: <span class="string">&quot;datacenter&quot;</span>.into(),
-                            version: <span class="string">&quot;0&quot;</span>.into(),
+                            name: <span class="string">"datacenter"</span>.into(),
+                            version: <span class="string">"0"</span>.into(),
                             resource: <span class="prelude-val">Some</span>(ResourceType::Datacenter.encode_to_any(
                                 <span class="kw-2">&amp;</span><span class="kw">crate</span>::net::cluster::proto::Datacenter {
                                     qcmp_port: <span class="kw-2">*</span>qcmp_port.load() <span class="kw">as _</span>,
@@ -1365,8 +1364,8 @@
                     DatacenterConfig::NonAgent { datacenters } =&gt; {
                         <span class="kw">for </span>entry <span class="kw">in </span>datacenters.read().iter() {
                             resources.push(XdsResource {
-                                name: <span class="string">&quot;datacenter&quot;</span>.into(),
-                                version: <span class="string">&quot;0&quot;</span>.into(),
+                                name: <span class="string">"datacenter"</span>.into(),
+                                version: <span class="string">"0"</span>.into(),
                                 resource: <span class="prelude-val">Some</span>(ResourceType::Datacenter.encode_to_any(
                                     <span class="kw-2">&amp;</span><span class="kw">crate</span>::net::cluster::proto::Datacenter {
                                         host: entry.key().to_string(),
@@ -1401,10 +1400,7 @@
                         name: key.as_ref().map(|k| k.to_string()).unwrap_or_default(),
                         version: current_version.to_string(),
                         resource: <span class="prelude-val">Some</span>(resource_type.encode_to_any(
-                            <span class="kw-2">&amp;</span><span class="kw">crate</span>::net::cluster::proto::Cluster::try_from((
-                                key,
-                                <span class="kw-2">&amp;</span>value.endpoints,
-                            ))<span class="question-mark">?</span>,
+                            <span class="kw-2">&amp;</span><span class="kw">crate</span>::net::cluster::proto::Cluster::from((key, <span class="kw-2">&amp;</span>value.endpoints)),
                         )<span class="question-mark">?</span>),
                         ..Default::default()
                     });
@@ -1453,7 +1449,7 @@
 
     <span class="attr">#[tracing::instrument(skip_all, fields(response = response.type_url()))]
     </span><span class="kw">pub fn </span>apply(<span class="kw-2">&amp;</span><span class="self">self</span>, response: Resource) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
-        <span class="macro">tracing::trace!</span>(resource=<span class="question-mark">?</span>response, <span class="string">&quot;applying resource&quot;</span>);
+        <span class="macro">tracing::trace!</span>(resource=<span class="question-mark">?</span>response, <span class="string">"applying resource"</span>);
 
         <span class="kw">match </span>response {
             Resource::Listener(<span class="kw-2">mut </span>listener) =&gt; {
@@ -1469,7 +1465,7 @@
             }
             Resource::Datacenter(dc) =&gt; {
                 <span class="kw">let </span>DatacenterConfig::NonAgent { datacenters } = <span class="kw-2">&amp;</span><span class="self">self</span>.datacenter <span class="kw">else </span>{
-                    <span class="macro">eyre::bail!</span>(<span class="string">&quot;cannot apply datacenter resource to an agent&quot;</span>);
+                    <span class="macro">eyre::bail!</span>(<span class="string">"cannot apply datacenter resource to an agent"</span>);
                 };
 
                 <span class="kw">let </span>host = dc.host.parse()<span class="question-mark">?</span>;
@@ -1506,7 +1502,7 @@
         removed_resources: Vec&lt;String&gt;,
         local_versions: <span class="kw-2">&amp;mut </span>HashMap&lt;String, String&gt;,
     ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
-        <span class="comment">// Remove any resources the upstream server has removed/doesn&#39;t have,
+        <span class="comment">// Remove any resources the upstream server has removed/doesn't have,
         // we do this before applying any new/updated resources in case a
         // resource is in both lists, though really that would be a bug in
         // the upstream server
@@ -1519,7 +1515,7 @@
                 <span class="kw">for </span>res <span class="kw">in </span>resources {
                     <span class="kw">let </span>(resource, <span class="kw">_</span>) = res<span class="question-mark">?</span>;
                     <span class="kw">let </span>Resource::Listener(<span class="kw-2">mut </span>listener) = resource <span class="kw">else </span>{
-                        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;a non-listener resource was present&quot;</span>));
+                        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">"a non-listener resource was present"</span>));
                     };
 
                     <span class="kw">let </span>chain: <span class="kw">crate</span>::filters::FilterChain = <span class="kw">if </span>listener.filter_chains.is_empty() {
@@ -1531,12 +1527,12 @@
                     </span>};
 
                     <span class="self">self</span>.filters.store(Arc::new(chain));
-                    local_versions.insert(listener.name, <span class="string">&quot;&quot;</span>.into());
+                    local_versions.insert(listener.name, <span class="string">""</span>.into());
                 }
             }
             ResourceType::Datacenter =&gt; {
                 <span class="kw">let </span>DatacenterConfig::NonAgent { datacenters } = <span class="kw-2">&amp;</span><span class="self">self</span>.datacenter <span class="kw">else </span>{
-                    <span class="macro">eyre::bail!</span>(<span class="string">&quot;cannot apply delta datacenters resource to agent&quot;</span>);
+                    <span class="macro">eyre::bail!</span>(<span class="string">"cannot apply delta datacenters resource to agent"</span>);
                 };
 
                 datacenters.modify(|wg| {
@@ -1544,7 +1540,7 @@
                         <span class="kw">let </span>(resource, version) = res<span class="question-mark">?</span>;
 
                         <span class="kw">let </span>Resource::Datacenter(dc) = resource <span class="kw">else </span>{
-                            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;a non-datacenter resource was present&quot;</span>));
+                            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">"a non-datacenter resource was present"</span>));
                         };
 
                         <span class="kw">let </span>host = dc.host.parse()<span class="question-mark">?</span>;
@@ -1577,7 +1573,7 @@
                     <span class="kw">let </span>(resource, version) = res<span class="question-mark">?</span>;
 
                     <span class="kw">let </span>Resource::Cluster(cluster) = resource <span class="kw">else </span>{
-                        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;a non-cluster resource was present&quot;</span>));
+                        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">"a non-cluster resource was present"</span>));
                     };
 
                     <span class="kw">let </span>parsed_version = version.parse()<span class="question-mark">?</span>;
@@ -1644,7 +1640,7 @@
         <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.datacenter {
             DatacenterConfig::NonAgent { datacenters } =&gt; datacenters,
             DatacenterConfig::Agent { .. } =&gt; {
-                <span class="macro">unreachable!</span>(<span class="string">&quot;this should not be called on an agent&quot;</span>);
+                <span class="macro">unreachable!</span>(<span class="string">"this should not be called on an agent"</span>);
             }
         }
     }
@@ -1757,14 +1753,14 @@
 
 <span class="kw">impl </span>AsRef&lt;str&gt; <span class="kw">for </span>IcaoCode {
     <span class="kw">fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>str {
-        <span class="comment">// SAFETY: We don&#39;t allow this to be constructed with an invalid utf-8 string
+        <span class="comment">// SAFETY: We don't allow this to be constructed with an invalid utf-8 string
         </span><span class="kw">unsafe </span>{ std::str::from_utf8_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>) }
     }
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>IcaoCode {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-        <span class="self">Self</span>([<span class="string">b&#39;X&#39;</span>, <span class="string">b&#39;X&#39;</span>, <span class="string">b&#39;X&#39;</span>, <span class="string">b&#39;X&#39;</span>])
+        <span class="self">Self</span>([<span class="string">b'X'</span>, <span class="string">b'X'</span>, <span class="string">b'X'</span>, <span class="string">b'X'</span>])
     }
 }
 
@@ -1772,21 +1768,21 @@
     <span class="kw">type </span><span class="prelude-val">Err </span>= eyre::Error;
 
     <span class="kw">fn </span>from_str(input: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Err&gt; {
-        <span class="kw">const </span>VALID_RANGE: std::ops::RangeInclusive&lt;char&gt; = <span class="string">&#39;A&#39;</span>..=<span class="string">&#39;Z&#39;</span>;
+        <span class="kw">const </span>VALID_RANGE: std::ops::RangeInclusive&lt;char&gt; = <span class="string">'A'</span>..=<span class="string">'Z'</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>arr = [<span class="number">0</span>; <span class="number">4</span>];
         <span class="kw">let </span><span class="kw-2">mut </span>i = <span class="number">0</span>;
 
         <span class="kw">for </span>c <span class="kw">in </span>input.chars() {
-            <span class="macro">eyre::ensure!</span>(i &lt; <span class="number">4</span>, <span class="string">&quot;ICAO code is too long&quot;</span>);
+            <span class="macro">eyre::ensure!</span>(i &lt; <span class="number">4</span>, <span class="string">"ICAO code is too long"</span>);
             <span class="macro">eyre::ensure!</span>(
                 VALID_RANGE.contains(<span class="kw-2">&amp;</span>c),
-                <span class="string">&quot;ICAO code contained invalid character &#39;{c}&#39;&quot;
+                <span class="string">"ICAO code contained invalid character '{c}'"
             </span>);
             arr[i] = c <span class="kw">as </span>u8;
             i += <span class="number">1</span>;
         }
 
-        <span class="macro">eyre::ensure!</span>(i == <span class="number">4</span>, <span class="string">&quot;ICAO code was not long enough&quot;</span>);
+        <span class="macro">eyre::ensure!</span>(i == <span class="number">4</span>, <span class="string">"ICAO code was not long enough"</span>);
         <span class="prelude-val">Ok</span>(<span class="self">Self</span>(arr))
     }
 }
@@ -1794,13 +1790,13 @@
 <span class="kw">use </span>std::fmt;
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>IcaoCode {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
         f.write_str(<span class="self">self</span>.as_ref())
     }
 }
 
 <span class="kw">impl </span>fmt::Debug <span class="kw">for </span>IcaoCode {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
         f.write_str(<span class="self">self</span>.as_ref())
     }
 }
@@ -1814,20 +1810,20 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;de</span>&gt; Deserialize&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>IcaoCode {
+<span class="kw">impl</span>&lt;<span class="lifetime">'de</span>&gt; Deserialize&lt;<span class="lifetime">'de</span>&gt; <span class="kw">for </span>IcaoCode {
     <span class="kw">fn </span>deserialize&lt;D&gt;(deserializer: D) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, D::Error&gt;
     <span class="kw">where
-        </span>D: serde::Deserializer&lt;<span class="lifetime">&#39;de</span>&gt;,
+        </span>D: serde::Deserializer&lt;<span class="lifetime">'de</span>&gt;,
     {
         <span class="kw">struct </span>IcaoVisitor;
 
-        <span class="kw">impl</span>&lt;<span class="lifetime">&#39;de</span>&gt; serde::de::Visitor&lt;<span class="lifetime">&#39;de</span>&gt; <span class="kw">for </span>IcaoVisitor {
+        <span class="kw">impl</span>&lt;<span class="lifetime">'de</span>&gt; serde::de::Visitor&lt;<span class="lifetime">'de</span>&gt; <span class="kw">for </span>IcaoVisitor {
             <span class="kw">type </span>Value = IcaoCode;
-            <span class="kw">fn </span>expecting(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
-                f.write_str(<span class="string">&quot;a 4-character, uppercase, alphabetical ASCII ICAO code&quot;</span>)
+            <span class="kw">fn </span>expecting(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
+                f.write_str(<span class="string">"a 4-character, uppercase, alphabetical ASCII ICAO code"</span>)
             }
 
-            <span class="kw">fn </span>visit_borrowed_str&lt;E&gt;(<span class="self">self</span>, v: <span class="kw-2">&amp;</span><span class="lifetime">&#39;de </span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Value, E&gt;
+            <span class="kw">fn </span>visit_borrowed_str&lt;E&gt;(<span class="self">self</span>, v: <span class="kw-2">&amp;</span><span class="lifetime">'de </span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Value, E&gt;
             <span class="kw">where
                 </span>E: serde::de::Error,
             {
@@ -1841,7 +1837,7 @@
 
 <span class="kw">impl </span>schemars::JsonSchema <span class="kw">for </span>IcaoCode {
     <span class="kw">fn </span>schema_name() -&gt; String {
-        <span class="string">&quot;IcaoCode&quot;</span>.into()
+        <span class="string">"IcaoCode"</span>.into()
     }
 
     <span class="kw">fn </span>is_referenceable() -&gt; bool {
@@ -1853,7 +1849,7 @@
         <span class="kw">if let </span>schemars::schema::Schema::Object(schema_object) = <span class="kw-2">&amp;mut </span>schema {
             <span class="kw">if </span>schema_object.has_type(schemars::schema::InstanceType::String) {
                 <span class="kw">let </span>validation = schema_object.string();
-                validation.pattern = <span class="prelude-val">Some</span>(<span class="string">r&quot;^[A-Z]{4}$&quot;</span>.to_string());
+                validation.pattern = <span class="prelude-val">Some</span>(<span class="string">r"^[A-Z]{4}$"</span>.to_string());
             }
         }
         schema
@@ -1862,7 +1858,7 @@
 
 <span class="attr">#[derive(Clone, Debug, Deserialize, Eq, Serialize, JsonSchema, PartialEq)]
 </span><span class="kw">pub enum </span>Version {
-    <span class="attr">#[serde(rename = <span class="string">&quot;v1alpha1&quot;</span>)]
+    <span class="attr">#[serde(rename = <span class="string">"v1alpha1"</span>)]
     </span>V1Alpha1,
 }
 
@@ -1872,12 +1868,12 @@
     }
 }
 
-<span class="attr">#[cfg(not(target_os = <span class="string">&quot;linux&quot;</span>))]
+<span class="attr">#[cfg(not(target_os = <span class="string">"linux"</span>))]
 </span><span class="kw">fn </span>default_proxy_id() -&gt; Slot&lt;String&gt; {
     Slot::from(Uuid::new_v4().as_hyphenated().to_string())
 }
 
-<span class="attr">#[cfg(target_os = <span class="string">&quot;linux&quot;</span>)]
+<span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)]
 </span><span class="kw">fn </span>default_proxy_id() -&gt; Slot&lt;String&gt; {
     Slot::from(sys_info::hostname().unwrap_or_else(|<span class="kw">_</span>| Uuid::new_v4().as_hyphenated().to_string()))
 }
@@ -1904,8 +1900,8 @@
                 ConfigType::TypedConfig(any) =&gt; any,
                 ConfigType::ConfigDiscovery(<span class="kw">_</span>) =&gt; {
                     <span class="kw">return </span><span class="prelude-val">Err</span>(CreationError::FieldInvalid {
-                        field: <span class="string">&quot;config_type&quot;</span>.into(),
-                        reason: <span class="string">&quot;ConfigDiscovery is currently unsupported&quot;</span>.into(),
+                        field: <span class="string">"config_type"</span>.into(),
+                        reason: <span class="string">"ConfigDiscovery is currently unsupported"</span>.into(),
                     })
                 }
             };
@@ -1978,7 +1974,7 @@
     </span><span class="kw">fn </span>deserialise_client() {
         <span class="kw">let </span>config = Config::default_non_agent();
         config.clusters.modify(|clusters| {
-            clusters.insert_default([Endpoint::new(<span class="string">&quot;127.0.0.1:25999&quot;</span>.parse().unwrap())].into())
+            clusters.insert_default([Endpoint::new(<span class="string">"127.0.0.1:25999"</span>.parse().unwrap())].into())
         });
 
         <span class="kw">let _ </span>= serde_yaml::to_string(<span class="kw-2">&amp;</span>config).unwrap();
@@ -1990,8 +1986,8 @@
         config.clusters.modify(|clusters| {
             clusters.insert_default(
                 [
-                    Endpoint::new(<span class="string">&quot;127.0.0.1:26000&quot;</span>.parse().unwrap()),
-                    Endpoint::new(<span class="string">&quot;127.0.0.1:26001&quot;</span>.parse().unwrap()),
+                    Endpoint::new(<span class="string">"127.0.0.1:26000"</span>.parse().unwrap()),
+                    Endpoint::new(<span class="string">"127.0.0.1:26001"</span>.parse().unwrap()),
                 ]
                 .into(),
             )
@@ -2003,8 +1999,8 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>parse_default_values() {
         <span class="kw">let </span>config: Config = serde_json::from_value(<span class="macro">json!</span>({
-            <span class="string">&quot;version&quot;</span>: <span class="string">&quot;v1alpha1&quot;</span>,
-             <span class="string">&quot;clusters&quot;</span>:[]
+            <span class="string">"version"</span>: <span class="string">"v1alpha1"</span>,
+             <span class="string">"clusters"</span>:[]
         }))
         .unwrap();
 
@@ -2013,23 +2009,23 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>parse_proxy() {
-        <span class="kw">let </span>yaml = <span class="string">&quot;
+        <span class="kw">let </span>yaml = <span class="string">"
 version: v1alpha1
 id: server-proxy
-  &quot;</span>;
+  "</span>;
         <span class="kw">let </span>config = parse_config(yaml);
 
-        <span class="macro">assert_eq!</span>(config.id.load().as_str(), <span class="string">&quot;server-proxy&quot;</span>);
+        <span class="macro">assert_eq!</span>(config.id.load().as_str(), <span class="string">"server-proxy"</span>);
         <span class="macro">assert_eq!</span>(<span class="kw-2">*</span>config.version.load(), Version::V1Alpha1);
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>parse_client() {
         <span class="kw">let </span>config: Config = serde_json::from_value(<span class="macro">json!</span>({
-            <span class="string">&quot;version&quot;</span>: <span class="string">&quot;v1alpha1&quot;</span>,
-            <span class="string">&quot;clusters&quot;</span>: [{
-                <span class="string">&quot;endpoints&quot;</span>: [{
-                    <span class="string">&quot;address&quot;</span>: <span class="string">&quot;127.0.0.1:25999&quot;
+            <span class="string">"version"</span>: <span class="string">"v1alpha1"</span>,
+            <span class="string">"clusters"</span>: [{
+                <span class="string">"endpoints"</span>: [{
+                    <span class="string">"address"</span>: <span class="string">"127.0.0.1:25999"
                 </span>}],
             }]
         }))
@@ -2047,10 +2043,10 @@ id: server-proxy
     <span class="attr">#[test]
     </span><span class="kw">fn </span>parse_ipv6_endpoint() {
         <span class="kw">let </span>config: Config = serde_json::from_value(<span class="macro">json!</span>({
-            <span class="string">&quot;version&quot;</span>: <span class="string">&quot;v1alpha1&quot;</span>,
-            <span class="string">&quot;clusters&quot;</span>:[{
-                <span class="string">&quot;endpoints&quot;</span>: [{
-                    <span class="string">&quot;address&quot;</span>: <span class="string">&quot;[2345:0425:2CA1:0000:0000:0567:5673:24b5]:25999&quot;
+            <span class="string">"version"</span>: <span class="string">"v1alpha1"</span>,
+            <span class="string">"clusters"</span>:[{
+                <span class="string">"endpoints"</span>: [{
+                    <span class="string">"address"</span>: <span class="string">"[2345:0425:2CA1:0000:0000:0567:5673:24b5]:25999"
                 </span>}],
             }]
         }))
@@ -2062,7 +2058,7 @@ id: server-proxy
             <span class="kw-2">&amp;</span>ClusterMap::new_default(
                 [Endpoint::new(
                     (
-                        <span class="string">&quot;2345:0425:2CA1:0000:0000:0567:5673:24b5&quot;
+                        <span class="string">"2345:0425:2CA1:0000:0000:0567:5673:24b5"
                             </span>.parse::&lt;Ipv6Addr&gt;()
                             .unwrap(),
                         <span class="number">25999
@@ -2077,22 +2073,22 @@ id: server-proxy
     <span class="attr">#[test]
     </span><span class="kw">fn </span>parse_server() {
         <span class="kw">let </span>config: Config = serde_json::from_value(<span class="macro">json!</span>({
-            <span class="string">&quot;version&quot;</span>: <span class="string">&quot;v1alpha1&quot;</span>,
-            <span class="string">&quot;clusters&quot;</span>: [{
-                <span class="string">&quot;endpoints&quot;</span>: [
+            <span class="string">"version"</span>: <span class="string">"v1alpha1"</span>,
+            <span class="string">"clusters"</span>: [{
+                <span class="string">"endpoints"</span>: [
                     {
-                        <span class="string">&quot;address&quot; </span>: <span class="string">&quot;127.0.0.1:26000&quot;</span>,
-                        <span class="string">&quot;metadata&quot;</span>: {
-                            <span class="string">&quot;quilkin.dev&quot;</span>: {
-                                <span class="string">&quot;tokens&quot;</span>: [<span class="string">&quot;MXg3aWp5Ng==&quot;</span>, <span class="string">&quot;OGdqM3YyaQ==&quot;</span>],
+                        <span class="string">"address" </span>: <span class="string">"127.0.0.1:26000"</span>,
+                        <span class="string">"metadata"</span>: {
+                            <span class="string">"quilkin.dev"</span>: {
+                                <span class="string">"tokens"</span>: [<span class="string">"MXg3aWp5Ng=="</span>, <span class="string">"OGdqM3YyaQ=="</span>],
                             }
                         }
                     },
                     {
-                        <span class="string">&quot;address&quot; </span>: <span class="string">&quot;[2345:0425:2CA1:0000:0000:0567:5673:24b5]:25999&quot;</span>,
-                        <span class="string">&quot;metadata&quot;</span>: {
-                            <span class="string">&quot;quilkin.dev&quot;</span>: {
-                                <span class="string">&quot;tokens&quot;</span>: [<span class="string">&quot;bmt1eTcweA==&quot;</span>],
+                        <span class="string">"address" </span>: <span class="string">"[2345:0425:2CA1:0000:0000:0567:5673:24b5]:25999"</span>,
+                        <span class="string">"metadata"</span>: {
+                            <span class="string">"quilkin.dev"</span>: {
+                                <span class="string">"tokens"</span>: [<span class="string">"bmt1eTcweA=="</span>],
                             }
                         }
                     }
@@ -2107,20 +2103,20 @@ id: server-proxy
             <span class="kw-2">&amp;</span>ClusterMap::new_default(
                 [
                     Endpoint::with_metadata(
-                        <span class="string">&quot;127.0.0.1:26000&quot;</span>.parse().unwrap(),
+                        <span class="string">"127.0.0.1:26000"</span>.parse().unwrap(),
                         Metadata {
-                            tokens: <span class="macro">vec!</span>[<span class="string">&quot;1x7ijy6&quot;</span>, <span class="string">&quot;8gj3v2i&quot;</span>]
+                            tokens: <span class="macro">vec!</span>[<span class="string">"1x7ijy6"</span>, <span class="string">"8gj3v2i"</span>]
                                 .into_iter()
                                 .map(From::from)
                                 .collect(),
                         },
                     ),
                     Endpoint::with_metadata(
-                        <span class="string">&quot;[2345:0425:2CA1:0000:0000:0567:5673:24b5]:25999&quot;
+                        <span class="string">"[2345:0425:2CA1:0000:0000:0567:5673:24b5]:25999"
                             </span>.parse()
                             .unwrap(),
                         Metadata {
-                            tokens: <span class="macro">vec!</span>[<span class="string">&quot;nkuy70x&quot;</span>].into_iter().map(From::from).collect(),
+                            tokens: <span class="macro">vec!</span>[<span class="string">"nkuy70x"</span>].into_iter().map(From::from).collect(),
                         },
                     ),
                 ]
@@ -2132,14 +2128,14 @@ id: server-proxy
     <span class="attr">#[test]
     </span><span class="kw">fn </span>deny_unused_fields() {
         <span class="kw">let </span>configs = <span class="macro">vec!</span>[
-            <span class="string">&quot;
+            <span class="string">"
 version: v1alpha1
 foo: bar
 clusters:
     - endpoints:
         - address: 127.0.0.1:7001
-&quot;</span>,
-            <span class="string">&quot;
+"</span>,
+            <span class="string">"
 # proxy
 version: v1alpha1
 foo: bar
@@ -2148,15 +2144,15 @@ port: 7000
 clusters:
     - endpoints:
         - address: 127.0.0.1:7001
-&quot;</span>,
-            <span class="string">&quot;
+"</span>,
+            <span class="string">"
 # admin
 version: v1alpha1
 admin:
     foo: bar
     address: 127.0.0.1:7001
-&quot;</span>,
-            <span class="string">&quot;
+"</span>,
+            <span class="string">"
 # static.endpoints
 version: v1alpha1
 clusters:
@@ -2164,29 +2160,29 @@ clusters:
         - address: 127.0.0.1:7001
           connection_ids:
             - Mxg3aWp5Ng==
-&quot;</span>,
-            <span class="string">&quot;
+"</span>,
+            <span class="string">"
 # static.filters
 version: v1alpha1
 filters:
   - name: quilkin.core.v1.rate-limiter
     foo: bar
-&quot;</span>,
-            <span class="string">&quot;
+"</span>,
+            <span class="string">"
 # dynamic.management_servers
 version: v1alpha1
 dynamic:
   management_servers:
     - address: 127.0.0.1:25999
       foo: bar
-&quot;</span>,
+"</span>,
         ];
 
         <span class="kw">for </span>config <span class="kw">in </span>configs {
             <span class="kw">let </span>result = Config::from_reader(config.as_bytes());
             <span class="kw">let </span>error = result.unwrap_err();
-            <span class="macro">println!</span>(<span class="string">&quot;here: {}&quot;</span>, error);
-            <span class="macro">assert!</span>(<span class="macro">format!</span>(<span class="string">&quot;{error:?}&quot;</span>).contains(<span class="string">&quot;unknown field&quot;</span>));
+            <span class="macro">println!</span>(<span class="string">"here: {}"</span>, error);
+            <span class="macro">assert!</span>(<span class="macro">format!</span>(<span class="string">"{error:?}"</span>).contains(<span class="string">"unknown field"</span>));
         }
     }
 }

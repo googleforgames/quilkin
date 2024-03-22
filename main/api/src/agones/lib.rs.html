@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `agones/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="agones" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0 (79e9716c9 2023-11-13)" data-channel="1.74.0" data-search-js="search-8be46b629f5f14a8.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../agones/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `agones/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="agones" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0 (aedd173a2 2024-03-17)" data-channel="1.77.0" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../agones/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -730,14 +732,14 @@
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
- * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -792,16 +794,16 @@
 <span class="attr">#[allow(dead_code)]
 </span><span class="kw">static </span>CLIENT: OnceCell&lt;Client&gt; = OnceCell::const_new();
 <span class="attr">#[allow(dead_code)]
-</span><span class="kw">const </span>IMAGE_TAG: <span class="kw-2">&amp;</span>str = <span class="string">&quot;IMAGE_TAG&quot;</span>;
-<span class="kw">const </span>DELETE_DELAY_SECONDS: <span class="kw-2">&amp;</span>str = <span class="string">&quot;DELETE_DELAY_SECONDS&quot;</span>;
+</span><span class="kw">const </span>IMAGE_TAG: <span class="kw-2">&amp;</span>str = <span class="string">"IMAGE_TAG"</span>;
+<span class="kw">const </span>DELETE_DELAY_SECONDS: <span class="kw-2">&amp;</span>str = <span class="string">"DELETE_DELAY_SECONDS"</span>;
 <span class="doccomment">/// A simple udp server that returns packets that are sent to it.
 /// See: &lt;https://github.com/googleforgames/agones/tree/main/examples/simple-game-server&gt;
 /// for more details.
 </span><span class="kw">pub const </span>GAMESERVER_IMAGE: <span class="kw-2">&amp;</span>str =
-    <span class="string">&quot;us-docker.pkg.dev/agones-images/examples/simple-game-server:0.16&quot;</span>;
+    <span class="string">"us-docker.pkg.dev/agones-images/examples/simple-game-server:0.16"</span>;
 
 <span class="doccomment">/// The dynamic metadata key for routing tokens
-</span><span class="kw">pub const </span>TOKEN_KEY: <span class="kw-2">&amp;</span>str = <span class="string">&quot;quilkin.dev/tokens&quot;</span>;
+</span><span class="kw">pub const </span>TOKEN_KEY: <span class="kw-2">&amp;</span>str = <span class="string">"quilkin.dev/tokens"</span>;
 
 <span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>Client {
@@ -824,7 +826,7 @@
             .get_or_init(|| <span class="kw">async </span>{
                 <span class="kw">let </span>client = kube::Client::try_default()
                     .<span class="kw">await
-                    </span>.expect(<span class="string">&quot;Kubernetes client to be created&quot;</span>);
+                    </span>.expect(<span class="string">"Kubernetes client to be created"</span>);
 
                 Client {
                     kubernetes: client.clone(),
@@ -839,7 +841,7 @@
         // at the end of each test.
         </span>client.kubernetes = kube::Client::try_default()
             .<span class="kw">await
-            </span>.expect(<span class="string">&quot;Kubernetes client to be created&quot;</span>);
+            </span>.expect(<span class="string">"Kubernetes client to be created"</span>);
         client
     }
 
@@ -858,7 +860,7 @@
 </span><span class="kw">async fn </span>setup_namespace(client: kube::Client) -&gt; String {
     <span class="kw">let </span>namespaces: Api&lt;Namespace&gt; = Api::all(client.clone());
 
-    <span class="kw">let </span>lp = ListParams::default().labels(<span class="string">&quot;owner=quilkin-test&quot;</span>);
+    <span class="kw">let </span>lp = ListParams::default().labels(<span class="string">"owner=quilkin-test"</span>);
     <span class="kw">let </span>nss = namespaces.list(<span class="kw-2">&amp;</span>lp).<span class="kw">await</span>.unwrap();
     <span class="kw">let </span>dp = DeleteParams::default();
 
@@ -878,7 +880,7 @@
             .unwrap_or(<span class="bool-val">true</span>);
         <span class="kw">if </span>delete {
             <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = namespaces.delete(name.as_str(), <span class="kw-2">&amp;</span>dp).<span class="kw">await </span>{
-                <span class="macro">println!</span>(<span class="string">&quot;Failure attempting to deleted namespace: {:?}, {err}&quot;</span>, name);
+                <span class="macro">println!</span>(<span class="string">"Failure attempting to deleted namespace: {:?}, {err}"</span>, name);
             }
         }
     }
@@ -891,7 +893,7 @@
 
     <span class="kw">let </span>metadata = ObjectMeta {
         name: <span class="prelude-val">Some</span>(name),
-        labels: <span class="prelude-val">Some</span>(BTreeMap::from([(<span class="string">&quot;owner&quot;</span>.into(), <span class="string">&quot;quilkin-test&quot;</span>.into())])),
+        labels: <span class="prelude-val">Some</span>(BTreeMap::from([(<span class="string">"owner"</span>.into(), <span class="string">"quilkin-test"</span>.into())])),
         ..Default::default()
     };
     <span class="kw">let </span>test_namespace = Namespace {
@@ -904,7 +906,7 @@
     namespaces
         .create(<span class="kw-2">&amp;</span>pp, <span class="kw-2">&amp;</span>test_namespace)
         .<span class="kw">await
-        </span>.expect(<span class="string">&quot;namespace to be created&quot;</span>);
+        </span>.expect(<span class="string">"namespace to be created"</span>);
 
     add_agones_service_account(client, test_namespace.name_unchecked()).<span class="kw">await</span>;
 
@@ -915,11 +917,11 @@
     <span class="kw">let </span>service_accounts: Api&lt;ServiceAccount&gt; = Api::namespaced(client.clone(), namespace.as_str());
     <span class="kw">let </span>role_bindings: Api&lt;RoleBinding&gt; = Api::namespaced(client, namespace.as_str());
     <span class="kw">let </span>pp = PostParams::default();
-    <span class="kw">let </span>labels = BTreeMap::from([(<span class="string">&quot;app&quot;</span>.to_string(), <span class="string">&quot;agones&quot;</span>.to_string())]);
+    <span class="kw">let </span>labels = BTreeMap::from([(<span class="string">"app"</span>.to_string(), <span class="string">"agones"</span>.to_string())]);
 
     <span class="kw">let </span>service_account = ServiceAccount {
         metadata: ObjectMeta {
-            name: <span class="prelude-val">Some</span>(<span class="string">&quot;agones-sdk&quot;</span>.into()),
+            name: <span class="prelude-val">Some</span>(<span class="string">"agones-sdk"</span>.into()),
             namespace: <span class="prelude-val">Some</span>(namespace.clone()),
             labels: <span class="prelude-val">Some</span>(labels.clone()),
             ..Default::default()
@@ -934,18 +936,18 @@
 
     <span class="kw">let </span>role_binding = RoleBinding {
         metadata: ObjectMeta {
-            name: <span class="prelude-val">Some</span>(<span class="string">&quot;agones-sdk-access&quot;</span>.into()),
+            name: <span class="prelude-val">Some</span>(<span class="string">"agones-sdk-access"</span>.into()),
             namespace: <span class="prelude-val">Some</span>(namespace.clone()),
             labels: <span class="prelude-val">Some</span>(labels),
             ..Default::default()
         },
         role_ref: RoleRef {
-            api_group: <span class="string">&quot;rbac.authorization.k8s.io&quot;</span>.into(),
-            kind: <span class="string">&quot;ClusterRole&quot;</span>.into(),
-            name: <span class="string">&quot;agones-sdk&quot;</span>.into(),
+            api_group: <span class="string">"rbac.authorization.k8s.io"</span>.into(),
+            kind: <span class="string">"ClusterRole"</span>.into(),
+            name: <span class="string">"agones-sdk"</span>.into(),
         },
         subjects: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[Subject {
-            kind: <span class="string">&quot;ServiceAccount&quot;</span>.into(),
+            kind: <span class="string">"ServiceAccount"</span>.into(),
             name: service_account.name_unchecked(),
             namespace: <span class="prelude-val">Some</span>(namespace),
             api_group: <span class="prelude-val">None</span>,
@@ -964,7 +966,7 @@
     role_bindings: Api&lt;RoleBinding&gt;,
 ) -&gt; String {
     <span class="kw">let </span>pp = PostParams::default();
-    <span class="kw">let </span>rbac_name = <span class="string">&quot;quilkin-agones&quot;</span>;
+    <span class="kw">let </span>rbac_name = <span class="string">"quilkin-agones"</span>;
 
     <span class="comment">// check if sevice account already exists, otherwise create it.
     </span><span class="kw">if </span>service_accounts.get(rbac_name).<span class="kw">await</span>.is_ok() {
@@ -986,27 +988,27 @@
         .<span class="kw">await
         </span>.unwrap();
 
-    <span class="comment">// Delete the cluster role if it already exists, since it&#39;s cluster wide.
+    <span class="comment">// Delete the cluster role if it already exists, since it's cluster wide.
     </span><span class="kw">match </span>cluster_roles
         .delete(rbac_name, <span class="kw-2">&amp;</span>DeleteParams::default())
         .<span class="kw">await
     </span>{
         <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; {}
-        <span class="prelude-val">Err</span>(err) =&gt; <span class="macro">println!</span>(<span class="string">&quot;Cluster role not found: {err}&quot;</span>),
+        <span class="prelude-val">Err</span>(err) =&gt; <span class="macro">println!</span>(<span class="string">"Cluster role not found: {err}"</span>),
     };
     <span class="kw">let </span>cluster_role = ClusterRole {
         metadata: rbac_meta.clone(),
         rules: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[
             PolicyRule {
-                api_groups: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="string">&quot;agones.dev&quot;</span>.into()]),
-                resources: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="string">&quot;gameservers&quot;</span>.into()]),
-                verbs: [<span class="string">&quot;get&quot;</span>, <span class="string">&quot;list&quot;</span>, <span class="string">&quot;watch&quot;</span>].map(String::from).to_vec(),
+                api_groups: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="string">"agones.dev"</span>.into()]),
+                resources: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="string">"gameservers"</span>.into()]),
+                verbs: [<span class="string">"get"</span>, <span class="string">"list"</span>, <span class="string">"watch"</span>].map(String::from).to_vec(),
                 ..Default::default()
             },
             PolicyRule {
-                api_groups: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="string">&quot;&quot;</span>.into()]),
-                resources: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="string">&quot;configmaps&quot;</span>.into()]),
-                verbs: [<span class="string">&quot;get&quot;</span>, <span class="string">&quot;list&quot;</span>, <span class="string">&quot;watch&quot;</span>].map(String::from).to_vec(),
+                api_groups: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="string">""</span>.into()]),
+                resources: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="string">"configmaps"</span>.into()]),
+                verbs: [<span class="string">"get"</span>, <span class="string">"list"</span>, <span class="string">"watch"</span>].map(String::from).to_vec(),
                 ..Default::default()
             },
         ]),
@@ -1017,14 +1019,14 @@
     <span class="kw">let </span>binding = RoleBinding {
         metadata: rbac_meta,
         subjects: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[Subject {
-            kind: <span class="string">&quot;User&quot;</span>.into(),
-            name: <span class="macro">format!</span>(<span class="string">&quot;system:serviceaccount:{}:{rbac_name}&quot;</span>, client.namespace),
-            api_group: <span class="prelude-val">Some</span>(<span class="string">&quot;rbac.authorization.k8s.io&quot;</span>.into()),
+            kind: <span class="string">"User"</span>.into(),
+            name: <span class="macro">format!</span>(<span class="string">"system:serviceaccount:{}:{rbac_name}"</span>, client.namespace),
+            api_group: <span class="prelude-val">Some</span>(<span class="string">"rbac.authorization.k8s.io"</span>.into()),
             ..Default::default()
         }]),
         role_ref: RoleRef {
-            api_group: <span class="string">&quot;rbac.authorization.k8s.io&quot;</span>.into(),
-            kind: <span class="string">&quot;ClusterRole&quot;</span>.into(),
+            api_group: <span class="string">"rbac.authorization.k8s.io"</span>.into(),
+            kind: <span class="string">"ClusterRole"</span>.into(),
             name: rbac_name.into(),
         },
     };
@@ -1032,7 +1034,7 @@
     rbac_name.into()
 }
 
-<span class="doccomment">/// Create a Deployment with a singular Quilkin proxy, and return it&#39;s address.
+<span class="doccomment">/// Create a Deployment with a singular Quilkin proxy, and return it's address.
 /// The `name` variable is used as role={name} for label lookup.
 </span><span class="kw">pub async fn </span>quilkin_proxy_deployment(
     client: <span class="kw-2">&amp;</span>Client,
@@ -1045,24 +1047,24 @@
     <span class="kw">let </span><span class="kw-2">mut </span>container = quilkin_container(
         client,
         <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[
-            <span class="string">&quot;proxy&quot;</span>.into(),
-            <span class="macro">format!</span>(<span class="string">&quot;--management-server={management_server}&quot;</span>),
+            <span class="string">"proxy"</span>.into(),
+            <span class="macro">format!</span>(<span class="string">"--management-server={management_server}"</span>),
         ]),
         <span class="prelude-val">None</span>,
     );
 
-    <span class="comment">// we&#39;ll use a host port, since spinning up a load balancer takes a long time.
+    <span class="comment">// we'll use a host port, since spinning up a load balancer takes a long time.
     // we know that port 7777 is open because this is an Agones cluster and it has associated
     // firewall rules , and even if we conflict with a GameServer
     // the k8s scheduler will move us to another node.
     </span>container.ports = <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[ContainerPort {
         container_port: <span class="number">7777</span>,
         host_port: <span class="prelude-val">Some</span>(host_port <span class="kw">as </span>i32),
-        protocol: <span class="prelude-val">Some</span>(<span class="string">&quot;UDP&quot;</span>.into()),
+        protocol: <span class="prelude-val">Some</span>(<span class="string">"UDP"</span>.into()),
         ..Default::default()
     }]);
 
-    <span class="kw">let </span>labels = BTreeMap::from([(<span class="string">&quot;role&quot;</span>.to_string(), name.clone())]);
+    <span class="kw">let </span>labels = BTreeMap::from([(<span class="string">"role"</span>.to_string(), name.clone())]);
     <span class="kw">let </span>deployment = Deployment {
         metadata: ObjectMeta {
             name: <span class="prelude-val">Some</span>(name),
@@ -1092,7 +1094,7 @@
 
     <span class="kw">let </span>deployment = deployments.create(<span class="kw-2">&amp;</span>pp, <span class="kw-2">&amp;</span>deployment).<span class="kw">await</span>.unwrap();
     <span class="kw">let </span>name = deployment.name_unchecked();
-    <span class="comment">// should not be ready, since there are no endpoints, but let&#39;s wait 3 seconds, make sure it doesn&#39;t do something we don&#39;t expect
+    <span class="comment">// should not be ready, since there are no endpoints, but let's wait 3 seconds, make sure it doesn't do something we don't expect
     </span><span class="kw">let </span>result = timeout(
         Duration::from_secs(<span class="number">3</span>),
         await_condition(deployments.clone(), name.as_str(), is_deployment_ready()),
@@ -1104,7 +1106,7 @@
     </span><span class="kw">let </span>pods = client.namespaced_api::&lt;Pod&gt;();
     <span class="kw">let </span>list = pods
         .list(<span class="kw-2">&amp;</span>ListParams {
-            label_selector: <span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">&quot;role={name}&quot;</span>)),
+            label_selector: <span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">"role={name}"</span>)),
             ..Default::default()
         })
         .<span class="kw">await
@@ -1126,7 +1128,7 @@
         .addresses
         .unwrap()
         .iter()
-        .find(|addr| addr.type_ == <span class="string">&quot;ExternalIP&quot;</span>)
+        .find(|addr| addr.type_ == <span class="string">"ExternalIP"</span>)
         .unwrap()
         .address
         .clone();
@@ -1134,7 +1136,7 @@
     SocketAddr::new(external_ip.parse().unwrap(), host_port)
 }
 
-<span class="doccomment">/// Create a Fleet, and pick on it&#39;s GameServers and add the token to it.
+<span class="doccomment">/// Create a Fleet, and pick on it's GameServers and add the token to it.
 /// Returns the details of the GameServer that has been selected.
 </span><span class="kw">pub async fn </span>create_tokenised_gameserver(
     fleets: Api&lt;Fleet&gt;,
@@ -1153,11 +1155,11 @@
         await_condition(fleets.clone(), name.as_str(), is_fleet_ready()),
     )
     .<span class="kw">await
-    </span>.expect(<span class="string">&quot;Fleet should be ready&quot;</span>)
+    </span>.expect(<span class="string">"Fleet should be ready"</span>)
     .unwrap();
 
     <span class="kw">let </span>lp = ListParams {
-        label_selector: <span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">&quot;agones.dev/fleet={}&quot;</span>, fleet.name_unchecked())),
+        label_selector: <span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">"agones.dev/fleet={}"</span>, fleet.name_unchecked())),
         ..Default::default()
     };
     <span class="kw">let </span>list = gameservers.list(<span class="kw-2">&amp;</span>lp).<span class="kw">await</span>.unwrap();
@@ -1184,19 +1186,19 @@
 </span><span class="kw">pub fn </span>game_server() -&gt; GameServer {
     <span class="kw">let </span><span class="kw-2">mut </span>resources = BTreeMap::new();
 
-    resources.insert(<span class="string">&quot;cpu&quot;</span>.into(), Quantity(<span class="string">&quot;30m&quot;</span>.into()));
-    resources.insert(<span class="string">&quot;memory&quot;</span>.into(), Quantity(<span class="string">&quot;32Mi&quot;</span>.into()));
+    resources.insert(<span class="string">"cpu"</span>.into(), Quantity(<span class="string">"30m"</span>.into()));
+    resources.insert(<span class="string">"memory"</span>.into(), Quantity(<span class="string">"32Mi"</span>.into()));
 
     GameServer {
         metadata: ObjectMeta {
-            generate_name: <span class="prelude-val">Some</span>(<span class="string">&quot;gameserver-&quot;</span>.into()),
+            generate_name: <span class="prelude-val">Some</span>(<span class="string">"gameserver-"</span>.into()),
             ..Default::default()
         },
         spec: GameServerSpec {
             ports: <span class="macro">vec!</span>[GameServerPort {
                 container_port: <span class="number">7654</span>,
                 host_port: <span class="prelude-val">None</span>,
-                name: <span class="string">&quot;udp-port&quot;</span>.into(),
+                name: <span class="string">"udp-port"</span>.into(),
                 port_policy: Default::default(),
                 container: <span class="prelude-val">None</span>,
                 protocol: Default::default(),
@@ -1204,7 +1206,7 @@
             template: PodTemplateSpec {
                 spec: <span class="prelude-val">Some</span>(PodSpec {
                     containers: <span class="macro">vec!</span>[Container {
-                        name: <span class="string">&quot;game-server&quot;</span>.into(),
+                        name: <span class="string">"game-server"</span>.into(),
                         image: <span class="prelude-val">Some</span>(GAMESERVER_IMAGE.into()),
                         resources: <span class="prelude-val">Some</span>(ResourceRequirements {
                             limits: <span class="prelude-val">Some</span>(resources.clone()),
@@ -1228,7 +1230,7 @@
     <span class="kw">let </span>gs = game_server();
     Fleet {
         metadata: ObjectMeta {
-            generate_name: <span class="prelude-val">Some</span>(<span class="string">&quot;fleet-&quot;</span>.into()),
+            generate_name: <span class="prelude-val">Some</span>(<span class="string">"fleet-"</span>.into()),
             ..Default::default()
         },
         spec: FleetSpec {
@@ -1262,7 +1264,7 @@
                 .and_then(|conditions| {
                     conditions
                         .iter()
-                        .find(|condition| condition.type_ == <span class="string">&quot;Ready&quot; </span>&amp;&amp; condition.status == <span class="string">&quot;True&quot;</span>)
+                        .find(|condition| condition.type_ == <span class="string">"Ready" </span>&amp;&amp; condition.status == <span class="string">"True"</span>)
                 })
                 .is_some();
         }
@@ -1311,17 +1313,17 @@
     volume_mount: <span class="prelude-ty">Option</span>&lt;String&gt;,
 ) -&gt; Container {
     <span class="kw">let </span><span class="kw-2">mut </span>container = Container {
-        name: <span class="string">&quot;quilkin&quot;</span>.into(),
+        name: <span class="string">"quilkin"</span>.into(),
         image: <span class="prelude-val">Some</span>(client.quilkin_image.clone()),
         args,
         env: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[EnvVar {
-            name: <span class="string">&quot;RUST_LOG&quot;</span>.to_string(),
-            value: <span class="prelude-val">Some</span>(<span class="string">&quot;quilkin=trace&quot;</span>.into()),
+            name: <span class="string">"RUST_LOG"</span>.to_string(),
+            value: <span class="prelude-val">Some</span>(<span class="string">"quilkin=trace"</span>.into()),
             value_from: <span class="prelude-val">None</span>,
         }]),
         liveness_probe: <span class="prelude-val">Some</span>(Probe {
             http_get: <span class="prelude-val">Some</span>(HTTPGetAction {
-                path: <span class="prelude-val">Some</span>(<span class="string">&quot;/live&quot;</span>.into()),
+                path: <span class="prelude-val">Some</span>(<span class="string">"/live"</span>.into()),
                 port: IntOrString::Int(<span class="number">8000</span>),
                 ..Default::default()
             }),
@@ -1331,7 +1333,7 @@
         }),
         readiness_probe: <span class="prelude-val">Some</span>(Probe {
             http_get: <span class="prelude-val">Some</span>(HTTPGetAction {
-                path: <span class="prelude-val">Some</span>(<span class="string">&quot;/ready&quot;</span>.into()),
+                path: <span class="prelude-val">Some</span>(<span class="string">"/ready"</span>.into()),
                 port: IntOrString::Int(<span class="number">8000</span>),
                 ..Default::default()
             }),
@@ -1345,7 +1347,7 @@
     <span class="kw">if let </span><span class="prelude-val">Some</span>(name) = volume_mount {
         container.volume_mounts = <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[VolumeMount {
             name,
-            mount_path: <span class="string">&quot;/etc/quilkin&quot;</span>.into(),
+            mount_path: <span class="string">"/etc/quilkin"</span>.into(),
             ..Default::default()
         }])
     };
@@ -1358,11 +1360,11 @@
 </span><span class="kw">pub fn </span>quilkin_config_map(config: <span class="kw-2">&amp;</span>str) -&gt; ConfigMap {
     ConfigMap {
         metadata: ObjectMeta {
-            generate_name: <span class="prelude-val">Some</span>(<span class="string">&quot;quilkin-config-&quot;</span>.into()),
+            generate_name: <span class="prelude-val">Some</span>(<span class="string">"quilkin-config-"</span>.into()),
             ..Default::default()
         },
         data: <span class="prelude-val">Some</span>(BTreeMap::from([(
-            <span class="string">&quot;quilkin.yaml&quot;</span>.to_string(),
+            <span class="string">"quilkin.yaml"</span>.to_string(),
             config.to_string(),
         )])),
         ..Default::default()
@@ -1373,7 +1375,7 @@
 </span><span class="kw">pub async fn </span>create_token_router_config(config_maps: <span class="kw-2">&amp;</span>Api&lt;ConfigMap&gt;) -&gt; ConfigMap {
     <span class="kw">let </span>pp = PostParams::default();
 
-    <span class="kw">let </span>config = <span class="string">r#&quot;
+    <span class="kw">let </span>config = <span class="string">r#"
 version: v1alpha1
 filters:
   - name: quilkin.filters.capture.v1alpha1.Capture # Capture and remove the authentication token
@@ -1382,13 +1384,13 @@ filters:
           size: 3
           remove: true
   - name: quilkin.filters.token_router.v1alpha1.TokenRouter
-&quot;#</span>;
+"#</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>config_map = quilkin_config_map(config);
     config_map
         .metadata
         .labels
         .get_or_insert(Default::default())
-        .insert(<span class="string">&quot;quilkin.dev/configmap&quot;</span>.into(), <span class="string">&quot;true&quot;</span>.into());
+        .insert(<span class="string">"quilkin.dev/configmap"</span>.into(), <span class="string">"true"</span>.into());
 
     config_maps.create(<span class="kw-2">&amp;</span>pp, <span class="kw-2">&amp;</span>config_map).<span class="kw">await</span>.unwrap()
 }
@@ -1397,7 +1399,7 @@ filters:
 </span><span class="kw">pub fn </span>gameserver_address(gs: <span class="kw-2">&amp;</span>GameServer) -&gt; String {
     <span class="kw">let </span>status = gs.status.as_ref().unwrap();
     <span class="kw">let </span>address = <span class="macro">format!</span>(
-        <span class="string">&quot;{}:{}&quot;</span>,
+        <span class="string">"{}:{}"</span>,
         status.address,
         status.ports.as_ref().unwrap()[<span class="number">0</span>].port
     );
@@ -1406,10 +1408,10 @@ filters:
 
 <span class="comment">// Output the events and logs for each pod that matches this label selector.
 // Useful for determining why something is failing in CI without having to run a cluster.
-// Requires quilkin::test::enable_log(&quot;agones=debug&quot;); to enable debug logging within
+// Requires quilkin::test::enable_log("agones=debug"); to enable debug logging within
 // the test
 </span><span class="kw">pub async fn </span>debug_pods(client: <span class="kw-2">&amp;</span>Client, labels: String) {
-    <span class="macro">debug!</span>(labels, <span class="string">&quot;🪓 Debug output for Selector&quot;</span>);
+    <span class="macro">debug!</span>(labels, <span class="string">"🪓 Debug output for Selector"</span>);
     <span class="kw">let </span>pods: Api&lt;Pod&gt; = client.namespaced_api();
     <span class="kw">let </span>events: Api&lt;Event&gt; = client.namespaced_api();
 
@@ -1429,11 +1431,11 @@ filters:
         <span class="kw">let </span>pod_events: Vec&lt;<span class="kw-2">&amp;</span>Event&gt; = event_list
             .iter()
             .filter(|item| {
-                item.involved_object.kind == <span class="prelude-val">Some</span>(<span class="string">&quot;Pod&quot;</span>.into())
+                item.involved_object.kind == <span class="prelude-val">Some</span>(<span class="string">"Pod"</span>.into())
                     &amp;&amp; item.involved_object.name == <span class="prelude-val">Some</span>(name.clone())
             })
             .collect();
-        <span class="macro">debug!</span>(pod = name, <span class="string">&quot;🗓️  Pod Events&quot;</span>);
+        <span class="macro">debug!</span>(pod = name, <span class="string">"🗓️  Pod Events"</span>);
         <span class="kw">for </span>event <span class="kw">in </span>pod_events {
             <span class="macro">debug!</span>(
                 pod = name,
@@ -1444,7 +1446,7 @@ filters:
             );
         }
 
-        <span class="macro">debug!</span>(pod = name, <span class="string">&quot;📃 Pod Logs&quot;</span>);
+        <span class="macro">debug!</span>(pod = name, <span class="string">"📃 Pod Logs"</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>logs = pods
             .log_stream(name.as_str(), <span class="kw-2">&amp;</span>params)
             .<span class="kw">await

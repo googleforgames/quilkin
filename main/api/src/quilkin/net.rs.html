@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/net.rs`."><title>net.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="quilkin" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0 (79e9716c9 2023-11-13)" data-channel="1.74.0" data-search-js="search-8be46b629f5f14a8.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../quilkin/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/net.rs`."><title>net.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="quilkin" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0 (aedd173a2 2024-03-17)" data-channel="1.77.0" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../quilkin/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -429,35 +431,17 @@
 <a href="#429" id="429">429</a>
 <a href="#430" id="430">430</a>
 <a href="#431" id="431">431</a>
-<a href="#432" id="432">432</a>
-<a href="#433" id="433">433</a>
-<a href="#434" id="434">434</a>
-<a href="#435" id="435">435</a>
-<a href="#436" id="436">436</a>
-<a href="#437" id="437">437</a>
-<a href="#438" id="438">438</a>
-<a href="#439" id="439">439</a>
-<a href="#440" id="440">440</a>
-<a href="#441" id="441">441</a>
-<a href="#442" id="442">442</a>
-<a href="#443" id="443">443</a>
-<a href="#444" id="444">444</a>
-<a href="#445" id="445">445</a>
-<a href="#446" id="446">446</a>
-<a href="#447" id="447">447</a>
-<a href="#448" id="448">448</a>
-<a href="#449" id="449">449</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
- * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -468,7 +452,7 @@
     (<span class="macro-nonterminal">$future</span>:expr) =&gt; {{
         <span class="kw">let </span>(tx, rx) = tokio::sync::oneshot::channel::&lt;<span class="kw">crate</span>::Result&lt;()&gt;&gt;();
         <span class="macro">cfg_if::cfg_if! </span>{
-            <span class="kw">if </span><span class="attr">#[cfg(target_os = <span class="string">&quot;linux&quot;</span>)] </span>{
+            <span class="kw">if </span><span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)] </span>{
                 std::thread::spawn(<span class="kw">move </span>|| {
                     <span class="kw">match </span>tokio_uring::Runtime::new(<span class="kw-2">&amp;</span>tokio_uring::builder().entries(<span class="number">2048</span>)) {
                         <span class="prelude-val">Ok</span>(runtime) =&gt; {
@@ -495,7 +479,7 @@
 </span><span class="macro">macro_rules! </span>uring_inner_spawn {
     (<span class="macro-nonterminal">$future</span>:expr) =&gt; {
         <span class="macro">cfg_if::cfg_if! </span>{
-            <span class="kw">if </span><span class="attr">#[cfg(target_os = <span class="string">&quot;linux&quot;</span>)] </span>{
+            <span class="kw">if </span><span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)] </span>{
                 tokio_uring::spawn(<span class="macro-nonterminal">$future</span>);
             } <span class="kw">else </span>{
                 tokio::spawn(<span class="macro-nonterminal">$future</span>);
@@ -518,7 +502,7 @@
 <span class="kw">use </span>socket2::{Protocol, Socket, Type};
 
 <span class="macro">cfg_if::cfg_if! </span>{
-    <span class="kw">if </span><span class="attr">#[cfg(target_os = <span class="string">&quot;linux&quot;</span>)] </span>{
+    <span class="kw">if </span><span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)] </span>{
         <span class="kw">use </span>tokio_uring::net::UdpSocket;
     } <span class="kw">else </span>{
         <span class="kw">use </span>tokio::net::UdpSocket;
@@ -532,7 +516,7 @@
 
 <span class="kw">fn </span>socket_with_reuse_and_address(addr: SocketAddr) -&gt; std::io::Result&lt;UdpSocket&gt; {
     <span class="macro">cfg_if::cfg_if! </span>{
-        <span class="kw">if </span><span class="attr">#[cfg(target_os = <span class="string">&quot;linux&quot;</span>)] </span>{
+        <span class="kw">if </span><span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)] </span>{
             raw_socket_with_reuse_and_address(addr)
                 .map(From::from)
                 .map(UdpSocket::from_std)
@@ -585,13 +569,13 @@
     }
 }
 
-<span class="attr">#[cfg(not(target_family = <span class="string">&quot;windows&quot;</span>))]
+<span class="attr">#[cfg(not(target_family = <span class="string">"windows"</span>))]
 </span><span class="kw">fn </span>enable_reuse(sock: <span class="kw-2">&amp;</span>Socket) -&gt; io::Result&lt;()&gt; {
     sock.set_reuse_port(<span class="bool-val">true</span>)<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="attr">#[cfg(target_family = <span class="string">&quot;windows&quot;</span>)]
+<span class="attr">#[cfg(target_family = <span class="string">"windows"</span>)]
 </span><span class="kw">fn </span>enable_reuse(sock: <span class="kw-2">&amp;</span>Socket) -&gt; io::Result&lt;()&gt; {
     sock.set_reuse_address(<span class="bool-val">true</span>)<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(())
@@ -609,7 +593,7 @@
         <span class="kw">let </span>socket: std::net::UdpSocket = socket.into();
         <span class="kw">let </span>local_addr = socket.local_addr().unwrap();
         <span class="macro">cfg_if::cfg_if! </span>{
-            <span class="kw">if </span><span class="attr">#[cfg(target_os = <span class="string">&quot;linux&quot;</span>)] </span>{
+            <span class="kw">if </span><span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)] </span>{
                 <span class="kw">let </span>socket = UdpSocket::from_std(socket);
             } <span class="kw">else </span>{
                 <span class="comment">// This is only for macOS and Windows (non-production platforms),
@@ -648,7 +632,7 @@
     }
 
     <span class="macro">cfg_if::cfg_if! </span>{
-        <span class="kw">if </span><span class="attr">#[cfg(target_os = <span class="string">&quot;linux&quot;</span>)] </span>{
+        <span class="kw">if </span><span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)] </span>{
             <span class="kw">pub async fn </span>recv_from&lt;B: tokio_uring::buf::IoBufMut&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, buf: B) -&gt; (io::Result&lt;(usize, SocketAddr)&gt;, B) {
                 <span class="self">self</span>.socket.recv_from(buf).<span class="kw">await
             </span>}
@@ -675,7 +659,7 @@
 }
 
 <span class="macro">cfg_if::cfg_if! </span>{
-    <span class="kw">if </span><span class="attr">#[cfg(target_os = <span class="string">&quot;linux&quot;</span>)] </span>{
+    <span class="kw">if </span><span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)] </span>{
         <span class="kw">pub type </span>DualStackLocalSocketRc = std::rc::Rc&lt;DualStackLocalSocket&gt;;
     } <span class="kw">else </span>{
         <span class="kw">pub type </span>DualStackLocalSocketRc = std::sync::Arc&lt;DualStackLocalSocket&gt;;
@@ -760,13 +744,13 @@
     <span class="doccomment">/// Retrieves the port the listener is bound to
     </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>port(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u16 {
-        <span class="self">self</span>.inner.local_addr().expect(<span class="string">&quot;failed to bind&quot;</span>).port()
+        <span class="self">self</span>.inner.local_addr().expect(<span class="string">"failed to bind"</span>).port()
     }
 
     <span class="doccomment">/// Retrieves the local address the listener is bound to
     </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>local_addr(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SocketAddr {
-        <span class="self">self</span>.inner.local_addr().expect(<span class="string">&quot;failed to bind&quot;</span>)
+        <span class="self">self</span>.inner.local_addr().expect(<span class="string">"failed to bind"</span>)
     }
 
     <span class="attr">#[inline]
@@ -829,7 +813,7 @@
         <span class="kw">let </span>echo_addr = t.run_echo_server(AddressType::Random).<span class="kw">await</span>;
         <span class="kw">let </span>(<span class="kw-2">mut </span>rx, socket) = t.open_socket_and_recv_multiple_packets().<span class="kw">await</span>;
 
-        <span class="kw">let </span>msg = <span class="string">&quot;hello&quot;</span>;
+        <span class="kw">let </span>msg = <span class="string">"hello"</span>;
         <span class="kw">let </span>addr = echo_addr.to_socket_addr().<span class="kw">await</span>.unwrap();
 
         socket.send_to(msg.as_bytes(), <span class="kw-2">&amp;</span>addr).<span class="kw">await</span>.unwrap();
@@ -837,7 +821,7 @@
             msg,
             timeout(Duration::from_secs(<span class="number">5</span>), rx.recv())
                 .<span class="kw">await
-                </span>.expect(<span class="string">&quot;should not timeout&quot;</span>)
+                </span>.expect(<span class="string">"should not timeout"</span>)
                 .unwrap()
         );
 
@@ -849,7 +833,7 @@
                 IpAddr::V4(<span class="kw">_</span>) =&gt; (Ipv6Addr::UNSPECIFIED, echo_addr.port).into(),
                 IpAddr::V6(<span class="kw">_</span>) =&gt; ipv4_echo_addr,
             },
-            <span class="comment">// we&#39;re not testing this, since DNS resolves to IP.
+            <span class="comment">// we're not testing this, since DNS resolves to IP.
             </span>AddressKind::Name(<span class="kw">_</span>) =&gt; <span class="macro">unreachable!</span>(),
         };
 
@@ -858,11 +842,11 @@
             msg,
             timeout(Duration::from_secs(<span class="number">5</span>), rx.recv())
                 .<span class="kw">await
-                </span>.expect(<span class="string">&quot;should not timeout&quot;</span>)
+                </span>.expect(<span class="string">"should not timeout"</span>)
                 .unwrap()
         );
 
-        <span class="comment">// Since all other sockets are actual ipv6 sockets, let&#39;s force a test with a real ipv4 socket sending to our dual
+        <span class="comment">// Since all other sockets are actual ipv6 sockets, let's force a test with a real ipv4 socket sending to our dual
         // stack socket.
         </span><span class="kw">let </span>(<span class="kw-2">mut </span>rx, socket) = t.open_ipv4_socket_and_recv_multiple_packets().<span class="kw">await</span>;
         socket
@@ -873,27 +857,9 @@
             msg,
             timeout(Duration::from_secs(<span class="number">5</span>), rx.recv())
                 .<span class="kw">await
-                </span>.expect(<span class="string">&quot;should not timeout&quot;</span>)
+                </span>.expect(<span class="string">"should not timeout"</span>)
                 .unwrap()
         );
     }
-}
-
-<span class="doccomment">/// Converts a a socket address to its canonical version.
-/// This is just a copy of the method available in std but that is currently
-/// nightly only.
-</span><span class="kw">pub fn </span>to_canonical(addr: <span class="kw-2">&amp;mut </span>SocketAddr) {
-    <span class="kw">let </span>ip = <span class="kw">match </span>addr.ip() {
-        std::net::IpAddr::V6(ip) =&gt; {
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(mapped) = ip.to_ipv4_mapped() {
-                std::net::IpAddr::V4(mapped)
-            } <span class="kw">else </span>{
-                std::net::IpAddr::V6(ip)
-            }
-        }
-        addr =&gt; addr,
-    };
-
-    addr.set_ip(ip);
 }
 </code></pre></div></section></main></body></html>

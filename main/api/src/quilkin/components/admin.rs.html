@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/components/admin.rs`."><title>admin.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="quilkin" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0 (79e9716c9 2023-11-13)" data-channel="1.74.0" data-search-js="search-8be46b629f5f14a8.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/components/admin.rs`."><title>admin.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="quilkin" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0 (aedd173a2 2024-03-17)" data-channel="1.77.0" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../quilkin/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -261,17 +263,18 @@
 <a href="#261" id="261">261</a>
 <a href="#262" id="262">262</a>
 <a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2023 Google LLC
  *
- * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -322,7 +325,7 @@
     ) -&gt; std::thread::JoinHandle&lt;<span class="prelude-ty">Result</span>&lt;(), hyper::Error&gt;&gt; {
         <span class="kw">let </span>address = address.unwrap_or_else(|| (std::net::Ipv6Addr::UNSPECIFIED, PORT).into());
         <span class="kw">let </span>health = Health::new();
-        <span class="macro">tracing::info!</span>(address = %address, <span class="string">&quot;Starting admin endpoint&quot;</span>);
+        <span class="macro">tracing::info!</span>(address = %address, <span class="string">"Starting admin endpoint"</span>);
 
         <span class="kw">let </span>mode = <span class="self">self</span>.clone();
         std::thread::spawn(<span class="kw">move </span>|| {
@@ -330,7 +333,7 @@
                 .enable_io()
                 .enable_time()
                 .build()
-                .expect(<span class="string">&quot;couldn&#39;t create tokio runtime in thread&quot;</span>);
+                .expect(<span class="string">"couldn't create tokio runtime in thread"</span>);
             runtime.block_on(<span class="kw">async move </span>{
                 <span class="kw">let </span>make_svc = make_service_fn(<span class="kw">move </span>|_conn| {
                     <span class="kw">let </span>config = config.clone();
@@ -374,13 +377,13 @@
         health: Health,
     ) -&gt; Response&lt;Body&gt; {
         <span class="kw">match </span>(request.method(), request.uri().path()) {
-            (<span class="kw-2">&amp;</span>Method::GET, <span class="string">&quot;/metrics&quot;</span>) =&gt; collect_metrics(),
-            (<span class="kw-2">&amp;</span>Method::GET, <span class="string">&quot;/live&quot; </span>| <span class="string">&quot;/livez&quot;</span>) =&gt; health.check_liveness(),
-            <span class="attr">#[cfg(target_os = <span class="string">&quot;linux&quot;</span>)]
-            </span>(<span class="kw-2">&amp;</span>Method::GET, <span class="string">&quot;/debug/pprof/profile&quot;</span>) =&gt; {
+            (<span class="kw-2">&amp;</span>Method::GET, <span class="string">"/metrics"</span>) =&gt; collect_metrics(),
+            (<span class="kw-2">&amp;</span>Method::GET, <span class="string">"/live" </span>| <span class="string">"/livez"</span>) =&gt; health.check_liveness(),
+            <span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)]
+            </span>(<span class="kw-2">&amp;</span>Method::GET, <span class="string">"/debug/pprof/profile"</span>) =&gt; {
                 <span class="kw">let </span>duration = request.uri().query().and_then(|query| {
                     form_urlencoded::parse(query.as_bytes())
-                        .find(|(k, <span class="kw">_</span>)| k == <span class="string">&quot;seconds&quot;</span>)
+                        .find(|(k, <span class="kw">_</span>)| k == <span class="string">"seconds"</span>)
                         .and_then(|(<span class="kw">_</span>, v)| v.parse().ok())
                         .map(std::time::Duration::from_secs)
                 });
@@ -388,27 +391,27 @@
                 <span class="kw">match </span>collect_pprof(duration).<span class="kw">await </span>{
                     <span class="prelude-val">Ok</span>(value) =&gt; value,
                     <span class="prelude-val">Err</span>(error) =&gt; {
-                        <span class="macro">tracing::warn!</span>(%error, <span class="string">&quot;admin http server error&quot;</span>);
+                        <span class="macro">tracing::warn!</span>(%error, <span class="string">"admin http server error"</span>);
                         Response::builder()
                             .status(StatusCode::INTERNAL_SERVER_ERROR)
-                            .body(Body::from(<span class="string">&quot;internal error&quot;</span>))
+                            .body(Body::from(<span class="string">"internal error"</span>))
                             .unwrap()
                     }
                 }
             }
-            (<span class="kw-2">&amp;</span>Method::GET, <span class="string">&quot;/ready&quot; </span>| <span class="string">&quot;/readyz&quot;</span>) =&gt; check_readiness(|| <span class="self">self</span>.is_ready(<span class="kw-2">&amp;</span>config)),
-            (<span class="kw-2">&amp;</span>Method::GET, <span class="string">&quot;/config&quot;</span>) =&gt; <span class="kw">match </span>serde_json::to_string(<span class="kw-2">&amp;</span>config) {
+            (<span class="kw-2">&amp;</span>Method::GET, <span class="string">"/ready" </span>| <span class="string">"/readyz"</span>) =&gt; check_readiness(|| <span class="self">self</span>.is_ready(<span class="kw-2">&amp;</span>config)),
+            (<span class="kw-2">&amp;</span>Method::GET, <span class="string">"/config"</span>) =&gt; <span class="kw">match </span>serde_json::to_string(<span class="kw-2">&amp;</span>config) {
                 <span class="prelude-val">Ok</span>(body) =&gt; Response::builder()
                     .status(StatusCode::OK)
                     .header(
-                        <span class="string">&quot;Content-Type&quot;</span>,
-                        hyper::header::HeaderValue::from_static(<span class="string">&quot;application/json&quot;</span>),
+                        <span class="string">"Content-Type"</span>,
+                        hyper::header::HeaderValue::from_static(<span class="string">"application/json"</span>),
                     )
                     .body(Body::from(body))
                     .unwrap(),
                 <span class="prelude-val">Err</span>(err) =&gt; Response::builder()
                     .status(StatusCode::INTERNAL_SERVER_ERROR)
-                    .body(Body::from(<span class="macro">format!</span>(<span class="string">&quot;failed to create config dump: {err}&quot;</span>)))
+                    .body(Body::from(<span class="macro">format!</span>(<span class="string">"failed to create config dump: {err}"</span>)))
                     .unwrap(),
             },
             (<span class="kw">_</span>, <span class="kw">_</span>) =&gt; {
@@ -422,7 +425,7 @@
 
 <span class="kw">fn </span>check_readiness(check: <span class="kw">impl </span>Fn() -&gt; bool) -&gt; Response&lt;Body&gt; {
     <span class="kw">if </span>(check)() {
-        <span class="kw">return </span>Response::new(<span class="string">&quot;ok&quot;</span>.into());
+        <span class="kw">return </span>Response::new(<span class="string">"ok"</span>.into());
     }
 
     <span class="kw">let </span><span class="kw-2">mut </span>response = Response::new(Body::empty());
@@ -436,11 +439,11 @@
     <span class="kw">let </span>encoder = prometheus::TextEncoder::new();
     <span class="kw">let </span>body =
         prometheus::Encoder::encode(<span class="kw-2">&amp;</span>encoder, <span class="kw-2">&amp;</span><span class="kw">crate</span>::metrics::registry().gather(), <span class="kw-2">&amp;mut </span>buffer)
-            .map_err(|error| <span class="macro">tracing::warn!</span>(%error, <span class="string">&quot;Failed to encode metrics&quot;</span>))
+            .map_err(|error| <span class="macro">tracing::warn!</span>(%error, <span class="string">"Failed to encode metrics"</span>))
             .and_then(|<span class="kw">_</span>| {
                 String::from_utf8(buffer)
                     .map(Body::from)
-                    .map_err(|error| <span class="macro">tracing::warn!</span>(%error, <span class="string">&quot;Failed to convert metrics to utf8&quot;</span>))
+                    .map_err(|error| <span class="macro">tracing::warn!</span>(%error, <span class="string">"Failed to convert metrics to utf8"</span>))
             });
 
     <span class="kw">match </span>body {
@@ -457,18 +460,18 @@
 
 <span class="doccomment">/// Collects profiling information using `prof` for an optional `duration` or
 /// the default if `None`.
-</span><span class="attr">#[cfg(target_os = <span class="string">&quot;linux&quot;</span>)]
+</span><span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)]
 </span><span class="kw">async fn </span>collect_pprof(
     duration: <span class="prelude-ty">Option</span>&lt;std::time::Duration&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Response&lt;Body&gt;, eyre::Error&gt; {
     <span class="kw">let </span>duration = duration.unwrap_or_else(|| std::time::Duration::from_secs(<span class="number">2</span>));
-    <span class="macro">tracing::debug!</span>(duration_seconds = duration.as_secs(), <span class="string">&quot;profiling&quot;</span>);
+    <span class="macro">tracing::debug!</span>(duration_seconds = duration.as_secs(), <span class="string">"profiling"</span>);
 
     <span class="kw">let </span>guard = pprof::ProfilerGuardBuilder::default()
         .frequency(<span class="number">1000</span>)
         <span class="comment">// From the pprof docs, this blocklist helps prevent deadlock with
-        // libgcc&#39;s unwind.
-        </span>.blocklist(<span class="kw-2">&amp;</span>[<span class="string">&quot;libc&quot;</span>, <span class="string">&quot;libgcc&quot;</span>, <span class="string">&quot;pthread&quot;</span>, <span class="string">&quot;vdso&quot;</span>])
+        // libgcc's unwind.
+        </span>.blocklist(<span class="kw-2">&amp;</span>[<span class="string">"libc"</span>, <span class="string">"libgcc"</span>, <span class="string">"pthread"</span>, <span class="string">"vdso"</span>])
         .build()<span class="question-mark">?</span>;
 
     tokio::time::sleep(duration).<span class="kw">await</span>;
@@ -479,12 +482,12 @@
     </span><span class="kw">let </span><span class="kw-2">mut </span>encoder = libflate::gzip::Encoder::new(Vec::new())<span class="question-mark">?</span>;
     std::io::copy(<span class="kw-2">&amp;mut &amp;</span>encoded_profile[..], <span class="kw-2">&amp;mut </span>encoder)<span class="question-mark">?</span>;
     <span class="kw">let </span>gzip_body = encoder.finish().into_result()<span class="question-mark">?</span>;
-    <span class="macro">tracing::debug!</span>(<span class="string">&quot;profile encoded to gzip&quot;</span>);
+    <span class="macro">tracing::debug!</span>(<span class="string">"profile encoded to gzip"</span>);
 
     Response::builder()
         .header(hyper::header::CONTENT_LENGTH, gzip_body.len() <span class="kw">as </span>u64)
-        .header(hyper::header::CONTENT_TYPE, <span class="string">&quot;application/octet-stream&quot;</span>)
-        .header(hyper::header::CONTENT_ENCODING, <span class="string">&quot;gzip&quot;</span>)
+        .header(hyper::header::CONTENT_TYPE, <span class="string">"application/octet-stream"</span>)
+        .header(hyper::header::CONTENT_ENCODING, <span class="string">"gzip"</span>)
         .body(Body::from(gzip_body))
         .map_err(From::from)
 }
@@ -500,7 +503,8 @@
         <span class="macro">assert_eq!</span>(response.status(), hyper::StatusCode::OK);
     }
 
-    <span class="attr">#[tokio::test]
+    <span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)]
+    #[tokio::test]
     </span><span class="kw">async fn </span>collect_pprof() {
         <span class="comment">// Custom time to make the test fast.
         </span><span class="kw">super</span>::collect_pprof(<span class="prelude-val">Some</span>(std::time::Duration::from_millis(<span class="number">1</span>)))

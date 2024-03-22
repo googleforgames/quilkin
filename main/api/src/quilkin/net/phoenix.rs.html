@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/net/phoenix.rs`."><title>phoenix.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="quilkin" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0 (79e9716c9 2023-11-13)" data-channel="1.74.0" data-search-js="search-8be46b629f5f14a8.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../quilkin/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/net/phoenix.rs`."><title>phoenix.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="quilkin" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0 (aedd173a2 2024-03-17)" data-channel="1.77.0" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../quilkin/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -758,7 +760,7 @@
     phoenix.add_nodes_from_config(<span class="kw-2">&amp;</span>config);
 
     <span class="kw">let </span><span class="kw">crate</span>::config::DatacenterConfig::NonAgent { datacenters } = <span class="kw-2">&amp;</span>config.datacenter <span class="kw">else </span>{
-        <span class="macro">unreachable!</span>(<span class="string">&quot;this shouldn&#39;t be spawned on an agent&quot;</span>)
+        <span class="macro">unreachable!</span>(<span class="string">"this shouldn't be spawned on an agent"</span>)
     };
     <span class="kw">let </span><span class="kw-2">mut </span>config_watcher = datacenters.watch();
 
@@ -787,14 +789,14 @@
                             <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, std::convert::Infallible&gt;(service_fn(<span class="kw">move </span>|<span class="kw">_</span>| {
                                 <span class="kw">let </span>json = json.clone();
                                 <span class="kw">async move </span>{
-                                    <span class="macro">tracing::trace!</span>(<span class="string">&quot;serving phoenix request&quot;</span>);
+                                    <span class="macro">tracing::trace!</span>(<span class="string">"serving phoenix request"</span>);
                                     <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, std::convert::Infallible&gt;(
                                         Response::builder()
                                             .status(StatusCode::OK)
                                             .header(
-                                                <span class="string">&quot;Content-Type&quot;</span>,
+                                                <span class="string">"Content-Type"</span>,
                                                 hyper::header::HeaderValue::from_static(
-                                                    <span class="string">&quot;application/json&quot;</span>,
+                                                    <span class="string">"application/json"</span>,
                                                 ),
                                             )
                                             .body(Body::from(serde_json::to_string(<span class="kw-2">&amp;</span>json).unwrap()))
@@ -805,7 +807,7 @@
                         }
                     });
 
-                    <span class="macro">tracing::info!</span>(addr=%listener.local_addr(), <span class="string">&quot;starting phoenix service&quot;</span>);
+                    <span class="macro">tracing::info!</span>(addr=%listener.local_addr(), <span class="string">"starting phoenix service"</span>);
                     tokio::spawn(HyperServer::from_tcp(listener.into())<span class="question-mark">?</span>.serve(make_svc));
 
                     <span class="kw">loop </span>{
@@ -842,7 +844,7 @@
 
 <span class="doccomment">/// A `Phoenix` instance maintains a virtual coordinate space for nodes in a
 /// distributed system to estimate their network latencies. It uses the provided
-/// `Measurement` trait to periodically measure and update each node&#39;s
+/// `Measurement` trait to periodically measure and update each node's
 /// coordinates, allowing for latency estimation between any two nodes.
 </span><span class="attr">#[derive(Clone, Debug)]
 </span><span class="kw">pub struct </span>Phoenix&lt;M&gt; {
@@ -863,7 +865,7 @@
     ),
 }
 
-<span class="kw">impl</span>&lt;M: Measurement + <span class="lifetime">&#39;static</span>&gt; Phoenix&lt;M&gt; {
+<span class="kw">impl</span>&lt;M: Measurement + <span class="lifetime">'static</span>&gt; Phoenix&lt;M&gt; {
     <span class="kw">pub fn </span>new(measurement: M) -&gt; <span class="self">Self </span>{
         Builder::new(measurement).build()
     }
@@ -889,7 +891,7 @@
 
             <span class="kw">for </span>address <span class="kw">in </span>nodes_to_probe {
                 <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>node) = <span class="self">self</span>.nodes.get_mut(<span class="kw-2">&amp;</span>address) <span class="kw">else </span>{
-                    <span class="macro">tracing::debug!</span>(%address, <span class="string">&quot;node removed between selection and measurement&quot;</span>);
+                    <span class="macro">tracing::debug!</span>(%address, <span class="string">"node removed between selection and measurement"</span>);
                     <span class="kw">continue</span>;
                 };
 
@@ -900,7 +902,7 @@
                         count += <span class="number">1</span>;
                     }
                     <span class="prelude-val">Err</span>(error) =&gt; {
-                        <span class="macro">tracing::warn!</span>(%address, %error, <span class="string">&quot;error measuring distance&quot;</span>);
+                        <span class="macro">tracing::warn!</span>(%address, %error, <span class="string">"error measuring distance"</span>);
                         node.increase_error_estimate();
                     }
                 }
@@ -1032,7 +1034,7 @@
 
     <span class="kw">pub fn </span>add_nodes_from_config(<span class="kw-2">&amp;</span><span class="self">self</span>, config: <span class="kw-2">&amp;</span><span class="kw">crate</span>::Config) {
         <span class="kw">let </span><span class="kw">crate</span>::config::DatacenterConfig::NonAgent { datacenters } = <span class="kw-2">&amp;</span>config.datacenter <span class="kw">else </span>{
-            <span class="macro">unreachable!</span>(<span class="string">&quot;this shouldn&#39;t be called by an agent&quot;</span>)
+            <span class="macro">unreachable!</span>(<span class="string">"this shouldn't be called by an agent"</span>)
         };
         <span class="kw">for </span>entry <span class="kw">in </span>datacenters.write().iter() {
             <span class="kw">let </span>addr = (<span class="kw-2">*</span>entry.key(), entry.value().qcmp_port).into();
@@ -1232,7 +1234,7 @@
         <span class="kw">async fn </span>measure_distance(<span class="kw-2">&amp;</span><span class="self">self</span>, address: SocketAddr) -&gt; eyre::Result&lt;(i64, i64)&gt; {
             <span class="kw">let </span>failed_addresses = <span class="self">self</span>.failed_addresses.lock().<span class="kw">await</span>;
             <span class="kw">if </span>failed_addresses.contains(<span class="kw-2">&amp;</span>address) {
-                <span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">&quot;Measurement timed out&quot;</span>))
+                <span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">"Measurement timed out"</span>))
             } <span class="kw">else </span>{
                 <span class="prelude-val">Ok</span>(<span class="kw-2">*</span><span class="self">self</span>.latencies.get(<span class="kw-2">&amp;</span>address).unwrap_or(<span class="kw-2">&amp;</span>(<span class="number">0</span>, <span class="number">0</span>)))
             }
@@ -1240,15 +1242,15 @@
     }
 
     <span class="kw">fn </span>abcd() -&gt; IcaoCode {
-        <span class="string">&quot;ABCD&quot;</span>.parse().unwrap()
+        <span class="string">"ABCD"</span>.parse().unwrap()
     }
 
     <span class="kw">fn </span>efgh() -&gt; IcaoCode {
-        <span class="string">&quot;EFGH&quot;</span>.parse().unwrap()
+        <span class="string">"EFGH"</span>.parse().unwrap()
     }
 
     <span class="kw">fn </span>ijkl() -&gt; IcaoCode {
-        <span class="string">&quot;IJKL&quot;</span>.parse().unwrap()
+        <span class="string">"IJKL"</span>.parse().unwrap()
     }
 
     <span class="attr">#[test]
@@ -1261,38 +1263,38 @@
     <span class="attr">#[tokio::test]
     </span><span class="kw">async fn </span>coordinates_adjustment() {
         <span class="kw">let </span><span class="kw-2">mut </span>mock_latencies = HashMap::new();
-        mock_latencies.insert(<span class="string">&quot;127.0.0.1:8081&quot;</span>.parse().unwrap(), (<span class="number">25</span>, <span class="number">25</span>));
+        mock_latencies.insert(<span class="string">"127.0.0.1:8081"</span>.parse().unwrap(), (<span class="number">25</span>, <span class="number">25</span>));
         <span class="kw">let </span>phoenix = Phoenix::new(MockMeasurement {
             latencies: mock_latencies,
         });
 
-        phoenix.add_node(<span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(), abcd());
-        phoenix.add_node(<span class="string">&quot;127.0.0.1:8081&quot;</span>.parse().unwrap(), efgh());
+        phoenix.add_node(<span class="string">"127.0.0.1:8080"</span>.parse().unwrap(), abcd());
+        phoenix.add_node(<span class="string">"127.0.0.1:8081"</span>.parse().unwrap(), efgh());
         phoenix.measure_all_nodes().<span class="kw">await</span>;
 
         <span class="kw">let </span>coords = phoenix
-            .get_coordinates(<span class="kw-2">&amp;</span><span class="string">&quot;127.0.0.1:8081&quot;</span>.parse().unwrap())
+            .get_coordinates(<span class="kw-2">&amp;</span><span class="string">"127.0.0.1:8081"</span>.parse().unwrap())
             .unwrap();
         <span class="macro">assert!</span>(
             coords.x != <span class="number">0.0 </span>|| coords.y != <span class="number">0.0</span>,
-            <span class="string">&quot;Coordinates were not adjusted.&quot;
+            <span class="string">"Coordinates were not adjusted."
         </span>);
     }
 
     <span class="attr">#[tokio::test]
     </span><span class="kw">async fn </span>ordered_nodes_by_latency() {
         <span class="kw">let </span><span class="kw-2">mut </span>mock_latencies = HashMap::new();
-        mock_latencies.insert(<span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(), (<span class="number">10</span>, <span class="number">10</span>));
-        mock_latencies.insert(<span class="string">&quot;127.0.0.1:8081&quot;</span>.parse().unwrap(), (<span class="number">50</span>, <span class="number">50</span>));
-        mock_latencies.insert(<span class="string">&quot;127.0.0.1:8082&quot;</span>.parse().unwrap(), (<span class="number">30</span>, <span class="number">30</span>));
+        mock_latencies.insert(<span class="string">"127.0.0.1:8080"</span>.parse().unwrap(), (<span class="number">10</span>, <span class="number">10</span>));
+        mock_latencies.insert(<span class="string">"127.0.0.1:8081"</span>.parse().unwrap(), (<span class="number">50</span>, <span class="number">50</span>));
+        mock_latencies.insert(<span class="string">"127.0.0.1:8082"</span>.parse().unwrap(), (<span class="number">30</span>, <span class="number">30</span>));
 
         <span class="kw">let </span>phoenix = Phoenix::new(MockMeasurement {
             latencies: mock_latencies,
         });
 
-        phoenix.add_node(<span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(), abcd());
-        phoenix.add_node(<span class="string">&quot;127.0.0.1:8081&quot;</span>.parse().unwrap(), efgh());
-        phoenix.add_node(<span class="string">&quot;127.0.0.1:8082&quot;</span>.parse().unwrap(), ijkl());
+        phoenix.add_node(<span class="string">"127.0.0.1:8080"</span>.parse().unwrap(), abcd());
+        phoenix.add_node(<span class="string">"127.0.0.1:8081"</span>.parse().unwrap(), efgh());
+        phoenix.add_node(<span class="string">"127.0.0.1:8082"</span>.parse().unwrap(), ijkl());
 
         phoenix.measure_all_nodes().<span class="kw">await</span>;
 
@@ -1317,7 +1319,7 @@
 
         <span class="macro">assert!</span>(
             result.is_err(),
-            <span class="string">&quot;Builder should panic when given an invalid interval range.&quot;
+            <span class="string">"Builder should panic when given an invalid interval range."
         </span>);
     }
 
@@ -1327,11 +1329,11 @@
         <span class="kw">let </span>phoenix = Phoenix::new(MockMeasurement {
             latencies: mock_latencies,
         });
-        <span class="kw">let </span>result = phoenix.get_coordinates(<span class="kw-2">&amp;</span><span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap());
+        <span class="kw">let </span>result = phoenix.get_coordinates(<span class="kw-2">&amp;</span><span class="string">"127.0.0.1:8080"</span>.parse().unwrap());
 
         <span class="macro">assert!</span>(
             result.is_none(),
-            <span class="string">&quot;Should not get coordinates for a node that was not added.&quot;
+            <span class="string">"Should not get coordinates for a node that was not added."
         </span>);
     }
 
@@ -1346,15 +1348,15 @@
 
         <span class="macro">assert!</span>(
             result.is_err(),
-            <span class="string">&quot;Builder should panic when given an invalid subset percentage.&quot;
+            <span class="string">"Builder should panic when given an invalid subset percentage."
         </span>);
     }
 
     <span class="attr">#[tokio::test]
     </span><span class="kw">async fn </span>successful_measurements() {
         <span class="kw">let </span>latencies = HashMap::from([
-            (<span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(), (<span class="number">100</span>, <span class="number">100</span>)),
-            (<span class="string">&quot;127.0.0.1:8081&quot;</span>.parse().unwrap(), (<span class="number">200</span>, <span class="number">200</span>)),
+            (<span class="string">"127.0.0.1:8080"</span>.parse().unwrap(), (<span class="number">100</span>, <span class="number">100</span>)),
+            (<span class="string">"127.0.0.1:8081"</span>.parse().unwrap(), (<span class="number">200</span>, <span class="number">200</span>)),
         ]);
         <span class="kw">let </span>failed_addresses = Arc::new(Mutex::new(HashSet::new()));
         <span class="kw">let </span>measurement = FailedAddressesMock {
@@ -1364,8 +1366,8 @@
 
         <span class="kw">let </span>phoenix = Phoenix::new(measurement);
 
-        phoenix.add_node(<span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(), abcd());
-        phoenix.add_node(<span class="string">&quot;127.0.0.1:8081&quot;</span>.parse().unwrap(), efgh());
+        phoenix.add_node(<span class="string">"127.0.0.1:8080"</span>.parse().unwrap(), abcd());
+        phoenix.add_node(<span class="string">"127.0.0.1:8081"</span>.parse().unwrap(), efgh());
 
         phoenix.measure_all_nodes().<span class="kw">await</span>;
 
@@ -1380,10 +1382,10 @@
     <span class="attr">#[tokio::test]
     </span><span class="kw">async fn </span>failed_measurements_excluded() {
         <span class="kw">let </span>latencies = HashMap::from([
-            (<span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(), (<span class="number">100</span>, <span class="number">100</span>)),
-            (<span class="string">&quot;127.0.0.1:8081&quot;</span>.parse().unwrap(), (<span class="number">200</span>, <span class="number">200</span>)),
+            (<span class="string">"127.0.0.1:8080"</span>.parse().unwrap(), (<span class="number">100</span>, <span class="number">100</span>)),
+            (<span class="string">"127.0.0.1:8081"</span>.parse().unwrap(), (<span class="number">200</span>, <span class="number">200</span>)),
         ]);
-        <span class="kw">let </span>failed_addresses = Arc::new(Mutex::new(HashSet::from([<span class="string">&quot;127.0.0.1:8081&quot;
+        <span class="kw">let </span>failed_addresses = Arc::new(Mutex::new(HashSet::from([<span class="string">"127.0.0.1:8081"
             </span>.parse()
             .unwrap()])));
         <span class="kw">let </span>measurement = FailedAddressesMock {
@@ -1393,8 +1395,8 @@
 
         <span class="kw">let </span>phoenix = Phoenix::new(measurement);
 
-        phoenix.add_node(<span class="string">&quot;127.0.0.1:8080&quot;</span>.parse().unwrap(), abcd());
-        phoenix.add_node(<span class="string">&quot;127.0.0.1:8081&quot;</span>.parse().unwrap(), efgh());
+        phoenix.add_node(<span class="string">"127.0.0.1:8080"</span>.parse().unwrap(), abcd());
+        phoenix.add_node(<span class="string">"127.0.0.1:8081"</span>.parse().unwrap(), efgh());
 
         phoenix.measure_all_nodes().<span class="kw">await</span>;
 
@@ -1407,13 +1409,13 @@
     <span class="attr">#[tokio::test]
     </span><span class="kw">async fn </span>http_server() {
         <span class="kw">let </span>config = Arc::new(<span class="kw">crate</span>::Config::default_non_agent());
-        <span class="kw">let </span>qcmp_listener = <span class="kw">crate</span>::net::TcpListener::bind(<span class="prelude-val">None</span>).expect(<span class="string">&quot;failed to bind listener&quot;</span>);
+        <span class="kw">let </span>qcmp_listener = <span class="kw">crate</span>::net::TcpListener::bind(<span class="prelude-val">None</span>).expect(<span class="string">"failed to bind listener"</span>);
         <span class="kw">let </span>qcmp_port = qcmp_listener.port();
         config.datacenters().write().insert(
             std::net::Ipv4Addr::LOCALHOST.into(),
             <span class="kw">crate</span>::config::Datacenter {
                 qcmp_port,
-                icao_code: <span class="string">&quot;ABCD&quot;</span>.parse().unwrap(),
+                icao_code: <span class="string">"ABCD"</span>.parse().unwrap(),
             },
         );
 
@@ -1427,7 +1429,7 @@
         <span class="kw">let </span>client = hyper::Client::new();
 
         <span class="kw">let </span>resp = client
-            .get(<span class="macro">format!</span>(<span class="string">&quot;http://localhost:{qcmp_port}/&quot;</span>).parse().unwrap())
+            .get(<span class="macro">format!</span>(<span class="string">"http://localhost:{qcmp_port}/"</span>).parse().unwrap())
             .<span class="kw">await
             </span>.map(|resp| resp.into_body())
             .map(hyper::body::to_bytes)
@@ -1437,7 +1439,7 @@
 
         <span class="kw">let </span>map = serde_json::from_slice::&lt;serde_json::Map&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt;&gt;(<span class="kw-2">&amp;</span>resp).unwrap();
 
-        <span class="macro">assert!</span>(<span class="macro">dbg!</span>(map).contains_key(<span class="string">&quot;ABCD&quot;</span>));
+        <span class="macro">assert!</span>(<span class="macro">dbg!</span>(map).contains_key(<span class="string">"ABCD"</span>));
     }
 }
 </code></pre></div></section></main></body></html>

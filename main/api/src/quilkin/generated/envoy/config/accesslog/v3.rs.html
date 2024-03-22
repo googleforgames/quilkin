@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/generated/envoy/config/accesslog/v3.rs`."><title>v3.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="quilkin" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0 (79e9716c9 2023-11-13)" data-channel="1.74.0" data-search-js="search-8be46b629f5f14a8.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../../../src-files.js"></script><script defer src="../../../../../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../../../quilkin/index.html"><img class="rust-logo" src="../../../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/generated/envoy/config/accesslog/v3.rs`."><title>v3.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="quilkin" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0 (aedd173a2 2024-03-17)" data-channel="1.77.0" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../../../src-files.js"></script><script defer src="../../../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../../../quilkin/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -264,11 +266,11 @@
 </pre></div><pre class="rust"><code><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>AccessLog {
-    <span class="attr">#[prost(string, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(string, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>name: ::prost::alloc::string::String,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>filter: ::core::option::Option&lt;AccessLogFilter&gt;,
-    <span class="attr">#[prost(oneof = <span class="string">&quot;access_log::ConfigType&quot;</span>, tags = <span class="string">&quot;4&quot;</span>)]
+    <span class="attr">#[prost(oneof = <span class="string">"access_log::ConfigType"</span>, tags = <span class="string">"4"</span>)]
     </span><span class="kw">pub </span>config_type: ::core::option::Option&lt;access_log::ConfigType&gt;,
 }
 <span class="doccomment">/// Nested message and enum types in `AccessLog`.
@@ -276,7 +278,7 @@
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     </span><span class="kw">pub enum </span>ConfigType {
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;4&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"4"</span>)]
         </span>TypedConfig(::prost_types::Any),
     }
 }
@@ -284,8 +286,8 @@
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>AccessLogFilter {
     <span class="attr">#[prost(
-        oneof = <span class="string">&quot;access_log_filter::FilterSpecifier&quot;</span>,
-        tags = <span class="string">&quot;1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12&quot;
+        oneof = <span class="string">"access_log_filter::FilterSpecifier"</span>,
+        tags = <span class="string">"1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12"
     </span>)]
     </span><span class="kw">pub </span>filter_specifier: ::core::option::Option&lt;access_log_filter::FilterSpecifier&gt;,
 }
@@ -294,38 +296,38 @@
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     </span><span class="kw">pub enum </span>FilterSpecifier {
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;1&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"1"</span>)]
         </span>StatusCodeFilter(<span class="kw">super</span>::StatusCodeFilter),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;2&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"2"</span>)]
         </span>DurationFilter(<span class="kw">super</span>::DurationFilter),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;3&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"3"</span>)]
         </span>NotHealthCheckFilter(<span class="kw">super</span>::NotHealthCheckFilter),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;4&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"4"</span>)]
         </span>TraceableFilter(<span class="kw">super</span>::TraceableFilter),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;5&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"5"</span>)]
         </span>RuntimeFilter(<span class="kw">super</span>::RuntimeFilter),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;6&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"6"</span>)]
         </span>AndFilter(<span class="kw">super</span>::AndFilter),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;7&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"7"</span>)]
         </span>OrFilter(<span class="kw">super</span>::OrFilter),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;8&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"8"</span>)]
         </span>HeaderFilter(<span class="kw">super</span>::HeaderFilter),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;9&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"9"</span>)]
         </span>ResponseFlagFilter(<span class="kw">super</span>::ResponseFlagFilter),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;10&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"10"</span>)]
         </span>GrpcStatusFilter(<span class="kw">super</span>::GrpcStatusFilter),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;11&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"11"</span>)]
         </span>ExtensionFilter(<span class="kw">super</span>::ExtensionFilter),
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;12&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"12"</span>)]
         </span>MetadataFilter(<span class="kw">super</span>::MetadataFilter),
     }
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>ComparisonFilter {
-    <span class="attr">#[prost(enumeration = <span class="string">&quot;comparison_filter::Op&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(enumeration = <span class="string">"comparison_filter::Op"</span>, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>op: i32,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>value: ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::core::v3::RuntimeUInt32&gt;,
 }
 <span class="doccomment">/// Nested message and enum types in `ComparisonFilter`.
@@ -342,19 +344,19 @@
         ///
         /// The values are not transformed in any way and thus are considered stable
         /// (if the ProtoBuf definition does not change) and safe for programmatic use.
-        </span><span class="kw">pub fn </span>as_str_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+        </span><span class="kw">pub fn </span>as_str_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
             <span class="kw">match </span><span class="self">self </span>{
-                Op::Eq =&gt; <span class="string">&quot;EQ&quot;</span>,
-                Op::Ge =&gt; <span class="string">&quot;GE&quot;</span>,
-                Op::Le =&gt; <span class="string">&quot;LE&quot;</span>,
+                Op::Eq =&gt; <span class="string">"EQ"</span>,
+                Op::Ge =&gt; <span class="string">"GE"</span>,
+                Op::Le =&gt; <span class="string">"LE"</span>,
             }
         }
         <span class="doccomment">/// Creates an enum from field names used in the ProtoBuf definition.
         </span><span class="kw">pub fn </span>from_str_name(value: <span class="kw-2">&amp;</span>str) -&gt; ::core::option::Option&lt;<span class="self">Self</span>&gt; {
             <span class="kw">match </span>value {
-                <span class="string">&quot;EQ&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Eq),
-                <span class="string">&quot;GE&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Ge),
-                <span class="string">&quot;LE&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Le),
+                <span class="string">"EQ" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Eq),
+                <span class="string">"GE" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Ge),
+                <span class="string">"LE" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Le),
                 <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
             }
         }
@@ -363,13 +365,13 @@
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>StatusCodeFilter {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>comparison: ::core::option::Option&lt;ComparisonFilter&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>DurationFilter {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>comparison: ::core::option::Option&lt;ComparisonFilter&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
@@ -381,48 +383,48 @@
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>RuntimeFilter {
-    <span class="attr">#[prost(string, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(string, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>runtime_key: ::prost::alloc::string::String,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>percent_sampled: ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::kind::v3::FractionalPercent&gt;,
-    <span class="attr">#[prost(bool, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(bool, tag = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>use_independent_randomness: bool,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>AndFilter {
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(message, repeated, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>filters: ::prost::alloc::vec::Vec&lt;AccessLogFilter&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>OrFilter {
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(message, repeated, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>filters: ::prost::alloc::vec::Vec&lt;AccessLogFilter&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>HeaderFilter {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>header: ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::route::v3::HeaderMatcher&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>ResponseFlagFilter {
-    <span class="attr">#[prost(string, repeated, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(string, repeated, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>flags: ::prost::alloc::vec::Vec&lt;::prost::alloc::string::String&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>GrpcStatusFilter {
     <span class="attr">#[prost(
-        enumeration = <span class="string">&quot;grpc_status_filter::Status&quot;</span>,
+        enumeration = <span class="string">"grpc_status_filter::Status"</span>,
         repeated,
-        packed = <span class="string">&quot;false&quot;</span>,
-        tag = <span class="string">&quot;1&quot;
+        packed = <span class="string">"false"</span>,
+        tag = <span class="string">"1"
     </span>)]
     </span><span class="kw">pub </span>statuses: ::prost::alloc::vec::Vec&lt;i32&gt;,
-    <span class="attr">#[prost(bool, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(bool, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>exclude: bool,
 }
 <span class="doccomment">/// Nested message and enum types in `GrpcStatusFilter`.
@@ -453,47 +455,47 @@
         ///
         /// The values are not transformed in any way and thus are considered stable
         /// (if the ProtoBuf definition does not change) and safe for programmatic use.
-        </span><span class="kw">pub fn </span>as_str_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+        </span><span class="kw">pub fn </span>as_str_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
             <span class="kw">match </span><span class="self">self </span>{
-                Status::Ok =&gt; <span class="string">&quot;OK&quot;</span>,
-                Status::Canceled =&gt; <span class="string">&quot;CANCELED&quot;</span>,
-                Status::Unknown =&gt; <span class="string">&quot;UNKNOWN&quot;</span>,
-                Status::InvalidArgument =&gt; <span class="string">&quot;INVALID_ARGUMENT&quot;</span>,
-                Status::DeadlineExceeded =&gt; <span class="string">&quot;DEADLINE_EXCEEDED&quot;</span>,
-                Status::NotFound =&gt; <span class="string">&quot;NOT_FOUND&quot;</span>,
-                Status::AlreadyExists =&gt; <span class="string">&quot;ALREADY_EXISTS&quot;</span>,
-                Status::PermissionDenied =&gt; <span class="string">&quot;PERMISSION_DENIED&quot;</span>,
-                Status::ResourceExhausted =&gt; <span class="string">&quot;RESOURCE_EXHAUSTED&quot;</span>,
-                Status::FailedPrecondition =&gt; <span class="string">&quot;FAILED_PRECONDITION&quot;</span>,
-                Status::Aborted =&gt; <span class="string">&quot;ABORTED&quot;</span>,
-                Status::OutOfRange =&gt; <span class="string">&quot;OUT_OF_RANGE&quot;</span>,
-                Status::Unimplemented =&gt; <span class="string">&quot;UNIMPLEMENTED&quot;</span>,
-                Status::Internal =&gt; <span class="string">&quot;INTERNAL&quot;</span>,
-                Status::Unavailable =&gt; <span class="string">&quot;UNAVAILABLE&quot;</span>,
-                Status::DataLoss =&gt; <span class="string">&quot;DATA_LOSS&quot;</span>,
-                Status::Unauthenticated =&gt; <span class="string">&quot;UNAUTHENTICATED&quot;</span>,
+                Status::Ok =&gt; <span class="string">"OK"</span>,
+                Status::Canceled =&gt; <span class="string">"CANCELED"</span>,
+                Status::Unknown =&gt; <span class="string">"UNKNOWN"</span>,
+                Status::InvalidArgument =&gt; <span class="string">"INVALID_ARGUMENT"</span>,
+                Status::DeadlineExceeded =&gt; <span class="string">"DEADLINE_EXCEEDED"</span>,
+                Status::NotFound =&gt; <span class="string">"NOT_FOUND"</span>,
+                Status::AlreadyExists =&gt; <span class="string">"ALREADY_EXISTS"</span>,
+                Status::PermissionDenied =&gt; <span class="string">"PERMISSION_DENIED"</span>,
+                Status::ResourceExhausted =&gt; <span class="string">"RESOURCE_EXHAUSTED"</span>,
+                Status::FailedPrecondition =&gt; <span class="string">"FAILED_PRECONDITION"</span>,
+                Status::Aborted =&gt; <span class="string">"ABORTED"</span>,
+                Status::OutOfRange =&gt; <span class="string">"OUT_OF_RANGE"</span>,
+                Status::Unimplemented =&gt; <span class="string">"UNIMPLEMENTED"</span>,
+                Status::Internal =&gt; <span class="string">"INTERNAL"</span>,
+                Status::Unavailable =&gt; <span class="string">"UNAVAILABLE"</span>,
+                Status::DataLoss =&gt; <span class="string">"DATA_LOSS"</span>,
+                Status::Unauthenticated =&gt; <span class="string">"UNAUTHENTICATED"</span>,
             }
         }
         <span class="doccomment">/// Creates an enum from field names used in the ProtoBuf definition.
         </span><span class="kw">pub fn </span>from_str_name(value: <span class="kw-2">&amp;</span>str) -&gt; ::core::option::Option&lt;<span class="self">Self</span>&gt; {
             <span class="kw">match </span>value {
-                <span class="string">&quot;OK&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Ok),
-                <span class="string">&quot;CANCELED&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Canceled),
-                <span class="string">&quot;UNKNOWN&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Unknown),
-                <span class="string">&quot;INVALID_ARGUMENT&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::InvalidArgument),
-                <span class="string">&quot;DEADLINE_EXCEEDED&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::DeadlineExceeded),
-                <span class="string">&quot;NOT_FOUND&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::NotFound),
-                <span class="string">&quot;ALREADY_EXISTS&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::AlreadyExists),
-                <span class="string">&quot;PERMISSION_DENIED&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::PermissionDenied),
-                <span class="string">&quot;RESOURCE_EXHAUSTED&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::ResourceExhausted),
-                <span class="string">&quot;FAILED_PRECONDITION&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::FailedPrecondition),
-                <span class="string">&quot;ABORTED&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Aborted),
-                <span class="string">&quot;OUT_OF_RANGE&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::OutOfRange),
-                <span class="string">&quot;UNIMPLEMENTED&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Unimplemented),
-                <span class="string">&quot;INTERNAL&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Internal),
-                <span class="string">&quot;UNAVAILABLE&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Unavailable),
-                <span class="string">&quot;DATA_LOSS&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::DataLoss),
-                <span class="string">&quot;UNAUTHENTICATED&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Unauthenticated),
+                <span class="string">"OK" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Ok),
+                <span class="string">"CANCELED" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Canceled),
+                <span class="string">"UNKNOWN" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Unknown),
+                <span class="string">"INVALID_ARGUMENT" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::InvalidArgument),
+                <span class="string">"DEADLINE_EXCEEDED" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::DeadlineExceeded),
+                <span class="string">"NOT_FOUND" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::NotFound),
+                <span class="string">"ALREADY_EXISTS" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::AlreadyExists),
+                <span class="string">"PERMISSION_DENIED" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::PermissionDenied),
+                <span class="string">"RESOURCE_EXHAUSTED" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::ResourceExhausted),
+                <span class="string">"FAILED_PRECONDITION" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::FailedPrecondition),
+                <span class="string">"ABORTED" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Aborted),
+                <span class="string">"OUT_OF_RANGE" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::OutOfRange),
+                <span class="string">"UNIMPLEMENTED" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Unimplemented),
+                <span class="string">"INTERNAL" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Internal),
+                <span class="string">"UNAVAILABLE" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Unavailable),
+                <span class="string">"DATA_LOSS" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::DataLoss),
+                <span class="string">"UNAUTHENTICATED" </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Unauthenticated),
                 <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
             }
         }
@@ -502,17 +504,17 @@
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>MetadataFilter {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>matcher: ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::<span class="kw">super</span>::kind::matcher::v3::MetadataMatcher&gt;,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>match_if_key_not_found: ::core::option::Option&lt;bool&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>ExtensionFilter {
-    <span class="attr">#[prost(string, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(string, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>name: ::prost::alloc::string::String,
-    <span class="attr">#[prost(oneof = <span class="string">&quot;extension_filter::ConfigType&quot;</span>, tags = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(oneof = <span class="string">"extension_filter::ConfigType"</span>, tags = <span class="string">"3"</span>)]
     </span><span class="kw">pub </span>config_type: ::core::option::Option&lt;extension_filter::ConfigType&gt;,
 }
 <span class="doccomment">/// Nested message and enum types in `ExtensionFilter`.
@@ -520,7 +522,7 @@
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     </span><span class="kw">pub enum </span>ConfigType {
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;3&quot;</span>)]
+        <span class="attr">#[prost(message, tag = <span class="string">"3"</span>)]
         </span>TypedConfig(::prost_types::Any),
     }
 }
