@@ -170,6 +170,7 @@ impl Cli {
             Commands::Manage(_mng) => {
                 let ready = components::manage::Ready {
                     idle_request_interval: admin_server::IDLE_REQUEST_INTERVAL,
+                    is_manage: true,
                     ..Default::default()
                 };
                 Admin::Manage(ready)

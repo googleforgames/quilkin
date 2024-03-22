@@ -11,13 +11,15 @@ pub struct Ready {
     pub idle_request_interval: std::time::Duration,
     pub provider_is_healthy: Arc<AtomicBool>,
     pub relay_is_healthy: Arc<AtomicBool>,
+    /// If true, only care about the provider being healthy, not the relay
+    pub is_manage: bool,
 }
 
 impl Ready {
     #[inline]
     pub fn is_ready(&self) -> bool {
         self.provider_is_healthy.load(Ordering::SeqCst)
-            && self.relay_is_healthy.load(Ordering::SeqCst)
+            && (self.is_manage || self.relay_is_healthy.load(Ordering::SeqCst))
     }
 }
 
