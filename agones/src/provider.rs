@@ -15,6 +15,7 @@
  */
 
 #[cfg(test)]
+#[allow(dead_code)]
 mod tests {
     use std::{collections::BTreeMap, time::Duration};
 
