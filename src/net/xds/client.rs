@@ -682,7 +682,7 @@ impl AdsStream {
                                 break;
                             }
                             Err(_) => {
-                                tracing::warn!(
+                                tracing::debug!(
                                     "exceeded idle request interval sending new requests"
                                 );
                                 Self::refresh_resources(
