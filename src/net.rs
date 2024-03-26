@@ -37,6 +37,7 @@ macro_rules! uring_spawn {
                     };
                 });
             } else {
+                use tracing::instrument::WithSubscriber as _;
                 tokio::spawn(async move {
                     let _ = tx.send(Ok(()));
                     $future.await
