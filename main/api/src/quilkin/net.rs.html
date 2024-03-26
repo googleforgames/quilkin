@@ -431,6 +431,12 @@
 <a href="#429" id="429">429</a>
 <a href="#430" id="430">430</a>
 <a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -449,15 +455,20 @@
 
 </span><span class="doccomment">/// On linux spawns a io-uring runtime + thread, everywhere else spawns a regular tokio task.
 </span><span class="macro">macro_rules! </span>uring_spawn {
-    (<span class="macro-nonterminal">$future</span>:expr) =&gt; {{
+    (<span class="macro-nonterminal">$span</span>:expr, <span class="macro-nonterminal">$future</span>:expr) =&gt; {{
         <span class="kw">let </span>(tx, rx) = tokio::sync::oneshot::channel::&lt;<span class="kw">crate</span>::Result&lt;()&gt;&gt;();
+        <span class="kw">use </span>tracing::Instrument <span class="kw">as _</span>;
+
         <span class="macro">cfg_if::cfg_if! </span>{
             <span class="kw">if </span><span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)] </span>{
+                <span class="kw">let </span>dispatcher = tracing::dispatcher::get_default(|d| d.clone());
                 std::thread::spawn(<span class="kw">move </span>|| {
+                    <span class="kw">let </span>_guard = tracing::dispatcher::set_default(<span class="kw-2">&amp;</span>dispatcher);
+
                     <span class="kw">match </span>tokio_uring::Runtime::new(<span class="kw-2">&amp;</span>tokio_uring::builder().entries(<span class="number">2048</span>)) {
                         <span class="prelude-val">Ok</span>(runtime) =&gt; {
                             <span class="kw">let _ </span>= tx.send(<span class="prelude-val">Ok</span>(()));
-                            runtime.block_on(<span class="macro-nonterminal">$future</span>);
+                            runtime.block_on(<span class="macro-nonterminal">$future</span>.instrument(<span class="macro-nonterminal">$span</span>));
                         }
                         <span class="prelude-val">Err</span>(error) =&gt; {
                             <span class="kw">let _ </span>= tx.send(<span class="prelude-val">Err</span>(error.into()));
@@ -465,10 +476,11 @@
                     };
                 });
             } <span class="kw">else </span>{
+                <span class="kw">use </span>tracing::instrument::WithSubscriber <span class="kw">as _</span>;
                 tokio::spawn(<span class="kw">async move </span>{
                     <span class="kw">let _ </span>= tx.send(<span class="prelude-val">Ok</span>(()));
                     <span class="macro-nonterminal">$future</span>.<span class="kw">await
-                </span>});
+                </span>}.instrument(<span class="macro-nonterminal">$span</span>).with_current_subscriber());
             }
         }
         rx

@@ -294,6 +294,15 @@
 <a href="#292" id="292">292</a>
 <a href="#293" id="293">293</a>
 <a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
 </pre></div><pre class="rust"><code><span class="kw">use super</span>::{
     sessions::{DownstreamReceiver, SessionKey},
     PipelineError, PipelineErrorDiscriminants, SessionPool,
@@ -317,7 +326,7 @@
 
 <span class="doccomment">/// Represents the required arguments to run a worker task that
 /// processes packets received downstream.
-</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>DownstreamReceiveWorkerConfig {
+</span><span class="kw">pub struct </span>DownstreamReceiveWorkerConfig {
     <span class="doccomment">/// ID of the worker.
     </span><span class="kw">pub </span>worker_id: usize,
     <span class="doccomment">/// Socket with reused port from which the worker receives packets.
@@ -330,7 +339,7 @@
 }
 
 <span class="kw">impl </span>DownstreamReceiveWorkerConfig {
-    <span class="kw">pub fn </span>spawn(<span class="self">self</span>) -&gt; Arc&lt;tokio::sync::Notify&gt; {
+    <span class="kw">pub async fn </span>spawn(<span class="self">self</span>) -&gt; eyre::Result&lt;Arc&lt;tokio::sync::Notify&gt;&gt; {
         <span class="kw">let </span><span class="self">Self </span>{
             worker_id,
             upstream_receiver,
@@ -344,17 +353,22 @@
         <span class="kw">let </span>notify = Arc::new(tokio::sync::Notify::new());
         <span class="kw">let </span>is_ready = notify.clone();
 
-        <span class="macro">uring_spawn!</span>(<span class="kw">async move </span>{
-            <span class="comment">// Initialize a buffer for the UDP packet. We use the maximum size of a UDP
-            // packet, which is the maximum value of 16 a bit integer.
-            </span><span class="kw">let </span><span class="kw-2">mut </span>last_received_at = <span class="prelude-val">None</span>;
+        <span class="kw">let </span>thread_span = <span class="macro">tracing::debug_span!</span>(<span class="string">"receiver"</span>, id = worker_id).or_current();
+
+        <span class="kw">let </span>worker = <span class="macro">uring_spawn!</span>(thread_span, <span class="kw">async move </span>{
+            <span class="kw">let </span><span class="kw-2">mut </span>last_received_at = <span class="prelude-val">None</span>;
             <span class="kw">let </span>socket = <span class="kw">crate</span>::net::DualStackLocalSocket::new(port)
                 .unwrap()
                 .make_refcnt();
+
+            <span class="macro">tracing::trace!</span>(port, <span class="string">"bound worker"</span>);
             <span class="kw">let </span>send_socket = socket.clone();
+
+            <span class="kw">let </span>upstream = <span class="macro">tracing::debug_span!</span>(<span class="string">"upstream"</span>).or_current();
 
             <span class="macro">uring_inner_spawn!</span>(<span class="kw">async move </span>{
                 is_ready.notify_one();
+
                 <span class="kw">loop </span>{
                     <span class="macro">tokio::select! </span>{
                         result = upstream_receiver.recv() =&gt; {
@@ -399,12 +413,15 @@
                         }
                     }
                 }
-            });
+            }.instrument(upstream));
 
             <span class="kw">loop </span>{
-                <span class="kw">let </span>buffer = buffer_pool.clone().alloc();
+                <span class="comment">// Initialize a buffer for the UDP packet. We use the maximum size of a UDP
+                // packet, which is the maximum value of 16 a bit integer.
+                </span><span class="kw">let </span>buffer = buffer_pool.clone().alloc();
 
                 <span class="kw">let </span>(result, contents) = socket.recv_from(buffer).<span class="kw">await</span>;
+
                 <span class="kw">match </span>result {
                     <span class="prelude-val">Ok</span>((_size, <span class="kw-2">mut </span>source)) =&gt; {
                         source.set_ip(source.ip().to_canonical());
@@ -442,7 +459,9 @@
             }
         });
 
-        notify
+        <span class="kw">use </span>eyre::WrapErr <span class="kw">as _</span>;
+        worker.<span class="kw">await</span>.context(<span class="string">"failed to spawn receiver task"</span>)<span class="question-mark">??</span>;
+        <span class="prelude-val">Ok</span>(notify)
     }
 
     <span class="attr">#[inline]
@@ -533,7 +552,7 @@
 /// This function also spawns the set of worker tasks responsible for consuming packets
 /// off the aforementioned queue and processing them through the filter chain and session
 /// pipeline.
-</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>spawn_receivers(
+</span><span class="kw">pub async fn </span>spawn_receivers(
     config: Arc&lt;Config&gt;,
     socket: socket2::Socket,
     num_workers: usize,
@@ -545,21 +564,20 @@
 
     <span class="kw">let </span>port = <span class="kw">crate</span>::net::socket_port(<span class="kw-2">&amp;</span>socket);
 
-    <span class="kw">let </span>worker_notifications = (<span class="number">0</span>..num_workers)
-        .map(|worker_id| {
-            <span class="kw">let </span>worker = DownstreamReceiveWorkerConfig {
-                worker_id,
-                upstream_receiver: upstream_receiver.clone(),
-                port,
-                config: config.clone(),
-                sessions: sessions.clone(),
-                error_sender: error_sender.clone(),
-                buffer_pool: buffer_pool.clone(),
-            };
+    <span class="kw">let </span><span class="kw-2">mut </span>worker_notifications = Vec::with_capacity(num_workers);
+    <span class="kw">for </span>worker_id <span class="kw">in </span><span class="number">0</span>..num_workers {
+        <span class="kw">let </span>worker = DownstreamReceiveWorkerConfig {
+            worker_id,
+            upstream_receiver: upstream_receiver.clone(),
+            port,
+            config: config.clone(),
+            sessions: sessions.clone(),
+            error_sender: error_sender.clone(),
+            buffer_pool: buffer_pool.clone(),
+        };
 
-            worker.spawn()
-        })
-        .collect();
+        worker_notifications.push(worker.spawn().<span class="kw">await</span><span class="question-mark">?</span>);
+    }
 
     tokio::spawn(<span class="kw">async move </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>log_task = tokio::time::interval(std::time::Duration::from_secs(<span class="number">5</span>));

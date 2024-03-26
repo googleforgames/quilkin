@@ -880,7 +880,7 @@
 
         <span class="kw">let </span>pool = <span class="self">self</span>.clone();
 
-        <span class="kw">let </span>initialised = <span class="macro">uring_spawn!</span>(<span class="kw">async move </span>{
+        <span class="kw">let </span>initialised = <span class="macro">uring_spawn!</span>(<span class="macro">tracing::debug_span!</span>(<span class="string">"session pool"</span>), <span class="kw">async move </span>{
             <span class="kw">let </span><span class="kw-2">mut </span>last_received_at = <span class="prelude-val">None</span>;
             <span class="kw">let </span><span class="kw-2">mut </span>shutdown_rx = pool.shutdown_rx.clone();
             <span class="macro">cfg_if::cfg_if! </span>{

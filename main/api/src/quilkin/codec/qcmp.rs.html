@@ -631,7 +631,7 @@
 <span class="kw">pub fn </span>spawn(socket: socket2::Socket, <span class="kw-2">mut </span>shutdown_rx: <span class="kw">crate</span>::ShutdownRx) {
     <span class="kw">let </span>port = <span class="kw">crate</span>::net::socket_port(<span class="kw-2">&amp;</span>socket);
 
-    <span class="macro">uring_spawn!</span>(<span class="kw">async move </span>{
+    <span class="macro">uring_spawn!</span>(<span class="macro">tracing::debug_span!</span>(<span class="string">"qcmp"</span>), <span class="kw">async move </span>{
         <span class="comment">// Initialize a buffer for the UDP packet. We use the maximum size of a UDP
         // packet, which is the maximum value of 16 a bit integer.
         </span><span class="kw">let </span><span class="kw-2">mut </span>input_buf = <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">1 </span>&lt;&lt; <span class="number">16</span>];

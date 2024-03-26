@@ -244,7 +244,8 @@
 <a href="#242" id="242">242</a>
 <a href="#243" id="243">243</a>
 <a href="#244" id="244">244</a>
-</pre></div><pre class="rust"><code><span class="kw">mod </span>packet_router;
+<a href="#245" id="245">245</a>
+</pre></div><pre class="rust"><code><span class="kw">pub mod </span>packet_router;
 <span class="kw">mod </span>sessions;
 
 <span class="kw">use </span><span class="kw">super</span>::RunArgs;
@@ -252,7 +253,7 @@
     net::{maxmind_db::IpNetEntry, xds::ResourceType},
     pool::PoolBuffer,
 };
-<span class="kw">use </span>sessions::SessionPool;
+<span class="kw">pub use </span>sessions::SessionPool;
 <span class="kw">use </span>std::{
     net::SocketAddr,
     sync::{
@@ -454,7 +455,8 @@
             <span class="kw-2">&amp;</span>sessions,
             upstream_receiver,
             buffer_pool,
-        )<span class="question-mark">?</span>;
+        )
+        .<span class="kw">await</span><span class="question-mark">?</span>;
 
         <span class="kw">crate</span>::codec::qcmp::spawn(<span class="self">self</span>.qcmp, shutdown_rx.clone());
         <span class="kw">crate</span>::net::phoenix::spawn(<span class="self">self</span>.phoenix, config.clone(), shutdown_rx.clone())<span class="question-mark">?</span>;

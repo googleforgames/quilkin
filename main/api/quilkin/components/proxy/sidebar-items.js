@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["PipelineError","PipelineErrorDiscriminants"],"struct":["Proxy","Ready"]};
+window.SIDEBAR_ITEMS = {"enum":["PipelineError","PipelineErrorDiscriminants"],"mod":["packet_router"],"struct":["Proxy","Ready","SessionPool"]};
