@@ -671,6 +671,16 @@ impl Sandbox {
             .expect("operation timed out")
     }
 
+    #[inline]
+    pub async fn maybe_timeout<F>(&self, ms: u64, fut: F) -> Option<F::Output>
+    where
+        F: std::future::Future,
+    {
+        tokio::time::timeout(std::time::Duration::from_millis(ms), fut)
+            .await
+            .ok()
+    }
+
     /// Runs a future, expecting it to timeout instead of resolving, panics if
     /// the future finishes before the timeout
     #[inline]

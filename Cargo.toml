@@ -104,7 +104,7 @@ tokio-stream = { version = "0.1.14", features = ["net", "sync"] }
 tonic = "0.10.2"
 tracing.workspace = true
 tracing-futures = { version = "0.2.5", features = ["futures-03"] }
-tracing-subscriber = { version = "0.3.17", features = ["json", "env-filter"] }
+tracing-subscriber = { workspace = true, features = ["json", "env-filter"] }
 tryhard = "0.5.1"
 url = { version = "2.4.1", features = ["serde"] }
 uuid = { version = "1.4.1", default-features = false, features = ["v4"] }
@@ -186,3 +186,4 @@ tokio = { version = "1.32.0", features = [
 ] }
 tempfile = "3.8.0"
 tracing = "0.1.37"
+tracing-subscriber = "0.3"
