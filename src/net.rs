@@ -16,15 +16,20 @@
 
 /// On linux spawns a io-uring runtime + thread, everywhere else spawns a regular tokio task.
 macro_rules! uring_spawn {
-    ($future:expr) => {{
+    ($span:expr, $future:expr) => {{
         let (tx, rx) = tokio::sync::oneshot::channel::<crate::Result<()>>();
+        use tracing::Instrument as _;
+
         cfg_if::cfg_if! {
             if #[cfg(target_os = "linux")] {
+                let dispatcher = tracing::dispatcher::get_default(|d| d.clone());
                 std::thread::spawn(move || {
+                    let _guard = tracing::dispatcher::set_default(&dispatcher);
+
                     match tokio_uring::Runtime::new(&tokio_uring::builder().entries(2048)) {
                         Ok(runtime) => {
                             let _ = tx.send(Ok(()));
-                            runtime.block_on($future);
+                            runtime.block_on($future.instrument($span));
                         }
                         Err(error) => {
                             let _ = tx.send(Err(error.into()));
@@ -35,7 +40,7 @@ macro_rules! uring_spawn {
                 tokio::spawn(async move {
                     let _ = tx.send(Ok(()));
                     $future.await
-                });
+                }.instrument($span).with_current_subscriber());
             }
         }
         rx
