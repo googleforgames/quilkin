@@ -58,6 +58,19 @@ jobs:
             submodules: true
       - run: cargo run -p proto-gen -- validate
 
+  test:
+    name: Test
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install nextest
+        run: curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ${CARGO_HOME:-~/.cargo}/bin
+      - name: Build
+        run: cargo build -p qt -p quilkin --tests
+      - run: cargo nextest run -p qt -p quilkin
+
   build:
     name: Build
     strategy:

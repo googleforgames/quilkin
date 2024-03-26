@@ -1,4 +1,4 @@
-mod packet_router;
+pub mod packet_router;
 mod sessions;
 
 use super::RunArgs;
@@ -6,7 +6,7 @@ use crate::{
     net::{maxmind_db::IpNetEntry, xds::ResourceType},
     pool::PoolBuffer,
 };
-use sessions::SessionPool;
+pub use sessions::SessionPool;
 use std::{
     net::SocketAddr,
     sync::{
@@ -208,7 +208,8 @@ impl Proxy {
             &sessions,
             upstream_receiver,
             buffer_pool,
-        )?;
+        )
+        .await?;
 
         crate::codec::qcmp::spawn(self.qcmp, shutdown_rx.clone());
         crate::net::phoenix::spawn(self.phoenix, config.clone(), shutdown_rx.clone())?;

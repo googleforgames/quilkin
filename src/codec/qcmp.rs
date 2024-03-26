@@ -75,7 +75,7 @@ impl Measurement for QcmpMeasurement {
 pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) {
     let port = crate::net::socket_port(&socket);
 
-    uring_spawn!(async move {
+    uring_spawn!(tracing::debug_span!("qcmp"), async move {
         // Initialize a buffer for the UDP packet. We use the maximum size of a UDP
         // packet, which is the maximum value of 16 a bit integer.
         let mut input_buf = vec![0; 1 << 16];

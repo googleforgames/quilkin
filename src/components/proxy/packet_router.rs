@@ -21,7 +21,7 @@ struct DownstreamPacket {
 
 /// Represents the required arguments to run a worker task that
 /// processes packets received downstream.
-pub(crate) struct DownstreamReceiveWorkerConfig {
+pub struct DownstreamReceiveWorkerConfig {
     /// ID of the worker.
     pub worker_id: usize,
     /// Socket with reused port from which the worker receives packets.
@@ -34,7 +34,7 @@ pub(crate) struct DownstreamReceiveWorkerConfig {
 }
 
 impl DownstreamReceiveWorkerConfig {
-    pub fn spawn(self) -> Arc<tokio::sync::Notify> {
+    pub async fn spawn(self) -> eyre::Result<Arc<tokio::sync::Notify>> {
         let Self {
             worker_id,
             upstream_receiver,
@@ -48,17 +48,22 @@ impl DownstreamReceiveWorkerConfig {
         let notify = Arc::new(tokio::sync::Notify::new());
         let is_ready = notify.clone();
 
-        uring_spawn!(async move {
-            // Initialize a buffer for the UDP packet. We use the maximum size of a UDP
-            // packet, which is the maximum value of 16 a bit integer.
+        let thread_span = tracing::debug_span!("receiver", id = worker_id).or_current();
+
+        let worker = uring_spawn!(thread_span, async move {
             let mut last_received_at = None;
             let socket = crate::net::DualStackLocalSocket::new(port)
                 .unwrap()
                 .make_refcnt();
+
+            tracing::trace!(port, "bound worker");
             let send_socket = socket.clone();
+
+            let upstream = tracing::debug_span!("upstream").or_current();
 
             uring_inner_spawn!(async move {
                 is_ready.notify_one();
+
                 loop {
                     tokio::select! {
                         result = upstream_receiver.recv() => {
@@ -103,12 +108,15 @@ impl DownstreamReceiveWorkerConfig {
                         }
                     }
                 }
-            });
+            }.instrument(upstream));
 
             loop {
+                // Initialize a buffer for the UDP packet. We use the maximum size of a UDP
+                // packet, which is the maximum value of 16 a bit integer.
                 let buffer = buffer_pool.clone().alloc();
 
                 let (result, contents) = socket.recv_from(buffer).await;
+
                 match result {
                     Ok((_size, mut source)) => {
                         source.set_ip(source.ip().to_canonical());
@@ -146,7 +154,9 @@ impl DownstreamReceiveWorkerConfig {
             }
         });
 
-        notify
+        use eyre::WrapErr as _;
+        worker.await.context("failed to spawn receiver task")??;
+        Ok(notify)
     }
 
     #[inline]
@@ -237,7 +247,7 @@ impl DownstreamReceiveWorkerConfig {
 /// This function also spawns the set of worker tasks responsible for consuming packets
 /// off the aforementioned queue and processing them through the filter chain and session
 /// pipeline.
-pub(super) fn spawn_receivers(
+pub async fn spawn_receivers(
     config: Arc<Config>,
     socket: socket2::Socket,
     num_workers: usize,
@@ -249,21 +259,20 @@ pub(super) fn spawn_receivers(
 
     let port = crate::net::socket_port(&socket);
 
-    let worker_notifications = (0..num_workers)
-        .map(|worker_id| {
-            let worker = DownstreamReceiveWorkerConfig {
-                worker_id,
-                upstream_receiver: upstream_receiver.clone(),
-                port,
-                config: config.clone(),
-                sessions: sessions.clone(),
-                error_sender: error_sender.clone(),
-                buffer_pool: buffer_pool.clone(),
-            };
+    let mut worker_notifications = Vec::with_capacity(num_workers);
+    for worker_id in 0..num_workers {
+        let worker = DownstreamReceiveWorkerConfig {
+            worker_id,
+            upstream_receiver: upstream_receiver.clone(),
+            port,
+            config: config.clone(),
+            sessions: sessions.clone(),
+            error_sender: error_sender.clone(),
+            buffer_pool: buffer_pool.clone(),
+        };
 
-            worker.spawn()
-        })
-        .collect();
+        worker_notifications.push(worker.spawn().await?);
+    }
 
     tokio::spawn(async move {
         let mut log_task = tokio::time::interval(std::time::Duration::from_secs(5));

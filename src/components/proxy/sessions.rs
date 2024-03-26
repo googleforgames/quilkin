@@ -113,7 +113,7 @@ impl SessionPool {
 
         let pool = self.clone();
 
-        let initialised = uring_spawn!(async move {
+        let initialised = uring_spawn!(tracing::debug_span!("session pool"), async move {
             let mut last_received_at = None;
             let mut shutdown_rx = pool.shutdown_rx.clone();
             cfg_if::cfg_if! {
