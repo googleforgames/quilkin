@@ -93,6 +93,7 @@ pub fn spawn(
                             result = config_watcher.changed() => result?,
                             result = phoenix_watcher.changed() => result?,
                         }
+                        tracing::trace!("change detected, updating phoenix");
                         phoenix.add_nodes_from_config(&config);
                         let nodes = phoenix.ordered_nodes_by_latency();
                         let mut new_json = serde_json::Map::default();
