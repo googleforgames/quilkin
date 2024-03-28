@@ -721,6 +721,7 @@
 <a href="#719" id="719">719</a>
 <a href="#720" id="720">720</a>
 <a href="#721" id="721">721</a>
+<a href="#722" id="722">722</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! # Phoenix Network Coordinate System
 //!
 //! This module provides a framework for estimating network latencies between
@@ -816,6 +817,7 @@
                             result = config_watcher.changed() =&gt; result<span class="question-mark">?</span>,
                             result = phoenix_watcher.changed() =&gt; result<span class="question-mark">?</span>,
                         }
+                        <span class="macro">tracing::trace!</span>(<span class="string">"change detected, updating phoenix"</span>);
                         phoenix.add_nodes_from_config(<span class="kw-2">&amp;</span>config);
                         <span class="kw">let </span>nodes = phoenix.ordered_nodes_by_latency();
                         <span class="kw">let </span><span class="kw-2">mut </span>new_json = serde_json::Map::default();
