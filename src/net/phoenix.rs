@@ -61,6 +61,7 @@ pub fn spawn(
                 let json2 = json.clone();
                 let make_svc = make_service_fn(move |_conn| {
                     let json = json2.clone();
+                    #[allow(clippy::declare_interior_mutable_const)]
                     const JSON: hyper::header::HeaderValue =
                         hyper::header::HeaderValue::from_static("application/json");
 
@@ -117,7 +118,7 @@ pub fn spawn(
                     json.store(new_json.into());
                 };
 
-                if let Err(_) = stx.send(()) {
+                if stx.send(()).is_err() {
                     tracing::error!("phoenix HTTP service task has already exited");
                 }
 
