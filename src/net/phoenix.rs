@@ -146,7 +146,7 @@ pub fn spawn(
                             .or_else(|| panic.downcast_ref::<&str>().copied())
                             .unwrap_or("<unknown non-string panic>");
 
-                        tracing::error!(panic = message, "phoenix HTTP task paniced");
+                        tracing::error!(panic = message, "phoenix HTTP task panicked");
                     }
                 }
 
