@@ -46,67 +46,116 @@ pub fn spawn(
             .enable_all()
             .build()
             .unwrap();
-        runtime
-            .block_on({
-                let mut phoenix_watcher = phoenix.update_watcher();
-                let config = config.clone();
+        let res = runtime.block_on({
+            let mut phoenix_watcher = phoenix.update_watcher();
+            let config = config.clone();
 
-                async move {
-                    let json = crate::config::Slot::new(serde_json::Map::default());
+            async move {
+                let json = crate::config::Slot::new(serde_json::Map::default());
 
-                    tokio::spawn({
-                        let phoenix = phoenix.clone();
-                        async move { phoenix.background_update_task().await }
-                    });
+                tokio::spawn({
+                    let phoenix = phoenix.clone();
+                    async move { phoenix.background_update_task().await }
+                });
 
-                    let json2 = json.clone();
-                    let make_svc = make_service_fn(move |_conn| {
-                        let json = json2.clone();
-                        async move {
-                            Ok::<_, std::convert::Infallible>(service_fn(move |_| {
-                                let json = json.clone();
-                                async move {
-                                    tracing::trace!("serving phoenix request");
-                                    Ok::<_, std::convert::Infallible>(
-                                        Response::builder()
-                                            .status(StatusCode::OK)
-                                            .header(
-                                                "Content-Type",
-                                                hyper::header::HeaderValue::from_static(
-                                                    "application/json",
-                                                ),
-                                            )
-                                            .body(Body::from(serde_json::to_string(&json).unwrap()))
-                                            .unwrap(),
-                                    )
-                                }
-                            }))
-                        }
-                    });
+                let json2 = json.clone();
+                let make_svc = make_service_fn(move |_conn| {
+                    let json = json2.clone();
+                    const JSON: hyper::header::HeaderValue =
+                        hyper::header::HeaderValue::from_static("application/json");
 
-                    tracing::info!(addr=%listener.local_addr(), "starting phoenix service");
-                    tokio::spawn(HyperServer::from_tcp(listener.into())?.serve(make_svc));
+                    async move {
+                        Ok::<_, std::convert::Infallible>(service_fn(move |_| {
+                            let json = json.clone();
+                            async move {
+                                tracing::trace!("serving phoenix request");
+                                Ok::<_, std::convert::Infallible>(
+                                    Response::builder()
+                                        .status(StatusCode::OK)
+                                        .header(hyper::header::CONTENT_TYPE, JSON)
+                                        .body(Body::from(serde_json::to_string(&json).unwrap()))
+                                        .unwrap(),
+                                )
+                            }
+                        }))
+                    }
+                });
 
-                    loop {
-                        tokio::select! {
-                            _ = shutdown_rx.changed() => return Ok::<_, eyre::Error>(()),
-                            result = config_watcher.changed() => result?,
-                            result = phoenix_watcher.changed() => result?,
-                        }
-                        tracing::trace!("change detected, updating phoenix");
-                        phoenix.add_nodes_from_config(&config);
-                        let nodes = phoenix.ordered_nodes_by_latency();
-                        let mut new_json = serde_json::Map::default();
+                tracing::info!(addr=%listener.local_addr(), "starting phoenix HTTP service");
+                let (stx, srx) = tokio::sync::oneshot::channel::<()>();
 
-                        for (identifier, latency) in nodes {
-                            new_json.insert(identifier.to_string(), latency.into());
-                        }
+                let http_task = tokio::spawn(
+                    HyperServer::from_tcp(listener.into())?
+                        .serve(make_svc)
+                        .with_graceful_shutdown(async move {
+                            let _ = srx.await;
+                        }),
+                );
 
-                        json.store(new_json.into());
+                let res = loop {
+                    use eyre::WrapErr as _;
+
+                    tokio::select! {
+                        _ = shutdown_rx.changed() => break Ok::<_, eyre::Error>(()),
+                        result = config_watcher.changed() => if let Err(err) = result {
+                            break Err(err).context("config watcher sender dropped");
+                        },
+                        result = phoenix_watcher.changed() => if let Err(err) = result {
+                            break Err(err).context("phoenix watcher sender dropped");
+                        },
+                    }
+
+                    tracing::trace!("change detected, updating phoenix");
+                    phoenix.add_nodes_from_config(&config);
+                    let nodes = phoenix.ordered_nodes_by_latency();
+                    let mut new_json = serde_json::Map::default();
+
+                    for (identifier, latency) in nodes {
+                        new_json.insert(identifier.to_string(), latency.into());
+                    }
+
+                    json.store(new_json.into());
+                };
+
+                if let Err(_) = stx.send(()) {
+                    tracing::error!("phoenix HTTP service task has already exited");
+                }
+
+                // This should happen quickly, abort if it takes too long
+                let max_wait = std::time::Instant::now() + std::time::Duration::from_millis(100);
+                let mut interval = tokio::time::interval(std::time::Duration::from_millis(1));
+
+                loop {
+                    if http_task.is_finished() || std::time::Instant::now() > max_wait {
+                        break;
+                    }
+
+                    interval.tick().await;
+                }
+
+                if !http_task.is_finished() {
+                    http_task.abort();
+                }
+
+                if let Err(err) = http_task.await {
+                    if let Ok(panic) = err.try_into_panic() {
+                        let message = panic
+                            .downcast_ref::<String>()
+                            .map(String::as_str)
+                            .or_else(|| panic.downcast_ref::<&str>().copied())
+                            .unwrap_or("<unknown non-string panic>");
+
+                        tracing::error!(panic = message, "phoenix HTTP task paniced");
                     }
                 }
-            })
-            .unwrap()
+
+                res
+            }
+        });
+
+        if let Err(err) = res {
+            tracing::error!(err = %err, "phoenix thread failed with an error");
+        }
     });
 
     Ok(())
