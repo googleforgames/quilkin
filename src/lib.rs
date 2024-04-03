@@ -19,6 +19,7 @@
 pub(crate) mod collections;
 pub(crate) mod metrics;
 pub mod pool;
+pub mod time;
 
 // Above other modules for thr `uring_spawn` macro.
 #[macro_use]
@@ -76,12 +77,6 @@ pub fn make_shutdown_channel(init: ShutdownKind) -> (ShutdownTx, ShutdownRx) {
 pub(crate) trait Loggable {
     /// Output a log.
     fn log(&self);
-}
-
-/// Gets the current [Unix timestamp](https://en.wikipedia.org/wiki/Unix_time)
-#[inline]
-pub fn unix_timestamp() -> i64 {
-    time::OffsetDateTime::now_utc().unix_timestamp()
 }
 
 #[cfg(doctest)]

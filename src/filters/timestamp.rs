@@ -165,7 +165,7 @@ mod tests {
         );
         ctx.metadata.insert(
             TIMESTAMP_KEY.into(),
-            Value::Number(crate::unix_timestamp() as u64),
+            Value::Number(crate::time::UtcTimestamp::now().unix() as u64),
         );
 
         filter.read(&mut ctx).await.unwrap();

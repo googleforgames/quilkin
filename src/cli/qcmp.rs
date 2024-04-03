@@ -15,7 +15,10 @@
  */
 use std::net::SocketAddr;
 
-use crate::codec::qcmp::Protocol;
+use crate::{
+    codec::qcmp::{self, Protocol},
+    time::{DurationNanos, UtcTimestamp},
+};
 
 #[derive(Clone, Debug, clap::Subcommand)]
 pub enum Qcmp {
@@ -43,18 +46,19 @@ impl Ping {
 
         let socket = tokio::net::UdpSocket::bind(addr).await?;
         let mut results = Vec::new();
-        let mut buf = [0; u16::MAX as usize];
+        let mut recv_buf = [0; 1500 /* MTU */];
+        let mut send_buf = qcmp::QcmpPacket::default();
 
         for _ in 0..self.amount {
             let ping = Protocol::ping();
             socket
-                .send_to(&ping.encode(), &self.endpoint)
+                .send_to(ping.encode(&mut send_buf), &self.endpoint)
                 .await
                 .unwrap();
 
             let Ok(socket_result) = tokio::time::timeout(
                 std::time::Duration::from_secs(1),
-                socket.recv_from(&mut buf),
+                socket.recv_from(&mut recv_buf),
             )
             .await
             else {
@@ -70,8 +74,8 @@ impl Ping {
                 }
             };
 
-            let recv_time = crate::unix_timestamp();
-            let reply = Protocol::parse(&buf[..size]).unwrap().unwrap();
+            let recv_time = UtcTimestamp::now();
+            let reply = Protocol::parse(&recv_buf[..size]).unwrap().unwrap();
 
             if ping.nonce() != reply.nonce() {
                 tracing::error!(sent_nonce=%ping.nonce(), recv_nonce=%reply.nonce(), "mismatched nonces");
@@ -79,16 +83,16 @@ impl Ping {
             }
 
             let delay = reply.round_trip_delay(recv_time).unwrap();
-            let duration = std::time::Duration::from_nanos(delay as u64);
-            tracing::info!(delay_millis=%format!("{:.2}", duration.as_secs_f64() * 1000.0), "successful ping");
+            tracing::info!(delay_millis=%format!("{:.2}", delay.duration().as_secs_f64() * 1000.0), "successful ping");
             results.push(delay);
         }
 
         match median(&mut results) {
             Some(median) => {
-                let median = std::time::Duration::from_nanos(median as u64);
+                let median = median.duration();
                 let average = std::time::Duration::from_nanos(
-                    (results.iter().sum::<i64>() / results.len() as i64) as u64,
+                    (results.iter().map(|dn| dn.nanos() as i128).sum::<i128>()
+                        / results.len() as i128) as u64,
                 );
                 tracing::info!(
                     median_millis=%format!("{:.2}", median.as_secs_f64() * 1000.0),
@@ -105,7 +109,7 @@ impl Ping {
     }
 }
 
-fn median(numbers: &mut [i64]) -> Option<i64> {
+fn median(numbers: &mut [DurationNanos]) -> Option<DurationNanos> {
     let len = numbers.len();
     if len == 0 {
         return None;
@@ -121,13 +125,17 @@ fn median(numbers: &mut [i64]) -> Option<i64> {
         // Even number of elements: Return the average of the two middle ones.
         let mid1 = numbers[(len - 1) / 2];
         let mid2 = numbers[len / 2];
-        Some((mid1 + mid2) / 2)
+        Some(DurationNanos::from_nanos((mid1.nanos() + mid2.nanos()) / 2))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn dn(nanos: i64) -> DurationNanos {
+        DurationNanos::from_nanos(nanos)
+    }
 
     #[test]
     fn empty() {
@@ -136,16 +144,17 @@ mod tests {
 
     #[test]
     fn single() {
-        assert_eq!(median(&mut [42]), Some(42));
+        let dn = dn(42);
+        assert_eq!(median(&mut [dn]), Some(dn));
     }
 
     #[test]
     fn odd() {
-        assert_eq!(median(&mut [3, 1, 2]), Some(2));
+        assert_eq!(median(&mut [dn(3), dn(1), dn(2)]), Some(dn(2)));
     }
 
     #[test]
     fn even() {
-        assert_eq!(median(&mut [4, 3, 1, 2]), Some(2));
+        assert_eq!(median(&mut [dn(4), dn(3), dn(1), dn(2)]), Some(dn(2)));
     }
 }

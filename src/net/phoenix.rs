@@ -162,12 +162,48 @@ pub fn spawn(
     Ok(())
 }
 
+use crate::time::DurationNanos;
+
+#[derive(Copy, Clone)]
+#[cfg_attr(test, derive(Debug))]
+pub struct DistanceMeasure {
+    pub incoming: DurationNanos,
+    pub outgoing: DurationNanos,
+}
+
+impl Default for DistanceMeasure {
+    fn default() -> Self {
+        Self::from((0, 0))
+    }
+}
+
+impl From<(i64, i64)> for DistanceMeasure {
+    fn from(value: (i64, i64)) -> Self {
+        Self {
+            incoming: DurationNanos::from_nanos(value.0),
+            outgoing: DurationNanos::from_nanos(value.1),
+        }
+    }
+}
+
+impl DistanceMeasure {
+    #[inline]
+    pub fn total_nanos(self) -> i64 {
+        self.incoming.nanos() + self.outgoing.nanos()
+    }
+
+    #[inline]
+    pub fn total(self) -> std::time::Duration {
+        self.incoming.duration() + self.outgoing.duration()
+    }
+}
+
 /// An implementation of measuring the network difference between two nodes.
 #[async_trait]
 pub trait Measurement {
     /// Gets the difference between this node and `address`, returning the
     /// latency in nanoseconds on success.
-    async fn measure_distance(&self, address: SocketAddr) -> eyre::Result<(i64, i64)>;
+    async fn measure_distance(&self, address: SocketAddr) -> eyre::Result<DistanceMeasure>;
 }
 
 /// A `Phoenix` instance maintains a virtual coordinate space for nodes in a
@@ -206,16 +242,15 @@ impl<M: Measurement + 'static> Phoenix<M> {
     /// and update their coordinates.
     pub async fn background_update_task(&self) {
         let mut current_interval = self.interval_range.start;
-        let mut first = true;
+        let mut first = Some(self.all_nodes());
 
         loop {
             let mut total_difference = 0;
             let mut count = 0;
 
             let nodes_to_probe = first
-                .then(|| self.all_nodes())
+                .take()
                 .unwrap_or_else(|| self.random_subset_of_nodes());
-            first = false;
 
             for address in nodes_to_probe {
                 let Some(mut node) = self.nodes.get_mut(&address) else {
@@ -224,9 +259,9 @@ impl<M: Measurement + 'static> Phoenix<M> {
                 };
 
                 match self.measurement.measure_distance(address).await {
-                    Ok((incoming_distance, outgoing_distance)) => {
-                        node.adjust_coordinates(incoming_distance, outgoing_distance);
-                        total_difference += outgoing_distance + incoming_distance;
+                    Ok(distance) => {
+                        node.adjust_coordinates(distance);
+                        total_difference += distance.total_nanos();
                         count += 1;
                     }
                     Err(error) => {
@@ -247,12 +282,8 @@ impl<M: Measurement + 'static> Phoenix<M> {
                 }
 
                 // Ensure current_interval remains within bounds
-                if current_interval < self.interval_range.start {
-                    current_interval = self.interval_range.start;
-                }
-                if current_interval > self.interval_range.end {
-                    current_interval = self.interval_range.end;
-                }
+                current_interval =
+                    current_interval.clamp(self.interval_range.start, self.interval_range.end);
             }
 
             let _ = self.update_watcher.0.send(());
@@ -302,11 +333,10 @@ impl<M: Measurement + 'static> Phoenix<M> {
             .collect::<Vec<_>>()
         {
             if let Some(mut node) = self.nodes.get_mut(&address) {
-                let Ok((incoming, outgoing)) = self.measurement.measure_distance(address).await
-                else {
+                let Ok(distance) = self.measurement.measure_distance(address).await else {
                     continue;
                 };
-                node.adjust_coordinates(incoming, outgoing);
+                node.adjust_coordinates(distance);
             } else {
                 self.nodes.entry(address).and_modify(|node| {
                     node.increase_error_estimate();
@@ -497,21 +527,22 @@ impl Node {
         self.error_estimate += 0.1;
     }
 
-    fn adjust_coordinates(&mut self, incoming_distance: i64, outgoing_distance: i64) {
+    fn adjust_coordinates(&mut self, distance: DistanceMeasure) {
+        let incoming = distance.incoming.nanos() as f64;
+        let outgoing = distance.outgoing.nanos() as f64;
+
         let Some(coordinates) = &mut self.coordinates else {
             self.coordinates = Some(Coordinates {
-                x: incoming_distance as f64,
-                y: outgoing_distance as f64,
+                x: incoming,
+                y: outgoing,
             });
             return;
         };
 
-        let incoming_distance_f = incoming_distance as f64;
-        let outgoing_distance_f = outgoing_distance as f64;
         let weight = self.error_estimate;
 
-        coordinates.x = (coordinates.x + (incoming_distance_f * weight)) / 2.0;
-        coordinates.y = (coordinates.y + (outgoing_distance_f * weight)) / 2.0;
+        coordinates.x = (coordinates.x + (incoming * weight)) / 2.0;
+        coordinates.y = (coordinates.y + (outgoing * weight)) / 2.0;
     }
 }
 
@@ -528,43 +559,52 @@ mod tests {
 
     #[derive(Clone)]
     struct LoggingMockMeasurement {
-        latencies: HashMap<SocketAddr, (i64, i64)>,
+        latencies: HashMap<SocketAddr, DistanceMeasure>,
         probed_addresses: Arc<Mutex<HashSet<SocketAddr>>>,
     }
 
     #[async_trait]
     impl Measurement for LoggingMockMeasurement {
-        async fn measure_distance(&self, address: SocketAddr) -> eyre::Result<(i64, i64)> {
+        async fn measure_distance(&self, address: SocketAddr) -> eyre::Result<DistanceMeasure> {
             self.probed_addresses.lock().await.insert(address);
-            Ok(*self.latencies.get(&address).unwrap_or(&(0, 0)))
+            Ok(*self
+                .latencies
+                .get(&address)
+                .unwrap_or(&DistanceMeasure::default()))
         }
     }
 
     struct MockMeasurement {
-        latencies: HashMap<SocketAddr, (i64, i64)>,
+        latencies: HashMap<SocketAddr, DistanceMeasure>,
     }
 
     #[async_trait]
     impl Measurement for MockMeasurement {
-        async fn measure_distance(&self, address: SocketAddr) -> eyre::Result<(i64, i64)> {
-            Ok(*self.latencies.get(&address).unwrap_or(&(0, 0)))
+        async fn measure_distance(&self, address: SocketAddr) -> eyre::Result<DistanceMeasure> {
+            Ok(*self
+                .latencies
+                .get(&address)
+                .unwrap_or(&DistanceMeasure::default()))
         }
     }
 
     #[derive(Debug)]
     struct FailedAddressesMock {
-        latencies: HashMap<SocketAddr, (i64, i64)>,
+        latencies: HashMap<SocketAddr, DistanceMeasure>,
         failed_addresses: Arc<Mutex<HashSet<SocketAddr>>>,
     }
 
     #[async_trait]
     impl Measurement for FailedAddressesMock {
-        async fn measure_distance(&self, address: SocketAddr) -> eyre::Result<(i64, i64)> {
+        async fn measure_distance(&self, address: SocketAddr) -> eyre::Result<DistanceMeasure> {
             let failed_addresses = self.failed_addresses.lock().await;
             if failed_addresses.contains(&address) {
                 Err(eyre::eyre!("Measurement timed out"))
             } else {
-                Ok(*self.latencies.get(&address).unwrap_or(&(0, 0)))
+                Ok(*self
+                    .latencies
+                    .get(&address)
+                    .unwrap_or(&DistanceMeasure::default()))
             }
         }
     }
@@ -591,7 +631,7 @@ mod tests {
     #[tokio::test]
     async fn coordinates_adjustment() {
         let mut mock_latencies = HashMap::new();
-        mock_latencies.insert("127.0.0.1:8081".parse().unwrap(), (25, 25));
+        mock_latencies.insert("127.0.0.1:8081".parse().unwrap(), (25, 25).into());
         let phoenix = Phoenix::new(MockMeasurement {
             latencies: mock_latencies,
         });
@@ -612,9 +652,9 @@ mod tests {
     #[tokio::test]
     async fn ordered_nodes_by_latency() {
         let mut mock_latencies = HashMap::new();
-        mock_latencies.insert("127.0.0.1:8080".parse().unwrap(), (10, 10));
-        mock_latencies.insert("127.0.0.1:8081".parse().unwrap(), (50, 50));
-        mock_latencies.insert("127.0.0.1:8082".parse().unwrap(), (30, 30));
+        mock_latencies.insert("127.0.0.1:8080".parse().unwrap(), (10, 10).into());
+        mock_latencies.insert("127.0.0.1:8081".parse().unwrap(), (50, 50).into());
+        mock_latencies.insert("127.0.0.1:8082".parse().unwrap(), (30, 30).into());
 
         let phoenix = Phoenix::new(MockMeasurement {
             latencies: mock_latencies,
@@ -683,8 +723,8 @@ mod tests {
     #[tokio::test]
     async fn successful_measurements() {
         let latencies = HashMap::from([
-            ("127.0.0.1:8080".parse().unwrap(), (100, 100)),
-            ("127.0.0.1:8081".parse().unwrap(), (200, 200)),
+            ("127.0.0.1:8080".parse().unwrap(), (100, 100).into()),
+            ("127.0.0.1:8081".parse().unwrap(), (200, 200).into()),
         ]);
         let failed_addresses = Arc::new(Mutex::new(HashSet::new()));
         let measurement = FailedAddressesMock {
@@ -710,8 +750,8 @@ mod tests {
     #[tokio::test]
     async fn failed_measurements_excluded() {
         let latencies = HashMap::from([
-            ("127.0.0.1:8080".parse().unwrap(), (100, 100)),
-            ("127.0.0.1:8081".parse().unwrap(), (200, 200)),
+            ("127.0.0.1:8080".parse().unwrap(), (100, 100).into()),
+            ("127.0.0.1:8081".parse().unwrap(), (200, 200).into()),
         ]);
         let failed_addresses = Arc::new(Mutex::new(HashSet::from(["127.0.0.1:8081"
             .parse()

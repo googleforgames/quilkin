@@ -5,6 +5,7 @@ use super::{
 use crate::{
     filters::{Filter as _, ReadContext},
     pool::PoolBuffer,
+    time::UtcTimestamp,
     Config,
 };
 use std::{net::SocketAddr, sync::Arc};
@@ -15,7 +16,7 @@ use tokio::sync::mpsc;
 struct DownstreamPacket {
     asn_info: Option<crate::net::maxmind_db::IpNetEntry>,
     contents: PoolBuffer,
-    received_at: i64,
+    received_at: UtcTimestamp,
     source: SocketAddr,
 }
 
@@ -121,7 +122,7 @@ impl DownstreamReceiveWorkerConfig {
                     Ok((_size, mut source)) => {
                         source.set_ip(source.ip().to_canonical());
                         let packet = DownstreamPacket {
-                            received_at: crate::unix_timestamp(),
+                            received_at: UtcTimestamp::now(),
                             asn_info: crate::net::maxmind_db::MaxmindDb::lookup(source.ip()),
                             contents,
                             source,
@@ -132,7 +133,7 @@ impl DownstreamReceiveWorkerConfig {
                                 crate::metrics::READ,
                                 packet.asn_info.as_ref(),
                             )
-                            .set(packet.received_at - last_received_at);
+                            .set((packet.received_at - last_received_at).nanos());
                         }
                         last_received_at = Some(packet.received_at);
 
