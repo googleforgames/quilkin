@@ -66,6 +66,15 @@ unsafe impl tokio_uring::buf::IoBuf for QcmpPacket {
     }
 }
 
+#[cfg(not(target_os = "linux"))]
+impl std::ops::Deref for QcmpPacket {
+    type Target = [u8];
+
+    fn deref(&self) -> &Self::Target {
+        &self.buf[..self.len]
+    }
+}
+
 type Result<T, E = Error> = std::result::Result<T, E>;
 
 struct PacketBuilder<'buf> {
