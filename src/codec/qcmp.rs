@@ -249,6 +249,8 @@ pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) {
                     Protocol::ping_reply(nonce, client_timestamp, received_at)
                         .encode(&mut output_buf);
 
+                    tracing::debug!("sending ping reply {:?}", &output_buf.buf[..output_buf.len]);
+
                     output_buf = match socket.send_to(output_buf, source).await {
                         (Ok(_), buf) => buf,
                         (Err(error), buf) => {
@@ -684,13 +686,15 @@ mod tests {
         let delay = std::time::Duration::from_millis(50);
         let node = QcmpMeasurement::with_artificial_delay(delay).unwrap();
 
-        let dm = node.measure_distance(addr).await.unwrap();
-        let total = dm.total();
+        for _ in 0..3 {
+            let dm = node.measure_distance(addr).await.unwrap();
+            let total = dm.total();
 
-        assert!(
-            total > delay && total < delay * 2,
-            "Node1's distance is {total:?}, expected > {delay:?} and less than {:?}",
-            delay * 2
-        );
+            assert!(
+                total > delay && total < delay * 2,
+                "Node1's distance is {total:?}, expected > {delay:?} and less than {:?}",
+                delay * 2
+            );
+        }
     }
 }
