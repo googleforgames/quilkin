@@ -66,25 +66,28 @@ async fn ping(port: u16) {
     let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port);
     let ping = Protocol::ping();
 
-    socket.send_to(&ping.encode(), &local_addr).await.unwrap();
-    let mut buf = [0; u16::MAX as usize];
+    let mut ping_packet = quilkin::codec::qcmp::QcmpPacket::default();
+    socket
+        .send_to(ping.encode(&mut ping_packet), &local_addr)
+        .await
+        .unwrap();
+    let mut buf = [0; quilkin::codec::qcmp::MAX_QCMP_PACKET_LEN];
     let (size, _) = tokio::time::timeout(Duration::from_secs(1), socket.recv_from(&mut buf))
         .await
         .unwrap()
         .unwrap();
-    let recv_time = quilkin::unix_timestamp();
+    let recv_time = quilkin::time::UtcTimestamp::now();
     let reply = Protocol::parse(&buf[..size]).unwrap().unwrap();
 
     assert_eq!(ping.nonce(), reply.nonce());
-    const FIFTY_MILLIS_IN_NANOS: i64 = 50_000_000;
+    const MAX: std::time::Duration = std::time::Duration::from_millis(50);
 
     // If it takes longer than 50 milliseconds locally, it's likely that there
     // is bug.
     let delay = reply.round_trip_delay(recv_time).unwrap();
     assert!(
-        FIFTY_MILLIS_IN_NANOS > delay,
-        "Delay {}ns greater than {}ns",
-        delay,
-        FIFTY_MILLIS_IN_NANOS
+        MAX > delay.duration(),
+        "Delay {:?} greater than {MAX:?}",
+        delay.duration(),
     );
 }

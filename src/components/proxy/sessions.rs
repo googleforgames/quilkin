@@ -32,6 +32,7 @@ use crate::{
     net::maxmind_db::IpNetEntry,
     net::DualStackLocalSocket,
     pool::{BufferPool, FrozenPoolBuffer, PoolBuffer},
+    time::UtcTimestamp,
     Loggable, ShutdownRx,
 };
 
@@ -202,9 +203,9 @@ impl SessionPool {
         packet: PoolBuffer,
         mut recv_addr: SocketAddr,
         port: u16,
-        last_received_at: &mut Option<i64>,
+        last_received_at: &mut Option<UtcTimestamp>,
     ) {
-        let received_at = crate::unix_timestamp();
+        let received_at = UtcTimestamp::now();
         recv_addr.set_ip(recv_addr.ip().to_canonical());
         let (downstream_addr, asn_info): (SocketAddr, Option<IpNetEntry>) = {
             let storage = self.storage.read().await;
@@ -222,7 +223,7 @@ impl SessionPool {
 
         if let Some(last_received_at) = last_received_at {
             crate::metrics::packet_jitter(crate::metrics::WRITE, asn_info)
-                .set(received_at - *last_received_at);
+                .set((received_at - *last_received_at).nanos());
         }
         *last_received_at = Some(received_at);
 
