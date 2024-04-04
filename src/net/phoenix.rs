@@ -802,7 +802,7 @@ mod tests {
             .unwrap(),
         )
         .unwrap();
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(150)).await;
 
         let client = hyper::Client::new();
 
