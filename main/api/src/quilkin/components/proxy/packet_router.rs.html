@@ -303,6 +303,7 @@
 <a href="#301" id="301">301</a>
 <a href="#302" id="302">302</a>
 <a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
 </pre></div><pre class="rust"><code><span class="kw">use super</span>::{
     sessions::{DownstreamReceiver, SessionKey},
     PipelineError, PipelineErrorDiscriminants, SessionPool,
@@ -310,6 +311,7 @@
 <span class="kw">use crate</span>::{
     filters::{Filter <span class="kw">as _</span>, ReadContext},
     pool::PoolBuffer,
+    time::UtcTimestamp,
     Config,
 };
 <span class="kw">use </span>std::{net::SocketAddr, sync::Arc};
@@ -320,7 +322,7 @@
 </span><span class="kw">struct </span>DownstreamPacket {
     asn_info: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::net::maxmind_db::IpNetEntry&gt;,
     contents: PoolBuffer,
-    received_at: i64,
+    received_at: UtcTimestamp,
     source: SocketAddr,
 }
 
@@ -426,7 +428,7 @@
                     <span class="prelude-val">Ok</span>((_size, <span class="kw-2">mut </span>source)) =&gt; {
                         source.set_ip(source.ip().to_canonical());
                         <span class="kw">let </span>packet = DownstreamPacket {
-                            received_at: <span class="kw">crate</span>::unix_timestamp(),
+                            received_at: UtcTimestamp::now(),
                             asn_info: <span class="kw">crate</span>::net::maxmind_db::MaxmindDb::lookup(source.ip()),
                             contents,
                             source,
@@ -437,7 +439,7 @@
                                 <span class="kw">crate</span>::metrics::READ,
                                 packet.asn_info.as_ref(),
                             )
-                            .set(packet.received_at - last_received_at);
+                            .set((packet.received_at - last_received_at).nanos());
                         }
                         last_received_at = <span class="prelude-val">Some</span>(packet.received_at);
 

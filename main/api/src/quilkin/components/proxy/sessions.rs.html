@@ -765,6 +765,7 @@
 <a href="#763" id="763">763</a>
 <a href="#764" id="764">764</a>
 <a href="#765" id="765">765</a>
+<a href="#766" id="766">766</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -799,6 +800,7 @@
     net::maxmind_db::IpNetEntry,
     net::DualStackLocalSocket,
     pool::{BufferPool, FrozenPoolBuffer, PoolBuffer},
+    time::UtcTimestamp,
     Loggable, ShutdownRx,
 };
 
@@ -969,9 +971,9 @@
         packet: PoolBuffer,
         <span class="kw-2">mut </span>recv_addr: SocketAddr,
         port: u16,
-        last_received_at: <span class="kw-2">&amp;mut </span><span class="prelude-ty">Option</span>&lt;i64&gt;,
+        last_received_at: <span class="kw-2">&amp;mut </span><span class="prelude-ty">Option</span>&lt;UtcTimestamp&gt;,
     ) {
-        <span class="kw">let </span>received_at = <span class="kw">crate</span>::unix_timestamp();
+        <span class="kw">let </span>received_at = UtcTimestamp::now();
         recv_addr.set_ip(recv_addr.ip().to_canonical());
         <span class="kw">let </span>(downstream_addr, asn_info): (SocketAddr, <span class="prelude-ty">Option</span>&lt;IpNetEntry&gt;) = {
             <span class="kw">let </span>storage = <span class="self">self</span>.storage.read().<span class="kw">await</span>;
@@ -989,7 +991,7 @@
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(last_received_at) = last_received_at {
             <span class="kw">crate</span>::metrics::packet_jitter(<span class="kw">crate</span>::metrics::WRITE, asn_info)
-                .set(received_at - <span class="kw-2">*</span>last_received_at);
+                .set((received_at - <span class="kw-2">*</span>last_received_at).nanos());
         }
         <span class="kw-2">*</span>last_received_at = <span class="prelude-val">Some</span>(received_at);
 

@@ -370,7 +370,7 @@
         );
         ctx.metadata.insert(
             TIMESTAMP_KEY.into(),
-            Value::Number(<span class="kw">crate</span>::unix_timestamp() <span class="kw">as </span>u64),
+            Value::Number(<span class="kw">crate</span>::time::UtcTimestamp::now().unix() <span class="kw">as </span>u64),
         );
 
         filter.read(<span class="kw-2">&amp;mut </span>ctx).<span class="kw">await</span>.unwrap();

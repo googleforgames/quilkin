@@ -696,6 +696,8 @@
 <a href="#694" id="694">694</a>
 <a href="#695" id="695">695</a>
 <a href="#696" id="696">696</a>
+<a href="#697" id="697">697</a>
+<a href="#698" id="698">698</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>quilkin::{
     components::{<span class="self">self</span>, RunArgs},
     config::Providers,
@@ -919,6 +921,7 @@
 <span class="kw">pub struct </span>ProxyPail {
     <span class="kw">pub </span>port: u16,
     <span class="kw">pub </span>qcmp_port: u16,
+    <span class="kw">pub </span>phoenix_port: u16,
     <span class="kw">pub </span>task: JoinHandle,
     <span class="kw">pub </span>shutdown: ShutdownTx,
     <span class="kw">pub </span>config: Arc&lt;Config&gt;,
@@ -1119,8 +1122,8 @@
                 <span class="kw">let </span>qcmp =
                     quilkin::net::raw_socket_with_reuse(<span class="number">0</span>).expect(<span class="string">"failed to bind qcmp socket"</span>);
                 <span class="kw">let </span>qcmp_port = quilkin::net::socket_port(<span class="kw-2">&amp;</span>qcmp);
-                <span class="kw">let </span>phoenix =
-                    TcpListener::bind(<span class="prelude-val">Some</span>(qcmp_port)).expect(<span class="string">"failed to bind phoenix socket"</span>);
+                <span class="kw">let </span>phoenix = TcpListener::bind(<span class="prelude-val">None</span>).expect(<span class="string">"failed to bind phoenix socket"</span>);
+                <span class="kw">let </span>phoenix_port = phoenix.port();
 
                 <span class="kw">let </span>port = quilkin::net::socket_port(<span class="kw-2">&amp;</span>socket);
 
@@ -1204,6 +1207,7 @@
                 <span class="self">Self</span>::Proxy(ProxyPail {
                     port,
                     qcmp_port,
+                    phoenix_port,
                     shutdown,
                     task,
                     config,

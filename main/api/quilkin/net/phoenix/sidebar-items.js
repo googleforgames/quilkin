@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["spawn"],"struct":["Builder","Coordinates","Inner","Phoenix"],"trait":["Measurement"]};
+window.SIDEBAR_ITEMS = {"fn":["spawn"],"struct":["Builder","Coordinates","DistanceMeasure","Inner","Phoenix"],"trait":["Measurement"]};

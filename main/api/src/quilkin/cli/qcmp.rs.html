@@ -151,6 +151,15 @@
 <a href="#149" id="149">149</a>
 <a href="#150" id="150">150</a>
 <a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2023 Google LLC
  *
@@ -168,7 +177,10 @@
  */
 </span><span class="kw">use </span>std::net::SocketAddr;
 
-<span class="kw">use </span><span class="kw">crate</span>::codec::qcmp::Protocol;
+<span class="kw">use crate</span>::{
+    codec::qcmp::{<span class="self">self</span>, Protocol},
+    time::{DurationNanos, UtcTimestamp},
+};
 
 <span class="attr">#[derive(Clone, Debug, clap::Subcommand)]
 </span><span class="kw">pub enum </span>Qcmp {
@@ -196,18 +208,19 @@
 
         <span class="kw">let </span>socket = tokio::net::UdpSocket::bind(addr).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>results = Vec::new();
-        <span class="kw">let </span><span class="kw-2">mut </span>buf = [<span class="number">0</span>; u16::MAX <span class="kw">as </span>usize];
+        <span class="kw">let </span><span class="kw-2">mut </span>recv_buf = [<span class="number">0</span>; <span class="number">1500 </span><span class="comment">/* MTU */</span>];
+        <span class="kw">let </span><span class="kw-2">mut </span>send_buf = qcmp::QcmpPacket::default();
 
         <span class="kw">for _ in </span><span class="number">0</span>..<span class="self">self</span>.amount {
             <span class="kw">let </span>ping = Protocol::ping();
             socket
-                .send_to(<span class="kw-2">&amp;</span>ping.encode(), <span class="kw-2">&amp;</span><span class="self">self</span>.endpoint)
+                .send_to(ping.encode(<span class="kw-2">&amp;mut </span>send_buf), <span class="kw-2">&amp;</span><span class="self">self</span>.endpoint)
                 .<span class="kw">await
                 </span>.unwrap();
 
             <span class="kw">let </span><span class="prelude-val">Ok</span>(socket_result) = tokio::time::timeout(
                 std::time::Duration::from_secs(<span class="number">1</span>),
-                socket.recv_from(<span class="kw-2">&amp;mut </span>buf),
+                socket.recv_from(<span class="kw-2">&amp;mut </span>recv_buf),
             )
             .<span class="kw">await
             else </span>{
@@ -223,8 +236,8 @@
                 }
             };
 
-            <span class="kw">let </span>recv_time = <span class="kw">crate</span>::unix_timestamp();
-            <span class="kw">let </span>reply = Protocol::parse(<span class="kw-2">&amp;</span>buf[..size]).unwrap().unwrap();
+            <span class="kw">let </span>recv_time = UtcTimestamp::now();
+            <span class="kw">let </span>reply = Protocol::parse(<span class="kw-2">&amp;</span>recv_buf[..size]).unwrap().unwrap();
 
             <span class="kw">if </span>ping.nonce() != reply.nonce() {
                 <span class="macro">tracing::error!</span>(sent_nonce=%ping.nonce(), recv_nonce=%reply.nonce(), <span class="string">"mismatched nonces"</span>);
@@ -232,16 +245,16 @@
             }
 
             <span class="kw">let </span>delay = reply.round_trip_delay(recv_time).unwrap();
-            <span class="kw">let </span>duration = std::time::Duration::from_nanos(delay <span class="kw">as </span>u64);
-            <span class="macro">tracing::info!</span>(delay_millis=%<span class="macro">format!</span>(<span class="string">"{:.2}"</span>, duration.as_secs_f64() * <span class="number">1000.0</span>), <span class="string">"successful ping"</span>);
+            <span class="macro">tracing::info!</span>(delay_millis=%<span class="macro">format!</span>(<span class="string">"{:.2}"</span>, delay.duration().as_secs_f64() * <span class="number">1000.0</span>), <span class="string">"successful ping"</span>);
             results.push(delay);
         }
 
         <span class="kw">match </span>median(<span class="kw-2">&amp;mut </span>results) {
             <span class="prelude-val">Some</span>(median) =&gt; {
-                <span class="kw">let </span>median = std::time::Duration::from_nanos(median <span class="kw">as </span>u64);
+                <span class="kw">let </span>median = median.duration();
                 <span class="kw">let </span>average = std::time::Duration::from_nanos(
-                    (results.iter().sum::&lt;i64&gt;() / results.len() <span class="kw">as </span>i64) <span class="kw">as </span>u64,
+                    (results.iter().map(|dn| dn.nanos() <span class="kw">as </span>i128).sum::&lt;i128&gt;()
+                        / results.len() <span class="kw">as </span>i128) <span class="kw">as </span>u64,
                 );
                 <span class="macro">tracing::info!</span>(
                     median_millis=%<span class="macro">format!</span>(<span class="string">"{:.2}"</span>, median.as_secs_f64() * <span class="number">1000.0</span>),
@@ -258,7 +271,7 @@
     }
 }
 
-<span class="kw">fn </span>median(numbers: <span class="kw-2">&amp;mut </span>[i64]) -&gt; <span class="prelude-ty">Option</span>&lt;i64&gt; {
+<span class="kw">fn </span>median(numbers: <span class="kw-2">&amp;mut </span>[DurationNanos]) -&gt; <span class="prelude-ty">Option</span>&lt;DurationNanos&gt; {
     <span class="kw">let </span>len = numbers.len();
     <span class="kw">if </span>len == <span class="number">0 </span>{
         <span class="kw">return </span><span class="prelude-val">None</span>;
@@ -274,13 +287,17 @@
         <span class="comment">// Even number of elements: Return the average of the two middle ones.
         </span><span class="kw">let </span>mid1 = numbers[(len - <span class="number">1</span>) / <span class="number">2</span>];
         <span class="kw">let </span>mid2 = numbers[len / <span class="number">2</span>];
-        <span class="prelude-val">Some</span>((mid1 + mid2) / <span class="number">2</span>)
+        <span class="prelude-val">Some</span>(DurationNanos::from_nanos((mid1.nanos() + mid2.nanos()) / <span class="number">2</span>))
     }
 }
 
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
+
+    <span class="kw">fn </span>dn(nanos: i64) -&gt; DurationNanos {
+        DurationNanos::from_nanos(nanos)
+    }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>empty() {
@@ -289,17 +306,18 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>single() {
-        <span class="macro">assert_eq!</span>(median(<span class="kw-2">&amp;mut </span>[<span class="number">42</span>]), <span class="prelude-val">Some</span>(<span class="number">42</span>));
+        <span class="kw">let </span>dn = dn(<span class="number">42</span>);
+        <span class="macro">assert_eq!</span>(median(<span class="kw-2">&amp;mut </span>[dn]), <span class="prelude-val">Some</span>(dn));
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>odd() {
-        <span class="macro">assert_eq!</span>(median(<span class="kw-2">&amp;mut </span>[<span class="number">3</span>, <span class="number">1</span>, <span class="number">2</span>]), <span class="prelude-val">Some</span>(<span class="number">2</span>));
+        <span class="macro">assert_eq!</span>(median(<span class="kw-2">&amp;mut </span>[dn(<span class="number">3</span>), dn(<span class="number">1</span>), dn(<span class="number">2</span>)]), <span class="prelude-val">Some</span>(dn(<span class="number">2</span>)));
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>even() {
-        <span class="macro">assert_eq!</span>(median(<span class="kw-2">&amp;mut </span>[<span class="number">4</span>, <span class="number">3</span>, <span class="number">1</span>, <span class="number">2</span>]), <span class="prelude-val">Some</span>(<span class="number">2</span>));
+        <span class="macro">assert_eq!</span>(median(<span class="kw-2">&amp;mut </span>[dn(<span class="number">4</span>), dn(<span class="number">3</span>), dn(<span class="number">1</span>), dn(<span class="number">2</span>)]), <span class="prelude-val">Some</span>(dn(<span class="number">2</span>)));
     }
 }
 </code></pre></div></section></main></body></html>

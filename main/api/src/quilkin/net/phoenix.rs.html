@@ -772,6 +772,68 @@
 <a href="#770" id="770">770</a>
 <a href="#771" id="771">771</a>
 <a href="#772" id="772">772</a>
+<a href="#773" id="773">773</a>
+<a href="#774" id="774">774</a>
+<a href="#775" id="775">775</a>
+<a href="#776" id="776">776</a>
+<a href="#777" id="777">777</a>
+<a href="#778" id="778">778</a>
+<a href="#779" id="779">779</a>
+<a href="#780" id="780">780</a>
+<a href="#781" id="781">781</a>
+<a href="#782" id="782">782</a>
+<a href="#783" id="783">783</a>
+<a href="#784" id="784">784</a>
+<a href="#785" id="785">785</a>
+<a href="#786" id="786">786</a>
+<a href="#787" id="787">787</a>
+<a href="#788" id="788">788</a>
+<a href="#789" id="789">789</a>
+<a href="#790" id="790">790</a>
+<a href="#791" id="791">791</a>
+<a href="#792" id="792">792</a>
+<a href="#793" id="793">793</a>
+<a href="#794" id="794">794</a>
+<a href="#795" id="795">795</a>
+<a href="#796" id="796">796</a>
+<a href="#797" id="797">797</a>
+<a href="#798" id="798">798</a>
+<a href="#799" id="799">799</a>
+<a href="#800" id="800">800</a>
+<a href="#801" id="801">801</a>
+<a href="#802" id="802">802</a>
+<a href="#803" id="803">803</a>
+<a href="#804" id="804">804</a>
+<a href="#805" id="805">805</a>
+<a href="#806" id="806">806</a>
+<a href="#807" id="807">807</a>
+<a href="#808" id="808">808</a>
+<a href="#809" id="809">809</a>
+<a href="#810" id="810">810</a>
+<a href="#811" id="811">811</a>
+<a href="#812" id="812">812</a>
+<a href="#813" id="813">813</a>
+<a href="#814" id="814">814</a>
+<a href="#815" id="815">815</a>
+<a href="#816" id="816">816</a>
+<a href="#817" id="817">817</a>
+<a href="#818" id="818">818</a>
+<a href="#819" id="819">819</a>
+<a href="#820" id="820">820</a>
+<a href="#821" id="821">821</a>
+<a href="#822" id="822">822</a>
+<a href="#823" id="823">823</a>
+<a href="#824" id="824">824</a>
+<a href="#825" id="825">825</a>
+<a href="#826" id="826">826</a>
+<a href="#827" id="827">827</a>
+<a href="#828" id="828">828</a>
+<a href="#829" id="829">829</a>
+<a href="#830" id="830">830</a>
+<a href="#831" id="831">831</a>
+<a href="#832" id="832">832</a>
+<a href="#833" id="833">833</a>
+<a href="#834" id="834">834</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! # Phoenix Network Coordinate System
 //!
 //! This module provides a framework for estimating network latencies between
@@ -803,11 +865,12 @@
     listener: <span class="kw">crate</span>::net::TcpListener,
     config: Arc&lt;<span class="kw">crate</span>::Config&gt;,
     <span class="kw-2">mut </span>shutdown_rx: <span class="kw">crate</span>::ShutdownRx,
+    measurer: <span class="kw">crate</span>::codec::qcmp::QcmpMeasurement,
 ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
     <span class="kw">use </span>hyper::service::{make_service_fn, service_fn};
     <span class="kw">use </span>hyper::{Body, Response, Server <span class="kw">as </span>HyperServer, StatusCode};
 
-    <span class="kw">let </span>phoenix = Phoenix::new(<span class="kw">crate</span>::codec::qcmp::QcmpMeasurement::new()<span class="question-mark">?</span>);
+    <span class="kw">let </span>phoenix = Phoenix::new(measurer);
     phoenix.add_nodes_from_config(<span class="kw-2">&amp;</span>config);
 
     <span class="kw">let </span><span class="kw">crate</span>::config::DatacenterConfig::NonAgent { datacenters } = <span class="kw-2">&amp;</span>config.datacenter <span class="kw">else </span>{
@@ -936,12 +999,48 @@
     <span class="prelude-val">Ok</span>(())
 }
 
+<span class="kw">use </span><span class="kw">crate</span>::time::DurationNanos;
+
+<span class="attr">#[derive(Copy, Clone)]
+#[cfg_attr(test, derive(Debug))]
+</span><span class="kw">pub struct </span>DistanceMeasure {
+    <span class="kw">pub </span>incoming: DurationNanos,
+    <span class="kw">pub </span>outgoing: DurationNanos,
+}
+
+<span class="kw">impl </span>Default <span class="kw">for </span>DistanceMeasure {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::from((<span class="number">0</span>, <span class="number">0</span>))
+    }
+}
+
+<span class="kw">impl </span>From&lt;(i64, i64)&gt; <span class="kw">for </span>DistanceMeasure {
+    <span class="kw">fn </span>from(value: (i64, i64)) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            incoming: DurationNanos::from_nanos(value.<span class="number">0</span>),
+            outgoing: DurationNanos::from_nanos(value.<span class="number">1</span>),
+        }
+    }
+}
+
+<span class="kw">impl </span>DistanceMeasure {
+    <span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>total_nanos(<span class="self">self</span>) -&gt; i64 {
+        <span class="self">self</span>.incoming.nanos() + <span class="self">self</span>.outgoing.nanos()
+    }
+
+    <span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>total(<span class="self">self</span>) -&gt; std::time::Duration {
+        <span class="self">self</span>.incoming.duration() + <span class="self">self</span>.outgoing.duration()
+    }
+}
+
 <span class="doccomment">/// An implementation of measuring the network difference between two nodes.
 </span><span class="attr">#[async_trait]
 </span><span class="kw">pub trait </span>Measurement {
     <span class="doccomment">/// Gets the difference between this node and `address`, returning the
     /// latency in nanoseconds on success.
-    </span><span class="kw">async fn </span>measure_distance(<span class="kw-2">&amp;</span><span class="self">self</span>, address: SocketAddr) -&gt; eyre::Result&lt;(i64, i64)&gt;;
+    </span><span class="kw">async fn </span>measure_distance(<span class="kw-2">&amp;</span><span class="self">self</span>, address: SocketAddr) -&gt; eyre::Result&lt;DistanceMeasure&gt;;
 }
 
 <span class="doccomment">/// A `Phoenix` instance maintains a virtual coordinate space for nodes in a
@@ -980,16 +1079,15 @@
     /// and update their coordinates.
     </span><span class="kw">pub async fn </span>background_update_task(<span class="kw-2">&amp;</span><span class="self">self</span>) {
         <span class="kw">let </span><span class="kw-2">mut </span>current_interval = <span class="self">self</span>.interval_range.start;
-        <span class="kw">let </span><span class="kw-2">mut </span>first = <span class="bool-val">true</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>first = <span class="prelude-val">Some</span>(<span class="self">self</span>.all_nodes());
 
         <span class="kw">loop </span>{
             <span class="kw">let </span><span class="kw-2">mut </span>total_difference = <span class="number">0</span>;
             <span class="kw">let </span><span class="kw-2">mut </span>count = <span class="number">0</span>;
 
             <span class="kw">let </span>nodes_to_probe = first
-                .then(|| <span class="self">self</span>.all_nodes())
+                .take()
                 .unwrap_or_else(|| <span class="self">self</span>.random_subset_of_nodes());
-            first = <span class="bool-val">false</span>;
 
             <span class="kw">for </span>address <span class="kw">in </span>nodes_to_probe {
                 <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>node) = <span class="self">self</span>.nodes.get_mut(<span class="kw-2">&amp;</span>address) <span class="kw">else </span>{
@@ -998,9 +1096,9 @@
                 };
 
                 <span class="kw">match </span><span class="self">self</span>.measurement.measure_distance(address).<span class="kw">await </span>{
-                    <span class="prelude-val">Ok</span>((incoming_distance, outgoing_distance)) =&gt; {
-                        node.adjust_coordinates(incoming_distance, outgoing_distance);
-                        total_difference += outgoing_distance + incoming_distance;
+                    <span class="prelude-val">Ok</span>(distance) =&gt; {
+                        node.adjust_coordinates(distance);
+                        total_difference += distance.total_nanos();
                         count += <span class="number">1</span>;
                     }
                     <span class="prelude-val">Err</span>(error) =&gt; {
@@ -1021,12 +1119,8 @@
                 }
 
                 <span class="comment">// Ensure current_interval remains within bounds
-                </span><span class="kw">if </span>current_interval &lt; <span class="self">self</span>.interval_range.start {
-                    current_interval = <span class="self">self</span>.interval_range.start;
-                }
-                <span class="kw">if </span>current_interval &gt; <span class="self">self</span>.interval_range.end {
-                    current_interval = <span class="self">self</span>.interval_range.end;
-                }
+                </span>current_interval =
+                    current_interval.clamp(<span class="self">self</span>.interval_range.start, <span class="self">self</span>.interval_range.end);
             }
 
             <span class="kw">let _ </span>= <span class="self">self</span>.update_watcher.<span class="number">0</span>.send(());
@@ -1076,11 +1170,10 @@
             .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
         {
             <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>node) = <span class="self">self</span>.nodes.get_mut(<span class="kw-2">&amp;</span>address) {
-                <span class="kw">let </span><span class="prelude-val">Ok</span>((incoming, outgoing)) = <span class="self">self</span>.measurement.measure_distance(address).<span class="kw">await
-                else </span>{
+                <span class="kw">let </span><span class="prelude-val">Ok</span>(distance) = <span class="self">self</span>.measurement.measure_distance(address).<span class="kw">await else </span>{
                     <span class="kw">continue</span>;
                 };
-                node.adjust_coordinates(incoming, outgoing);
+                node.adjust_coordinates(distance);
             } <span class="kw">else </span>{
                 <span class="self">self</span>.nodes.entry(address).and_modify(|node| {
                     node.increase_error_estimate();
@@ -1271,21 +1364,22 @@
         <span class="self">self</span>.error_estimate += <span class="number">0.1</span>;
     }
 
-    <span class="kw">fn </span>adjust_coordinates(<span class="kw-2">&amp;mut </span><span class="self">self</span>, incoming_distance: i64, outgoing_distance: i64) {
+    <span class="kw">fn </span>adjust_coordinates(<span class="kw-2">&amp;mut </span><span class="self">self</span>, distance: DistanceMeasure) {
+        <span class="kw">let </span>incoming = distance.incoming.nanos() <span class="kw">as </span>f64;
+        <span class="kw">let </span>outgoing = distance.outgoing.nanos() <span class="kw">as </span>f64;
+
         <span class="kw">let </span><span class="prelude-val">Some</span>(coordinates) = <span class="kw-2">&amp;mut </span><span class="self">self</span>.coordinates <span class="kw">else </span>{
             <span class="self">self</span>.coordinates = <span class="prelude-val">Some</span>(Coordinates {
-                x: incoming_distance <span class="kw">as </span>f64,
-                y: outgoing_distance <span class="kw">as </span>f64,
+                x: incoming,
+                y: outgoing,
             });
             <span class="kw">return</span>;
         };
 
-        <span class="kw">let </span>incoming_distance_f = incoming_distance <span class="kw">as </span>f64;
-        <span class="kw">let </span>outgoing_distance_f = outgoing_distance <span class="kw">as </span>f64;
         <span class="kw">let </span>weight = <span class="self">self</span>.error_estimate;
 
-        coordinates.x = (coordinates.x + (incoming_distance_f * weight)) / <span class="number">2.0</span>;
-        coordinates.y = (coordinates.y + (outgoing_distance_f * weight)) / <span class="number">2.0</span>;
+        coordinates.x = (coordinates.x + (incoming * weight)) / <span class="number">2.0</span>;
+        coordinates.y = (coordinates.y + (outgoing * weight)) / <span class="number">2.0</span>;
     }
 }
 
@@ -1302,43 +1396,52 @@
 
     <span class="attr">#[derive(Clone)]
     </span><span class="kw">struct </span>LoggingMockMeasurement {
-        latencies: HashMap&lt;SocketAddr, (i64, i64)&gt;,
+        latencies: HashMap&lt;SocketAddr, DistanceMeasure&gt;,
         probed_addresses: Arc&lt;Mutex&lt;HashSet&lt;SocketAddr&gt;&gt;&gt;,
     }
 
     <span class="attr">#[async_trait]
     </span><span class="kw">impl </span>Measurement <span class="kw">for </span>LoggingMockMeasurement {
-        <span class="kw">async fn </span>measure_distance(<span class="kw-2">&amp;</span><span class="self">self</span>, address: SocketAddr) -&gt; eyre::Result&lt;(i64, i64)&gt; {
+        <span class="kw">async fn </span>measure_distance(<span class="kw-2">&amp;</span><span class="self">self</span>, address: SocketAddr) -&gt; eyre::Result&lt;DistanceMeasure&gt; {
             <span class="self">self</span>.probed_addresses.lock().<span class="kw">await</span>.insert(address);
-            <span class="prelude-val">Ok</span>(<span class="kw-2">*</span><span class="self">self</span>.latencies.get(<span class="kw-2">&amp;</span>address).unwrap_or(<span class="kw-2">&amp;</span>(<span class="number">0</span>, <span class="number">0</span>)))
+            <span class="prelude-val">Ok</span>(<span class="kw-2">*</span><span class="self">self
+                </span>.latencies
+                .get(<span class="kw-2">&amp;</span>address)
+                .unwrap_or(<span class="kw-2">&amp;</span>DistanceMeasure::default()))
         }
     }
 
     <span class="kw">struct </span>MockMeasurement {
-        latencies: HashMap&lt;SocketAddr, (i64, i64)&gt;,
+        latencies: HashMap&lt;SocketAddr, DistanceMeasure&gt;,
     }
 
     <span class="attr">#[async_trait]
     </span><span class="kw">impl </span>Measurement <span class="kw">for </span>MockMeasurement {
-        <span class="kw">async fn </span>measure_distance(<span class="kw-2">&amp;</span><span class="self">self</span>, address: SocketAddr) -&gt; eyre::Result&lt;(i64, i64)&gt; {
-            <span class="prelude-val">Ok</span>(<span class="kw-2">*</span><span class="self">self</span>.latencies.get(<span class="kw-2">&amp;</span>address).unwrap_or(<span class="kw-2">&amp;</span>(<span class="number">0</span>, <span class="number">0</span>)))
+        <span class="kw">async fn </span>measure_distance(<span class="kw-2">&amp;</span><span class="self">self</span>, address: SocketAddr) -&gt; eyre::Result&lt;DistanceMeasure&gt; {
+            <span class="prelude-val">Ok</span>(<span class="kw-2">*</span><span class="self">self
+                </span>.latencies
+                .get(<span class="kw-2">&amp;</span>address)
+                .unwrap_or(<span class="kw-2">&amp;</span>DistanceMeasure::default()))
         }
     }
 
     <span class="attr">#[derive(Debug)]
     </span><span class="kw">struct </span>FailedAddressesMock {
-        latencies: HashMap&lt;SocketAddr, (i64, i64)&gt;,
+        latencies: HashMap&lt;SocketAddr, DistanceMeasure&gt;,
         failed_addresses: Arc&lt;Mutex&lt;HashSet&lt;SocketAddr&gt;&gt;&gt;,
     }
 
     <span class="attr">#[async_trait]
     </span><span class="kw">impl </span>Measurement <span class="kw">for </span>FailedAddressesMock {
-        <span class="kw">async fn </span>measure_distance(<span class="kw-2">&amp;</span><span class="self">self</span>, address: SocketAddr) -&gt; eyre::Result&lt;(i64, i64)&gt; {
+        <span class="kw">async fn </span>measure_distance(<span class="kw-2">&amp;</span><span class="self">self</span>, address: SocketAddr) -&gt; eyre::Result&lt;DistanceMeasure&gt; {
             <span class="kw">let </span>failed_addresses = <span class="self">self</span>.failed_addresses.lock().<span class="kw">await</span>;
             <span class="kw">if </span>failed_addresses.contains(<span class="kw-2">&amp;</span>address) {
                 <span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">"Measurement timed out"</span>))
             } <span class="kw">else </span>{
-                <span class="prelude-val">Ok</span>(<span class="kw-2">*</span><span class="self">self</span>.latencies.get(<span class="kw-2">&amp;</span>address).unwrap_or(<span class="kw-2">&amp;</span>(<span class="number">0</span>, <span class="number">0</span>)))
+                <span class="prelude-val">Ok</span>(<span class="kw-2">*</span><span class="self">self
+                    </span>.latencies
+                    .get(<span class="kw-2">&amp;</span>address)
+                    .unwrap_or(<span class="kw-2">&amp;</span>DistanceMeasure::default()))
             }
         }
     }
@@ -1365,7 +1468,7 @@
     <span class="attr">#[tokio::test]
     </span><span class="kw">async fn </span>coordinates_adjustment() {
         <span class="kw">let </span><span class="kw-2">mut </span>mock_latencies = HashMap::new();
-        mock_latencies.insert(<span class="string">"127.0.0.1:8081"</span>.parse().unwrap(), (<span class="number">25</span>, <span class="number">25</span>));
+        mock_latencies.insert(<span class="string">"127.0.0.1:8081"</span>.parse().unwrap(), (<span class="number">25</span>, <span class="number">25</span>).into());
         <span class="kw">let </span>phoenix = Phoenix::new(MockMeasurement {
             latencies: mock_latencies,
         });
@@ -1386,9 +1489,9 @@
     <span class="attr">#[tokio::test]
     </span><span class="kw">async fn </span>ordered_nodes_by_latency() {
         <span class="kw">let </span><span class="kw-2">mut </span>mock_latencies = HashMap::new();
-        mock_latencies.insert(<span class="string">"127.0.0.1:8080"</span>.parse().unwrap(), (<span class="number">10</span>, <span class="number">10</span>));
-        mock_latencies.insert(<span class="string">"127.0.0.1:8081"</span>.parse().unwrap(), (<span class="number">50</span>, <span class="number">50</span>));
-        mock_latencies.insert(<span class="string">"127.0.0.1:8082"</span>.parse().unwrap(), (<span class="number">30</span>, <span class="number">30</span>));
+        mock_latencies.insert(<span class="string">"127.0.0.1:8080"</span>.parse().unwrap(), (<span class="number">10</span>, <span class="number">10</span>).into());
+        mock_latencies.insert(<span class="string">"127.0.0.1:8081"</span>.parse().unwrap(), (<span class="number">50</span>, <span class="number">50</span>).into());
+        mock_latencies.insert(<span class="string">"127.0.0.1:8082"</span>.parse().unwrap(), (<span class="number">30</span>, <span class="number">30</span>).into());
 
         <span class="kw">let </span>phoenix = Phoenix::new(MockMeasurement {
             latencies: mock_latencies,
@@ -1457,8 +1560,8 @@
     <span class="attr">#[tokio::test]
     </span><span class="kw">async fn </span>successful_measurements() {
         <span class="kw">let </span>latencies = HashMap::from([
-            (<span class="string">"127.0.0.1:8080"</span>.parse().unwrap(), (<span class="number">100</span>, <span class="number">100</span>)),
-            (<span class="string">"127.0.0.1:8081"</span>.parse().unwrap(), (<span class="number">200</span>, <span class="number">200</span>)),
+            (<span class="string">"127.0.0.1:8080"</span>.parse().unwrap(), (<span class="number">100</span>, <span class="number">100</span>).into()),
+            (<span class="string">"127.0.0.1:8081"</span>.parse().unwrap(), (<span class="number">200</span>, <span class="number">200</span>).into()),
         ]);
         <span class="kw">let </span>failed_addresses = Arc::new(Mutex::new(HashSet::new()));
         <span class="kw">let </span>measurement = FailedAddressesMock {
@@ -1484,8 +1587,8 @@
     <span class="attr">#[tokio::test]
     </span><span class="kw">async fn </span>failed_measurements_excluded() {
         <span class="kw">let </span>latencies = HashMap::from([
-            (<span class="string">"127.0.0.1:8080"</span>.parse().unwrap(), (<span class="number">100</span>, <span class="number">100</span>)),
-            (<span class="string">"127.0.0.1:8081"</span>.parse().unwrap(), (<span class="number">200</span>, <span class="number">200</span>)),
+            (<span class="string">"127.0.0.1:8080"</span>.parse().unwrap(), (<span class="number">100</span>, <span class="number">100</span>).into()),
+            (<span class="string">"127.0.0.1:8081"</span>.parse().unwrap(), (<span class="number">200</span>, <span class="number">200</span>).into()),
         ]);
         <span class="kw">let </span>failed_addresses = Arc::new(Mutex::new(HashSet::from([<span class="string">"127.0.0.1:8081"
             </span>.parse()
@@ -1525,8 +1628,17 @@
         <span class="kw">let </span>socket = raw_socket_with_reuse(qcmp_port).unwrap();
         <span class="kw">crate</span>::codec::qcmp::spawn(socket, rx.clone());
         tokio::time::sleep(std::time::Duration::from_millis(<span class="number">150</span>)).<span class="kw">await</span>;
-        <span class="kw">super</span>::spawn(qcmp_listener, config.clone(), rx).unwrap();
-        tokio::time::sleep(std::time::Duration::from_millis(<span class="number">1500</span>)).<span class="kw">await</span>;
+        <span class="kw">super</span>::spawn(
+            qcmp_listener,
+            config.clone(),
+            rx,
+            <span class="kw">crate</span>::codec::qcmp::QcmpMeasurement::with_artificial_delay(
+                std::time::Duration::from_millis(<span class="number">50</span>),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        tokio::time::sleep(std::time::Duration::from_millis(<span class="number">150</span>)).<span class="kw">await</span>;
 
         <span class="kw">let </span>client = hyper::Client::new();
 
@@ -1541,7 +1653,19 @@
 
         <span class="kw">let </span>map = serde_json::from_slice::&lt;serde_json::Map&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt;&gt;(<span class="kw-2">&amp;</span>resp).unwrap();
 
-        <span class="macro">assert!</span>(<span class="macro">dbg!</span>(map).contains_key(<span class="string">"ABCD"</span>));
+        <span class="kw">let </span>coords = Coordinates {
+            x: std::time::Duration::from_millis(<span class="number">50</span>).as_nanos() <span class="kw">as </span>f64 / <span class="number">2.0</span>,
+            y: std::time::Duration::from_millis(<span class="number">1</span>).as_nanos() <span class="kw">as </span>f64 / <span class="number">2.0</span>,
+        };
+
+        <span class="kw">let </span>min = Coordinates::ORIGIN.distance_to(<span class="kw-2">&amp;</span>coords);
+        <span class="kw">let </span>max = min * <span class="number">3.0</span>;
+        <span class="kw">let </span>distance = map[<span class="string">"ABCD"</span>].as_f64().unwrap();
+
+        <span class="macro">assert!</span>(
+            distance &gt; min &amp;&amp; distance &lt; max,
+            <span class="string">"expected distance {distance} to be &gt; {min} and &lt; {max}"</span>,
+        );
     }
 }
 </code></pre></div></section></main></body></html>
