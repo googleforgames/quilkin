@@ -679,7 +679,7 @@ mod tests {
 
         let (_tx, rx) = crate::make_shutdown_channel(Default::default());
         super::spawn(socket, rx);
-        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
 
         let delay = std::time::Duration::from_millis(50);
         let node = QcmpMeasurement::with_artificial_delay(delay).unwrap();
