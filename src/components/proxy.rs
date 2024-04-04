@@ -212,7 +212,12 @@ impl Proxy {
         .await?;
 
         crate::codec::qcmp::spawn(self.qcmp, shutdown_rx.clone());
-        crate::net::phoenix::spawn(self.phoenix, config.clone(), shutdown_rx.clone())?;
+        crate::net::phoenix::spawn(
+            self.phoenix,
+            config.clone(),
+            shutdown_rx.clone(),
+            crate::codec::qcmp::QcmpMeasurement::new()?,
+        )?;
 
         for notification in worker_notifications {
             notification.notified().await;

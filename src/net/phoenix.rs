@@ -29,11 +29,12 @@ pub fn spawn(
     listener: crate::net::TcpListener,
     config: Arc<crate::Config>,
     mut shutdown_rx: crate::ShutdownRx,
+    measurer: crate::codec::qcmp::QcmpMeasurement,
 ) -> crate::Result<()> {
     use hyper::service::{make_service_fn, service_fn};
     use hyper::{Body, Response, Server as HyperServer, StatusCode};
 
-    let phoenix = Phoenix::new(crate::codec::qcmp::QcmpMeasurement::new()?);
+    let phoenix = Phoenix::new(measurer);
     phoenix.add_nodes_from_config(&config);
 
     let crate::config::DatacenterConfig::NonAgent { datacenters } = &config.datacenter else {
@@ -791,8 +792,17 @@ mod tests {
         let socket = raw_socket_with_reuse(qcmp_port).unwrap();
         crate::codec::qcmp::spawn(socket, rx.clone());
         tokio::time::sleep(std::time::Duration::from_millis(150)).await;
-        super::spawn(qcmp_listener, config.clone(), rx).unwrap();
-        tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
+        super::spawn(
+            qcmp_listener,
+            config.clone(),
+            rx,
+            crate::codec::qcmp::QcmpMeasurement::with_artificial_delay(
+                std::time::Duration::from_millis(50),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
         let client = hyper::Client::new();
 
@@ -807,6 +817,18 @@ mod tests {
 
         let map = serde_json::from_slice::<serde_json::Map<_, _>>(&resp).unwrap();
 
-        assert!(dbg!(map).contains_key("ABCD"));
+        let coords = Coordinates {
+            x: std::time::Duration::from_millis(50).as_nanos() as f64 / 2.0,
+            y: std::time::Duration::from_millis(1).as_nanos() as f64 / 2.0,
+        };
+
+        let min = Coordinates::ORIGIN.distance_to(&coords);
+        let max = min * 3.0;
+        let distance = map["ABCD"].as_f64().unwrap();
+
+        assert!(
+            distance > min && distance < max,
+            "expected distance {distance} to be > {min} and < {max}",
+        );
     }
 }
