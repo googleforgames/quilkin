@@ -221,6 +221,7 @@ abort_task!(AgentPail);
 pub struct ProxyPail {
     pub port: u16,
     pub qcmp_port: u16,
+    pub phoenix_port: u16,
     pub task: JoinHandle,
     pub shutdown: ShutdownTx,
     pub config: Arc<Config>,
@@ -421,8 +422,8 @@ impl Pail {
                 let qcmp =
                     quilkin::net::raw_socket_with_reuse(0).expect("failed to bind qcmp socket");
                 let qcmp_port = quilkin::net::socket_port(&qcmp);
-                let phoenix =
-                    TcpListener::bind(Some(qcmp_port)).expect("failed to bind phoenix socket");
+                let phoenix = TcpListener::bind(None).expect("failed to bind phoenix socket");
+                let phoenix_port = phoenix.port();
 
                 let port = quilkin::net::socket_port(&socket);
 
@@ -506,6 +507,7 @@ impl Pail {
                 Self::Proxy(ProxyPail {
                     port,
                     qcmp_port,
+                    phoenix_port,
                     shutdown,
                     task,
                     config,

@@ -298,8 +298,7 @@ impl TestHelper {
 
         let server = server.unwrap_or_else(|| {
             let qcmp = crate::net::raw_socket_with_reuse(0).unwrap();
-            let phoenix =
-                crate::net::TcpListener::bind(Some(crate::net::socket_port(&qcmp))).unwrap();
+            let phoenix = crate::net::TcpListener::bind(None).unwrap();
 
             crate::components::proxy::Proxy {
                 num_workers: std::num::NonZeroUsize::new(1).unwrap(),
