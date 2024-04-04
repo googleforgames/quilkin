@@ -199,7 +199,7 @@ impl Measurement for QcmpMeasurement {
 
         let now = UtcTimestamp::now();
         let Some(reply) = Protocol::parse(&recv[..size])? else {
-            return Err(eyre::eyre!("received non qcmp packet"));
+            return Err(eyre::eyre!("received non qcmp packet {:?}", &recv[..size]));
         };
 
         reply
