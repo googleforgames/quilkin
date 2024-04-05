@@ -740,14 +740,14 @@
 <span class="kw">const </span>PONG: u8 = <span class="number">1</span>;
 
 <span class="kw">pub struct </span>QcmpPacket {
-    buf: [u8; MAX_QCMP_PACKET_LEN],
+    buf: Vec&lt;u8&gt;,
     len: usize,
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>QcmpPacket {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            buf: [<span class="number">0u8</span>; MAX_QCMP_PACKET_LEN],
+            buf: <span class="macro">vec!</span>[<span class="number">0</span>; MAX_QCMP_PACKET_LEN],
             len: <span class="number">0</span>,
         }
     }
