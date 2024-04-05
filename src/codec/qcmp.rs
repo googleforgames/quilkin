@@ -38,14 +38,14 @@ const PING: u8 = 0;
 const PONG: u8 = 1;
 
 pub struct QcmpPacket {
-    buf: [u8; MAX_QCMP_PACKET_LEN],
+    buf: Vec<u8>,
     len: usize,
 }
 
 impl Default for QcmpPacket {
     fn default() -> Self {
         Self {
-            buf: [0u8; MAX_QCMP_PACKET_LEN],
+            buf: vec![0; MAX_QCMP_PACKET_LEN],
             len: 0,
         }
     }
