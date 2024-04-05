@@ -338,7 +338,7 @@
                     };
 
                     <span class="kw">if </span>!found {
-                        <span class="macro">tracing::warn!</span>(
+                        <span class="macro">tracing::debug!</span>(
                             endpoint=%serde_json::to_value(server.endpoint()).unwrap(),
                             name=%serde_json::to_value(server.metadata.name).unwrap(),
                             <span class="string">"received unknown gameserver to delete from k8s"
