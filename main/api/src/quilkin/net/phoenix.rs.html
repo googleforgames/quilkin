@@ -834,6 +834,14 @@
 <a href="#832" id="832">832</a>
 <a href="#833" id="833">833</a>
 <a href="#834" id="834">834</a>
+<a href="#835" id="835">835</a>
+<a href="#836" id="836">836</a>
+<a href="#837" id="837">837</a>
+<a href="#838" id="838">838</a>
+<a href="#839" id="839">839</a>
+<a href="#840" id="840">840</a>
+<a href="#841" id="841">841</a>
+<a href="#842" id="842">842</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! # Phoenix Network Coordinate System
 //!
 //! This module provides a framework for estimating network latencies between
@@ -861,16 +869,15 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::config::IcaoCode;
 
-<span class="kw">pub fn </span>spawn(
+<span class="kw">pub fn </span>spawn&lt;M: Clone + Measurement + Sync + Send + <span class="lifetime">'static</span>&gt;(
     listener: <span class="kw">crate</span>::net::TcpListener,
     config: Arc&lt;<span class="kw">crate</span>::Config&gt;,
     <span class="kw-2">mut </span>shutdown_rx: <span class="kw">crate</span>::ShutdownRx,
-    measurer: <span class="kw">crate</span>::codec::qcmp::QcmpMeasurement,
+    phoenix: Phoenix&lt;M&gt;,
 ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
     <span class="kw">use </span>hyper::service::{make_service_fn, service_fn};
     <span class="kw">use </span>hyper::{Body, Response, Server <span class="kw">as </span>HyperServer, StatusCode};
 
-    <span class="kw">let </span>phoenix = Phoenix::new(measurer);
     phoenix.add_nodes_from_config(<span class="kw-2">&amp;</span>config);
 
     <span class="kw">let </span><span class="kw">crate</span>::config::DatacenterConfig::NonAgent { datacenters } = <span class="kw-2">&amp;</span>config.datacenter <span class="kw">else </span>{
@@ -1616,56 +1623,65 @@
         <span class="kw">let </span>config = Arc::new(<span class="kw">crate</span>::Config::default_non_agent());
         <span class="kw">let </span>qcmp_listener = <span class="kw">crate</span>::net::TcpListener::bind(<span class="prelude-val">None</span>).expect(<span class="string">"failed to bind listener"</span>);
         <span class="kw">let </span>qcmp_port = qcmp_listener.port();
+
+        <span class="kw">let </span>icao_code = <span class="string">"ABCD"</span>.parse().unwrap();
+
         config.datacenters().write().insert(
             std::net::Ipv4Addr::LOCALHOST.into(),
             <span class="kw">crate</span>::config::Datacenter {
                 qcmp_port,
-                icao_code: <span class="string">"ABCD"</span>.parse().unwrap(),
+                icao_code,
             },
         );
 
         <span class="kw">let </span>(_tx, rx) = <span class="kw">crate</span>::make_shutdown_channel(Default::default());
         <span class="kw">let </span>socket = raw_socket_with_reuse(qcmp_port).unwrap();
         <span class="kw">crate</span>::codec::qcmp::spawn(socket, rx.clone());
-        tokio::time::sleep(std::time::Duration::from_millis(<span class="number">150</span>)).<span class="kw">await</span>;
-        <span class="kw">super</span>::spawn(
-            qcmp_listener,
-            config.clone(),
-            rx,
-            <span class="kw">crate</span>::codec::qcmp::QcmpMeasurement::with_artificial_delay(
-                std::time::Duration::from_millis(<span class="number">50</span>),
-            )
-            .unwrap(),
-        )
-        .unwrap();
-        tokio::time::sleep(std::time::Duration::from_millis(<span class="number">150</span>)).<span class="kw">await</span>;
+        tokio::time::sleep(Duration::from_millis(<span class="number">150</span>)).<span class="kw">await</span>;
+
+        <span class="kw">let </span>measurement =
+            <span class="kw">crate</span>::codec::qcmp::QcmpMeasurement::with_artificial_delay(Duration::from_millis(<span class="number">50</span>))
+                .unwrap();
+
+        <span class="kw">let </span>phoenix = Phoenix::builder(measurement)
+            .interval_range(Duration::from_millis(<span class="number">10</span>)..Duration::from_millis(<span class="number">15</span>))
+            .build();
+
+        <span class="kw">super</span>::spawn(qcmp_listener, config.clone(), rx, phoenix).unwrap();
+        tokio::time::sleep(Duration::from_millis(<span class="number">150</span>)).<span class="kw">await</span>;
 
         <span class="kw">let </span>client = hyper::Client::new();
 
-        <span class="kw">let </span>resp = client
-            .get(<span class="macro">format!</span>(<span class="string">"http://localhost:{qcmp_port}/"</span>).parse().unwrap())
+        <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">10 </span>{
+            <span class="kw">let </span>resp = tokio::time::timeout(
+                Duration::from_millis(<span class="number">100</span>),
+                client
+                    .get(<span class="macro">format!</span>(<span class="string">"http://localhost:{qcmp_port}/"</span>).parse().unwrap())
+                    .<span class="kw">await
+                    </span>.map(|resp| resp.into_body())
+                    .map(hyper::body::to_bytes)
+                    .unwrap(),
+            )
             .<span class="kw">await
-            </span>.map(|resp| resp.into_body())
-            .map(hyper::body::to_bytes)
-            .unwrap()
-            .<span class="kw">await
-            </span>.unwrap();
+            </span>.unwrap()
+            .unwrap();
 
-        <span class="kw">let </span>map = serde_json::from_slice::&lt;serde_json::Map&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt;&gt;(<span class="kw-2">&amp;</span>resp).unwrap();
+            <span class="kw">let </span>map = serde_json::from_slice::&lt;serde_json::Map&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt;&gt;(<span class="kw-2">&amp;</span>resp).unwrap();
 
-        <span class="kw">let </span>coords = Coordinates {
-            x: std::time::Duration::from_millis(<span class="number">50</span>).as_nanos() <span class="kw">as </span>f64 / <span class="number">2.0</span>,
-            y: std::time::Duration::from_millis(<span class="number">1</span>).as_nanos() <span class="kw">as </span>f64 / <span class="number">2.0</span>,
-        };
+            <span class="kw">let </span>coords = Coordinates {
+                x: std::time::Duration::from_millis(<span class="number">50</span>).as_nanos() <span class="kw">as </span>f64 / <span class="number">2.0</span>,
+                y: std::time::Duration::from_millis(<span class="number">1</span>).as_nanos() <span class="kw">as </span>f64 / <span class="number">2.0</span>,
+            };
 
-        <span class="kw">let </span>min = Coordinates::ORIGIN.distance_to(<span class="kw-2">&amp;</span>coords);
-        <span class="kw">let </span>max = min * <span class="number">3.0</span>;
-        <span class="kw">let </span>distance = map[<span class="string">"ABCD"</span>].as_f64().unwrap();
+            <span class="kw">let </span>min = Coordinates::ORIGIN.distance_to(<span class="kw-2">&amp;</span>coords);
+            <span class="kw">let </span>max = min * <span class="number">3.0</span>;
+            <span class="kw">let </span>distance = map[icao_code.as_ref()].as_f64().unwrap();
 
-        <span class="macro">assert!</span>(
-            distance &gt; min &amp;&amp; distance &lt; max,
-            <span class="string">"expected distance {distance} to be &gt; {min} and &lt; {max}"</span>,
-        );
+            <span class="macro">assert!</span>(
+                distance &gt; min &amp;&amp; distance &lt; max,
+                <span class="string">"expected distance {distance} to be &gt; {min} and &lt; {max}"</span>,
+            );
+        }
     }
 }
 </code></pre></div></section></main></body></html>

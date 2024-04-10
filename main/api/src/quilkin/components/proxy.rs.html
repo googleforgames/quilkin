@@ -468,7 +468,7 @@
             <span class="self">self</span>.phoenix,
             config.clone(),
             shutdown_rx.clone(),
-            <span class="kw">crate</span>::codec::qcmp::QcmpMeasurement::new()<span class="question-mark">?</span>,
+            <span class="kw">crate</span>::net::phoenix::Phoenix::new(<span class="kw">crate</span>::codec::qcmp::QcmpMeasurement::new()<span class="question-mark">?</span>),
         )<span class="question-mark">?</span>;
 
         <span class="kw">for </span>notification <span class="kw">in </span>worker_notifications {
