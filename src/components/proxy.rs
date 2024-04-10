@@ -216,7 +216,7 @@ impl Proxy {
             self.phoenix,
             config.clone(),
             shutdown_rx.clone(),
-            crate::codec::qcmp::QcmpMeasurement::new()?,
+            crate::net::phoenix::Phoenix::new(crate::codec::qcmp::QcmpMeasurement::new()?),
         )?;
 
         for notification in worker_notifications {

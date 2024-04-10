@@ -25,16 +25,15 @@ use dashmap::DashMap;
 
 use crate::config::IcaoCode;
 
-pub fn spawn(
+pub fn spawn<M: Clone + Measurement + Sync + Send + 'static>(
     listener: crate::net::TcpListener,
     config: Arc<crate::Config>,
     mut shutdown_rx: crate::ShutdownRx,
-    measurer: crate::codec::qcmp::QcmpMeasurement,
+    phoenix: Phoenix<M>,
 ) -> crate::Result<()> {
     use hyper::service::{make_service_fn, service_fn};
     use hyper::{Body, Response, Server as HyperServer, StatusCode};
 
-    let phoenix = Phoenix::new(measurer);
     phoenix.add_nodes_from_config(&config);
 
     let crate::config::DatacenterConfig::NonAgent { datacenters } = &config.datacenter else {
@@ -780,55 +779,64 @@ mod tests {
         let config = Arc::new(crate::Config::default_non_agent());
         let qcmp_listener = crate::net::TcpListener::bind(None).expect("failed to bind listener");
         let qcmp_port = qcmp_listener.port();
+
+        let icao_code = "ABCD".parse().unwrap();
+
         config.datacenters().write().insert(
             std::net::Ipv4Addr::LOCALHOST.into(),
             crate::config::Datacenter {
                 qcmp_port,
-                icao_code: "ABCD".parse().unwrap(),
+                icao_code,
             },
         );
 
         let (_tx, rx) = crate::make_shutdown_channel(Default::default());
         let socket = raw_socket_with_reuse(qcmp_port).unwrap();
         crate::codec::qcmp::spawn(socket, rx.clone());
-        tokio::time::sleep(std::time::Duration::from_millis(150)).await;
-        super::spawn(
-            qcmp_listener,
-            config.clone(),
-            rx,
-            crate::codec::qcmp::QcmpMeasurement::with_artificial_delay(
-                std::time::Duration::from_millis(50),
-            )
-            .unwrap(),
-        )
-        .unwrap();
-        tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+        tokio::time::sleep(Duration::from_millis(150)).await;
+
+        let measurement =
+            crate::codec::qcmp::QcmpMeasurement::with_artificial_delay(Duration::from_millis(50))
+                .unwrap();
+
+        let phoenix = Phoenix::builder(measurement)
+            .interval_range(Duration::from_millis(10)..Duration::from_millis(15))
+            .build();
+
+        super::spawn(qcmp_listener, config.clone(), rx, phoenix).unwrap();
+        tokio::time::sleep(Duration::from_millis(150)).await;
 
         let client = hyper::Client::new();
 
-        let resp = client
-            .get(format!("http://localhost:{qcmp_port}/").parse().unwrap())
+        for _ in 0..10 {
+            let resp = tokio::time::timeout(
+                Duration::from_millis(100),
+                client
+                    .get(format!("http://localhost:{qcmp_port}/").parse().unwrap())
+                    .await
+                    .map(|resp| resp.into_body())
+                    .map(hyper::body::to_bytes)
+                    .unwrap(),
+            )
             .await
-            .map(|resp| resp.into_body())
-            .map(hyper::body::to_bytes)
             .unwrap()
-            .await
             .unwrap();
 
-        let map = serde_json::from_slice::<serde_json::Map<_, _>>(&resp).unwrap();
+            let map = serde_json::from_slice::<serde_json::Map<_, _>>(&resp).unwrap();
 
-        let coords = Coordinates {
-            x: std::time::Duration::from_millis(50).as_nanos() as f64 / 2.0,
-            y: std::time::Duration::from_millis(1).as_nanos() as f64 / 2.0,
-        };
+            let coords = Coordinates {
+                x: std::time::Duration::from_millis(50).as_nanos() as f64 / 2.0,
+                y: std::time::Duration::from_millis(1).as_nanos() as f64 / 2.0,
+            };
 
-        let min = Coordinates::ORIGIN.distance_to(&coords);
-        let max = min * 3.0;
-        let distance = map["ABCD"].as_f64().unwrap();
+            let min = Coordinates::ORIGIN.distance_to(&coords);
+            let max = min * 3.0;
+            let distance = map[icao_code.as_ref()].as_f64().unwrap();
 
-        assert!(
-            distance > min && distance < max,
-            "expected distance {distance} to be > {min} and < {max}",
-        );
+            assert!(
+                distance > min && distance < max,
+                "expected distance {distance} to be > {min} and < {max}",
+            );
+        }
     }
 }
