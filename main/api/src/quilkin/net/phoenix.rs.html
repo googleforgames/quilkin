@@ -842,6 +842,18 @@
 <a href="#840" id="840">840</a>
 <a href="#841" id="841">841</a>
 <a href="#842" id="842">842</a>
+<a href="#843" id="843">843</a>
+<a href="#844" id="844">844</a>
+<a href="#845" id="845">845</a>
+<a href="#846" id="846">846</a>
+<a href="#847" id="847">847</a>
+<a href="#848" id="848">848</a>
+<a href="#849" id="849">849</a>
+<a href="#850" id="850">850</a>
+<a href="#851" id="851">851</a>
+<a href="#852" id="852">852</a>
+<a href="#853" id="853">853</a>
+<a href="#854" id="854">854</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! # Phoenix Network Coordinate System
 //!
 //! This module provides a framework for estimating network latencies between
@@ -875,6 +887,7 @@
     <span class="kw-2">mut </span>shutdown_rx: <span class="kw">crate</span>::ShutdownRx,
     phoenix: Phoenix&lt;M&gt;,
 ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
+    <span class="kw">use </span>eyre::WrapErr <span class="kw">as _</span>;
     <span class="kw">use </span>hyper::service::{make_service_fn, service_fn};
     <span class="kw">use </span>hyper::{Body, Response, Server <span class="kw">as </span>HyperServer, StatusCode};
 
@@ -885,123 +898,134 @@
     };
     <span class="kw">let </span><span class="kw-2">mut </span>config_watcher = datacenters.watch();
 
-    std::thread::spawn(<span class="kw">move </span>|| {
-        <span class="kw">let </span>runtime = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .unwrap();
-        <span class="kw">let </span>res = runtime.block_on({
-            <span class="kw">let </span><span class="kw-2">mut </span>phoenix_watcher = phoenix.update_watcher();
-            <span class="kw">let </span>config = config.clone();
+    std::thread::Builder::new()
+        .name(<span class="string">"phoenix-http"</span>.into())
+        .spawn(<span class="kw">move </span>|| {
+            <span class="kw">let </span>runtime = tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .worker_threads(<span class="number">2</span>)
+                .thread_name_fn(|| {
+                    <span class="kw">static </span>ATOMIC_ID: std::sync::atomic::AtomicUsize =
+                        std::sync::atomic::AtomicUsize::new(<span class="number">0</span>);
+                    <span class="kw">let </span>id = ATOMIC_ID.fetch_add(<span class="number">1</span>, std::sync::atomic::Ordering::SeqCst);
+                    <span class="macro">format!</span>(<span class="string">"phoenix-http-{id}"</span>)
+                })
+                .build()
+                .unwrap();
+            <span class="kw">let </span>res = runtime.block_on({
+                <span class="kw">let </span><span class="kw-2">mut </span>phoenix_watcher = phoenix.update_watcher();
+                <span class="kw">let </span>config = config.clone();
 
-            <span class="kw">async move </span>{
-                <span class="kw">let </span>json = <span class="kw">crate</span>::config::Slot::new(serde_json::Map::default());
+                <span class="kw">async move </span>{
+                    <span class="kw">let </span>json = <span class="kw">crate</span>::config::Slot::new(serde_json::Map::default());
 
-                tokio::spawn({
-                    <span class="kw">let </span>phoenix = phoenix.clone();
-                    <span class="kw">async move </span>{ phoenix.background_update_task().<span class="kw">await </span>}
-                });
+                    tokio::spawn({
+                        <span class="kw">let </span>phoenix = phoenix.clone();
+                        <span class="kw">async move </span>{ phoenix.background_update_task().<span class="kw">await </span>}
+                    });
 
-                <span class="kw">let </span>json2 = json.clone();
-                <span class="kw">let </span>make_svc = make_service_fn(<span class="kw">move </span>|_conn| {
-                    <span class="kw">let </span>json = json2.clone();
-                    <span class="attr">#[allow(clippy::declare_interior_mutable_const)]
-                    </span><span class="kw">const </span>JSON: hyper::header::HeaderValue =
-                        hyper::header::HeaderValue::from_static(<span class="string">"application/json"</span>);
+                    <span class="kw">let </span>json2 = json.clone();
+                    <span class="kw">let </span>make_svc = make_service_fn(<span class="kw">move </span>|_conn| {
+                        <span class="kw">let </span>json = json2.clone();
+                        <span class="attr">#[allow(clippy::declare_interior_mutable_const)]
+                        </span><span class="kw">const </span>JSON: hyper::header::HeaderValue =
+                            hyper::header::HeaderValue::from_static(<span class="string">"application/json"</span>);
 
-                    <span class="kw">async move </span>{
-                        <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, std::convert::Infallible&gt;(service_fn(<span class="kw">move </span>|<span class="kw">_</span>| {
-                            <span class="kw">let </span>json = json.clone();
-                            <span class="kw">async move </span>{
-                                <span class="macro">tracing::trace!</span>(<span class="string">"serving phoenix request"</span>);
-                                <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, std::convert::Infallible&gt;(
-                                    Response::builder()
-                                        .status(StatusCode::OK)
-                                        .header(hyper::header::CONTENT_TYPE, JSON)
-                                        .body(Body::from(serde_json::to_string(<span class="kw-2">&amp;</span>json).unwrap()))
-                                        .unwrap(),
-                                )
-                            }
-                        }))
+                        <span class="kw">async move </span>{
+                            <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, std::convert::Infallible&gt;(service_fn(<span class="kw">move </span>|<span class="kw">_</span>| {
+                                <span class="kw">let </span>json = json.clone();
+                                <span class="kw">async move </span>{
+                                    <span class="macro">tracing::trace!</span>(<span class="string">"serving phoenix request"</span>);
+                                    <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, std::convert::Infallible&gt;(
+                                        Response::builder()
+                                            .status(StatusCode::OK)
+                                            .header(hyper::header::CONTENT_TYPE, JSON)
+                                            .body(Body::from(serde_json::to_string(<span class="kw-2">&amp;</span>json).unwrap()))
+                                            .unwrap(),
+                                    )
+                                }
+                            }))
+                        }
+                    });
+
+                    <span class="macro">tracing::info!</span>(addr=%listener.local_addr(), <span class="string">"starting phoenix HTTP service"</span>);
+                    <span class="kw">let </span>(stx, srx) = tokio::sync::oneshot::channel::&lt;()&gt;();
+
+                    <span class="kw">let </span>http_task = tokio::spawn(
+                        HyperServer::from_tcp(listener.into())<span class="question-mark">?
+                            </span>.serve(make_svc)
+                            .with_graceful_shutdown(<span class="kw">async move </span>{
+                                <span class="kw">let _ </span>= srx.<span class="kw">await</span>;
+                            }),
+                    );
+
+                    <span class="kw">let </span>res = <span class="kw">loop </span>{
+                        <span class="kw">use </span>eyre::WrapErr <span class="kw">as _</span>;
+
+                        <span class="macro">tokio::select! </span>{
+                            <span class="kw">_ </span>= shutdown_rx.changed() =&gt; <span class="kw">break </span><span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, eyre::Error&gt;(()),
+                            result = config_watcher.changed() =&gt; <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = result {
+                                <span class="kw">break </span><span class="prelude-val">Err</span>(err).context(<span class="string">"config watcher sender dropped"</span>);
+                            },
+                            result = phoenix_watcher.changed() =&gt; <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = result {
+                                <span class="kw">break </span><span class="prelude-val">Err</span>(err).context(<span class="string">"phoenix watcher sender dropped"</span>);
+                            },
+                        }
+
+                        <span class="macro">tracing::trace!</span>(<span class="string">"change detected, updating phoenix"</span>);
+                        phoenix.add_nodes_from_config(<span class="kw-2">&amp;</span>config);
+                        <span class="kw">let </span>nodes = phoenix.ordered_nodes_by_latency();
+                        <span class="kw">let </span><span class="kw-2">mut </span>new_json = serde_json::Map::default();
+
+                        <span class="kw">for </span>(identifier, latency) <span class="kw">in </span>nodes {
+                            new_json.insert(identifier.to_string(), latency.into());
+                        }
+
+                        json.store(new_json.into());
+                    };
+
+                    <span class="kw">if </span>stx.send(()).is_err() {
+                        <span class="macro">tracing::error!</span>(<span class="string">"phoenix HTTP service task has already exited"</span>);
                     }
-                });
 
-                <span class="macro">tracing::info!</span>(addr=%listener.local_addr(), <span class="string">"starting phoenix HTTP service"</span>);
-                <span class="kw">let </span>(stx, srx) = tokio::sync::oneshot::channel::&lt;()&gt;();
+                    <span class="comment">// This should happen quickly, abort if it takes too long
+                    </span><span class="kw">let </span>max_wait =
+                        std::time::Instant::now() + std::time::Duration::from_millis(<span class="number">100</span>);
+                    <span class="kw">let </span><span class="kw-2">mut </span>interval = tokio::time::interval(std::time::Duration::from_millis(<span class="number">1</span>));
 
-                <span class="kw">let </span>http_task = tokio::spawn(
-                    HyperServer::from_tcp(listener.into())<span class="question-mark">?
-                        </span>.serve(make_svc)
-                        .with_graceful_shutdown(<span class="kw">async move </span>{
-                            <span class="kw">let _ </span>= srx.<span class="kw">await</span>;
-                        }),
-                );
+                    <span class="kw">loop </span>{
+                        <span class="kw">if </span>http_task.is_finished() || std::time::Instant::now() &gt; max_wait {
+                            <span class="kw">break</span>;
+                        }
 
-                <span class="kw">let </span>res = <span class="kw">loop </span>{
-                    <span class="kw">use </span>eyre::WrapErr <span class="kw">as _</span>;
-
-                    <span class="macro">tokio::select! </span>{
-                        <span class="kw">_ </span>= shutdown_rx.changed() =&gt; <span class="kw">break </span><span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, eyre::Error&gt;(()),
-                        result = config_watcher.changed() =&gt; <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = result {
-                            <span class="kw">break </span><span class="prelude-val">Err</span>(err).context(<span class="string">"config watcher sender dropped"</span>);
-                        },
-                        result = phoenix_watcher.changed() =&gt; <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = result {
-                            <span class="kw">break </span><span class="prelude-val">Err</span>(err).context(<span class="string">"phoenix watcher sender dropped"</span>);
-                        },
+                        interval.tick().<span class="kw">await</span>;
                     }
 
-                    <span class="macro">tracing::trace!</span>(<span class="string">"change detected, updating phoenix"</span>);
-                    phoenix.add_nodes_from_config(<span class="kw-2">&amp;</span>config);
-                    <span class="kw">let </span>nodes = phoenix.ordered_nodes_by_latency();
-                    <span class="kw">let </span><span class="kw-2">mut </span>new_json = serde_json::Map::default();
-
-                    <span class="kw">for </span>(identifier, latency) <span class="kw">in </span>nodes {
-                        new_json.insert(identifier.to_string(), latency.into());
+                    <span class="kw">if </span>!http_task.is_finished() {
+                        http_task.abort();
                     }
 
-                    json.store(new_json.into());
-                };
+                    <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = http_task.<span class="kw">await </span>{
+                        <span class="kw">if let </span><span class="prelude-val">Ok</span>(panic) = err.try_into_panic() {
+                            <span class="kw">let </span>message = panic
+                                .downcast_ref::&lt;String&gt;()
+                                .map(String::as_str)
+                                .or_else(|| panic.downcast_ref::&lt;<span class="kw-2">&amp;</span>str&gt;().copied())
+                                .unwrap_or(<span class="string">"&lt;unknown non-string panic&gt;"</span>);
 
-                <span class="kw">if </span>stx.send(()).is_err() {
-                    <span class="macro">tracing::error!</span>(<span class="string">"phoenix HTTP service task has already exited"</span>);
+                            <span class="macro">tracing::error!</span>(panic = message, <span class="string">"phoenix HTTP task panicked"</span>);
+                        }
+                    }
+
+                    res
                 }
+            });
 
-                <span class="comment">// This should happen quickly, abort if it takes too long
-                </span><span class="kw">let </span>max_wait = std::time::Instant::now() + std::time::Duration::from_millis(<span class="number">100</span>);
-                <span class="kw">let </span><span class="kw-2">mut </span>interval = tokio::time::interval(std::time::Duration::from_millis(<span class="number">1</span>));
-
-                <span class="kw">loop </span>{
-                    <span class="kw">if </span>http_task.is_finished() || std::time::Instant::now() &gt; max_wait {
-                        <span class="kw">break</span>;
-                    }
-
-                    interval.tick().<span class="kw">await</span>;
-                }
-
-                <span class="kw">if </span>!http_task.is_finished() {
-                    http_task.abort();
-                }
-
-                <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = http_task.<span class="kw">await </span>{
-                    <span class="kw">if let </span><span class="prelude-val">Ok</span>(panic) = err.try_into_panic() {
-                        <span class="kw">let </span>message = panic
-                            .downcast_ref::&lt;String&gt;()
-                            .map(String::as_str)
-                            .or_else(|| panic.downcast_ref::&lt;<span class="kw-2">&amp;</span>str&gt;().copied())
-                            .unwrap_or(<span class="string">"&lt;unknown non-string panic&gt;"</span>);
-
-                        <span class="macro">tracing::error!</span>(panic = message, <span class="string">"phoenix HTTP task panicked"</span>);
-                    }
-                }
-
-                res
+            <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = res {
+                <span class="macro">tracing::error!</span>(err = %err, <span class="string">"phoenix thread failed with an error"</span>);
             }
-        });
-
-        <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = res {
-            <span class="macro">tracing::error!</span>(err = %err, <span class="string">"phoenix thread failed with an error"</span>);
-        }
-    });
+        })
+        .context(<span class="string">"failed to spawn phoenix-http thread"</span>)<span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>(())
 }

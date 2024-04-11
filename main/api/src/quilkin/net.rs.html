@@ -462,7 +462,7 @@
         <span class="macro">cfg_if::cfg_if! </span>{
             <span class="kw">if </span><span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)] </span>{
                 <span class="kw">let </span>dispatcher = tracing::dispatcher::get_default(|d| d.clone());
-                std::thread::spawn(<span class="kw">move </span>|| {
+                std::thread::Builder::new().name(<span class="string">"io-uring"</span>.into()).spawn(<span class="kw">move </span>|| {
                     <span class="kw">let </span>_guard = tracing::dispatcher::set_default(<span class="kw-2">&amp;</span>dispatcher);
 
                     <span class="kw">match </span>tokio_uring::Runtime::new(<span class="kw-2">&amp;</span>tokio_uring::builder().entries(<span class="number">2048</span>)) {
@@ -474,7 +474,7 @@
                             <span class="kw">let _ </span>= tx.send(<span class="prelude-val">Err</span>(error.into()));
                         }
                     };
-                });
+                }).expect(<span class="string">"failed to spawn io-uring thread"</span>);
             } <span class="kw">else </span>{
                 <span class="kw">use </span>tracing::instrument::WithSubscriber <span class="kw">as _</span>;
                 tokio::spawn(<span class="kw">async move </span>{

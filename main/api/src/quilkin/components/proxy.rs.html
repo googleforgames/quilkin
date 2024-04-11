@@ -250,6 +250,16 @@
 <a href="#248" id="248">248</a>
 <a href="#249" id="249">249</a>
 <a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
 </pre></div><pre class="rust"><code><span class="kw">pub mod </span>packet_router;
 <span class="kw">mod </span>sessions;
 
@@ -390,67 +400,77 @@
                 <span class="kw-2">*</span>lock = <span class="prelude-val">Some</span>(check.clone());
             }
 
-            std::thread::spawn({
-                <span class="kw">let </span>config = config.clone();
-                <span class="kw">let </span><span class="kw-2">mut </span>shutdown_rx = shutdown_rx.clone();
-                <span class="kw">let </span>management_servers = <span class="self">self</span>.management_servers.clone();
+            std::thread::Builder::new()
+                .name(<span class="string">"proxy-subscription"</span>.into())
+                .spawn({
+                    <span class="kw">let </span>config = config.clone();
+                    <span class="kw">let </span><span class="kw-2">mut </span>shutdown_rx = shutdown_rx.clone();
+                    <span class="kw">let </span>management_servers = <span class="self">self</span>.management_servers.clone();
 
-                <span class="kw">move </span>|| {
-                    <span class="kw">let </span>runtime = tokio::runtime::Builder::new_multi_thread()
-                        .enable_all()
-                        .build()
-                        .unwrap();
+                    <span class="kw">move </span>|| {
+                        <span class="kw">let </span>runtime = tokio::runtime::Builder::new_multi_thread()
+                            .enable_all()
+                            .thread_name_fn(|| {
+                                <span class="kw">static </span>ATOMIC_ID: std::sync::atomic::AtomicUsize =
+                                    std::sync::atomic::AtomicUsize::new(<span class="number">0</span>);
+                                <span class="kw">let </span>id =
+                                    ATOMIC_ID.fetch_add(<span class="number">1</span>, std::sync::atomic::Ordering::SeqCst);
+                                <span class="macro">format!</span>(<span class="string">"proxy-subscription-{id}"</span>)
+                            })
+                            .build()
+                            .unwrap();
 
-                    runtime.block_on(<span class="kw">async move </span>{
-                        <span class="kw">let </span>client = <span class="kw">crate</span>::net::xds::AdsClient::connect(
-                            String::clone(<span class="kw-2">&amp;</span>id),
-                            management_servers,
-                        )
-                        .<span class="kw">await</span><span class="question-mark">?</span>;
-
-                        <span class="kw">let </span><span class="kw-2">mut </span>delta_sub = <span class="prelude-val">None</span>;
-                        <span class="kw">let </span><span class="kw-2">mut </span>state_sub = <span class="prelude-val">None</span>;
-
-                        <span class="kw">match </span>client
-                            .delta_subscribe(
-                                config.clone(),
-                                ready.clone(),
-                                [
-                                    (ResourceType::Cluster, Vec::new()),
-                                    (ResourceType::Listener, Vec::new()),
-                                    (ResourceType::Datacenter, Vec::new()),
-                                ],
+                        runtime.block_on(<span class="kw">async move </span>{
+                            <span class="kw">let </span>client = <span class="kw">crate</span>::net::xds::AdsClient::connect(
+                                String::clone(<span class="kw-2">&amp;</span>id),
+                                management_servers,
                             )
-                            .<span class="kw">await
-                        </span>{
-                            <span class="prelude-val">Ok</span>(ds) =&gt; delta_sub = <span class="prelude-val">Some</span>(ds),
-                            <span class="prelude-val">Err</span>(client) =&gt; {
-                                <span class="kw">let </span><span class="kw-2">mut </span>stream = client.xds_client_stream(config, ready);
+                            .<span class="kw">await</span><span class="question-mark">?</span>;
 
-                                tokio::time::sleep(std::time::Duration::from_nanos(<span class="number">1</span>)).<span class="kw">await</span>;
-                                stream
-                                    .aggregated_subscribe(ResourceType::Cluster, <span class="kw-2">&amp;</span>[])
-                                    .<span class="kw">await</span><span class="question-mark">?</span>;
-                                tokio::time::sleep(std::time::Duration::from_nanos(<span class="number">1</span>)).<span class="kw">await</span>;
-                                stream
-                                    .aggregated_subscribe(ResourceType::Listener, <span class="kw-2">&amp;</span>[])
-                                    .<span class="kw">await</span><span class="question-mark">?</span>;
-                                tokio::time::sleep(std::time::Duration::from_nanos(<span class="number">1</span>)).<span class="kw">await</span>;
-                                stream
-                                    .aggregated_subscribe(ResourceType::Datacenter, <span class="kw-2">&amp;</span>[])
-                                    .<span class="kw">await</span><span class="question-mark">?</span>;
+                            <span class="kw">let </span><span class="kw-2">mut </span>delta_sub = <span class="prelude-val">None</span>;
+                            <span class="kw">let </span><span class="kw-2">mut </span>state_sub = <span class="prelude-val">None</span>;
 
-                                state_sub = <span class="prelude-val">Some</span>(stream);
+                            <span class="kw">match </span>client
+                                .delta_subscribe(
+                                    config.clone(),
+                                    ready.clone(),
+                                    [
+                                        (ResourceType::Cluster, Vec::new()),
+                                        (ResourceType::Listener, Vec::new()),
+                                        (ResourceType::Datacenter, Vec::new()),
+                                    ],
+                                )
+                                .<span class="kw">await
+                            </span>{
+                                <span class="prelude-val">Ok</span>(ds) =&gt; delta_sub = <span class="prelude-val">Some</span>(ds),
+                                <span class="prelude-val">Err</span>(client) =&gt; {
+                                    <span class="kw">let </span><span class="kw-2">mut </span>stream = client.xds_client_stream(config, ready);
+
+                                    tokio::time::sleep(std::time::Duration::from_nanos(<span class="number">1</span>)).<span class="kw">await</span>;
+                                    stream
+                                        .aggregated_subscribe(ResourceType::Cluster, <span class="kw-2">&amp;</span>[])
+                                        .<span class="kw">await</span><span class="question-mark">?</span>;
+                                    tokio::time::sleep(std::time::Duration::from_nanos(<span class="number">1</span>)).<span class="kw">await</span>;
+                                    stream
+                                        .aggregated_subscribe(ResourceType::Listener, <span class="kw-2">&amp;</span>[])
+                                        .<span class="kw">await</span><span class="question-mark">?</span>;
+                                    tokio::time::sleep(std::time::Duration::from_nanos(<span class="number">1</span>)).<span class="kw">await</span>;
+                                    stream
+                                        .aggregated_subscribe(ResourceType::Datacenter, <span class="kw-2">&amp;</span>[])
+                                        .<span class="kw">await</span><span class="question-mark">?</span>;
+
+                                    state_sub = <span class="prelude-val">Some</span>(stream);
+                                }
                             }
-                        }
 
-                        <span class="kw">let _ </span>= shutdown_rx.changed().<span class="kw">await</span>;
-                        drop(delta_sub);
-                        drop(state_sub);
-                        <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, eyre::Error&gt;(())
-                    })
-                }
-            });
+                            <span class="kw">let _ </span>= shutdown_rx.changed().<span class="kw">await</span>;
+                            drop(delta_sub);
+                            drop(state_sub);
+                            <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, eyre::Error&gt;(())
+                        })
+                    }
+                })
+                .expect(<span class="string">"failed to spawn proxy-subscription thread"</span>);
         }
 
         <span class="kw">let </span>worker_notifications = packet_router::spawn_receivers(

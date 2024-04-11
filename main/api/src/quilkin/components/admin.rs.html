@@ -264,6 +264,12 @@
 <a href="#262" id="262">262</a>
 <a href="#263" id="263">263</a>
 <a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2023 Google LLC
  *
@@ -328,35 +334,41 @@
         <span class="macro">tracing::info!</span>(address = %address, <span class="string">"Starting admin endpoint"</span>);
 
         <span class="kw">let </span>mode = <span class="self">self</span>.clone();
-        std::thread::spawn(<span class="kw">move </span>|| {
-            <span class="kw">let </span>runtime = tokio::runtime::Builder::new_current_thread()
-                .enable_io()
-                .enable_time()
-                .build()
-                .expect(<span class="string">"couldn't create tokio runtime in thread"</span>);
-            runtime.block_on(<span class="kw">async move </span>{
-                <span class="kw">let </span>make_svc = make_service_fn(<span class="kw">move </span>|_conn| {
-                    <span class="kw">let </span>config = config.clone();
-                    <span class="kw">let </span>health = health.clone();
-                    <span class="kw">let </span>mode = mode.clone();
-                    <span class="kw">async move </span>{
+        std::thread::Builder::new()
+            .name(<span class="string">"admin-http"</span>.into())
+            .spawn(<span class="kw">move </span>|| {
+                <span class="kw">let </span>runtime = tokio::runtime::Builder::new_current_thread()
+                    .enable_io()
+                    .enable_time()
+                    .thread_name(<span class="string">"admin-http-worker"</span>)
+                    .build()
+                    .expect(<span class="string">"couldn't create tokio runtime in thread"</span>);
+                runtime.block_on(<span class="kw">async move </span>{
+                    <span class="kw">let </span>make_svc = make_service_fn(<span class="kw">move </span>|_conn| {
                         <span class="kw">let </span>config = config.clone();
                         <span class="kw">let </span>health = health.clone();
                         <span class="kw">let </span>mode = mode.clone();
-                        <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, Infallible&gt;(service_fn(<span class="kw">move </span>|req| {
+                        <span class="kw">async move </span>{
                             <span class="kw">let </span>config = config.clone();
                             <span class="kw">let </span>health = health.clone();
                             <span class="kw">let </span>mode = mode.clone();
-                            <span class="kw">async move </span>{
-                                <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, Infallible&gt;(mode.handle_request(req, config, health).<span class="kw">await</span>)
-                            }
-                        }))
-                    }
-                });
+                            <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, Infallible&gt;(service_fn(<span class="kw">move </span>|req| {
+                                <span class="kw">let </span>config = config.clone();
+                                <span class="kw">let </span>health = health.clone();
+                                <span class="kw">let </span>mode = mode.clone();
+                                <span class="kw">async move </span>{
+                                    <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, Infallible&gt;(
+                                        mode.handle_request(req, config, health).<span class="kw">await</span>,
+                                    )
+                                }
+                            }))
+                        }
+                    });
 
-                HyperServer::bind(<span class="kw-2">&amp;</span>address).serve(make_svc).<span class="kw">await
-            </span>})
-        })
+                    HyperServer::bind(<span class="kw-2">&amp;</span>address).serve(make_svc).<span class="kw">await
+                </span>})
+            })
+            .expect(<span class="string">"failed to spawn admin-http thread"</span>)
     }
 
     <span class="kw">fn </span>is_ready(<span class="kw-2">&amp;</span><span class="self">self</span>, config: <span class="kw-2">&amp;</span>Config) -&gt; bool {
