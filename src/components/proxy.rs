@@ -138,67 +138,77 @@ impl Proxy {
                 *lock = Some(check.clone());
             }
 
-            std::thread::spawn({
-                let config = config.clone();
-                let mut shutdown_rx = shutdown_rx.clone();
-                let management_servers = self.management_servers.clone();
+            std::thread::Builder::new()
+                .name("proxy-subscription".into())
+                .spawn({
+                    let config = config.clone();
+                    let mut shutdown_rx = shutdown_rx.clone();
+                    let management_servers = self.management_servers.clone();
 
-                move || {
-                    let runtime = tokio::runtime::Builder::new_multi_thread()
-                        .enable_all()
-                        .build()
-                        .unwrap();
+                    move || {
+                        let runtime = tokio::runtime::Builder::new_multi_thread()
+                            .enable_all()
+                            .thread_name_fn(|| {
+                                static ATOMIC_ID: std::sync::atomic::AtomicUsize =
+                                    std::sync::atomic::AtomicUsize::new(0);
+                                let id =
+                                    ATOMIC_ID.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                                format!("proxy-subscription-{id}")
+                            })
+                            .build()
+                            .unwrap();
 
-                    runtime.block_on(async move {
-                        let client = crate::net::xds::AdsClient::connect(
-                            String::clone(&id),
-                            management_servers,
-                        )
-                        .await?;
-
-                        let mut delta_sub = None;
-                        let mut state_sub = None;
-
-                        match client
-                            .delta_subscribe(
-                                config.clone(),
-                                ready.clone(),
-                                [
-                                    (ResourceType::Cluster, Vec::new()),
-                                    (ResourceType::Listener, Vec::new()),
-                                    (ResourceType::Datacenter, Vec::new()),
-                                ],
+                        runtime.block_on(async move {
+                            let client = crate::net::xds::AdsClient::connect(
+                                String::clone(&id),
+                                management_servers,
                             )
-                            .await
-                        {
-                            Ok(ds) => delta_sub = Some(ds),
-                            Err(client) => {
-                                let mut stream = client.xds_client_stream(config, ready);
+                            .await?;
 
-                                tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
-                                stream
-                                    .aggregated_subscribe(ResourceType::Cluster, &[])
-                                    .await?;
-                                tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
-                                stream
-                                    .aggregated_subscribe(ResourceType::Listener, &[])
-                                    .await?;
-                                tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
-                                stream
-                                    .aggregated_subscribe(ResourceType::Datacenter, &[])
-                                    .await?;
+                            let mut delta_sub = None;
+                            let mut state_sub = None;
 
-                                state_sub = Some(stream);
+                            match client
+                                .delta_subscribe(
+                                    config.clone(),
+                                    ready.clone(),
+                                    [
+                                        (ResourceType::Cluster, Vec::new()),
+                                        (ResourceType::Listener, Vec::new()),
+                                        (ResourceType::Datacenter, Vec::new()),
+                                    ],
+                                )
+                                .await
+                            {
+                                Ok(ds) => delta_sub = Some(ds),
+                                Err(client) => {
+                                    let mut stream = client.xds_client_stream(config, ready);
+
+                                    tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
+                                    stream
+                                        .aggregated_subscribe(ResourceType::Cluster, &[])
+                                        .await?;
+                                    tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
+                                    stream
+                                        .aggregated_subscribe(ResourceType::Listener, &[])
+                                        .await?;
+                                    tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
+                                    stream
+                                        .aggregated_subscribe(ResourceType::Datacenter, &[])
+                                        .await?;
+
+                                    state_sub = Some(stream);
+                                }
                             }
-                        }
 
-                        let _ = shutdown_rx.changed().await;
-                        drop(delta_sub);
-                        drop(state_sub);
-                        Ok::<_, eyre::Error>(())
-                    })
-                }
-            });
+                            let _ = shutdown_rx.changed().await;
+                            drop(delta_sub);
+                            drop(state_sub);
+                            Ok::<_, eyre::Error>(())
+                        })
+                    }
+                })
+                .expect("failed to spawn proxy-subscription thread");
         }
 
         let worker_notifications = packet_router::spawn_receivers(

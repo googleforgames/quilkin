@@ -41,14 +41,9 @@ pub fn spawn<M: Clone + Measurement + Sync + Send + 'static>(
     };
     let mut config_watcher = datacenters.watch();
 
-    std::thread::spawn(move || {
-        let runtime = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .unwrap();
-        let res = runtime.block_on({
-            let mut phoenix_watcher = phoenix.update_watcher();
-            let config = config.clone();
+    std::thread::Builder::new()
+        .name("phoenix-http".into())
+        .spawn(move || {
 
             async move {
                 let json = crate::config::Slot::new(serde_json::Map::default());

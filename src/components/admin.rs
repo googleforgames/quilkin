@@ -62,35 +62,41 @@ impl Admin {
         tracing::info!(address = %address, "Starting admin endpoint");
 
         let mode = self.clone();
-        std::thread::spawn(move || {
-            let runtime = tokio::runtime::Builder::new_current_thread()
-                .enable_io()
-                .enable_time()
-                .build()
-                .expect("couldn't create tokio runtime in thread");
-            runtime.block_on(async move {
-                let make_svc = make_service_fn(move |_conn| {
-                    let config = config.clone();
-                    let health = health.clone();
-                    let mode = mode.clone();
-                    async move {
+        std::thread::Builder::new()
+            .name("admin-http".into())
+            .spawn(move || {
+                let runtime = tokio::runtime::Builder::new_current_thread()
+                    .enable_io()
+                    .enable_time()
+                    .thread_name("admin-http-worker")
+                    .build()
+                    .expect("couldn't create tokio runtime in thread");
+                runtime.block_on(async move {
+                    let make_svc = make_service_fn(move |_conn| {
                         let config = config.clone();
                         let health = health.clone();
                         let mode = mode.clone();
-                        Ok::<_, Infallible>(service_fn(move |req| {
+                        async move {
                             let config = config.clone();
                             let health = health.clone();
                             let mode = mode.clone();
-                            async move {
-                                Ok::<_, Infallible>(mode.handle_request(req, config, health).await)
-                            }
-                        }))
-                    }
-                });
+                            Ok::<_, Infallible>(service_fn(move |req| {
+                                let config = config.clone();
+                                let health = health.clone();
+                                let mode = mode.clone();
+                                async move {
+                                    Ok::<_, Infallible>(
+                                        mode.handle_request(req, config, health).await,
+                                    )
+                                }
+                            }))
+                        }
+                    });
 
-                HyperServer::bind(&address).serve(make_svc).await
+                    HyperServer::bind(&address).serve(make_svc).await
+                })
             })
-        })
+            .expect("failed to spawn admin-http thread")
     }
 
     fn is_ready(&self, config: &Config) -> bool {
