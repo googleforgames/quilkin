@@ -23,7 +23,7 @@ macro_rules! uring_spawn {
         cfg_if::cfg_if! {
             if #[cfg(target_os = "linux")] {
                 let dispatcher = tracing::dispatcher::get_default(|d| d.clone());
-                std::thread::spawn(move || {
+                std::thread::Builder::new().name("io-uring".into()).spawn(move || {
                     let _guard = tracing::dispatcher::set_default(&dispatcher);
 
                     match tokio_uring::Runtime::new(&tokio_uring::builder().entries(2048)) {
@@ -35,7 +35,7 @@ macro_rules! uring_spawn {
                             let _ = tx.send(Err(error.into()));
                         }
                     };
-                });
+                }).expect("failed to spawn io-uring thread");
             } else {
                 use tracing::instrument::WithSubscriber as _;
                 tokio::spawn(async move {
