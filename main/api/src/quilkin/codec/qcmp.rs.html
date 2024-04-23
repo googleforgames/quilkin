@@ -700,6 +700,16 @@
 <a href="#698" id="698">698</a>
 <a href="#699" id="699">699</a>
 <a href="#700" id="700">700</a>
+<a href="#701" id="701">701</a>
+<a href="#702" id="702">702</a>
+<a href="#703" id="703">703</a>
+<a href="#704" id="704">704</a>
+<a href="#705" id="705">705</a>
+<a href="#706" id="706">706</a>
+<a href="#707" id="707">707</a>
+<a href="#708" id="708">708</a>
+<a href="#709" id="709">709</a>
+<a href="#710" id="710">710</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2023 Google LLC
  *
@@ -1382,11 +1392,21 @@
         <span class="kw">let </span>addr = socket.local_addr().unwrap().as_socket().unwrap();
 
         <span class="kw">let </span>(_tx, rx) = <span class="kw">crate</span>::make_shutdown_channel(Default::default());
-        <span class="kw">super</span>::spawn(socket, rx);
-        tokio::time::sleep(std::time::Duration::from_millis(<span class="number">20</span>)).<span class="kw">await</span>;
+        spawn(socket, rx);
 
-        <span class="kw">let </span>delay = std::time::Duration::from_millis(<span class="number">50</span>);
+        <span class="kw">let </span>delay = Duration::from_millis(<span class="number">50</span>);
         <span class="kw">let </span>node = QcmpMeasurement::with_artificial_delay(delay).unwrap();
+
+        <span class="comment">// fire messages until we get one back, so we know the socket is ready.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>check = <span class="bool-val">false</span>;
+        <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">20 </span>{
+            tokio::time::sleep(Duration::from_millis(<span class="number">50</span>)).<span class="kw">await</span>;
+            <span class="kw">if </span>node.measure_distance(addr).<span class="kw">await</span>.is_ok() {
+                check = <span class="bool-val">true</span>;
+                <span class="kw">break</span>;
+            }
+        }
+        <span class="macro">assert!</span>(check, <span class="string">"timed out on initial qcmp spawn"</span>);
 
         <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">3 </span>{
             <span class="kw">let </span>dm = node.measure_distance(addr).<span class="kw">await</span>.unwrap();

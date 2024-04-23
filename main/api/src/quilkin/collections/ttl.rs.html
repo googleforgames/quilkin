@@ -783,6 +783,8 @@
 <a href="#781" id="781">781</a>
 <a href="#782" id="782">782</a>
 <a href="#783" id="783">783</a>
+<a href="#784" id="784">784</a>
+<a href="#785" id="785">785</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -1273,14 +1275,16 @@
     </span><span class="kw">async fn </span>len() {
         <span class="kw">let </span>(one, two) = address_pair();
         <span class="kw">const </span>TTL: Duration = Duration::from_millis(<span class="number">50</span>);
+        <span class="kw">const </span>POLL: Duration = Duration::from_millis(<span class="number">10</span>);
 
-        <span class="kw">let </span>map = TtlMap::&lt;EndpointAddress, usize&gt;::new(TTL, Duration::from_millis(<span class="number">10</span>));
+        <span class="kw">let </span>map = TtlMap::&lt;EndpointAddress, usize&gt;::new(TTL, POLL);
         map.insert(one, <span class="number">1</span>);
         <span class="macro">assert_eq!</span>(map.len(), <span class="number">1</span>);
         map.insert(two, <span class="number">2</span>);
         <span class="macro">assert_eq!</span>(map.len(), <span class="number">2</span>);
 
-        tokio::time::sleep(TTL).<span class="kw">await</span>;
+        <span class="comment">// add POLL to allow for if it JUST polls right before TTL.
+        </span>tokio::time::sleep(TTL + POLL).<span class="kw">await</span>;
         <span class="macro">assert!</span>(map.is_empty());
     }
 
