@@ -28,7 +28,7 @@ pub fn handle_delta_discovery_responses(
     stream: impl futures::Stream<Item = tonic::Result<DeltaDiscoveryResponse>> + 'static + Send,
     config: Arc<Config>,
     local: Arc<LocalVersions>,
-    remote_addr: std::net::SocketAddr,
+    _remote_addr: std::net::SocketAddr,
 ) -> std::pin::Pin<Box<dyn futures::Stream<Item = crate::Result<DeltaDiscoveryRequest>> + Send>> {
     Box::pin(async_stream::try_stream! {
         let _stream_metrics = metrics::StreamConnectionMetrics::new(identifier.clone());
@@ -70,8 +70,8 @@ pub fn handle_delta_discovery_responses(
                     .resources
                     .into_iter()
                     .map(|res| {
-                        Resource::try_from(res.resource.ok_or_else(|| eyre::format_err!("resource field not set"))?).map(|mut rsrc| {
-                            rsrc.add_host_to_datacenter(remote_addr);
+                        Resource::try_from(res.resource.ok_or_else(|| eyre::format_err!("resource field not set"))?).map(|rsrc| {
+                            //rsrc.add_host_to_datacenter(remote_addr);
                             (rsrc, res.version)
                         })
                     }), response.removed_resources, &mut lock)
