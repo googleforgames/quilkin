@@ -488,14 +488,16 @@ mod tests {
     async fn len() {
         let (one, two) = address_pair();
         const TTL: Duration = Duration::from_millis(50);
+        const POLL: Duration = Duration::from_millis(10);
 
-        let map = TtlMap::<EndpointAddress, usize>::new(TTL, Duration::from_millis(10));
+        let map = TtlMap::<EndpointAddress, usize>::new(TTL, POLL);
         map.insert(one, 1);
         assert_eq!(map.len(), 1);
         map.insert(two, 2);
         assert_eq!(map.len(), 2);
 
-        tokio::time::sleep(TTL).await;
+        // add POLL to allow for if it JUST polls right before TTL.
+        tokio::time::sleep(TTL + POLL).await;
         assert!(map.is_empty());
     }
 

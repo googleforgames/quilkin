@@ -680,11 +680,21 @@ mod tests {
         let addr = socket.local_addr().unwrap().as_socket().unwrap();
 
         let (_tx, rx) = crate::make_shutdown_channel(Default::default());
-        super::spawn(socket, rx);
-        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        spawn(socket, rx);
 
-        let delay = std::time::Duration::from_millis(50);
+        let delay = Duration::from_millis(50);
         let node = QcmpMeasurement::with_artificial_delay(delay).unwrap();
+
+        // fire messages until we get one back, so we know the socket is ready.
+        let mut check = false;
+        for _ in 0..20 {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+            if node.measure_distance(addr).await.is_ok() {
+                check = true;
+                break;
+            }
+        }
+        assert!(check, "timed out on initial qcmp spawn");
 
         for _ in 0..3 {
             let dm = node.measure_distance(addr).await.unwrap();
