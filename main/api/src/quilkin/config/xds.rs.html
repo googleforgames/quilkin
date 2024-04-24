@@ -100,6 +100,8 @@
 <a href="#98" id="98">98</a>
 <a href="#99" id="99">99</a>
 <a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::Config;
 <span class="kw">use </span><span class="kw">crate</span>::net::xds::{
     discovery::{DeltaDiscoveryRequest, DeltaDiscoveryResponse},
@@ -130,7 +132,7 @@
     stream: <span class="kw">impl </span>futures::Stream&lt;Item = tonic::Result&lt;DeltaDiscoveryResponse&gt;&gt; + <span class="lifetime">'static </span>+ Send,
     config: Arc&lt;Config&gt;,
     local: Arc&lt;LocalVersions&gt;,
-    remote_addr: std::net::SocketAddr,
+    remote_addr: <span class="prelude-ty">Option</span>&lt;std::net::SocketAddr&gt;,
 ) -&gt; std::pin::Pin&lt;Box&lt;<span class="kw">dyn </span>futures::Stream&lt;Item = <span class="kw">crate</span>::Result&lt;DeltaDiscoveryRequest&gt;&gt; + Send&gt;&gt; {
     Box::pin(<span class="macro">async_stream::try_stream! </span>{
         <span class="kw">let </span>_stream_metrics = metrics::StreamConnectionMetrics::new(identifier.clone());
@@ -173,7 +175,9 @@
                     .into_iter()
                     .map(|res| {
                         Resource::try_from(res.resource.ok_or_else(|| <span class="macro">eyre::format_err!</span>(<span class="string">"resource field not set"</span>))<span class="question-mark">?</span>).map(|<span class="kw-2">mut </span>rsrc| {
-                            rsrc.add_host_to_datacenter(remote_addr);
+                            <span class="kw">if let </span><span class="prelude-val">Some</span>(ra) = remote_addr {
+                                rsrc.add_host_to_datacenter(ra);
+                            }
                             (rsrc, res.version)
                         })
                     }), response.removed_resources, <span class="kw-2">&amp;mut </span>lock)
