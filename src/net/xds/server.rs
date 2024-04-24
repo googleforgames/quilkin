@@ -713,7 +713,7 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
                     responses,
                     config.clone(),
                     local.clone(),
-                    remote_addr,
+                    Some(remote_addr),
                 );
 
                 loop {

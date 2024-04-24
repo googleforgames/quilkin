@@ -116,6 +116,7 @@ pub struct Client<C: ServiceClient> {
     identifier: Arc<str>,
     management_servers: Vec<Endpoint>,
     /// The management server endpoint the client is currently connected to
+    #[allow(dead_code)]
     connected_endpoint: Endpoint,
 }
 
@@ -432,50 +433,6 @@ impl AdsClient {
 
         let identifier = String::from(&*self.identifier);
 
-        async fn get_remote_addr(
-            ep: &tonic::transport::Endpoint,
-        ) -> Result<std::net::SocketAddr, eyre::Error> {
-            let uri = ep.uri();
-            let authority = uri
-                .authority()
-                .ok_or_else(|| eyre::eyre!("uri has no authority component"))?;
-
-            let sa = match uri.scheme_str() {
-                Some(scheme) if matches!(scheme, "http" | "https") => {
-                    let port =
-                        uri.port_u16()
-                            .unwrap_or_else(|| if scheme == "http" { 80 } else { 443 });
-                    let ep = crate::net::endpoint::EndpointAddress {
-                        host: crate::net::endpoint::AddressKind::Name(authority.host().into()),
-                        port,
-                    };
-
-                    ep.to_socket_addr().await?
-                }
-                None => authority.as_str().parse()?,
-                Some(unknown) => {
-                    return Err(eyre::eyre!("invalid scheme '{unknown}'"));
-                }
-            };
-
-            Ok(sa)
-        }
-
-        let mut remote_addr = match get_remote_addr(&self.connected_endpoint).await {
-            Ok(ra) => ra,
-            Err(err) => {
-                tracing::error!(
-                    uri = ?self.connected_endpoint.uri(),
-                    error = ?err,
-                    "failed to get remote address"
-                );
-                return Err(self);
-            }
-        };
-
-        // Resolve the remote endpoint to its socketaddr
-        // self.connected_endpoint.
-
         let (mut ds, stream) = match DeltaClientStream::connect(
             self.client.clone(),
             identifier.clone(),
@@ -515,7 +472,7 @@ impl AdsClient {
                         stream,
                         config.clone(),
                         local.clone(),
-                        remote_addr,
+                        None,
                     );
 
                     loop {
@@ -563,18 +520,8 @@ impl AdsClient {
                         .store(false, Ordering::SeqCst);
 
                     tracing::info!("Lost connection to xDS, retrying");
-                    let (new_client, new_endpoint) =
+                    let (new_client, _) =
                         Self::connect_with_backoff(&self.management_servers).await?;
-
-                    remote_addr = match get_remote_addr(&new_endpoint).await {
-                        Ok(ra) => ra,
-                        Err(err) => {
-                            return Err(err.wrap_err(format!(
-                                "failed to get remote address for endpoint {}",
-                                new_endpoint.uri()
-                            )));
-                        }
-                    };
 
                     (ds, stream) =
                         DeltaClientStream::connect(new_client, identifier.clone()).await?;
