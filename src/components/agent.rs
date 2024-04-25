@@ -29,6 +29,7 @@ pub struct Agent {
     pub icao_code: Option<IcaoCode>,
     pub relay_servers: Vec<tonic::transport::Endpoint>,
     pub provider: Option<Providers>,
+    pub address_type: Option<String>,
 }
 
 impl Agent {
@@ -60,6 +61,7 @@ impl Agent {
                     config.clone(),
                     ready.provider_is_healthy.clone(),
                     self.locality,
+                    self.address_type,
                 )),
                 None => return Err(eyre::eyre!("no configuration provider given")),
             };

@@ -397,6 +397,7 @@ impl Pail {
                         relay_servers,
                         qcmp_socket,
                         provider: Some(Providers::File { path }),
+                        address_type: None,
                     }
                     .run(RunArgs {
                         config: aconfig,

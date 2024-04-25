@@ -48,6 +48,10 @@ pub struct Agent {
     /// The configuration source for a management server.
     #[clap(subcommand)]
     pub provider: Option<crate::config::Providers>,
+    /// If specified, will use the first node address found with the specified
+    /// type
+    #[clap(long)]
+    pub address_type: Option<String>,
     /// The interval in seconds at which the agent will wait for a discovery
     /// request from a relay server before restarting the connection.
     #[clap(long, env = "QUILKIN_IDLE_REQUEST_INTERVAL_SECS")]
@@ -68,6 +72,7 @@ impl Default for Agent {
             provider: <_>::default(),
             idle_request_interval_secs: None,
             icao_code: <_>::default(),
+            address_type: None,
         }
     }
 }
@@ -97,6 +102,7 @@ impl Agent {
             icao_code,
             relay_servers: self.relay,
             provider: self.provider,
+            address_type: self.address_type,
         }
         .run(crate::components::RunArgs {
             config,
