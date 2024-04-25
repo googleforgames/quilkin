@@ -376,6 +376,7 @@ pub struct GameServerStatus {
     pub state: GameServerState,
     pub ports: Option<Vec<GameServerStatusPort>>,
     pub address: String,
+    #[serde(default)]
     pub addresses: Vec<NodeAddress>,
     pub node_name: String,
     pub reserved_until: Option<k8s_openapi::apimachinery::pkg::apis::meta::v1::Time>,
