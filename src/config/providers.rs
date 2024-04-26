@@ -47,7 +47,7 @@ impl Providers {
         config: std::sync::Arc<crate::Config>,
         health_check: Arc<AtomicBool>,
         locality: Option<crate::net::endpoint::Locality>,
-        address_type: Option<String>,
+        address_selector: Option<crate::config::AddressSelector>,
     ) -> tokio::task::JoinHandle<crate::Result<()>> {
         match &self {
             Self::Agones {
@@ -64,7 +64,7 @@ impl Providers {
                         health_check.clone(),
                         locality.clone(),
                         config.clone(),
-                        address_type.clone(),
+                        address_selector.clone(),
                     )
                 }
             })),

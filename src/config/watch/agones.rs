@@ -28,7 +28,7 @@ pub async fn watch(
     health_check: Arc<AtomicBool>,
     locality: Option<Locality>,
     config: Arc<Config>,
-    address_type: Option<String>,
+    address_selector: Option<crate::config::AddressSelector>,
 ) -> crate::Result<()> {
     let client = tokio::time::timeout(
         std::time::Duration::from_secs(5),
@@ -45,7 +45,7 @@ pub async fn watch(
         gameservers_namespace,
         config.clone(),
         locality,
-        address_type,
+        address_selector,
     );
     tokio::pin!(configmap_reflector);
     tokio::pin!(gameserver_reflector);

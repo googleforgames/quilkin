@@ -41,7 +41,10 @@ pub struct GameServer {
 }
 
 impl GameServer {
-    pub fn endpoint(&self, address_type: Option<&str>) -> Option<Endpoint> {
+    pub fn endpoint(
+        &self,
+        address_selector: Option<&crate::config::AddressSelector>,
+    ) -> Option<Endpoint> {
         self.status.as_ref().and_then(|status| {
             let port = status
                 .ports
@@ -59,11 +62,19 @@ impl GameServer {
                 map
             };
 
-            let address = if let Some(at) = address_type {
-                status
-                    .addresses
-                    .iter()
-                    .find_map(|adr| (adr.type_ == at).then(|| adr.address.clone()))?
+            let address = if let Some(ads) = address_selector {
+                status.addresses.iter().find_map(|adr| {
+                    if adr.type_ != ads.name {
+                        return None;
+                    }
+
+                    use crate::config::AddrKind;
+                    match ads.kind {
+                        AddrKind::Any => Some(adr.address.clone()),
+                        AddrKind::Ipv4 => (!adr.address.contains(':')).then(|| adr.address.clone()),
+                        AddrKind::Ipv6 => adr.address.contains(':').then(|| adr.address.clone()),
+                    }
+                })?
             } else {
                 status.address.clone()
             };

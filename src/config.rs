@@ -861,6 +861,46 @@ impl From<(String, FilterInstance)> for Filter {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct AddressSelector {
+    pub name: String,
+    pub kind: AddrKind,
+}
+
+impl std::str::FromStr for AddressSelector {
+    type Err = eyre::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let ads = if let Some((name, kind)) = s.split_once(':') {
+            let kind = match kind {
+                "ipv4" => AddrKind::Ipv4,
+                "ipv6" => AddrKind::Ipv6,
+                "any" => AddrKind::Any,
+                s => return Err(eyre::eyre!("unknown kind '{s}'")),
+            };
+
+            Self {
+                name: name.into(),
+                kind,
+            }
+        } else {
+            Self {
+                name: s.into(),
+                kind: AddrKind::Any,
+            }
+        };
+
+        Ok(ads)
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum AddrKind {
+    Ipv4,
+    Ipv6,
+    Any,
+}
+
 #[cfg(test)]
 mod tests {
     use std::net::Ipv6Addr;
