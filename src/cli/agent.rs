@@ -49,12 +49,12 @@ pub struct Agent {
     #[clap(subcommand)]
     pub provider: Option<crate::config::Providers>,
     /// If specified, filters the available gameserver addresses to the one that
-    /// matches
-    ///
-    /// This takes the form `<address_type>`, and optionally a specifier for the
-    /// IP address kind following a `:` as in `<address_type>:<ipv4|ipv6>`.
+    /// matches the specified type
     #[clap(long)]
-    pub address_selector: Option<crate::config::AddressSelector>,
+    pub address_type: Option<String>,
+    /// If specified, additionally filters the gameserver address by its ip kind
+    #[clap(long, requires("address_type"), value_enum)]
+    pub ip_kind: Option<crate::config::AddrKind>,
     /// The interval in seconds at which the agent will wait for a discovery
     /// request from a relay server before restarting the connection.
     #[clap(long, env = "QUILKIN_IDLE_REQUEST_INTERVAL_SECS")]
@@ -62,6 +62,21 @@ pub struct Agent {
     /// The ICAO code for the agent.
     #[clap(short, long, env, default_value_t = crate::config::IcaoCode::default())]
     pub icao_code: crate::config::IcaoCode,
+}
+
+impl clap::ValueEnum for crate::config::AddrKind {
+    fn value_variants<'a>() -> &'a [Self] {
+        &[Self::Ipv4, Self::Ipv6, Self::Any]
+    }
+
+    fn to_possible_value(&self) -> Option<clap::builder::PossibleValue> {
+        use clap::builder::PossibleValue as pv;
+        Some(match self {
+            Self::Ipv4 => pv::new("v4"),
+            Self::Ipv6 => pv::new("v6"),
+            Self::Any => pv::new("any"),
+        })
+    }
 }
 
 impl Default for Agent {
@@ -75,7 +90,8 @@ impl Default for Agent {
             provider: <_>::default(),
             idle_request_interval_secs: None,
             icao_code: <_>::default(),
-            address_selector: None,
+            address_type: None,
+            ip_kind: None,
         }
     }
 }
@@ -105,7 +121,10 @@ impl Agent {
             icao_code,
             relay_servers: self.relay,
             provider: self.provider,
-            address_selector: self.address_selector,
+            address_selector: self.address_type.map(|at| crate::config::AddressSelector {
+                name: at,
+                kind: self.ip_kind.unwrap_or(crate::config::AddrKind::Any),
+            }),
         }
         .run(crate::components::RunArgs {
             config,
