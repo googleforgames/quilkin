@@ -19,29 +19,35 @@ import "google/protobuf/struct.proto";
 
 package quilkin.config.v1alpha1;
 
-message ClusterMap {
-    repeated Cluster clusters = 1;
-}
+message ClusterMap { repeated Cluster clusters = 1; }
 
 message Cluster {
-    Locality locality = 1;
-    repeated Endpoint endpoints = 2;
+  Locality locality = 1;
+  repeated Endpoint endpoints = 2;
 }
 
 message Locality {
-    string region = 1;
-    string zone = 2;
-    string sub_zone = 3;
+  string region = 1;
+  string zone = 2;
+  string sub_zone = 3;
 }
 
 message Endpoint {
-    string host = 1;
-    uint32 port = 2;
-    google.protobuf.Struct metadata = 3;
+  string host = 1;
+  uint32 port = 2;
+  google.protobuf.Struct metadata = 3;
 }
 
 message Datacenter {
-    string host = 1;
-    uint32 qcmp_port = 2;
-    string icao_code = 3;
+  string host = 1;
+  uint32 qcmp_port = 2;
+  string icao_code = 3;
 }
+
+message Filter {
+  string name = 1;
+  string label = 2;
+  string config = 3;
+}
+
+message FilterChain { repeated Filter filters = 1; }
