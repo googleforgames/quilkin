@@ -50,7 +50,7 @@ impl Capture {
     fn new(config: Config) -> Self {
         Self {
             capture: config.strategy.into_capture(),
-            is_present_key: (config.metadata_key.to_string() + "/is_present").into(),
+            is_present_key: format!("{}/is_present", config.metadata_key).into(),
             metadata_key: config.metadata_key,
         }
     }
