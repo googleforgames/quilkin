@@ -357,7 +357,8 @@ pub struct GameServerPort {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub container: Option<String>,
     /// The port that is being opened on the specified container's process
-    pub container_port: u16,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub container_port: Option<u16>,
     /// The port exposed on the host for clients to connect to
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub host_port: Option<u16>,
