@@ -860,6 +860,7 @@
 <a href="#858" id="858">858</a>
 <a href="#859" id="859">859</a>
 <a href="#860" id="860">860</a>
+<a href="#861" id="861">861</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -1219,7 +1220,8 @@
     </span><span class="attr">#[serde(default, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
     </span><span class="kw">pub </span>container: <span class="prelude-ty">Option</span>&lt;String&gt;,
     <span class="doccomment">/// The port that is being opened on the specified container's process
-    </span><span class="kw">pub </span>container_port: u16,
+    </span><span class="attr">#[serde(default, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
+    </span><span class="kw">pub </span>container_port: <span class="prelude-ty">Option</span>&lt;u16&gt;,
     <span class="doccomment">/// The port exposed on the host for clients to connect to
     </span><span class="attr">#[serde(default, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
     </span><span class="kw">pub </span>host_port: <span class="prelude-ty">Option</span>&lt;u16&gt;,
