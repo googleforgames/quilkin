@@ -861,6 +861,19 @@ impl From<(String, FilterInstance)> for Filter {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct AddressSelector {
+    pub name: String,
+    pub kind: AddrKind,
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum AddrKind {
+    Ipv4,
+    Ipv6,
+    Any,
+}
+
 #[cfg(test)]
 mod tests {
     use std::net::Ipv6Addr;
