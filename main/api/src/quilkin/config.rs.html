@@ -1093,6 +1093,19 @@
 <a href="#1091" id="1091">1091</a>
 <a href="#1092" id="1092">1092</a>
 <a href="#1093" id="1093">1093</a>
+<a href="#1094" id="1094">1094</a>
+<a href="#1095" id="1095">1095</a>
+<a href="#1096" id="1096">1096</a>
+<a href="#1097" id="1097">1097</a>
+<a href="#1098" id="1098">1098</a>
+<a href="#1099" id="1099">1099</a>
+<a href="#1100" id="1100">1100</a>
+<a href="#1101" id="1101">1101</a>
+<a href="#1102" id="1102">1102</a>
+<a href="#1103" id="1103">1103</a>
+<a href="#1104" id="1104">1104</a>
+<a href="#1105" id="1105">1105</a>
+<a href="#1106" id="1106">1106</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -1954,6 +1967,19 @@
             config: <span class="prelude-val">Some</span>(serde_json::Value::clone(instance.config())),
         }
     }
+}
+
+<span class="attr">#[derive(Clone, Debug)]
+</span><span class="kw">pub struct </span>AddressSelector {
+    <span class="kw">pub </span>name: String,
+    <span class="kw">pub </span>kind: AddrKind,
+}
+
+<span class="attr">#[derive(Copy, Clone, Debug)]
+</span><span class="kw">pub enum </span>AddrKind {
+    Ipv4,
+    Ipv6,
+    Any,
 }
 
 <span class="attr">#[cfg(test)]

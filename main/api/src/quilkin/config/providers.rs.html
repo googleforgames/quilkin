@@ -105,6 +105,8 @@
 <a href="#103" id="103">103</a>
 <a href="#104" id="104">104</a>
 <a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
@@ -154,6 +156,7 @@
         config: std::sync::Arc&lt;<span class="kw">crate</span>::Config&gt;,
         health_check: Arc&lt;AtomicBool&gt;,
         locality: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::net::endpoint::Locality&gt;,
+        address_selector: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::config::AddressSelector&gt;,
     ) -&gt; tokio::task::JoinHandle&lt;<span class="kw">crate</span>::Result&lt;()&gt;&gt; {
         <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self </span>{
             <span class="self">Self</span>::Agones {
@@ -170,6 +173,7 @@
                         health_check.clone(),
                         locality.clone(),
                         config.clone(),
+                        address_selector.clone(),
                     )
                 }
             })),

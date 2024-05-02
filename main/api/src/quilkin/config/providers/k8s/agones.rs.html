@@ -861,6 +861,21 @@
 <a href="#859" id="859">859</a>
 <a href="#860" id="860">860</a>
 <a href="#861" id="861">861</a>
+<a href="#862" id="862">862</a>
+<a href="#863" id="863">863</a>
+<a href="#864" id="864">864</a>
+<a href="#865" id="865">865</a>
+<a href="#866" id="866">866</a>
+<a href="#867" id="867">867</a>
+<a href="#868" id="868">868</a>
+<a href="#869" id="869">869</a>
+<a href="#870" id="870">870</a>
+<a href="#871" id="871">871</a>
+<a href="#872" id="872">872</a>
+<a href="#873" id="873">873</a>
+<a href="#874" id="874">874</a>
+<a href="#875" id="875">875</a>
+<a href="#876" id="876">876</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -878,6 +893,7 @@
  */
 
 </span><span class="kw">use </span>k8s_openapi::{
+    api::core::v1::NodeAddress,
     apiextensions_apiserver::pkg::apis::apiextensions::v1::{
         CustomResourceDefinition, CustomResourceDefinitionNames, CustomResourceDefinitionSpec,
         CustomResourceDefinitionVersion, CustomResourceValidation,
@@ -903,8 +919,11 @@
 }
 
 <span class="kw">impl </span>GameServer {
-    <span class="kw">pub fn </span>endpoint(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Endpoint&gt; {
-        <span class="self">self</span>.status.as_ref().map(|status| {
+    <span class="kw">pub fn </span>endpoint(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        address_selector: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="kw">crate</span>::config::AddressSelector&gt;,
+    ) -&gt; <span class="prelude-ty">Option</span>&lt;Endpoint&gt; {
+        <span class="self">self</span>.status.as_ref().and_then(|status| {
             <span class="kw">let </span>port = status
                 .ports
                 .as_ref()
@@ -921,13 +940,32 @@
                 map
             };
 
-            Endpoint::with_metadata(
-                (status.address.clone(), port).into(),
+            <span class="kw">let </span>address = <span class="kw">if let </span><span class="prelude-val">Some</span>(ads) = address_selector {
+                status.addresses.iter().find_map(|adr| {
+                    <span class="kw">if </span>adr.type_ != ads.name {
+                        <span class="kw">return </span><span class="prelude-val">None</span>;
+                    }
+
+                    <span class="kw">use </span><span class="kw">crate</span>::config::AddrKind;
+                    <span class="kw">match </span>ads.kind {
+                        AddrKind::Any =&gt; <span class="prelude-val">Some</span>(adr.address.clone()),
+                        AddrKind::Ipv4 =&gt; (!adr.address.contains(<span class="string">':'</span>)).then(|| adr.address.clone()),
+                        AddrKind::Ipv6 =&gt; adr.address.contains(<span class="string">':'</span>).then(|| adr.address.clone()),
+                    }
+                })<span class="question-mark">?
+            </span>} <span class="kw">else </span>{
+                status.address.clone()
+            };
+
+            <span class="kw">let </span>ep = Endpoint::with_metadata(
+                (address, port).into(),
                 <span class="kw">crate</span>::net::endpoint::metadata::MetadataView::with_unknown(
                     <span class="kw">crate</span>::net::endpoint::Metadata { tokens },
                     extra_metadata,
                 ),
-            )
+            );
+
+            <span class="prelude-val">Some</span>(ep)
         })
     }
 
@@ -996,7 +1034,7 @@
 
     <span class="kw">pub fn </span>is_allocated(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
         <span class="self">self</span>.status.as_ref().map_or(<span class="bool-val">false</span>, |status| {
-            <span class="macro">tracing::trace!</span>(%status.address, <span class="question-mark">?</span>status.state, <span class="string">"checking gameserver"</span>);
+            <span class="macro">tracing::trace!</span>(<span class="question-mark">?</span>status.addresses, <span class="question-mark">?</span>status.state, <span class="string">"checking gameserver"</span>);
             <span class="macro">matches!</span>(status.state, GameServerState::Allocated)
         })
     }
@@ -1152,16 +1190,6 @@
     }
 }
 
-<span class="kw">impl </span>TryFrom&lt;GameServer&gt; <span class="kw">for </span>Endpoint {
-    <span class="kw">type </span>Error = tonic::Status;
-
-    <span class="kw">fn </span>try_from(server: GameServer) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
-        server
-            .endpoint()
-            .ok_or_else(|| tonic::Status::internal(<span class="string">"No status found for game server"</span>))
-    }
-}
-
 <span class="attr">#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 </span><span class="kw">pub struct </span>Health {
     <span class="doccomment">/// Whether health checking is disabled or not
@@ -1238,6 +1266,8 @@
     </span><span class="kw">pub </span>state: GameServerState,
     <span class="kw">pub </span>ports: <span class="prelude-ty">Option</span>&lt;Vec&lt;GameServerStatusPort&gt;&gt;,
     <span class="kw">pub </span>address: String,
+    <span class="attr">#[serde(default)]
+    </span><span class="kw">pub </span>addresses: Vec&lt;NodeAddress&gt;,
     <span class="kw">pub </span>node_name: String,
     <span class="kw">pub </span>reserved_until: <span class="prelude-ty">Option</span>&lt;k8s_openapi::apimachinery::pkg::apis::meta::v1::Time&gt;,
 }

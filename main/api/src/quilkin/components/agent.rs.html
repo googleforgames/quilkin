@@ -102,6 +102,8 @@
 <a href="#100" id="100">100</a>
 <a href="#101" id="101">101</a>
 <a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::RunArgs;
 <span class="kw">use </span><span class="kw">crate</span>::config::{IcaoCode, Providers};
 <span class="kw">pub use </span><span class="kw">crate</span>::net::{endpoint::Locality, DualStackLocalSocket};
@@ -133,6 +135,7 @@
     <span class="kw">pub </span>icao_code: <span class="prelude-ty">Option</span>&lt;IcaoCode&gt;,
     <span class="kw">pub </span>relay_servers: Vec&lt;tonic::transport::Endpoint&gt;,
     <span class="kw">pub </span>provider: <span class="prelude-ty">Option</span>&lt;Providers&gt;,
+    <span class="kw">pub </span>address_selector: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::config::AddressSelector&gt;,
 }
 
 <span class="kw">impl </span>Agent {
@@ -164,6 +167,7 @@
                     config.clone(),
                     ready.provider_is_healthy.clone(),
                     <span class="self">self</span>.locality,
+                    <span class="self">self</span>.address_selector,
                 )),
                 <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">"no configuration provider given"</span>)),
             };

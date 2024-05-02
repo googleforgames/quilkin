@@ -83,6 +83,7 @@
 <a href="#81" id="81">81</a>
 <a href="#82" id="82">82</a>
 <a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
 </pre></div><pre class="rust"><code><span class="kw">pub use </span><span class="kw">super</span>::agent::Ready;
 <span class="kw">use </span><span class="kw">super</span>::RunArgs;
 <span class="kw">pub use crate</span>::{
@@ -117,6 +118,7 @@
             config.clone(),
             ready.provider_is_healthy.clone(),
             <span class="self">self</span>.locality,
+            <span class="prelude-val">None</span>,
         );
 
         <span class="kw">let </span>idle_request_interval = ready.idle_request_interval;

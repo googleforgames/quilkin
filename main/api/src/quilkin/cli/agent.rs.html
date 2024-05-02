@@ -108,6 +108,34 @@
 <a href="#106" id="106">106</a>
 <a href="#107" id="107">107</a>
 <a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2023 Google LLC
  *
@@ -158,6 +186,13 @@
     <span class="doccomment">/// The configuration source for a management server.
     </span><span class="attr">#[clap(subcommand)]
     </span><span class="kw">pub </span>provider: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::config::Providers&gt;,
+    <span class="doccomment">/// If specified, filters the available gameserver addresses to the one that
+    /// matches the specified type
+    </span><span class="attr">#[clap(long)]
+    </span><span class="kw">pub </span>address_type: <span class="prelude-ty">Option</span>&lt;String&gt;,
+    <span class="doccomment">/// If specified, additionally filters the gameserver address by its ip kind
+    </span><span class="attr">#[clap(long, requires(<span class="string">"address_type"</span>), value_enum)]
+    </span><span class="kw">pub </span>ip_kind: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::config::AddrKind&gt;,
     <span class="doccomment">/// The interval in seconds at which the agent will wait for a discovery
     /// request from a relay server before restarting the connection.
     </span><span class="attr">#[clap(long, env = <span class="string">"QUILKIN_IDLE_REQUEST_INTERVAL_SECS"</span>)]
@@ -165,6 +200,21 @@
     <span class="doccomment">/// The ICAO code for the agent.
     </span><span class="attr">#[clap(short, long, env, default_value_t = <span class="kw">crate</span>::config::IcaoCode::default())]
     </span><span class="kw">pub </span>icao_code: <span class="kw">crate</span>::config::IcaoCode,
+}
+
+<span class="kw">impl </span>clap::ValueEnum <span class="kw">for </span><span class="kw">crate</span>::config::AddrKind {
+    <span class="kw">fn </span>value_variants&lt;<span class="lifetime">'a</span>&gt;() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[<span class="self">Self</span>] {
+        <span class="kw-2">&amp;</span>[<span class="self">Self</span>::Ipv4, <span class="self">Self</span>::Ipv6, <span class="self">Self</span>::Any]
+    }
+
+    <span class="kw">fn </span>to_possible_value(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;clap::builder::PossibleValue&gt; {
+        <span class="kw">use </span>clap::builder::PossibleValue <span class="kw">as </span>pv;
+        <span class="prelude-val">Some</span>(<span class="kw">match </span><span class="self">self </span>{
+            <span class="self">Self</span>::Ipv4 =&gt; pv::new(<span class="string">"v4"</span>),
+            <span class="self">Self</span>::Ipv6 =&gt; pv::new(<span class="string">"v6"</span>),
+            <span class="self">Self</span>::Any =&gt; pv::new(<span class="string">"any"</span>),
+        })
+    }
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>Agent {
@@ -178,6 +228,8 @@
             provider: &lt;<span class="kw">_</span>&gt;::default(),
             idle_request_interval_secs: <span class="prelude-val">None</span>,
             icao_code: &lt;<span class="kw">_</span>&gt;::default(),
+            address_type: <span class="prelude-val">None</span>,
+            ip_kind: <span class="prelude-val">None</span>,
         }
     }
 }
@@ -207,6 +259,10 @@
             icao_code,
             relay_servers: <span class="self">self</span>.relay,
             provider: <span class="self">self</span>.provider,
+            address_selector: <span class="self">self</span>.address_type.map(|at| <span class="kw">crate</span>::config::AddressSelector {
+                name: at,
+                kind: <span class="self">self</span>.ip_kind.unwrap_or(<span class="kw">crate</span>::config::AddrKind::Any),
+            }),
         }
         .run(<span class="kw">crate</span>::components::RunArgs {
             config,

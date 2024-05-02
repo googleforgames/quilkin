@@ -171,11 +171,6 @@
 <a href="#169" id="169">169</a>
 <a href="#170" id="170">170</a>
 <a href="#171" id="171">171</a>
-<a href="#172" id="172">172</a>
-<a href="#173" id="173">173</a>
-<a href="#174" id="174">174</a>
-<a href="#175" id="175">175</a>
-<a href="#176" id="176">176</a>
 </pre></div><pre class="rust"><code><span class="kw">pub mod </span>agones;
 
 <span class="kw">use </span>std::{collections::BTreeSet, sync::Arc};
@@ -186,7 +181,7 @@
 
 <span class="kw">use </span>agones::GameServer;
 
-<span class="kw">use </span><span class="kw">crate</span>::net::endpoint::{Endpoint, Locality};
+<span class="kw">use </span><span class="kw">crate</span>::net::endpoint::Locality;
 
 <span class="kw">pub fn </span>update_filters_from_configmap(
     client: kube::Client,
@@ -278,9 +273,11 @@
     namespace: <span class="kw">impl </span>AsRef&lt;str&gt;,
     config: Arc&lt;<span class="kw">crate</span>::Config&gt;,
     locality: <span class="prelude-ty">Option</span>&lt;Locality&gt;,
+    address_selector: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::config::AddressSelector&gt;,
 ) -&gt; <span class="kw">impl </span>Stream&lt;Item = <span class="kw">crate</span>::Result&lt;(), eyre::Error&gt;&gt; {
     <span class="macro">async_stream::stream! </span>{
         <span class="kw">for await </span>event <span class="kw">in </span>gameserver_events(client, namespace) {
+            <span class="kw">let </span>ads = address_selector.as_ref();
             <span class="kw">match </span>event<span class="question-mark">? </span>{
                 Event::Applied(server) =&gt; {
                     <span class="macro">tracing::debug!</span>(<span class="string">"received applied event from k8s"</span>);
@@ -290,12 +287,9 @@
                         <span class="kw">continue</span>;
                     }
 
-                    <span class="kw">let </span>endpoint = <span class="kw">match </span>Endpoint::try_from(server) {
-                        <span class="prelude-val">Ok</span>(endpoint) =&gt; endpoint,
-                        <span class="prelude-val">Err</span>(error) =&gt; {
-                            <span class="macro">tracing::warn!</span>(%error, <span class="string">"received invalid gameserver to apply from k8s"</span>);
-                            <span class="kw">continue</span>;
-                        }
+                    <span class="kw">let </span><span class="prelude-val">Some</span>(endpoint) = server.endpoint(ads) <span class="kw">else </span>{
+                        <span class="macro">tracing::warn!</span>(selector=<span class="question-mark">?</span>ads, <span class="string">"received invalid gameserver to apply from k8s"</span>);
+                        <span class="kw">continue</span>;
                     };
                     <span class="macro">tracing::debug!</span>(endpoint=%serde_json::to_value(<span class="kw-2">&amp;</span>endpoint).unwrap(), <span class="string">"Adding endpoint"</span>);
                     config.clusters.write()
@@ -306,16 +300,12 @@
                     <span class="macro">tracing::debug!</span>(<span class="string">"received restart event from k8s"</span>);
                     <span class="kw">let </span>servers: BTreeSet&lt;<span class="kw">_</span>&gt; = servers
                         .into_iter()
-                        .filter(GameServer::is_allocated)
-                        .map(Endpoint::try_from)
-                        .filter_map(|result| {
-                            <span class="kw">match </span>result {
-                                <span class="prelude-val">Ok</span>(endpoint) =&gt; <span class="prelude-val">Some</span>(endpoint),
-                                <span class="prelude-val">Err</span>(error) =&gt; {
-                                    <span class="macro">tracing::warn!</span>(%error, <span class="string">"received invalid gameserver on restart from k8s"</span>);
-                                    <span class="prelude-val">None
-                                </span>}
+                        .filter_map(|server| {
+                            <span class="kw">if </span>!server.is_allocated() {
+                                <span class="kw">return </span><span class="prelude-val">None</span>;
                             }
+
+                            server.endpoint(ads)
                         })
                         .collect();
 
@@ -329,7 +319,7 @@
 
                 Event::Deleted(server) =&gt; {
                     <span class="macro">tracing::debug!</span>(<span class="string">"received delete event from k8s"</span>);
-                    <span class="kw">let </span>found = <span class="kw">if let </span><span class="prelude-val">Some</span>(endpoint) = server.endpoint() {
+                    <span class="kw">let </span>found = <span class="kw">if let </span><span class="prelude-val">Some</span>(endpoint) = server.endpoint(ads) {
                         config.clusters.write().remove_endpoint(<span class="kw-2">&amp;</span>endpoint)
                     } <span class="kw">else </span>{
                         config.clusters.write().remove_endpoint_if(|endpoint| {
@@ -339,7 +329,7 @@
 
                     <span class="kw">if </span>!found {
                         <span class="macro">tracing::debug!</span>(
-                            endpoint=%serde_json::to_value(server.endpoint()).unwrap(),
+                            endpoint=%serde_json::to_value(server.endpoint(ads)).unwrap(),
                             name=%serde_json::to_value(server.metadata.name).unwrap(),
                             <span class="string">"received unknown gameserver to delete from k8s"
                         </span>);

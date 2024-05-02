@@ -205,6 +205,10 @@ Options:
           The `zone` in the `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_ZONE=]
       --sub-zone &lt;SUB_ZONE&gt;
           The `sub_zone` in the `zone` in the `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_SUB_ZONE=]
+      --address-type &lt;ADDRESS_TYPE&gt;
+          If specified, filters the available gameserver addresses to the one that matches the specified type
+      --ip-kind &lt;IP_KIND&gt;
+          If specified, additionally filters the gameserver address by its ip kind [possible values: v4, v6, any]
       --idle-request-interval-secs &lt;IDLE_REQUEST_INTERVAL_SECS&gt;
           The interval in seconds at which the agent will wait for a discovery request from a relay server before restarting the connection [env: QUILKIN_IDLE_REQUEST_INTERVAL_SECS=]
   -i, --icao-code &lt;ICAO_CODE&gt;

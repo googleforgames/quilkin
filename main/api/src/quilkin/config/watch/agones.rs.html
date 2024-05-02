@@ -63,6 +63,8 @@
 <a href="#61" id="61">61</a>
 <a href="#62" id="62">62</a>
 <a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -93,6 +95,7 @@
     health_check: Arc&lt;AtomicBool&gt;,
     locality: <span class="prelude-ty">Option</span>&lt;Locality&gt;,
     config: Arc&lt;Config&gt;,
+    address_selector: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::config::AddressSelector&gt;,
 ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
     <span class="kw">let </span>client = tokio::time::timeout(
         std::time::Duration::from_secs(<span class="number">5</span>),
@@ -109,6 +112,7 @@
         gameservers_namespace,
         config.clone(),
         locality,
+        address_selector,
     );
     <span class="macro">tokio::pin!</span>(configmap_reflector);
     <span class="macro">tokio::pin!</span>(gameserver_reflector);
