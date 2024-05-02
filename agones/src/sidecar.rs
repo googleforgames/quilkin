@@ -88,7 +88,7 @@ clusters:
         let mut gs = game_server();
 
         // reset ports to point at the Quilkin sidecar
-        gs.spec.ports[0].container_port = 7777;
+        gs.spec.ports[0].container_port = Some(7777);
         gs.spec.ports[0].container = Some("quilkin".into());
 
         // set the gameserver container to the simple-game-server container.

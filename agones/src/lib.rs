@@ -465,7 +465,7 @@ pub fn game_server() -> GameServer {
         },
         spec: GameServerSpec {
             ports: vec![GameServerPort {
-                container_port: 7654,
+                container_port: Some(7654),
                 host_port: None,
                 name: "udp-port".into(),
                 port_policy: Default::default(),
