@@ -487,6 +487,7 @@ pub enum PortPolicy {
     /// selected host port. This will mean that users will need to lookup what
     /// port has been opened through the server side SDK.
     Passthrough,
+    None,
 }
 
 impl Default for PortPolicy {
