@@ -182,6 +182,29 @@
 <a href="#180" id="180">180</a>
 <a href="#181" id="181">181</a>
 <a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -219,6 +242,7 @@
         CLUSTER_TYPE = <span class="string">"quilkin.config.v1alpha1.Cluster"</span>,
         LISTENER_TYPE = <span class="string">"envoy.config.listener.v3.Listener"</span>,
         DATACENTER_TYPE = <span class="string">"quilkin.config.v1alpha1.Datacenter"</span>,
+        FILTER_CHAIN_TYPE = <span class="string">"quilkin.config.v1alpha1.FilterChain"</span>,
     }
 }
 
@@ -227,6 +251,7 @@
     Cluster(Box&lt;<span class="kw">crate</span>::net::cluster::proto::Cluster&gt;),
     Datacenter(Box&lt;<span class="kw">crate</span>::net::cluster::proto::Datacenter&gt;),
     Listener(Box&lt;Listener&gt;),
+    FilterChain(<span class="kw">crate</span>::net::cluster::proto::FilterChain),
 }
 
 <span class="kw">impl </span>Resource {
@@ -239,6 +264,7 @@
                 .map(|locality| <span class="kw">crate</span>::net::endpoint::Locality::from(locality).to_string())
                 .unwrap_or_default(),
             <span class="self">Self</span>::Listener(listener) =&gt; listener.name.to_string(),
+            <span class="self">Self</span>::FilterChain(_fc) =&gt; String::new(),
             <span class="self">Self</span>::Datacenter(dc) =&gt; dc.icao_code.to_string(),
         }
     }
@@ -248,6 +274,7 @@
         <span class="kw">match </span><span class="self">self </span>{
             <span class="self">Self</span>::Cluster(<span class="kw">_</span>) =&gt; ResourceType::Cluster,
             <span class="self">Self</span>::Listener(<span class="kw">_</span>) =&gt; ResourceType::Listener,
+            <span class="self">Self</span>::FilterChain(<span class="kw">_</span>) =&gt; ResourceType::FilterChain,
             <span class="self">Self</span>::Datacenter(<span class="kw">_</span>) =&gt; ResourceType::Datacenter,
         }
     }
@@ -265,6 +292,16 @@
     </span><span class="kw">pub fn </span>type_url(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>str {
         <span class="self">self</span>.resource_type().type_url()
     }
+
+    <span class="kw">pub fn </span>from_any(any: prost_types::Any) -&gt; eyre::Result&lt;<span class="self">Self</span>&gt; {
+        <span class="prelude-val">Ok</span>(<span class="kw">match </span><span class="kw-2">&amp;*</span>any.type_url {
+            CLUSTER_TYPE =&gt; Resource::Cluster(&lt;<span class="kw">_</span>&gt;::decode(<span class="kw-2">&amp;*</span>any.value)<span class="question-mark">?</span>),
+            LISTENER_TYPE =&gt; Resource::Listener(&lt;<span class="kw">_</span>&gt;::decode(<span class="kw-2">&amp;*</span>any.value)<span class="question-mark">?</span>),
+            DATACENTER_TYPE =&gt; Resource::Datacenter(&lt;<span class="kw">_</span>&gt;::decode(<span class="kw-2">&amp;*</span>any.value)<span class="question-mark">?</span>),
+            FILTER_CHAIN_TYPE =&gt; Resource::FilterChain(&lt;<span class="kw">_</span>&gt;::decode(<span class="kw-2">&amp;*</span>any.value)<span class="question-mark">?</span>),
+            url =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(UnknownResourceType(url.into()).into()),
+        })
+    }
 }
 
 <span class="kw">impl </span>TryFrom&lt;prost_types::Any&gt; <span class="kw">for </span>Resource {
@@ -275,6 +312,7 @@
             CLUSTER_TYPE =&gt; Resource::Cluster(&lt;<span class="kw">_</span>&gt;::decode(<span class="kw-2">&amp;*</span>any.value)<span class="question-mark">?</span>),
             LISTENER_TYPE =&gt; Resource::Listener(&lt;<span class="kw">_</span>&gt;::decode(<span class="kw-2">&amp;*</span>any.value)<span class="question-mark">?</span>),
             DATACENTER_TYPE =&gt; Resource::Datacenter(&lt;<span class="kw">_</span>&gt;::decode(<span class="kw-2">&amp;*</span>any.value)<span class="question-mark">?</span>),
+            FILTER_CHAIN_TYPE =&gt; Resource::FilterChain(&lt;<span class="kw">_</span>&gt;::decode(<span class="kw-2">&amp;*</span>any.value)<span class="question-mark">?</span>),
             url =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(UnknownResourceType(url.into()).into()),
         })
     }
@@ -284,11 +322,17 @@
 </span><span class="kw">pub enum </span>ResourceType {
     Cluster,
     Listener,
+    FilterChain,
     Datacenter,
 }
 
 <span class="kw">impl </span>ResourceType {
-    <span class="kw">pub const </span>VARIANTS: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[<span class="self">Self</span>] = <span class="kw-2">&amp;</span>[<span class="self">Self</span>::Cluster, <span class="self">Self</span>::Listener, <span class="self">Self</span>::Datacenter];
+    <span class="kw">pub const </span>VARIANTS: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[<span class="self">Self</span>] = <span class="kw-2">&amp;</span>[
+        <span class="self">Self</span>::Cluster,
+        <span class="self">Self</span>::Listener,
+        <span class="self">Self</span>::FilterChain,
+        <span class="self">Self</span>::Datacenter,
+    ];
 
     <span class="doccomment">/// Returns the corresponding type URL for the response type.
     </span><span class="attr">#[inline]
@@ -297,6 +341,7 @@
             <span class="self">Self</span>::Cluster =&gt; CLUSTER_TYPE,
             <span class="self">Self</span>::Listener =&gt; LISTENER_TYPE,
             <span class="self">Self</span>::Datacenter =&gt; DATACENTER_TYPE,
+            <span class="self">Self</span>::FilterChain =&gt; FILTER_CHAIN_TYPE,
         }
     }
 
@@ -324,6 +369,7 @@
         <span class="prelude-val">Ok</span>(<span class="kw">match </span>url {
             CLUSTER_TYPE =&gt; <span class="self">Self</span>::Cluster,
             LISTENER_TYPE =&gt; <span class="self">Self</span>::Listener,
+            FILTER_CHAIN_TYPE =&gt; <span class="self">Self</span>::FilterChain,
             DATACENTER_TYPE =&gt; <span class="self">Self</span>::Datacenter,
             unknown =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(UnknownResourceType(unknown.to_owned())),
         })

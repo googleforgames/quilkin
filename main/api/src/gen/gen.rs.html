@@ -353,12 +353,13 @@
 <a href="#351" id="351">351</a>
 <a href="#352" id="352">352</a>
 <a href="#353" id="353">353</a>
+<a href="#354" id="354">354</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     path::PathBuf,
     process::{Command, Stdio},
 };
 
-<span class="kw">const </span>VERSION: <span class="kw-2">&amp;</span>str = <span class="string">"0.2.1"</span>;
+<span class="kw">const </span>VERSION: <span class="kw-2">&amp;</span>str = <span class="string">"0.2.6"</span>;
 
 <span class="kw">fn </span>check_version(name: <span class="kw-2">&amp;</span>str, prefix: <span class="kw-2">&amp;</span>str, wanted: <span class="kw-2">&amp;</span>str) -&gt; bool {
     <span class="kw">if let </span><span class="prelude-val">Ok</span>(output) = Command::new(name).arg(<span class="string">"--version"</span>).output() {
@@ -366,7 +367,8 @@
             <span class="kw">let </span>version = std::str::from_utf8(<span class="kw-2">&amp;</span>output.stdout).expect(<span class="string">"version output was non-utf8"</span>);
 
             <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = version.strip_prefix(prefix) {
-                <span class="kw">if </span>v.trim() == wanted {
+                <span class="kw">let </span>v = v.trim();
+                <span class="kw">if </span>v == wanted {
                     <span class="kw">return </span><span class="bool-val">true</span>;
                 } <span class="kw">else </span>{
                     <span class="macro">println!</span>(<span class="string">"{name} version detected as '{v}' which did not match expected version '{wanted}'"</span>);
@@ -447,7 +449,7 @@
         }
     } <span class="kw">else </span>{
         <span class="kw">if </span>!Command::new(<span class="string">"cargo"</span>)
-            .args([<span class="string">"install"</span>, <span class="string">"-f"</span>, <span class="string">"proto-gen"</span>])
+            .args([<span class="string">"install"</span>, <span class="string">"--locked"</span>, <span class="string">"-f"</span>, <span class="string">"proto-gen"</span>])
             .status()
             .expect(<span class="string">"cargo not installed"</span>)
             .success()

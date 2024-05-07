@@ -315,7 +315,7 @@
     <span class="kw">fn </span>new(config: Config) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             capture: config.strategy.into_capture(),
-            is_present_key: (config.metadata_key.to_string() + <span class="string">"/is_present"</span>).into(),
+            is_present_key: <span class="macro">format!</span>(<span class="string">"{}/is_present"</span>, config.metadata_key).into(),
             metadata_key: config.metadata_key,
         }
     }

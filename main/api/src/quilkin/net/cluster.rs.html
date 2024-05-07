@@ -672,6 +672,7 @@
 <a href="#670" id="670">670</a>
 <a href="#671" id="671">671</a>
 <a href="#672" id="672">672</a>
+<a href="#673" id="673">673</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -1295,6 +1296,7 @@
             host: endpoint.address.host.to_string(),
             port: endpoint.address.port.into(),
             metadata: <span class="prelude-val">Some</span>((<span class="kw-2">&amp;</span>endpoint.metadata).into()),
+            host2: <span class="prelude-val">None</span>,
         }
     }
 }

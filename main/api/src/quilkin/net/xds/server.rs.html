@@ -879,6 +879,19 @@
 <a href="#877" id="877">877</a>
 <a href="#878" id="878">878</a>
 <a href="#879" id="879">879</a>
+<a href="#880" id="880">880</a>
+<a href="#881" id="881">881</a>
+<a href="#882" id="882">882</a>
+<a href="#883" id="883">883</a>
+<a href="#884" id="884">884</a>
+<a href="#885" id="885">885</a>
+<a href="#886" id="886">886</a>
+<a href="#887" id="887">887</a>
+<a href="#888" id="888">888</a>
+<a href="#889" id="889">889</a>
+<a href="#890" id="890">890</a>
+<a href="#891" id="891">891</a>
+<a href="#892" id="892">892</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -1235,7 +1248,14 @@
                     subscribed: BTreeSet::new(),
                     kind: ResourceType::Listener,
                 }
-            }
+            },
+            ResourceType::FilterChain =&gt; {
+                ResourceTypeTracker {
+                    client: ClientVersions::new(ResourceType::FilterChain),
+                    subscribed: BTreeSet::new(),
+                    kind: ResourceType::FilterChain,
+                }
+            },
             ResourceType::Datacenter =&gt; {
                 ResourceTypeTracker {
                     client: ClientVersions::new(ResourceType::Datacenter),
@@ -1247,6 +1267,7 @@
 
         <span class="kw">let </span><span class="kw-2">mut </span>cluster_rx = <span class="self">self</span>.watchers[ResourceType::Cluster].receiver.clone();
         <span class="kw">let </span><span class="kw-2">mut </span>listener_rx = <span class="self">self</span>.watchers[ResourceType::Listener].receiver.clone();
+        <span class="kw">let </span><span class="kw-2">mut </span>fc_rx = <span class="self">self</span>.watchers[ResourceType::FilterChain].receiver.clone();
         <span class="kw">let </span><span class="kw-2">mut </span>dc_rx = <span class="self">self</span>.watchers[ResourceType::Datacenter].receiver.clone();
 
         <span class="kw">let </span>id = node_id.clone();
@@ -1356,6 +1377,11 @@
                         <span class="macro">tracing::trace!</span>(<span class="string">"sending new listener delta discovery response"</span>);
 
                         <span class="kw">yield </span>responder(<span class="prelude-val">None</span>, <span class="kw-2">&amp;mut </span>trackers[ResourceType::Listener], <span class="kw-2">&amp;mut </span>pending_acks)<span class="question-mark">?</span>;
+                    }
+                    <span class="kw">_ </span>= fc_rx.changed() =&gt; {
+                        <span class="macro">tracing::trace!</span>(<span class="string">"sending new filter chain delta discovery response"</span>);
+
+                        <span class="kw">yield </span>responder(<span class="prelude-val">None</span>, <span class="kw-2">&amp;mut </span>trackers[ResourceType::FilterChain], <span class="kw-2">&amp;mut </span>pending_acks)<span class="question-mark">?</span>;
                     }
                     <span class="kw">_ </span>= dc_rx.changed() =&gt; {
                         <span class="macro">tracing::trace!</span>(<span class="string">"sending new datacenter delta discovery response"</span>);

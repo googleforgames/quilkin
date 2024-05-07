@@ -401,12 +401,6 @@
 <a href="#399" id="399">399</a>
 <a href="#400" id="400">400</a>
 <a href="#401" id="401">401</a>
-<a href="#402" id="402">402</a>
-<a href="#403" id="403">403</a>
-<a href="#404" id="404">404</a>
-<a href="#405" id="405">405</a>
-<a href="#406" id="406">406</a>
-<a href="#407" id="407">407</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -439,19 +433,12 @@
 };
 <span class="kw">pub use </span>client::{AdsClient, Client};
 <span class="kw">pub use </span>resource::{Resource, ResourceType};
-<span class="comment">// pub use self::{
-//     client::{AdsClient, Client},
-//     envoy::service::discovery::v3::aggregated_discovery_service_client::AggregatedDiscoveryServiceClient,
-//     envoy::*,
-//     resource::{Resource, ResourceType},
-//     server::ControlPlane,
-//     xds::*,
-// };
-</span><span class="kw">use </span>std::collections::HashMap;
+<span class="kw">use </span>std::collections::HashMap;
 
 <span class="doccomment">/// Keeps track of what resource versions a particular client has
 </span><span class="kw">pub enum </span>ClientVersions {
     Listener,
+    FilterChain,
     Cluster(HashMap&lt;<span class="prelude-ty">Option</span>&lt;Locality&gt;, EndpointSetVersion&gt;),
     Datacenter,
 }
@@ -461,6 +448,7 @@
 /// the client has
 </span><span class="kw">pub enum </span>AwaitingAck {
     Listener,
+    FilterChain,
     Cluster {
         updated: Vec&lt;(<span class="prelude-ty">Option</span>&lt;Locality&gt;, EndpointSetVersion)&gt;,
         remove_none: bool,
@@ -473,6 +461,7 @@
     </span><span class="kw">pub fn </span>new(rt: ResourceType) -&gt; <span class="self">Self </span>{
         <span class="kw">match </span>rt {
             ResourceType::Listener =&gt; <span class="self">Self</span>::Listener,
+            ResourceType::FilterChain =&gt; <span class="self">Self</span>::FilterChain,
             ResourceType::Cluster =&gt; <span class="self">Self</span>::Cluster(HashMap::new()),
             ResourceType::Datacenter =&gt; <span class="self">Self</span>::Datacenter,
         }
@@ -482,6 +471,7 @@
     </span><span class="kw">pub fn </span>typ(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ResourceType {
         <span class="kw">match </span><span class="self">self </span>{
             <span class="self">Self</span>::Listener =&gt; ResourceType::Listener,
+            <span class="self">Self</span>::FilterChain =&gt; ResourceType::FilterChain,
             <span class="self">Self</span>::Cluster(<span class="kw">_</span>) =&gt; ResourceType::Cluster,
             <span class="self">Self</span>::Datacenter =&gt; ResourceType::Datacenter,
         }
@@ -515,43 +505,41 @@
 
     <span class="attr">#[inline]
     </span><span class="kw">pub fn </span>remove(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: String) {
-        <span class="kw">match </span><span class="self">self </span>{
-            <span class="self">Self</span>::Listener | <span class="self">Self</span>::Datacenter =&gt; {}
-            <span class="self">Self</span>::Cluster(map) =&gt; {
-                <span class="kw">let </span>locality = <span class="kw">if </span>name.is_empty() {
-                    <span class="prelude-val">None
-                </span>} <span class="kw">else </span>{
-                    <span class="kw">match </span>name.parse() {
-                        <span class="prelude-val">Ok</span>(l) =&gt; <span class="prelude-val">Some</span>(l),
-                        <span class="prelude-val">Err</span>(err) =&gt; {
-                            <span class="macro">tracing::error!</span>(error = %err, name, <span class="string">"Failed to parse locality"</span>);
-                            <span class="kw">return</span>;
-                        }
-                    }
-                };
-                map.remove(<span class="kw-2">&amp;</span>locality);
+        <span class="kw">let </span><span class="self">Self</span>::Cluster(map) = <span class="self">self </span><span class="kw">else </span>{
+            <span class="kw">return</span>;
+        };
+
+        <span class="kw">let </span>locality = <span class="kw">if </span>name.is_empty() {
+            <span class="prelude-val">None
+        </span>} <span class="kw">else </span>{
+            <span class="kw">match </span>name.parse() {
+                <span class="prelude-val">Ok</span>(l) =&gt; <span class="prelude-val">Some</span>(l),
+                <span class="prelude-val">Err</span>(err) =&gt; {
+                    <span class="macro">tracing::error!</span>(error = %err, name, <span class="string">"Failed to parse locality"</span>);
+                    <span class="kw">return</span>;
+                }
             }
-        }
+        };
+        map.remove(<span class="kw-2">&amp;</span>locality);
     }
 
     <span class="doccomment">/// Resets the client versions to those specified by the client itself
     </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>reset(<span class="kw-2">&amp;mut </span><span class="self">self</span>, versions: HashMap&lt;String, String&gt;) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
-        <span class="kw">match </span><span class="self">self </span>{
-            <span class="self">Self</span>::Listener | <span class="self">Self</span>::Datacenter =&gt; <span class="prelude-val">Ok</span>(()),
-            <span class="self">Self</span>::Cluster(map) =&gt; {
-                map.clear();
+        <span class="kw">let </span><span class="self">Self</span>::Cluster(map) = <span class="self">self </span><span class="kw">else </span>{
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+        };
 
-                <span class="kw">for </span>(k, v) <span class="kw">in </span>versions {
-                    <span class="kw">let </span>locality = <span class="kw">if </span>k.is_empty() { <span class="prelude-val">None </span>} <span class="kw">else </span>{ <span class="prelude-val">Some</span>(k.parse()<span class="question-mark">?</span>) };
-                    <span class="kw">let </span>version = v.parse()<span class="question-mark">?</span>;
+        map.clear();
 
-                    map.insert(locality, version);
-                }
+        <span class="kw">for </span>(k, v) <span class="kw">in </span>versions {
+            <span class="kw">let </span>locality = <span class="kw">if </span>k.is_empty() { <span class="prelude-val">None </span>} <span class="kw">else </span>{ <span class="prelude-val">Some</span>(k.parse()<span class="question-mark">?</span>) };
+            <span class="kw">let </span>version = v.parse()<span class="question-mark">?</span>;
 
-                <span class="prelude-val">Ok</span>(())
-            }
+            map.insert(locality, version);
         }
+
+        <span class="prelude-val">Ok</span>(())
     }
 }
 
