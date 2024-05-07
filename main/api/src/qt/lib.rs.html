@@ -699,6 +699,7 @@
 <a href="#697" id="697">697</a>
 <a href="#698" id="698">698</a>
 <a href="#699" id="699">699</a>
+<a href="#700" id="700">700</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>quilkin::{
     components::{<span class="self">self</span>, RunArgs},
     config::Providers,
@@ -767,7 +768,8 @@
 
 <span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>trace_test {
-    (<span class="macro-nonterminal">$name</span>:ident, <span class="macro-nonterminal">$body</span>:block) =&gt; {
+    ($(<span class="attr">#[<span class="macro-nonterminal">$attr</span>:meta]</span>)* <span class="macro-nonterminal">$name</span>:ident, <span class="macro-nonterminal">$body</span>:block) =&gt; {
+        $(<span class="attr">#[<span class="macro-nonterminal">$attr</span>]</span>)*
         <span class="attr">#[tokio::test]
         </span><span class="kw">async fn </span><span class="macro-nonterminal">$name</span>() {
             <span class="comment">// Get the module name
