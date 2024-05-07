@@ -174,7 +174,7 @@ impl GenResource for Listener {
                 name: filters::compress::Compress::NAME.into(),
                 label: Some("a label".into()),
                 config: Some(
-                    serde_json::to_value(&filters::compress::Config {
+                    serde_json::to_value(filters::compress::Config {
                         mode: filters::compress::Mode::Lz4,
                         on_read: filters::compress::Action::Decompress,
                         on_write: filters::compress::Action::Compress,
@@ -252,7 +252,7 @@ fn deserialize(a: prost_types::Any) {
                 Default::default()
             } else {
                 quilkin::filters::FilterChain::try_create_fallible(
-                    listener.filter_chains.swap_remove(0).filters.into_iter(),
+                    listener.filter_chains.swap_remove(0).filters,
                 )
                 .unwrap()
             };
@@ -288,7 +288,7 @@ fn deserialize_faster(a: prost_types::Any) {
             unimplemented!("should not be used");
         }
         Resource::FilterChain(fc) => {
-            quilkin::filters::FilterChain::try_create_fallible(fc.filters.into_iter()).unwrap();
+            quilkin::filters::FilterChain::try_create_fallible(fc.filters).unwrap();
         }
         Resource::Datacenter(dc) => {
             let _host: std::net::IpAddr = dc.host.parse().unwrap();
@@ -322,7 +322,7 @@ mod resource {
         bencher
             .with_inputs(|| genn.generate(false))
             .input_counter(|a| divan::counter::BytesCount::usize(a.value.len() + a.type_url.len()))
-            .bench_local_values(|a| divan::black_box(deserialize(a)));
+            .bench_local_values(|a| deserialize(divan::black_box(a)));
     }
 
     #[divan::bench(
@@ -333,7 +333,7 @@ mod resource {
         bencher
             .with_inputs(|| genn.generate(true))
             .input_counter(|a| divan::counter::BytesCount::usize(a.value.len() + a.type_url.len()))
-            .bench_local_values(|a| divan::black_box(deserialize_faster(a)));
+            .bench_local_values(|a| deserialize_faster(divan::black_box(a)));
     }
 }
 
