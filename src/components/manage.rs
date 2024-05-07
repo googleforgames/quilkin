@@ -32,6 +32,7 @@ impl Manage {
             config.clone(),
             ready.provider_is_healthy.clone(),
             self.locality,
+            None,
         );
 
         let idle_request_interval = ready.idle_request_interval;
