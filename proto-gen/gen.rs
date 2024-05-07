@@ -93,7 +93,7 @@ fn install() {
         }
     } else {
         if !Command::new("cargo")
-            .args(["install", "-f", "proto-gen"])
+            .args(["install", "--locked", "-f", "proto-gen"])
             .status()
             .expect("cargo not installed")
             .success()
