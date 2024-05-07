@@ -48,6 +48,7 @@ skip = [
 ]
 skip-tree = [
     { crate = "regex-automata@0.1", reason = "matchers is using an old version, https://github.com/hawkw/matchers/pull/5, but it's also barely maintained..." },
+    { crate = "kube@0.91", reason = "We need the new version, and other notably rustls deps aren't up to date yet" },
 ]
 
 # This section is considered when running `cargo deny check licenses`
