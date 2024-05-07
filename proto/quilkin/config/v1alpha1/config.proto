@@ -32,10 +32,24 @@ message Locality {
   string sub_zone = 3;
 }
 
+message Ipv6 {
+  fixed64 first = 1;
+  fixed64 second = 2;
+}
+
+message Host {
+  oneof inner {
+    string name = 1;
+    fixed32 ipv4 = 2;
+    Ipv6 ipv6 = 3;
+  }
+}
+
 message Endpoint {
   string host = 1;
   uint32 port = 2;
   google.protobuf.Struct metadata = 3;
+  Host host2 = 4;
 }
 
 message Datacenter {
@@ -46,8 +60,8 @@ message Datacenter {
 
 message Filter {
   string name = 1;
-  string label = 2;
-  string config = 3;
+  optional string label = 2;
+  optional string config = 3;
 }
 
 message FilterChain { repeated Filter filters = 1; }

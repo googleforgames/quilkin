@@ -621,6 +621,7 @@ impl From<&'_ Endpoint> for proto::Endpoint {
             host: endpoint.address.host.to_string(),
             port: endpoint.address.port.into(),
             metadata: Some((&endpoint.metadata).into()),
+            host2: None,
         }
     }
 }

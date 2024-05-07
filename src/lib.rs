@@ -39,7 +39,7 @@ pub mod test;
     clippy::large_enum_variant,
     rustdoc::bare_urls
 )]
-mod generated;
+pub mod generated;
 
 pub type Result<T, E = eyre::Error> = std::result::Result<T, E>;
 

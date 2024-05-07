@@ -354,7 +354,14 @@ impl ControlPlane {
                     subscribed: BTreeSet::new(),
                     kind: ResourceType::Listener,
                 }
-            }
+            },
+            ResourceType::FilterChain => {
+                ResourceTypeTracker {
+                    client: ClientVersions::new(ResourceType::FilterChain),
+                    subscribed: BTreeSet::new(),
+                    kind: ResourceType::FilterChain,
+                }
+            },
             ResourceType::Datacenter => {
                 ResourceTypeTracker {
                     client: ClientVersions::new(ResourceType::Datacenter),
@@ -366,6 +373,7 @@ impl ControlPlane {
 
         let mut cluster_rx = self.watchers[ResourceType::Cluster].receiver.clone();
         let mut listener_rx = self.watchers[ResourceType::Listener].receiver.clone();
+        let mut fc_rx = self.watchers[ResourceType::FilterChain].receiver.clone();
         let mut dc_rx = self.watchers[ResourceType::Datacenter].receiver.clone();
 
         let id = node_id.clone();
@@ -475,6 +483,11 @@ impl ControlPlane {
                         tracing::trace!("sending new listener delta discovery response");
 
                         yield responder(None, &mut trackers[ResourceType::Listener], &mut pending_acks)?;
+                    }
+                    _ = fc_rx.changed() => {
+                        tracing::trace!("sending new filter chain delta discovery response");
+
+                        yield responder(None, &mut trackers[ResourceType::FilterChain], &mut pending_acks)?;
                     }
                     _ = dc_rx.changed() => {
                         tracing::trace!("sending new datacenter delta discovery response");

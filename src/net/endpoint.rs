@@ -20,6 +20,8 @@ pub(crate) mod address;
 mod locality;
 pub mod metadata;
 
+use crate::net::cluster::proto;
+use eyre::ContextCompat;
 use serde::{Deserialize, Serialize};
 
 pub use self::{
@@ -58,6 +60,59 @@ impl Endpoint {
             ..<_>::default()
         }
     }
+
+    #[inline]
+    pub fn from_proto(proto: proto::Endpoint) -> eyre::Result<Self> {
+        let host: AddressKind = if let Some(host) = proto.host2 {
+            match host.inner.context("should be unreachable")? {
+                proto::host::Inner::Name(name) => AddressKind::Name(name),
+                proto::host::Inner::Ipv4(v4) => {
+                    AddressKind::Ip(std::net::Ipv4Addr::from(v4).into())
+                }
+                proto::host::Inner::Ipv6(v6) => AddressKind::Ip(
+                    std::net::Ipv6Addr::from(((v6.first as u128) << 64) | v6.second as u128).into(),
+                ),
+            }
+        } else {
+            proto.host.parse()?
+        };
+
+        Ok(Self {
+            address: (host, proto.port as u16).into(),
+            metadata: proto
+                .metadata
+                .map(TryFrom::try_from)
+                .transpose()?
+                .unwrap_or_default(),
+        })
+    }
+
+    #[inline]
+    pub fn into_proto(self) -> proto::Endpoint {
+        let host = match self.address.host {
+            AddressKind::Name(name) => proto::host::Inner::Name(name),
+            AddressKind::Ip(ip) => match ip {
+                std::net::IpAddr::V4(v4) => {
+                    proto::host::Inner::Ipv4(u32::from_be_bytes(v4.octets()))
+                }
+                std::net::IpAddr::V6(v6) => {
+                    let ip = u128::from_be_bytes(v6.octets());
+
+                    let first = ((ip >> 64) & 0xffffffffffffffff) as u64;
+                    let second = (ip & 0xffffffffffffffff) as u64;
+
+                    proto::host::Inner::Ipv6(proto::Ipv6 { first, second })
+                }
+            },
+        };
+
+        proto::Endpoint {
+            host: String::new(),
+            port: self.address.port.into(),
+            metadata: Some(self.metadata.into()),
+            host2: Some(proto::Host { inner: Some(host) }),
+        }
+    }
 }
 
 impl Default for Endpoint {
@@ -80,20 +135,21 @@ impl std::str::FromStr for Endpoint {
     }
 }
 
-impl From<Endpoint> for crate::net::cluster::proto::Endpoint {
+impl From<Endpoint> for proto::Endpoint {
     fn from(endpoint: Endpoint) -> Self {
         Self {
             host: endpoint.address.host.to_string(),
             port: endpoint.address.port.into(),
             metadata: Some(endpoint.metadata.into()),
+            host2: None,
         }
     }
 }
 
-impl TryFrom<crate::net::cluster::proto::Endpoint> for Endpoint {
+impl TryFrom<proto::Endpoint> for Endpoint {
     type Error = eyre::Error;
 
-    fn try_from(endpoint: crate::net::cluster::proto::Endpoint) -> Result<Self, Self::Error> {
+    fn try_from(endpoint: proto::Endpoint) -> Result<Self, Self::Error> {
         let host: address::AddressKind = endpoint.host.parse()?;
         if endpoint.port > u16::MAX as u32 {
             return Err(eyre::eyre!("invalid endpoint port"));
@@ -322,5 +378,22 @@ mod tests {
         for yaml in &[not_a_list, not_a_string_value, not_a_base64_string] {
             serde_yaml::from_str::<EndpointMetadata>(yaml).unwrap_err();
         }
+    }
+
+    // Sanity check conversion between endpoint <-> proto works
+    #[test]
+    fn endpoint_proto_conversion() {
+        let first = Endpoint::new(EndpointAddress {
+            host: AddressKind::Ip(std::net::IpAddr::V6(std::net::Ipv6Addr::new(
+                0x00, 0x01, 0x02, 0x04, 0x08, 0x10, 0xab, 0xcd,
+            ))),
+            port: 2001,
+        });
+
+        let expected = first.clone();
+        let proto = first.into_proto();
+        let actual = Endpoint::from_proto(proto).unwrap();
+
+        assert_eq!(expected, actual);
     }
 }

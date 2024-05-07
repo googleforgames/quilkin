@@ -109,6 +109,8 @@ pub struct DeltaDiscoveryRes {
     pub removed: Vec<String>,
 }
 
+use crate::net::xds::ClientVersions;
+
 impl Config {
     /// Attempts to deserialize `input` as a YAML object representing `Self`.
     pub fn from_reader<R: std::io::Read>(input: R) -> Result<Self, serde_yaml::Error> {
@@ -192,6 +194,11 @@ impl Config {
                     ..<_>::default()
                 })?);
             }
+            ResourceType::FilterChain => {
+                resources.push(resource_type.encode_to_any(
+                    &crate::net::cluster::proto::FilterChain::try_from(&*self.filters.load())?,
+                )?);
+            }
             ResourceType::Cluster => {
                 if names.is_empty() {
                     for cluster in self.clusters.read().iter() {
@@ -226,12 +233,12 @@ impl Config {
     pub fn delta_discovery_request(
         &self,
         subscribed: &BTreeSet<String>,
-        client_versions: &crate::net::xds::ClientVersions,
+        client_versions: &ClientVersions,
     ) -> crate::Result<DeltaDiscoveryRes> {
         let mut resources = Vec::new();
 
         let (awaiting_ack, removed) = match client_versions {
-            crate::net::xds::ClientVersions::Listener => {
+            ClientVersions::Listener => {
                 resources.push(XdsResource {
                     name: "listener".into(),
                     version: "0".into(),
@@ -245,7 +252,20 @@ impl Config {
                 });
                 (crate::net::xds::AwaitingAck::Listener, Vec::new())
             }
-            crate::net::xds::ClientVersions::Datacenter => {
+            ClientVersions::FilterChain => {
+                resources.push(XdsResource {
+                    name: "filter_chain".into(),
+                    version: "0".into(),
+                    resource: Some(ResourceType::FilterChain.encode_to_any(
+                        &crate::net::cluster::proto::FilterChain::try_from(&*self.filters.load())?,
+                    )?),
+                    aliases: Vec::new(),
+                    ttl: None,
+                    cache_control: None,
+                });
+                (crate::net::xds::AwaitingAck::FilterChain, Vec::new())
+            }
+            ClientVersions::Datacenter => {
                 match &self.datacenter {
                     DatacenterConfig::Agent {
                         qcmp_port,
@@ -287,7 +307,7 @@ impl Config {
                 }
                 (crate::net::xds::AwaitingAck::Datacenter, Vec::new())
             }
-            crate::net::xds::ClientVersions::Cluster(map) => {
+            ClientVersions::Cluster(map) => {
                 let resource_type = ResourceType::Cluster;
                 let mut to_ack = Vec::new();
 
@@ -368,6 +388,12 @@ impl Config {
 
                 self.filters.store(Arc::new(chain));
             }
+            Resource::FilterChain(fc) => {
+                self.filters
+                    .store(Arc::new(crate::filters::FilterChain::try_create_fallible(
+                        fc.filters.into_iter(),
+                    )?));
+            }
             Resource::Datacenter(dc) => {
                 let DatacenterConfig::NonAgent { datacenters } = &self.datacenter else {
                     eyre::bail!("cannot apply datacenter resource to an agent");
@@ -433,6 +459,20 @@ impl Config {
 
                     self.filters.store(Arc::new(chain));
                     local_versions.insert(listener.name, "".into());
+                }
+            }
+            ResourceType::FilterChain => {
+                for res in resources {
+                    let (resource, _) = res?;
+                    let Resource::FilterChain(fc) = resource else {
+                        return Err(eyre::eyre!("a non-filterchain resource was present"));
+                    };
+
+                    self.filters
+                        .store(Arc::new(crate::filters::FilterChain::try_create_fallible(
+                            fc.filters.into_iter(),
+                        )?));
+                    local_versions.insert(String::new(), "".into());
                 }
             }
             ResourceType::Datacenter => {
@@ -823,6 +863,27 @@ impl TryFrom<listener::Filter> for Filter {
             name: filter.name,
             // TODO: keep the label across xDS
             label: None,
+            config,
+        })
+    }
+}
+
+impl TryFrom<crate::net::cluster::proto::Filter> for Filter {
+    type Error = CreationError;
+
+    fn try_from(value: crate::net::cluster::proto::Filter) -> Result<Self, Self::Error> {
+        let config = if let Some(cfg) = value.config {
+            Some(
+                serde_json::from_str(&cfg)
+                    .map_err(|err| CreationError::DeserializeFailed(err.to_string()))?,
+            )
+        } else {
+            None
+        };
+
+        Ok(Self {
+            name: value.name,
+            label: value.label,
             config,
         })
     }
