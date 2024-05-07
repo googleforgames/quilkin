@@ -120,7 +120,12 @@ pub enum ResourceType {
 }
 
 impl ResourceType {
-    pub const VARIANTS: &'static [Self] = &[Self::Cluster, Self::Listener, Self::Datacenter];
+    pub const VARIANTS: &'static [Self] = &[
+        Self::Cluster,
+        Self::Listener,
+        Self::FilterChain,
+        Self::Datacenter,
+    ];
 
     /// Returns the corresponding type URL for the response type.
     #[inline]
