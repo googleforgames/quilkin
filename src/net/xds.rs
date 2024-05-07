@@ -30,19 +30,12 @@ pub use crate::generated::envoy::{
 };
 pub use client::{AdsClient, Client};
 pub use resource::{Resource, ResourceType};
-// pub use self::{
-//     client::{AdsClient, Client},
-//     envoy::service::discovery::v3::aggregated_discovery_service_client::AggregatedDiscoveryServiceClient,
-//     envoy::*,
-//     resource::{Resource, ResourceType},
-//     server::ControlPlane,
-//     xds::*,
-// };
 use std::collections::HashMap;
 
 /// Keeps track of what resource versions a particular client has
 pub enum ClientVersions {
     Listener,
+    FilterChain,
     Cluster(HashMap<Option<Locality>, EndpointSetVersion>),
     Datacenter,
 }
@@ -52,6 +45,7 @@ pub enum ClientVersions {
 /// the client has
 pub enum AwaitingAck {
     Listener,
+    FilterChain,
     Cluster {
         updated: Vec<(Option<Locality>, EndpointSetVersion)>,
         remove_none: bool,
@@ -64,6 +58,7 @@ impl ClientVersions {
     pub fn new(rt: ResourceType) -> Self {
         match rt {
             ResourceType::Listener => Self::Listener,
+            ResourceType::FilterChain => Self::FilterChain,
             ResourceType::Cluster => Self::Cluster(HashMap::new()),
             ResourceType::Datacenter => Self::Datacenter,
         }
@@ -73,6 +68,7 @@ impl ClientVersions {
     pub fn typ(&self) -> ResourceType {
         match self {
             Self::Listener => ResourceType::Listener,
+            Self::FilterChain => ResourceType::FilterChain,
             Self::Cluster(_) => ResourceType::Cluster,
             Self::Datacenter => ResourceType::Datacenter,
         }
@@ -106,43 +102,41 @@ impl ClientVersions {
 
     #[inline]
     pub fn remove(&mut self, name: String) {
-        match self {
-            Self::Listener | Self::Datacenter => {}
-            Self::Cluster(map) => {
-                let locality = if name.is_empty() {
-                    None
-                } else {
-                    match name.parse() {
-                        Ok(l) => Some(l),
-                        Err(err) => {
-                            tracing::error!(error = %err, name, "Failed to parse locality");
-                            return;
-                        }
-                    }
-                };
-                map.remove(&locality);
+        let Self::Cluster(map) = self else {
+            return;
+        };
+
+        let locality = if name.is_empty() {
+            None
+        } else {
+            match name.parse() {
+                Ok(l) => Some(l),
+                Err(err) => {
+                    tracing::error!(error = %err, name, "Failed to parse locality");
+                    return;
+                }
             }
-        }
+        };
+        map.remove(&locality);
     }
 
     /// Resets the client versions to those specified by the client itself
     #[inline]
     pub fn reset(&mut self, versions: HashMap<String, String>) -> crate::Result<()> {
-        match self {
-            Self::Listener | Self::Datacenter => Ok(()),
-            Self::Cluster(map) => {
-                map.clear();
+        let Self::Cluster(map) = self else {
+            return Ok(());
+        };
 
-                for (k, v) in versions {
-                    let locality = if k.is_empty() { None } else { Some(k.parse()?) };
-                    let version = v.parse()?;
+        map.clear();
 
-                    map.insert(locality, version);
-                }
+        for (k, v) in versions {
+            let locality = if k.is_empty() { None } else { Some(k.parse()?) };
+            let version = v.parse()?;
 
-                Ok(())
-            }
+            map.insert(locality, version);
         }
+
+        Ok(())
     }
 }
 

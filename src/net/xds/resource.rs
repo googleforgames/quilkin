@@ -35,6 +35,7 @@ type_urls! {
         CLUSTER_TYPE = "quilkin.config.v1alpha1.Cluster",
         LISTENER_TYPE = "envoy.config.listener.v3.Listener",
         DATACENTER_TYPE = "quilkin.config.v1alpha1.Datacenter",
+        FILTER_CHAIN_TYPE = "quilkin.config.v1alpha1.FilterChain",
     }
 }
 
@@ -43,6 +44,7 @@ pub enum Resource {
     Cluster(Box<crate::net::cluster::proto::Cluster>),
     Datacenter(Box<crate::net::cluster::proto::Datacenter>),
     Listener(Box<Listener>),
+    FilterChain(crate::net::cluster::proto::FilterChain),
 }
 
 impl Resource {
@@ -55,6 +57,7 @@ impl Resource {
                 .map(|locality| crate::net::endpoint::Locality::from(locality).to_string())
                 .unwrap_or_default(),
             Self::Listener(listener) => listener.name.to_string(),
+            Self::FilterChain(_fc) => String::new(),
             Self::Datacenter(dc) => dc.icao_code.to_string(),
         }
     }
@@ -64,6 +67,7 @@ impl Resource {
         match self {
             Self::Cluster(_) => ResourceType::Cluster,
             Self::Listener(_) => ResourceType::Listener,
+            Self::FilterChain(_) => ResourceType::FilterChain,
             Self::Datacenter(_) => ResourceType::Datacenter,
         }
     }
@@ -81,6 +85,16 @@ impl Resource {
     pub fn type_url(&self) -> &str {
         self.resource_type().type_url()
     }
+
+    pub fn from_any(any: prost_types::Any) -> eyre::Result<Self> {
+        Ok(match &*any.type_url {
+            CLUSTER_TYPE => Resource::Cluster(<_>::decode(&*any.value)?),
+            LISTENER_TYPE => Resource::Listener(<_>::decode(&*any.value)?),
+            DATACENTER_TYPE => Resource::Datacenter(<_>::decode(&*any.value)?),
+            FILTER_CHAIN_TYPE => Resource::FilterChain(<_>::decode(&*any.value)?),
+            url => return Err(UnknownResourceType(url.into()).into()),
+        })
+    }
 }
 
 impl TryFrom<prost_types::Any> for Resource {
@@ -91,6 +105,7 @@ impl TryFrom<prost_types::Any> for Resource {
             CLUSTER_TYPE => Resource::Cluster(<_>::decode(&*any.value)?),
             LISTENER_TYPE => Resource::Listener(<_>::decode(&*any.value)?),
             DATACENTER_TYPE => Resource::Datacenter(<_>::decode(&*any.value)?),
+            FILTER_CHAIN_TYPE => Resource::FilterChain(<_>::decode(&*any.value)?),
             url => return Err(UnknownResourceType(url.into()).into()),
         })
     }
@@ -100,11 +115,17 @@ impl TryFrom<prost_types::Any> for Resource {
 pub enum ResourceType {
     Cluster,
     Listener,
+    FilterChain,
     Datacenter,
 }
 
 impl ResourceType {
-    pub const VARIANTS: &'static [Self] = &[Self::Cluster, Self::Listener, Self::Datacenter];
+    pub const VARIANTS: &'static [Self] = &[
+        Self::Cluster,
+        Self::Listener,
+        Self::FilterChain,
+        Self::Datacenter,
+    ];
 
     /// Returns the corresponding type URL for the response type.
     #[inline]
@@ -113,6 +134,7 @@ impl ResourceType {
             Self::Cluster => CLUSTER_TYPE,
             Self::Listener => LISTENER_TYPE,
             Self::Datacenter => DATACENTER_TYPE,
+            Self::FilterChain => FILTER_CHAIN_TYPE,
         }
     }
 
@@ -140,6 +162,7 @@ impl TryFrom<&'_ str> for ResourceType {
         Ok(match url {
             CLUSTER_TYPE => Self::Cluster,
             LISTENER_TYPE => Self::Listener,
+            FILTER_CHAIN_TYPE => Self::FilterChain,
             DATACENTER_TYPE => Self::Datacenter,
             unknown => return Err(UnknownResourceType(unknown.to_owned())),
         })

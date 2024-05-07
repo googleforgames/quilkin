@@ -210,6 +210,23 @@ impl TryFrom<&'_ FilterChain> for EnvoyFilterChain {
     }
 }
 
+impl TryFrom<&'_ FilterChain> for crate::net::cluster::proto::FilterChain {
+    type Error = CreationError;
+
+    fn try_from(value: &'_ FilterChain) -> Result<Self, Self::Error> {
+        Ok(Self {
+            filters: value
+                .iter()
+                .map(|filter| crate::net::cluster::proto::Filter {
+                    name: filter.name,
+                    label: filter.label,
+                    config: filter.config.map(|v| v.to_string()),
+                })
+                .collect(),
+        })
+    }
+}
+
 impl std::ops::Index<usize> for FilterChain {
     type Output = (String, FilterInstance);
 
@@ -371,7 +388,10 @@ mod tests {
         let expected = endpoints_fixture.clone();
 
         assert_eq!(&*expected.endpoints(), &*context.destinations);
-        assert_eq!(b"hello:odr:127.0.0.1:70", &*context.contents);
+        assert_eq!(
+            "hello:odr:127.0.0.1:70",
+            std::str::from_utf8(&context.contents).unwrap()
+        );
         assert_eq!(
             "receive",
             context.metadata[&"downstream".into()].as_string().unwrap()

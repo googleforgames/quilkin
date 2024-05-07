@@ -3,7 +3,7 @@ use std::{
     process::{Command, Stdio},
 };
 
-const VERSION: &str = "0.2.1";
+const VERSION: &str = "0.2.6";
 
 fn check_version(name: &str, prefix: &str, wanted: &str) -> bool {
     if let Ok(output) = Command::new(name).arg("--version").output() {
@@ -11,7 +11,8 @@ fn check_version(name: &str, prefix: &str, wanted: &str) -> bool {
             let version = std::str::from_utf8(&output.stdout).expect("version output was non-utf8");
 
             if let Some(v) = version.strip_prefix(prefix) {
-                if v.trim() == wanted {
+                let v = v.trim();
+                if v == wanted {
                     return true;
                 } else {
                     println!("{name} version detected as '{v}' which did not match expected version '{wanted}'");
@@ -92,7 +93,7 @@ fn install() {
         }
     } else {
         if !Command::new("cargo")
-            .args(["install", "-f", "proto-gen"])
+            .args(["install", "--locked", "-f", "proto-gen"])
             .status()
             .expect("cargo not installed")
             .success()

@@ -109,7 +109,6 @@ impl From<Action> for ActionValue {
 }
 
 #[derive(Clone, Copy, Default, Deserialize, Debug, Eq, PartialEq, Serialize, JsonSchema)]
-#[non_exhaustive]
 pub struct Config {
     #[serde(default)]
     pub mode: Mode,
