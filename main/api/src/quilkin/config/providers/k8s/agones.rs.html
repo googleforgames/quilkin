@@ -877,6 +877,15 @@
 <a href="#875" id="875">875</a>
 <a href="#876" id="876">876</a>
 <a href="#877" id="877">877</a>
+<a href="#878" id="878">878</a>
+<a href="#879" id="879">879</a>
+<a href="#880" id="880">880</a>
+<a href="#881" id="881">881</a>
+<a href="#882" id="882">882</a>
+<a href="#883" id="883">883</a>
+<a href="#884" id="884">884</a>
+<a href="#885" id="885">885</a>
+<a href="#886" id="886">886</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -1158,6 +1167,15 @@
     }
 }
 
+<span class="kw">fn </span>deserialize_null_default&lt;<span class="lifetime">'de</span>, D, T&gt;(deserializer: D) -&gt; <span class="prelude-ty">Result</span>&lt;T, D::Error&gt;
+<span class="kw">where
+    </span>T: Default + Deserialize&lt;<span class="lifetime">'de</span>&gt;,
+    D: serde::de::Deserializer&lt;<span class="lifetime">'de</span>&gt;,
+{
+    <span class="kw">let </span>opt = Option::deserialize(deserializer)<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(opt.unwrap_or_default())
+}
+
 <span class="attr">#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = <span class="string">"camelCase"</span>)]
 </span><span class="kw">pub struct </span>GameServerSpec {
@@ -1166,7 +1184,7 @@
     </span><span class="attr">#[serde(default, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
     </span><span class="kw">pub </span>container: <span class="prelude-ty">Option</span>&lt;String&gt;,
     <span class="doccomment">/// Ports are the array of ports that can be exposed via the game server
-    </span><span class="attr">#[serde(default)]
+    </span><span class="attr">#[serde(deserialize_with = <span class="string">"deserialize_null_default"</span>)]
     </span><span class="kw">pub </span>ports: Vec&lt;GameServerPort&gt;,
     <span class="doccomment">/// Configures health checking
     </span><span class="kw">pub </span>health: Health,
@@ -1267,7 +1285,7 @@
     </span><span class="kw">pub </span>state: GameServerState,
     <span class="kw">pub </span>ports: <span class="prelude-ty">Option</span>&lt;Vec&lt;GameServerStatusPort&gt;&gt;,
     <span class="kw">pub </span>address: String,
-    <span class="attr">#[serde(default)]
+    <span class="attr">#[serde(deserialize_with = <span class="string">"deserialize_null_default"</span>)]
     </span><span class="kw">pub </span>addresses: Vec&lt;NodeAddress&gt;,
     <span class="kw">pub </span>node_name: String,
     <span class="kw">pub </span>reserved_until: <span class="prelude-ty">Option</span>&lt;k8s_openapi::apimachinery::pkg::apis::meta::v1::Time&gt;,

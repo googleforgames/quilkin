@@ -431,7 +431,7 @@
         <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">30 </span>{
             <span class="macro">println!</span>(<span class="string">"Connection Attempt: {i}"</span>);
 
-            <span class="comment">// returns the nae of the GameServer. This proves we are routing the the allocated
+            <span class="comment">// returns the name of the GameServer. This proves we are routing the allocated
             // GameServer with the correct token attached.
             </span>socket
                 .send_to(<span class="macro">format!</span>(<span class="string">"GAMESERVER{token}"</span>).as_bytes(), proxy_address)
@@ -482,7 +482,7 @@
             </span>.unwrap();
     }
 
-    <span class="doccomment">/// Deploys the Agent and Relay Server Deployents and Services
+    <span class="doccomment">/// Deploys the Agent and Relay Server Deployments and Services
     </span><span class="kw">async fn </span>agones_agent_deployment(client: <span class="kw-2">&amp;</span>Client, deployments: Api&lt;Deployment&gt;) {
         <span class="kw">let </span>service_accounts: Api&lt;ServiceAccount&gt; = client.namespaced_api();
         <span class="kw">let </span>cluster_roles: Api&lt;ClusterRole&gt; = Api::all(client.kubernetes.clone());
