@@ -131,11 +131,6 @@
 <a href="#129" id="129">129</a>
 <a href="#130" id="130">130</a>
 <a href="#131" id="131">131</a>
-<a href="#132" id="132">132</a>
-<a href="#133" id="133">133</a>
-<a href="#134" id="134">134</a>
-<a href="#135" id="135">135</a>
-<a href="#136" id="136">136</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2023 Google LLC
  *
@@ -193,10 +188,6 @@
     <span class="doccomment">/// If specified, additionally filters the gameserver address by its ip kind
     </span><span class="attr">#[clap(long, requires(<span class="string">"address_type"</span>), value_enum)]
     </span><span class="kw">pub </span>ip_kind: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::config::AddrKind&gt;,
-    <span class="doccomment">/// The interval in seconds at which the agent will wait for a discovery
-    /// request from a relay server before restarting the connection.
-    </span><span class="attr">#[clap(long, env = <span class="string">"QUILKIN_IDLE_REQUEST_INTERVAL_SECS"</span>)]
-    </span><span class="kw">pub </span>idle_request_interval_secs: <span class="prelude-ty">Option</span>&lt;u64&gt;,
     <span class="doccomment">/// The ICAO code for the agent.
     </span><span class="attr">#[clap(short, long, env, default_value_t = <span class="kw">crate</span>::config::IcaoCode::default())]
     </span><span class="kw">pub </span>icao_code: <span class="kw">crate</span>::config::IcaoCode,
@@ -226,7 +217,6 @@
             zone: &lt;<span class="kw">_</span>&gt;::default(),
             sub_zone: &lt;<span class="kw">_</span>&gt;::default(),
             provider: &lt;<span class="kw">_</span>&gt;::default(),
-            idle_request_interval_secs: <span class="prelude-val">None</span>,
             icao_code: &lt;<span class="kw">_</span>&gt;::default(),
             address_type: <span class="prelude-val">None</span>,
             ip_kind: <span class="prelude-val">None</span>,

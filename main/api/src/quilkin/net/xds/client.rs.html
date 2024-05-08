@@ -899,18 +899,6 @@
 <a href="#897" id="897">897</a>
 <a href="#898" id="898">898</a>
 <a href="#899" id="899">899</a>
-<a href="#900" id="900">900</a>
-<a href="#901" id="901">901</a>
-<a href="#902" id="902">902</a>
-<a href="#903" id="903">903</a>
-<a href="#904" id="904">904</a>
-<a href="#905" id="905">905</a>
-<a href="#906" id="906">906</a>
-<a href="#907" id="907">907</a>
-<a href="#908" id="908">908</a>
-<a href="#909" id="909">909</a>
-<a href="#910" id="910">910</a>
-<a href="#911" id="911">911</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -1158,26 +1146,20 @@
         <span class="kw">let </span>handle = tokio::task::spawn(
             <span class="kw">async move </span>{
                 <span class="macro">tracing::trace!</span>(<span class="string">"starting relay client delta stream task"</span>);
-                <span class="kw">let </span>interval = rt_config.idle_request_interval;
 
                 <span class="kw">loop </span>{
                     {
-                        <span class="kw">let </span>control_plane =
-                            <span class="kw">super</span>::server::ControlPlane::from_arc(config.clone(), interval);
+                        <span class="kw">let </span>control_plane = <span class="kw">super</span>::server::ControlPlane::from_arc(
+                            config.clone(),
+                            <span class="kw">crate</span>::components::admin::IDLE_REQUEST_INTERVAL,
+                        );
                         <span class="kw">let </span><span class="kw-2">mut </span>stream = control_plane.delta_aggregated_resources(stream).<span class="kw">await</span><span class="question-mark">?</span>;
                         rt_config.relay_is_healthy.store(<span class="bool-val">true</span>, Ordering::SeqCst);
 
-                        <span class="kw">loop </span>{
-                            <span class="kw">let </span>timeout = tokio::time::timeout(interval, stream.next());
-
-                            <span class="kw">match </span>timeout.<span class="kw">await </span>{
-                                <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(result)) =&gt; {
-                                    <span class="kw">let </span>response = result<span class="question-mark">?</span>;
-                                    <span class="macro">tracing::trace!</span>(<span class="string">"received delta discovery response"</span>);
-                                    ds.send_response(response).<span class="kw">await</span><span class="question-mark">?</span>;
-                                }
-                                <span class="kw">_ </span>=&gt; <span class="kw">break</span>,
-                            }
+                        <span class="kw">while let </span><span class="prelude-val">Some</span>(result) = stream.next().<span class="kw">await </span>{
+                            <span class="kw">let </span>response = result<span class="question-mark">?</span>;
+                            <span class="macro">tracing::trace!</span>(<span class="string">"received delta discovery response"</span>);
+                            ds.send_response(response).<span class="kw">await</span><span class="question-mark">?</span>;
                         }
                     }
 
@@ -1612,7 +1594,6 @@
             identifier.clone(),
             <span class="kw">move </span>|(requests, <span class="kw-2">mut </span>rx), <span class="kw">_</span>| <span class="kw">async move </span>{
                 <span class="macro">tracing::trace!</span>(<span class="string">"starting relay client stream task"</span>);
-                <span class="kw">let </span>idle_interval = rt_config.idle_request_interval;
 
                 <span class="kw">loop </span>{
                     <span class="kw">let </span>initial_response = DiscoveryResponse {
@@ -1635,22 +1616,17 @@
                         .<span class="kw">await</span><span class="question-mark">?
                         </span>.into_inner();
 
-                    <span class="kw">let </span>control_plane =
-                        <span class="kw">super</span>::server::ControlPlane::from_arc(config.clone(), idle_interval);
+                    <span class="kw">let </span>control_plane = <span class="kw">super</span>::server::ControlPlane::from_arc(
+                        config.clone(),
+                        <span class="kw">crate</span>::components::admin::IDLE_REQUEST_INTERVAL,
+                    );
                     <span class="kw">let </span><span class="kw-2">mut </span>stream = control_plane.stream_resources(stream).<span class="kw">await</span><span class="question-mark">?</span>;
                     rt_config.relay_is_healthy.store(<span class="bool-val">true</span>, Ordering::SeqCst);
 
-                    <span class="kw">loop </span>{
-                        <span class="kw">let </span>timeout = tokio::time::timeout(idle_interval, stream.next());
-
-                        <span class="kw">match </span>timeout.<span class="kw">await </span>{
-                            <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(result)) =&gt; {
-                                <span class="kw">let </span>response = result<span class="question-mark">?</span>;
-                                <span class="macro">tracing::debug!</span>(config=%serde_json::to_value(<span class="kw-2">&amp;</span>config).unwrap(), <span class="string">"received discovery response"</span>);
-                                requests.send(response)<span class="question-mark">?</span>;
-                            }
-                            <span class="kw">_ </span>=&gt; <span class="kw">break</span>,
-                        }
+                    <span class="kw">while let </span><span class="prelude-val">Some</span>(result) = stream.next().<span class="kw">await </span>{
+                        <span class="kw">let </span>response = result<span class="question-mark">?</span>;
+                        <span class="macro">tracing::debug!</span>(config=%serde_json::to_value(<span class="kw-2">&amp;</span>config).unwrap(), <span class="string">"received discovery response"</span>);
+                        requests.send(response)<span class="question-mark">?</span>;
                     }
 
                     rt_config.relay_is_healthy.store(<span class="bool-val">false</span>, Ordering::SeqCst);

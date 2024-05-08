@@ -269,7 +269,6 @@
 <a href="#267" id="267">267</a>
 <a href="#268" id="268">268</a>
 <a href="#269" id="269">269</a>
-<a href="#270" id="270">270</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2023 Google LLC
  *
@@ -318,7 +317,6 @@
     <span class="kw">pub fn </span>idle_request_interval(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Duration {
         <span class="kw">match </span><span class="self">self </span>{
             <span class="self">Self</span>::Proxy(config) =&gt; config.idle_request_interval,
-            <span class="self">Self</span>::Agent(config) =&gt; config.idle_request_interval,
             <span class="self">Self</span>::Relay(config) =&gt; config.idle_request_interval,
             <span class="kw">_ </span>=&gt; IDLE_REQUEST_INTERVAL,
         }
