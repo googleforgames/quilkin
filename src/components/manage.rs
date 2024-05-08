@@ -35,8 +35,6 @@ impl Manage {
             None,
         );
 
-        let idle_request_interval = ready.idle_request_interval;
-
         let _relay_stream = if !self.relay_servers.is_empty() {
             tracing::info!("connecting to relay server");
             let client = crate::net::xds::client::MdsClient::connect(
@@ -70,7 +68,7 @@ impl Manage {
         let server_task = tokio::spawn(crate::net::xds::server::spawn(
             self.listener,
             config,
-            idle_request_interval,
+            crate::components::admin::IDLE_REQUEST_INTERVAL,
         )?)
         .map_err(From::from)
         .and_then(std::future::ready);

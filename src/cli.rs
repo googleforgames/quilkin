@@ -147,16 +147,7 @@ impl Cli {
             Commands::GenerateConfigSchema(generator) => {
                 return generator.generate_config_schema();
             }
-            Commands::Agent(agent) => {
-                let ready = components::agent::Ready {
-                    idle_request_interval: agent
-                        .idle_request_interval_secs
-                        .map(std::time::Duration::from_secs)
-                        .unwrap_or(admin_server::IDLE_REQUEST_INTERVAL),
-                    ..Default::default()
-                };
-                Admin::Agent(ready)
-            }
+            Commands::Agent(_) => Admin::Agent(<_>::default()),
             Commands::Proxy(proxy) => {
                 let ready = components::proxy::Ready {
                     idle_request_interval: proxy
@@ -169,7 +160,6 @@ impl Cli {
             }
             Commands::Manage(_mng) => {
                 let ready = components::manage::Ready {
-                    idle_request_interval: admin_server::IDLE_REQUEST_INTERVAL,
                     is_manage: true,
                     ..Default::default()
                 };
