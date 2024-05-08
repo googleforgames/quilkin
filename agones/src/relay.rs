@@ -113,7 +113,7 @@ mod tests {
         for i in 0..30 {
             println!("Connection Attempt: {i}");
 
-            // returns the nae of the GameServer. This proves we are routing the the allocated
+            // returns the name of the GameServer. This proves we are routing the allocated
             // GameServer with the correct token attached.
             socket
                 .send_to(format!("GAMESERVER{token}").as_bytes(), proxy_address)
@@ -164,7 +164,7 @@ mod tests {
             .unwrap();
     }
 
-    /// Deploys the Agent and Relay Server Deployents and Services
+    /// Deploys the Agent and Relay Server Deployments and Services
     async fn agones_agent_deployment(client: &Client, deployments: Api<Deployment>) {
         let service_accounts: Api<ServiceAccount> = client.namespaced_api();
         let cluster_roles: Api<ClusterRole> = Api::all(client.kubernetes.clone());

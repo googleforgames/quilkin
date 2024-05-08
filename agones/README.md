@@ -59,7 +59,7 @@ IMAGE_TAG=us-docker.pkg.dev/my-project-name/dev/quilkin:0.4.0-auyz cargo test
 ### Build, Push and Test in one Go 💪
 
 The [`build/Makefile`](../build/Makefile) provides a targets that can be executed to build a development image, 
-push it a appropriate location, and run the set of Agones integration tests, depending on where you Kubernetes 
+push it an appropriate location, and run the set of Agones integration tests, depending on where you Kubernetes 
 cluster is set up. 
 
 #### Minikube
