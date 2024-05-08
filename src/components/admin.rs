@@ -46,7 +46,6 @@ impl Admin {
     pub fn idle_request_interval(&self) -> Duration {
         match self {
             Self::Proxy(config) => config.idle_request_interval,
-            Self::Agent(config) => config.idle_request_interval,
             Self::Relay(config) => config.idle_request_interval,
             _ => IDLE_REQUEST_INTERVAL,
         }

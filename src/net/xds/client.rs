@@ -245,26 +245,20 @@ impl MdsClient {
         let handle = tokio::task::spawn(
             async move {
                 tracing::trace!("starting relay client delta stream task");
-                let interval = rt_config.idle_request_interval;
 
                 loop {
                     {
-                        let control_plane =
-                            super::server::ControlPlane::from_arc(config.clone(), interval);
+                        let control_plane = super::server::ControlPlane::from_arc(
+                            config.clone(),
+                            crate::components::admin::IDLE_REQUEST_INTERVAL,
+                        );
                         let mut stream = control_plane.delta_aggregated_resources(stream).await?;
                         rt_config.relay_is_healthy.store(true, Ordering::SeqCst);
 
-                        loop {
-                            let timeout = tokio::time::timeout(interval, stream.next());
-
-                            match timeout.await {
-                                Ok(Some(result)) => {
-                                    let response = result?;
-                                    tracing::trace!("received delta discovery response");
-                                    ds.send_response(response).await?;
-                                }
-                                _ => break,
-                            }
+                        while let Some(result) = stream.next().await {
+                            let response = result?;
+                            tracing::trace!("received delta discovery response");
+                            ds.send_response(response).await?;
                         }
                     }
 
@@ -699,7 +693,6 @@ impl MdsStream {
             identifier.clone(),
             move |(requests, mut rx), _| async move {
                 tracing::trace!("starting relay client stream task");
-                let idle_interval = rt_config.idle_request_interval;
 
                 loop {
                     let initial_response = DiscoveryResponse {
@@ -722,22 +715,17 @@ impl MdsStream {
                         .await?
                         .into_inner();
 
-                    let control_plane =
-                        super::server::ControlPlane::from_arc(config.clone(), idle_interval);
+                    let control_plane = super::server::ControlPlane::from_arc(
+                        config.clone(),
+                        crate::components::admin::IDLE_REQUEST_INTERVAL,
+                    );
                     let mut stream = control_plane.stream_resources(stream).await?;
                     rt_config.relay_is_healthy.store(true, Ordering::SeqCst);
 
-                    loop {
-                        let timeout = tokio::time::timeout(idle_interval, stream.next());
-
-                        match timeout.await {
-                            Ok(Some(result)) => {
-                                let response = result?;
-                                tracing::debug!(config=%serde_json::to_value(&config).unwrap(), "received discovery response");
-                                requests.send(response)?;
-                            }
-                            _ => break,
-                        }
+                    while let Some(result) = stream.next().await {
+                        let response = result?;
+                        tracing::debug!(config=%serde_json::to_value(&config).unwrap(), "received discovery response");
+                        requests.send(response)?;
                     }
 
                     rt_config.relay_is_healthy.store(false, Ordering::SeqCst);

@@ -8,7 +8,6 @@ use std::sync::{
 
 #[derive(Clone, Debug, Default)]
 pub struct Ready {
-    pub idle_request_interval: std::time::Duration,
     pub provider_is_healthy: Arc<AtomicBool>,
     pub relay_is_healthy: Arc<AtomicBool>,
     /// If true, only care about the provider being healthy, not the relay

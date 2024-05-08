@@ -55,10 +55,6 @@ pub struct Agent {
     /// If specified, additionally filters the gameserver address by its ip kind
     #[clap(long, requires("address_type"), value_enum)]
     pub ip_kind: Option<crate::config::AddrKind>,
-    /// The interval in seconds at which the agent will wait for a discovery
-    /// request from a relay server before restarting the connection.
-    #[clap(long, env = "QUILKIN_IDLE_REQUEST_INTERVAL_SECS")]
-    pub idle_request_interval_secs: Option<u64>,
     /// The ICAO code for the agent.
     #[clap(short, long, env, default_value_t = crate::config::IcaoCode::default())]
     pub icao_code: crate::config::IcaoCode,
@@ -88,7 +84,6 @@ impl Default for Agent {
             zone: <_>::default(),
             sub_zone: <_>::default(),
             provider: <_>::default(),
-            idle_request_interval_secs: None,
             icao_code: <_>::default(),
             address_type: None,
             ip_kind: None,
