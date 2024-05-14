@@ -20,7 +20,7 @@ use tokio::time::{timeout, Duration};
 
 use quilkin::{
     config::Filter,
-    filters::{Capture, StaticFilter, HashedTokenRouter},
+    filters::{Capture, HashedTokenRouter, StaticFilter},
     net::endpoint::{metadata::MetadataView, Endpoint},
     test::{AddressType, TestHelper},
 };
@@ -52,7 +52,9 @@ quilkin.dev:
                 serde_yaml::from_str::<MetadataView<_>>(endpoint_metadata).unwrap(),
             )]
             .into(),
-        )
+        );
+
+        clusters.build_token_maps();
     });
 
     server_config.filters.store(
