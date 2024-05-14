@@ -399,6 +399,21 @@
 <a href="#397" id="397">397</a>
 <a href="#398" id="398">398</a>
 <a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -432,6 +447,7 @@
 };
 
 <span class="kw">pub type </span>EndpointMetadata = metadata::MetadataView&lt;Metadata&gt;;
+<span class="kw">pub use </span>base64_set::Set;
 
 <span class="doccomment">/// A destination endpoint with any associated metadata.
 </span><span class="attr">#[derive(Debug, Deserialize, Serialize, PartialEq, Clone, Eq, schemars::JsonSchema)]
@@ -699,36 +715,50 @@
 </span><span class="kw">mod </span>base64_set {
     <span class="kw">use </span>serde::de::Error;
 
-    <span class="kw">pub type </span>Set&lt;T = Vec&lt;u8&gt;&gt; = std::collections::BTreeSet&lt;T&gt;;
+    <span class="kw">pub type </span>Set = std::collections::BTreeSet&lt;Vec&lt;u8&gt;&gt;;
 
     <span class="kw">pub fn </span>serialize&lt;S&gt;(set: <span class="kw-2">&amp;</span>Set, ser: S) -&gt; <span class="prelude-ty">Result</span>&lt;S::Ok, S::Error&gt;
     <span class="kw">where
         </span>S: serde::Serializer,
     {
-        serde::Serialize::serialize(
-            <span class="kw-2">&amp;</span>set.iter()
-                .map(<span class="kw">crate</span>::codec::base64::encode)
-                .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(),
-            ser,
-        )
+        ser.collect_seq(set.iter().map(<span class="kw">crate</span>::codec::base64::encode))
     }
 
     <span class="kw">pub fn </span>deserialize&lt;<span class="lifetime">'de</span>, D&gt;(de: D) -&gt; <span class="prelude-ty">Result</span>&lt;Set, D::Error&gt;
     <span class="kw">where
         </span>D: serde::Deserializer&lt;<span class="lifetime">'de</span>&gt;,
     {
-        <span class="kw">let </span>items = &lt;Vec&lt;String&gt; <span class="kw">as </span>serde::Deserialize&gt;::deserialize(de)<span class="question-mark">?</span>;
-        <span class="kw">let </span>set = items.iter().cloned().collect::&lt;Set&lt;String&gt;&gt;();
+        <span class="kw">struct </span>TokenVisitor;
 
-        <span class="kw">if </span>set.len() != items.len() {
-            <span class="prelude-val">Err</span>(D::Error::custom(
-                <span class="string">"Found duplicate tokens in endpoint metadata."</span>,
-            ))
-        } <span class="kw">else </span>{
-            set.into_iter()
-                .map(|string| <span class="kw">crate</span>::codec::base64::decode(string).map_err(D::Error::custom))
-                .collect()
+        <span class="kw">impl</span>&lt;<span class="lifetime">'de</span>&gt; serde::de::Visitor&lt;<span class="lifetime">'de</span>&gt; <span class="kw">for </span>TokenVisitor {
+            <span class="kw">type </span>Value = Set;
+
+            <span class="kw">fn </span>expecting(<span class="kw-2">&amp;</span><span class="self">self</span>, formatter: <span class="kw-2">&amp;mut </span>std::fmt::Formatter) -&gt; std::fmt::Result {
+                formatter.write_str(<span class="string">"an array of base64 encoded tokens"</span>)
+            }
+
+            <span class="kw">fn </span>visit_seq&lt;A&gt;(<span class="self">self</span>, <span class="kw-2">mut </span>seq: A) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Value, A::Error&gt;
+            <span class="kw">where
+                </span>A: serde::de::SeqAccess&lt;<span class="lifetime">'de</span>&gt;,
+            {
+                <span class="kw">let </span><span class="kw-2">mut </span>set = Set::new();
+
+                <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = seq.next_element::&lt;std::borrow::Cow&lt;<span class="lifetime">'_</span>, str&gt;&gt;()<span class="question-mark">? </span>{
+                    <span class="kw">let </span>decoded =
+                        <span class="kw">crate</span>::codec::base64::decode(token.as_ref()).map_err(Error::custom)<span class="question-mark">?</span>;
+
+                    <span class="kw">if </span>!set.insert(decoded) {
+                        <span class="kw">return </span><span class="prelude-val">Err</span>(Error::custom(
+                            <span class="string">"Found duplicate tokens in endpoint metadata."</span>,
+                        ));
+                    }
+                }
+
+                <span class="prelude-val">Ok</span>(set)
+            }
         }
+
+        de.deserialize_seq(TokenVisitor)
     }
 }
 

@@ -260,10 +260,6 @@
 <a href="#258" id="258">258</a>
 <a href="#259" id="259">259</a>
 <a href="#260" id="260">260</a>
-<a href="#261" id="261">261</a>
-<a href="#262" id="262">262</a>
-<a href="#263" id="263">263</a>
-<a href="#264" id="264">264</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC All Rights Reserved.
  *
@@ -346,11 +342,7 @@
 
         filter.read(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span>.unwrap();
 
-        context
-            .destinations
-            .iter()
-            .map(|ep| ep.address.clone())
-            .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+        context.destinations
     }
 
     <span class="attr">#[tokio::test]

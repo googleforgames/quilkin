@@ -56,11 +56,6 @@
 <a href="#54" id="54">54</a>
 <a href="#55" id="55">55</a>
 <a href="#56" id="56">56</a>
-<a href="#57" id="57">57</a>
-<a href="#58" id="58">58</a>
-<a href="#59" id="59">59</a>
-<a href="#60" id="60">60</a>
-<a href="#61" id="61">61</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -83,7 +78,7 @@
 </span><span class="kw">use </span><span class="kw">crate</span>::filters::Filter;
 <span class="kw">use crate</span>::{
     net::{
-        endpoint::{metadata::DynamicMetadata, Endpoint, EndpointAddress},
+        endpoint::{metadata::DynamicMetadata, EndpointAddress},
         ClusterMap,
     },
     pool::PoolBuffer,
@@ -95,7 +90,7 @@
     <span class="doccomment">/// The upstream endpoints that the packet will be forwarded to.
     </span><span class="kw">pub </span>endpoints: Arc&lt;ClusterMap&gt;,
     <span class="doccomment">/// The upstream endpoints that the packet will be forwarded to.
-    </span><span class="kw">pub </span>destinations: Vec&lt;Endpoint&gt;,
+    </span><span class="kw">pub </span>destinations: Vec&lt;EndpointAddress&gt;,
     <span class="doccomment">/// The source of the received packet.
     </span><span class="kw">pub </span>source: EndpointAddress,
     <span class="doccomment">/// Contents of the received packet.
@@ -116,10 +111,5 @@
             metadata: DynamicMetadata::new(),
         }
     }
-
-    <span class="kw">pub fn </span>metadata(<span class="kw-2">mut </span><span class="self">self</span>, metadata: DynamicMetadata) -&gt; <span class="self">Self </span>{
-        <span class="self">self</span>.metadata = metadata;
-        <span class="self">self
-    </span>}
 }
 </code></pre></div></section></main></body></html>

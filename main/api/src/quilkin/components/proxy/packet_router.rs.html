@@ -534,10 +534,10 @@
         // cheaply and returned to the pool once all references are dropped
         </span><span class="kw">let </span>contents = contents.freeze();
 
-        <span class="kw">for </span>endpoint <span class="kw">in </span>destinations.iter() {
+        <span class="kw">for </span>epa <span class="kw">in </span>destinations {
             <span class="kw">let </span>session_key = SessionKey {
                 source: packet.source,
-                dest: endpoint.address.to_socket_addr().<span class="kw">await</span><span class="question-mark">?</span>,
+                dest: epa.to_socket_addr().<span class="kw">await</span><span class="question-mark">?</span>,
             };
 
             sessions

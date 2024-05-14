@@ -673,6 +673,59 @@
 <a href="#671" id="671">671</a>
 <a href="#672" id="672">672</a>
 <a href="#673" id="673">673</a>
+<a href="#674" id="674">674</a>
+<a href="#675" id="675">675</a>
+<a href="#676" id="676">676</a>
+<a href="#677" id="677">677</a>
+<a href="#678" id="678">678</a>
+<a href="#679" id="679">679</a>
+<a href="#680" id="680">680</a>
+<a href="#681" id="681">681</a>
+<a href="#682" id="682">682</a>
+<a href="#683" id="683">683</a>
+<a href="#684" id="684">684</a>
+<a href="#685" id="685">685</a>
+<a href="#686" id="686">686</a>
+<a href="#687" id="687">687</a>
+<a href="#688" id="688">688</a>
+<a href="#689" id="689">689</a>
+<a href="#690" id="690">690</a>
+<a href="#691" id="691">691</a>
+<a href="#692" id="692">692</a>
+<a href="#693" id="693">693</a>
+<a href="#694" id="694">694</a>
+<a href="#695" id="695">695</a>
+<a href="#696" id="696">696</a>
+<a href="#697" id="697">697</a>
+<a href="#698" id="698">698</a>
+<a href="#699" id="699">699</a>
+<a href="#700" id="700">700</a>
+<a href="#701" id="701">701</a>
+<a href="#702" id="702">702</a>
+<a href="#703" id="703">703</a>
+<a href="#704" id="704">704</a>
+<a href="#705" id="705">705</a>
+<a href="#706" id="706">706</a>
+<a href="#707" id="707">707</a>
+<a href="#708" id="708">708</a>
+<a href="#709" id="709">709</a>
+<a href="#710" id="710">710</a>
+<a href="#711" id="711">711</a>
+<a href="#712" id="712">712</a>
+<a href="#713" id="713">713</a>
+<a href="#714" id="714">714</a>
+<a href="#715" id="715">715</a>
+<a href="#716" id="716">716</a>
+<a href="#717" id="717">717</a>
+<a href="#718" id="718">718</a>
+<a href="#719" id="719">719</a>
+<a href="#720" id="720">720</a>
+<a href="#721" id="721">721</a>
+<a href="#722" id="722">722</a>
+<a href="#723" id="723">723</a>
+<a href="#724" id="724">724</a>
+<a href="#725" id="725">725</a>
+<a href="#726" id="726">726</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -699,7 +752,7 @@
 <span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 
-<span class="kw">use </span><span class="kw">crate</span>::net::endpoint::{Endpoint, Locality};
+<span class="kw">use </span><span class="kw">crate</span>::net::endpoint::{Endpoint, EndpointAddress, Locality};
 
 <span class="kw">const </span>SUBSYSTEM: <span class="kw-2">&amp;</span>str = <span class="string">"cluster"</span>;
 
@@ -759,9 +812,22 @@
     }
 }
 
+<span class="kw">pub type </span>TokenAddressMap = std::collections::BTreeMap&lt;u64, Vec&lt;EndpointAddress&gt;&gt;;
+
+<span class="attr">#[derive(Copy, Clone)]
+</span><span class="kw">pub struct </span>Token(u64);
+
+<span class="kw">impl </span>Token {
+    <span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>new(token: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>(seahash::hash(token))
+    }
+}
+
 <span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>EndpointSet {
     <span class="kw">pub </span>endpoints: BTreeSet&lt;Endpoint&gt;,
+    <span class="kw">pub </span>token_map: TokenAddressMap,
     <span class="doccomment">/// The hash of all of the endpoints in this set
     </span>hash: u64,
     <span class="doccomment">/// Version of this set of endpoints. Any mutatation of the endpoints
@@ -775,6 +841,7 @@
     </span><span class="kw">pub fn </span>new(endpoints: BTreeSet&lt;Endpoint&gt;) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>this = <span class="self">Self </span>{
             endpoints,
+            token_map: TokenAddressMap::new(),
             hash: <span class="number">0</span>,
             version: <span class="number">0</span>,
         };
@@ -790,11 +857,15 @@
     /// across machines
     </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>with_version(endpoints: BTreeSet&lt;Endpoint&gt;, hash: EndpointSetVersion) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
+        <span class="kw">let </span><span class="kw-2">mut </span>this = <span class="self">Self </span>{
             endpoints,
+            token_map: TokenAddressMap::new(),
             hash: hash.<span class="number">0</span>,
             version: <span class="number">1</span>,
-        }
+        };
+
+        this.build_token_map();
+        this
     }
 
     <span class="attr">#[inline]
@@ -810,6 +881,13 @@
     <span class="attr">#[inline]
     </span><span class="kw">pub fn </span>contains(<span class="kw-2">&amp;</span><span class="self">self</span>, ep: <span class="kw-2">&amp;</span>Endpoint) -&gt; bool {
         <span class="self">self</span>.endpoints.contains(ep)
+    }
+
+    <span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>addresses_for_token(<span class="kw-2">&amp;</span><span class="self">self</span>, token: Token, addresses: <span class="kw-2">&amp;mut </span>Vec&lt;EndpointAddress&gt;) {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(addrs) = <span class="self">self</span>.token_map.get(<span class="kw-2">&amp;</span>token.<span class="number">0</span>) {
+            addresses.extend_from_slice(addrs);
+        }
     }
 
     <span class="doccomment">/// Unique version for this endpoint set
@@ -834,6 +912,22 @@
         <span class="self">self</span>.version += <span class="number">1</span>;
     }
 
+    <span class="doccomment">/// Creates a map of tokens -&gt; address for the current set
+    </span><span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>build_token_map(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="kw">let </span><span class="kw-2">mut </span>token_map = TokenAddressMap::new();
+
+        <span class="comment">// This is only called on proxies, so calculate a token map
+        </span><span class="kw">for </span>ep <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.endpoints {
+            <span class="kw">for </span>tok <span class="kw">in </span><span class="kw-2">&amp;</span>ep.metadata.known.tokens {
+                <span class="kw">let </span>hash = seahash::hash(tok);
+                token_map.entry(hash).or_default().push(ep.address.clone());
+            }
+        }
+
+        <span class="self">self</span>.token_map = token_map;
+    }
+
     <span class="attr">#[inline]
     </span><span class="kw">pub fn </span>replace(<span class="kw-2">&amp;mut </span><span class="self">self</span>, replacement: <span class="self">Self</span>) -&gt; BTreeSet&lt;Endpoint&gt; {
         <span class="kw">let </span>old = std::mem::replace(<span class="kw-2">&amp;mut </span><span class="self">self</span>.endpoints, replacement.endpoints);
@@ -843,6 +937,10 @@
         } <span class="kw">else </span>{
             <span class="self">self</span>.hash = replacement.hash;
             <span class="self">self</span>.version += <span class="number">1</span>;
+        }
+
+        <span class="kw">if </span>!<span class="self">self</span>.token_map.is_empty() {
+            <span class="self">self</span>.build_token_map();
         }
 
         old
@@ -1093,6 +1191,14 @@
         }
 
         ret
+    }
+
+    <span class="doccomment">/// Builds token maps for every locality. Only used by testing/benching
+    </span><span class="attr">#[doc(hidden)]
+    </span><span class="kw">pub fn </span>build_token_maps(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+        <span class="kw">for </span><span class="kw-2">mut </span>eps <span class="kw">in </span><span class="self">self</span>.map.iter_mut() {
+            eps.build_token_map();
+        }
     }
 }
 
