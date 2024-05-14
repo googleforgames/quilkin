@@ -56,7 +56,7 @@ impl Router for TokenRouter {
     fn sync_read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         match ctx.metadata.get(&self.config.metadata_key) {
             Some(metadata::Value::Bytes(token)) => {
-                ctx.destinations = ctx.endpoints.filter_endpoints(|endpoint| {
+                let destinations = ctx.endpoints.filter_endpoints(|endpoint| {
                     if endpoint.metadata.known.tokens.contains(&**token) {
                         tracing::trace!(%endpoint.address, token = &*crate::codec::base64::encode(token), "Endpoint matched");
                         true
@@ -64,6 +64,8 @@ impl Router for TokenRouter {
                         false
                     }
                 });
+
+                ctx.destinations = destinations.into_iter().map(|ep| ep.address).collect();
 
                 if ctx.destinations.is_empty() {
                     Err(FilterError::new(Error::NoEndpointMatch(
@@ -132,9 +134,9 @@ impl Router for HashedTokenRouter {
                     }
                 }
 
-                ctx.faster_destinations = destinations;
+                ctx.destinations = destinations;
 
-                if ctx.faster_destinations.is_empty() {
+                if ctx.destinations.is_empty() {
                     Err(FilterError::new(Error::NoEndpointMatch(
                         self.config.metadata_key,
                         crate::codec::base64::encode(token),

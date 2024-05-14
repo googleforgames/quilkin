@@ -219,7 +219,6 @@ impl DownstreamReceiveWorkerConfig {
 
         let ReadContext {
             destinations,
-            faster_destinations,
             contents,
             ..
         } = context;
@@ -229,28 +228,15 @@ impl DownstreamReceiveWorkerConfig {
         // cheaply and returned to the pool once all references are dropped
         let contents = contents.freeze();
 
-        if !faster_destinations.is_empty() {
-            for epa in faster_destinations {
-                let session_key = SessionKey {
-                    source: packet.source,
-                    dest: epa.to_socket_addr().await?,
-                };
+        for epa in destinations {
+            let session_key = SessionKey {
+                source: packet.source,
+                dest: epa.to_socket_addr().await?,
+            };
 
-                sessions
-                    .send(session_key, packet.asn_info.clone(), contents.clone())
-                    .await?;
-            }
-        } else {
-            for endpoint in destinations.iter() {
-                let session_key = SessionKey {
-                    source: packet.source,
-                    dest: endpoint.address.to_socket_addr().await?,
-                };
-
-                sessions
-                    .send(session_key, packet.asn_info.clone(), contents.clone())
-                    .await?;
-            }
+            sessions
+                .send(session_key, packet.asn_info.clone(), contents.clone())
+                .await?;
         }
 
         Ok(())

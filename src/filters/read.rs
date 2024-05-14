@@ -20,7 +20,7 @@ use std::sync::Arc;
 use crate::filters::Filter;
 use crate::{
     net::{
-        endpoint::{metadata::DynamicMetadata, Endpoint, EndpointAddress},
+        endpoint::{metadata::DynamicMetadata, EndpointAddress},
         ClusterMap,
     },
     pool::PoolBuffer,
@@ -32,8 +32,7 @@ pub struct ReadContext {
     /// The upstream endpoints that the packet will be forwarded to.
     pub endpoints: Arc<ClusterMap>,
     /// The upstream endpoints that the packet will be forwarded to.
-    pub destinations: Vec<Endpoint>,
-    pub faster_destinations: Vec<EndpointAddress>,
+    pub destinations: Vec<EndpointAddress>,
     /// The source of the received packet.
     pub source: EndpointAddress,
     /// Contents of the received packet.
@@ -49,7 +48,6 @@ impl ReadContext {
         Self {
             endpoints,
             destinations: Vec::new(),
-            faster_destinations: Vec::new(),
             source,
             contents,
             metadata: DynamicMetadata::new(),
