@@ -33,6 +33,7 @@ pub type FilterMap = std::collections::HashMap<&'static str, Arc<DynFilterFactor
 /// - [`load_balancer`][filters::load_balancer]
 /// - [`capture`][filters::capture]
 /// - [`token_router`][filters::token_router]
+/// - [`hashed_token_router`][filters::token_router]
 /// - [`compress`][filters::compress]
 #[derive(Clone)]
 pub struct FilterSet(FilterMap);
@@ -50,6 +51,7 @@ impl FilterSet {
                 filters::Debug::factory(),
                 filters::Drop::factory(),
                 filters::Firewall::factory(),
+                filters::HashedTokenRouter::factory(),
                 filters::LoadBalancer::factory(),
                 filters::LocalRateLimit::factory(),
                 filters::Match::factory(),
