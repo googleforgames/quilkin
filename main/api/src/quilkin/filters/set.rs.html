@@ -156,6 +156,8 @@
 <a href="#154" id="154">154</a>
 <a href="#155" id="155">155</a>
 <a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -191,6 +193,7 @@
 /// - [`load_balancer`][filters::load_balancer]
 /// - [`capture`][filters::capture]
 /// - [`token_router`][filters::token_router]
+/// - [`hashed_token_router`][filters::token_router]
 /// - [`compress`][filters::compress]
 </span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>FilterSet(FilterMap);
@@ -208,6 +211,7 @@
                 filters::Debug::factory(),
                 filters::Drop::factory(),
                 filters::Firewall::factory(),
+                filters::HashedTokenRouter::factory(),
                 filters::LoadBalancer::factory(),
                 filters::LocalRateLimit::factory(),
                 filters::Match::factory(),
