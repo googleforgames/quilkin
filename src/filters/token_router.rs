@@ -48,9 +48,15 @@ impl StaticFilter for TokenRouter {
 #[async_trait::async_trait]
 impl Filter for TokenRouter {
     async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+        self.sync_read(ctx)
+    }
+}
+
+impl Router for TokenRouter {
+    fn sync_read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         match ctx.metadata.get(&self.config.metadata_key) {
             Some(metadata::Value::Bytes(token)) => {
-                ctx.destinations = ctx.endpoints.filter_endpoints(|endpoint| {
+                let destinations = ctx.endpoints.filter_endpoints(|endpoint| {
                     if endpoint.metadata.known.tokens.contains(&**token) {
                         tracing::trace!(%endpoint.address, token = &*crate::codec::base64::encode(token), "Endpoint matched");
                         true
@@ -58,6 +64,8 @@ impl Filter for TokenRouter {
                         false
                     }
                 });
+
+                ctx.destinations = destinations.into_iter().map(|ep| ep.address).collect();
 
                 if ctx.destinations.is_empty() {
                     Err(FilterError::new(Error::NoEndpointMatch(
@@ -77,6 +85,84 @@ impl Filter for TokenRouter {
             ))),
         }
     }
+
+    fn new() -> Self {
+        Self::from_config(None)
+    }
+}
+
+pub struct HashedTokenRouter {
+    config: Config,
+}
+
+impl HashedTokenRouter {
+    fn new(config: Config) -> Self {
+        Self { config }
+    }
+}
+
+impl StaticFilter for HashedTokenRouter {
+    const NAME: &'static str = "quilkin.filters.token_router.v1alpha1.HashedTokenRouter";
+    type Configuration = Config;
+    type BinaryConfiguration = proto::TokenRouter;
+
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, CreationError> {
+        Ok(Self::new(config.unwrap_or_default()))
+    }
+}
+
+#[async_trait::async_trait]
+impl Filter for HashedTokenRouter {
+    async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+        self.sync_read(ctx)
+    }
+}
+
+impl Router for HashedTokenRouter {
+    fn sync_read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+        match ctx.metadata.get(&self.config.metadata_key) {
+            Some(metadata::Value::Bytes(token)) => {
+                let mut destinations = Vec::new();
+
+                let tok = crate::net::cluster::Token::new(token);
+
+                for ep in ctx.endpoints.iter() {
+                    ep.value().addresses_for_token(tok, &mut destinations);
+
+                    if !destinations.is_empty() {
+                        break;
+                    }
+                }
+
+                ctx.destinations = destinations;
+
+                if ctx.destinations.is_empty() {
+                    Err(FilterError::new(Error::NoEndpointMatch(
+                        self.config.metadata_key,
+                        crate::codec::base64::encode(token),
+                    )))
+                } else {
+                    Ok(())
+                }
+            }
+            Some(value) => Err(FilterError::new(Error::InvalidType(
+                self.config.metadata_key,
+                value.clone(),
+            ))),
+            None => Err(FilterError::new(Error::NoTokenFound(
+                self.config.metadata_key,
+            ))),
+        }
+    }
+
+    fn new() -> Self {
+        Self::from_config(None)
+    }
+}
+
+pub trait Router {
+    fn sync_read(&self, ctx: &mut ReadContext) -> Result<(), FilterError>;
+    fn new() -> Self;
 }
 
 #[derive(Debug, thiserror::Error)]

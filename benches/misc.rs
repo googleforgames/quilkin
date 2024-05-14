@@ -226,7 +226,7 @@ impl GenResource for Cluster {
 
         let mut rng = rand::rngs::SmallRng::seed_from_u64(self.counter as u64);
         let mut hasher = xxhash_rust::xxh3::Xxh3::new();
-        let endpoints = shared::gen_endpoints(&mut rng, &mut hasher);
+        let endpoints = shared::gen_endpoints(&mut rng, &mut hasher, None);
 
         let msg = quilkin::generated::quilkin::config::v1alpha1::Cluster {
             locality: Some(quilkin::generated::quilkin::config::v1alpha1::Locality {

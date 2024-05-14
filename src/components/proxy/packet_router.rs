@@ -228,10 +228,10 @@ impl DownstreamReceiveWorkerConfig {
         // cheaply and returned to the pool once all references are dropped
         let contents = contents.freeze();
 
-        for endpoint in destinations.iter() {
+        for epa in destinations {
             let session_key = SessionKey {
                 source: packet.source,
-                dest: endpoint.address.to_socket_addr().await?,
+                dest: epa.to_socket_addr().await?,
             };
 
             sessions

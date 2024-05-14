@@ -297,7 +297,12 @@ impl Filter for FilterChain {
         // has rejected, and the destinations is empty, we passthrough to all.
         // Which mimics the old behaviour while avoid clones in most cases.
         if ctx.destinations.is_empty() {
-            ctx.destinations = ctx.endpoints.endpoints();
+            ctx.destinations = ctx
+                .endpoints
+                .endpoints()
+                .into_iter()
+                .map(|ep| ep.address)
+                .collect();
         }
 
         Ok(())

@@ -52,6 +52,7 @@ impl EndpointChooser for RoundRobinEndpointChooser {
             .endpoints
             .nth_endpoint(count % ctx.endpoints.num_of_endpoints())
             .unwrap()
+            .address
             .clone()];
     }
 }
@@ -63,7 +64,7 @@ impl EndpointChooser for RandomEndpointChooser {
     fn choose_endpoints(&self, ctx: &mut ReadContext) {
         // The index is guaranteed to be in range.
         let index = thread_rng().gen_range(0..ctx.endpoints.num_of_endpoints());
-        ctx.destinations = vec![ctx.endpoints.nth_endpoint(index).unwrap().clone()];
+        ctx.destinations = vec![ctx.endpoints.nth_endpoint(index).unwrap().address.clone()];
     }
 }
 
@@ -78,6 +79,7 @@ impl EndpointChooser for HashEndpointChooser {
             .endpoints
             .nth_endpoint(hasher.finish() as usize % ctx.endpoints.num_of_endpoints())
             .unwrap()
+            .address
             .clone()];
     }
 }

@@ -80,11 +80,7 @@ mod tests {
 
         filter.read(&mut context).await.unwrap();
 
-        context
-            .destinations
-            .iter()
-            .map(|ep| ep.address.clone())
-            .collect::<Vec<_>>()
+        context.destinations
     }
 
     #[tokio::test]

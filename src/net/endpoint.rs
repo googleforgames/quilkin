@@ -31,6 +31,7 @@ pub use self::{
 };
 
 pub type EndpointMetadata = metadata::MetadataView<Metadata>;
+pub use base64_set::Set;
 
 /// A destination endpoint with any associated metadata.
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone, Eq, schemars::JsonSchema)]
@@ -298,36 +299,50 @@ pub enum MetadataError {
 mod base64_set {
     use serde::de::Error;
 
-    pub type Set<T = Vec<u8>> = std::collections::BTreeSet<T>;
+    pub type Set = std::collections::BTreeSet<Vec<u8>>;
 
     pub fn serialize<S>(set: &Set, ser: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
-        serde::Serialize::serialize(
-            &set.iter()
-                .map(crate::codec::base64::encode)
-                .collect::<Vec<_>>(),
-            ser,
-        )
+        ser.collect_seq(set.iter().map(crate::codec::base64::encode))
     }
 
     pub fn deserialize<'de, D>(de: D) -> Result<Set, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
-        let items = <Vec<String> as serde::Deserialize>::deserialize(de)?;
-        let set = items.iter().cloned().collect::<Set<String>>();
+        struct TokenVisitor;
 
-        if set.len() != items.len() {
-            Err(D::Error::custom(
-                "Found duplicate tokens in endpoint metadata.",
-            ))
-        } else {
-            set.into_iter()
-                .map(|string| crate::codec::base64::decode(string).map_err(D::Error::custom))
-                .collect()
+        impl<'de> serde::de::Visitor<'de> for TokenVisitor {
+            type Value = Set;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("an array of base64 encoded tokens")
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::SeqAccess<'de>,
+            {
+                let mut set = Set::new();
+
+                while let Some(token) = seq.next_element::<std::borrow::Cow<'_, str>>()? {
+                    let decoded =
+                        crate::codec::base64::decode(token.as_ref()).map_err(Error::custom)?;
+
+                    if !set.insert(decoded) {
+                        return Err(Error::custom(
+                            "Found duplicate tokens in endpoint metadata.",
+                        ));
+                    }
+                }
+
+                Ok(set)
+            }
         }
+
+        de.deserialize_seq(TokenVisitor)
     }
 }
 
