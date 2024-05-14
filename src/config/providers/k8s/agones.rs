@@ -284,8 +284,10 @@ where
     T: Default + Deserialize<'de>,
     D: serde::de::Deserializer<'de>,
 {
-    let opt = Option::deserialize(deserializer)?;
-    Ok(opt.unwrap_or_default())
+    match Option::deserialize(deserializer) {
+        Ok(opt) => opt.unwrap_or_default(),
+        Err(_) => Ok(T::default()),
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
