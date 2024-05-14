@@ -497,11 +497,20 @@ pub const LOCALITIES: &[&str] = &[
     "us:west4:c",
 ];
 
-pub fn gen_endpoints(rng: &mut rand::rngs::SmallRng, hasher: &mut Hasher) -> BTreeSet<Endpoint> {
+pub fn gen_endpoints(
+    rng: &mut rand::rngs::SmallRng,
+    hasher: &mut Hasher,
+    mut tg: Option<&mut TokenGenerator>,
+) -> BTreeSet<Endpoint> {
     let num_endpoints = rng.gen_range(100..10_000);
     hasher.write_u16(num_endpoints);
 
     let mut endpoints = BTreeSet::new();
+    if let Some(tg) = &mut tg {
+        if let Some(prev) = &mut tg.previous {
+            prev.clear();
+        }
+    }
 
     for i in 0..num_endpoints {
         let ep_addr = match i % 3 {
@@ -514,7 +523,20 @@ pub fn gen_endpoints(rng: &mut rand::rngs::SmallRng, hasher: &mut Hasher) -> BTr
             _ => unreachable!(),
         };
 
-        endpoints.insert(Endpoint::new(ep_addr));
+        let ep = if let Some(tg) = &mut tg {
+            let set = tg.next().unwrap();
+
+            Endpoint::with_metadata(
+                ep_addr,
+                quilkin::net::endpoint::EndpointMetadata::new(quilkin::net::endpoint::Metadata {
+                    tokens: set,
+                }),
+            )
+        } else {
+            Endpoint::new(ep_addr)
+        };
+
+        endpoints.insert(ep);
     }
 
     for ep in &endpoints {
@@ -541,7 +563,98 @@ fn write_locality(hasher: &mut Hasher, loc: &Option<Locality>) {
     }
 }
 
-pub fn gen_cluster_map<const S: u64>() -> GenCluster {
+pub enum TokenKind {
+    None,
+    Single {
+        duplicates: bool,
+    },
+    Multi {
+        range: std::ops::Range<usize>,
+        duplicates: bool,
+    },
+}
+
+impl std::str::FromStr for TokenKind {
+    type Err = eyre::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let dupes = |s: &str| match s {
+            "duplicates" => Ok(true),
+            "unique" => Ok(false),
+            _ => eyre::bail!("must be `duplicates` or `unique`"),
+        };
+
+        if let Some(rest) = s.strip_prefix("single:") {
+            Ok(Self::Single {
+                duplicates: dupes(rest)?,
+            })
+        } else if let Some(rest) = s.strip_prefix("multi:") {
+            let (r, rest) = rest
+                .split_once(':')
+                .ok_or_else(|| eyre::format_err!("multi must specify 'range:duplicates'"))?;
+
+            let (start, end) = r
+                .split_once("..")
+                .ok_or_else(|| eyre::format_err!("range must be specified as '<start>..<end>'"))?;
+
+            let range = start.parse()?..end.parse()?;
+
+            Ok(Self::Multi {
+                range,
+                duplicates: dupes(rest)?,
+            })
+        } else {
+            eyre::bail!("unknown token kind");
+        }
+    }
+}
+
+pub struct TokenGenerator {
+    rng: rand::rngs::SmallRng,
+    previous: Option<Vec<Vec<u8>>>,
+    range: Option<std::ops::Range<usize>>,
+}
+
+impl Iterator for TokenGenerator {
+    type Item = quilkin::net::endpoint::Set;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        use rand::RngCore;
+        let mut set = Self::Item::new();
+
+        let count = if let Some(range) = self.range.clone() {
+            self.rng.gen_range(range)
+        } else {
+            1
+        };
+
+        if let Some(prev) = &mut self.previous {
+            for _ in 0..count {
+                if !prev.is_empty() && self.rng.gen_ratio(1, 10) {
+                    let prev = &prev[self.rng.gen_range(0..prev.len())];
+                    set.insert(prev.clone());
+                } else {
+                    let count = self.rng.gen_range(4..20);
+                    let mut v = vec![0; count];
+                    self.rng.fill_bytes(&mut v);
+                    prev.push(v.clone());
+                    set.insert(v);
+                }
+            }
+        } else {
+            for _ in 0..count {
+                let count = self.rng.gen_range(4..20);
+                let mut v = vec![0; count];
+                self.rng.fill_bytes(&mut v);
+                set.insert(v);
+            }
+        }
+
+        Some(set)
+    }
+}
+
+pub fn gen_cluster_map<const S: u64>(token_kind: TokenKind) -> GenCluster {
     use rand::prelude::*;
 
     let mut rng = rand::rngs::SmallRng::seed_from_u64(S);
@@ -566,10 +679,24 @@ pub fn gen_cluster_map<const S: u64>() -> GenCluster {
     let keys: Vec<_> = cm.iter().map(|kv| kv.key().clone()).collect();
     let mut sets = std::collections::BTreeMap::new();
 
+    let mut token_generator = match token_kind {
+        TokenKind::None => None,
+        TokenKind::Multi { range, duplicates } => Some(TokenGenerator {
+            rng: rand::rngs::SmallRng::seed_from_u64(S),
+            previous: duplicates.then_some(Vec::new()),
+            range: Some(range),
+        }),
+        TokenKind::Single { duplicates } => Some(TokenGenerator {
+            rng: rand::rngs::SmallRng::seed_from_u64(S),
+            previous: duplicates.then_some(Vec::new()),
+            range: None,
+        }),
+    };
+
     for key in keys {
         write_locality(&mut hasher, &key);
 
-        let ep = gen_endpoints(&mut rng, &mut hasher);
+        let ep = gen_endpoints(&mut rng, &mut hasher, token_generator.as_mut());
         total_endpoints += ep.len();
         cm.insert(key.clone(), ep.clone());
         sets.insert(key, ep);

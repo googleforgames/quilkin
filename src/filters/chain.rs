@@ -296,7 +296,7 @@ impl Filter for FilterChain {
         // Special case to handle to allow for pass-through, if no filter
         // has rejected, and the destinations is empty, we passthrough to all.
         // Which mimics the old behaviour while avoid clones in most cases.
-        if ctx.destinations.is_empty() {
+        if ctx.destinations.is_empty() && ctx.faster_destinations.is_empty() {
             ctx.destinations = ctx.endpoints.endpoints();
         }
 

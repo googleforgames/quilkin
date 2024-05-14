@@ -24,7 +24,7 @@ use dashmap::DashMap;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-use crate::net::endpoint::{Endpoint, Locality};
+use crate::net::endpoint::{Endpoint, EndpointAddress, Locality};
 
 const SUBSYSTEM: &str = "cluster";
 
@@ -84,9 +84,22 @@ impl std::str::FromStr for EndpointSetVersion {
     }
 }
 
+pub type TokenAddressMap = std::collections::BTreeMap<u64, Vec<EndpointAddress>>;
+
+#[derive(Copy, Clone)]
+pub struct Token(u64);
+
+impl Token {
+    #[inline]
+    pub fn new(token: &[u8]) -> Self {
+        Self(seahash::hash(token))
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct EndpointSet {
     pub endpoints: BTreeSet<Endpoint>,
+    pub token_map: TokenAddressMap,
     /// The hash of all of the endpoints in this set
     hash: u64,
     /// Version of this set of endpoints. Any mutatation of the endpoints
@@ -100,6 +113,7 @@ impl EndpointSet {
     pub fn new(endpoints: BTreeSet<Endpoint>) -> Self {
         let mut this = Self {
             endpoints,
+            token_map: TokenAddressMap::new(),
             hash: 0,
             version: 0,
         };
@@ -115,11 +129,15 @@ impl EndpointSet {
     /// across machines
     #[inline]
     pub fn with_version(endpoints: BTreeSet<Endpoint>, hash: EndpointSetVersion) -> Self {
-        Self {
+        let mut this = Self {
             endpoints,
+            token_map: TokenAddressMap::new(),
             hash: hash.0,
             version: 1,
-        }
+        };
+
+        this.build_token_map();
+        this
     }
 
     #[inline]
@@ -135,6 +153,13 @@ impl EndpointSet {
     #[inline]
     pub fn contains(&self, ep: &Endpoint) -> bool {
         self.endpoints.contains(ep)
+    }
+
+    #[inline]
+    pub fn addresses_for_token(&self, token: Token, addresses: &mut Vec<EndpointAddress>) {
+        if let Some(addrs) = self.token_map.get(&token.0) {
+            addresses.extend_from_slice(addrs);
+        }
     }
 
     /// Unique version for this endpoint set
@@ -159,6 +184,22 @@ impl EndpointSet {
         self.version += 1;
     }
 
+    /// Creates a map of tokens -> address for the current set
+    #[inline]
+    pub fn build_token_map(&mut self) {
+        let mut token_map = TokenAddressMap::new();
+
+        // This is only called on proxies, so calculate a token map
+        for ep in &self.endpoints {
+            for tok in &ep.metadata.known.tokens {
+                let hash = seahash::hash(tok);
+                token_map.entry(hash).or_default().push(ep.address.clone());
+            }
+        }
+
+        self.token_map = token_map;
+    }
+
     #[inline]
     pub fn replace(&mut self, replacement: Self) -> BTreeSet<Endpoint> {
         let old = std::mem::replace(&mut self.endpoints, replacement.endpoints);
@@ -168,6 +209,10 @@ impl EndpointSet {
         } else {
             self.hash = replacement.hash;
             self.version += 1;
+        }
+
+        if !self.token_map.is_empty() {
+            self.build_token_map();
         }
 
         old
@@ -418,6 +463,14 @@ where
         }
 
         ret
+    }
+
+    /// Builds token maps for every locality. Only used by testing/benching
+    #[doc(hidden)]
+    pub fn build_token_maps(&self) {
+        for mut eps in self.map.iter_mut() {
+            eps.build_token_map();
+        }
     }
 }
 

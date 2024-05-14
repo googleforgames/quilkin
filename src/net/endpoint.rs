@@ -31,6 +31,7 @@ pub use self::{
 };
 
 pub type EndpointMetadata = metadata::MetadataView<Metadata>;
+pub use base64_set::Set;
 
 /// A destination endpoint with any associated metadata.
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone, Eq, schemars::JsonSchema)]
@@ -298,7 +299,7 @@ pub enum MetadataError {
 mod base64_set {
     use serde::de::Error;
 
-    pub type Set<T = Vec<u8>> = std::collections::BTreeSet<T>;
+    pub type Set = std::collections::BTreeSet<Vec<u8>>;
 
     pub fn serialize<S>(set: &Set, ser: S) -> Result<S::Ok, S::Error>
     where

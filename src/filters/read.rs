@@ -33,6 +33,7 @@ pub struct ReadContext {
     pub endpoints: Arc<ClusterMap>,
     /// The upstream endpoints that the packet will be forwarded to.
     pub destinations: Vec<Endpoint>,
+    pub faster_destinations: Vec<EndpointAddress>,
     /// The source of the received packet.
     pub source: EndpointAddress,
     /// Contents of the received packet.
@@ -48,14 +49,10 @@ impl ReadContext {
         Self {
             endpoints,
             destinations: Vec::new(),
+            faster_destinations: Vec::new(),
             source,
             contents,
             metadata: DynamicMetadata::new(),
         }
-    }
-
-    pub fn metadata(mut self, metadata: DynamicMetadata) -> Self {
-        self.metadata = metadata;
-        self
     }
 }
