@@ -119,6 +119,8 @@ impl SessionPool {
             async move {
                 let mut last_received_at = None;
                 let mut shutdown_rx = pool.shutdown_rx.clone();
+                let (tx, mut rx) = tokio::sync::oneshot::channel();
+
                 cfg_if::cfg_if! {
                     if #[cfg(target_os = "linux")] {
                         let socket = std::rc::Rc::new(DualStackLocalSocket::from_raw(raw_socket));
@@ -174,6 +176,8 @@ impl SessionPool {
                             }
                         }
                     }
+
+                    let _ = tx.send(());
                 });
 
                 loop {
@@ -191,6 +195,10 @@ impl SessionPool {
                         }
                         _ = shutdown_rx.changed() => {
                             tracing::debug!("Closing upstream socket loop");
+                            return;
+                        }
+                        _ = &mut rx => {
+                            tracing::debug!("Closing upstream socket loop, downstream closed");
                             return;
                         }
                     }
