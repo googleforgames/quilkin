@@ -8,7 +8,7 @@ use kube::runtime::watcher::Event;
 
 use agones::GameServer;
 
-use crate::net::endpoint::Locality;
+use crate::net::endpoint::{Endpoint, Locality};
 
 pub fn update_filters_from_configmap(
     client: kube::Client,
@@ -100,11 +100,9 @@ pub fn update_endpoints_from_gameservers(
     namespace: impl AsRef<str>,
     config: Arc<crate::Config>,
     locality: Option<Locality>,
-    address_selector: Option<crate::config::AddressSelector>,
 ) -> impl Stream<Item = crate::Result<(), eyre::Error>> {
     async_stream::stream! {
         for await event in gameserver_events(client, namespace) {
-            let ads = address_selector.as_ref();
             match event? {
                 Event::Applied(server) => {
                     tracing::debug!("received applied event from k8s");
@@ -114,9 +112,12 @@ pub fn update_endpoints_from_gameservers(
                         continue;
                     }
 
-                    let Some(endpoint) = server.endpoint(ads) else {
-                        tracing::warn!(selector=?ads, "received invalid gameserver to apply from k8s");
-                        continue;
+                    let endpoint = match Endpoint::try_from(server) {
+                        Ok(endpoint) => endpoint,
+                        Err(error) => {
+                            tracing::warn!(%error, "received invalid gameserver to apply from k8s");
+                            continue;
+                        }
                     };
                     tracing::debug!(endpoint=%serde_json::to_value(&endpoint).unwrap(), "Adding endpoint");
                     config.clusters.write()
@@ -127,12 +128,16 @@ pub fn update_endpoints_from_gameservers(
                     tracing::debug!("received restart event from k8s");
                     let servers: BTreeSet<_> = servers
                         .into_iter()
-                        .filter_map(|server| {
-                            if !server.is_allocated() {
-                                return None;
+                        .filter(GameServer::is_allocated)
+                        .map(Endpoint::try_from)
+                        .filter_map(|result| {
+                            match result {
+                                Ok(endpoint) => Some(endpoint),
+                                Err(error) => {
+                                    tracing::warn!(%error, "received invalid gameserver on restart from k8s");
+                                    None
+                                }
                             }
-
-                            server.endpoint(ads)
                         })
                         .collect();
 
@@ -146,7 +151,7 @@ pub fn update_endpoints_from_gameservers(
 
                 Event::Deleted(server) => {
                     tracing::debug!("received delete event from k8s");
-                    let found = if let Some(endpoint) = server.endpoint(ads) {
+                    let found = if let Some(endpoint) = server.endpoint() {
                         config.clusters.write().remove_endpoint(&endpoint)
                     } else {
                         config.clusters.write().remove_endpoint_if(|endpoint| {
@@ -156,7 +161,7 @@ pub fn update_endpoints_from_gameservers(
 
                     if !found {
                         tracing::debug!(
-                            endpoint=%serde_json::to_value(server.endpoint(ads)).unwrap(),
+                            endpoint=%serde_json::to_value(server.endpoint()).unwrap(),
                             name=%serde_json::to_value(server.metadata.name).unwrap(),
                             "received unknown gameserver to delete from k8s"
                         );

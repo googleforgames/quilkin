@@ -140,72 +140,68 @@ trace_test!(uring_receiver, {
     assert_eq!(msg, sb.timeout(200, packet_rx.recv()).await.unwrap());
 });
 
-trace_test!(
-    #[ignore]
-    recv_from,
-    {
-        let mut sc = qt::sandbox_config!();
+trace_test!(recv_from, {
+    let mut sc = qt::sandbox_config!();
 
-        sc.push("server", ServerPailConfig::default(), &[]);
-        let mut sb = sc.spinup().await;
+    sc.push("server", ServerPailConfig::default(), &[]);
+    let mut sb = sc.spinup().await;
 
-        let (mut packet_rx, endpoint) = sb.server("server");
+    let (mut packet_rx, endpoint) = sb.server("server");
 
-        let config = std::sync::Arc::new(quilkin::Config::default_non_agent());
-        config
-            .clusters
-            .modify(|clusters| clusters.insert_default([endpoint.into()].into()));
+    let config = std::sync::Arc::new(quilkin::Config::default_non_agent());
+    config
+        .clusters
+        .modify(|clusters| clusters.insert_default([endpoint.into()].into()));
 
-        let (tx, rx) = async_channel::unbounded();
-        let (_shutdown_tx, shutdown_rx) =
-            quilkin::make_shutdown_channel(quilkin::ShutdownKind::Testing);
+    let (tx, rx) = async_channel::unbounded();
+    let (_shutdown_tx, shutdown_rx) =
+        quilkin::make_shutdown_channel(quilkin::ShutdownKind::Testing);
 
-        let sessions = quilkin::components::proxy::SessionPool::new(
-            config.clone(),
-            tx,
-            BUFFER_POOL.clone(),
-            shutdown_rx,
-        );
+    let sessions = quilkin::components::proxy::SessionPool::new(
+        config.clone(),
+        tx,
+        BUFFER_POOL.clone(),
+        shutdown_rx,
+    );
 
-        const WORKER_COUNT: usize = 3;
+    const WORKER_COUNT: usize = 3;
 
-        let (socket, addr) = sb.socket();
-        let workers = quilkin::components::proxy::packet_router::spawn_receivers(
-            config,
-            socket,
-            WORKER_COUNT,
-            &sessions,
-            rx,
-            BUFFER_POOL.clone(),
-        )
-        .await
-        .unwrap();
+    let (socket, addr) = sb.socket();
+    let workers = quilkin::components::proxy::packet_router::spawn_receivers(
+        config,
+        socket,
+        WORKER_COUNT,
+        &sessions,
+        rx,
+        BUFFER_POOL.clone(),
+    )
+    .await
+    .unwrap();
 
-        for wn in workers {
-            sb.timeout(200, wn.notified()).await;
-        }
-
-        let socket = std::sync::Arc::new(sb.client());
-        let msg = "recv-from";
-
-        let mut tasks = tokio::task::JoinSet::new();
-
-        for _ in 0..WORKER_COUNT {
-            let ss = socket.clone();
-            tasks.spawn(async move { ss.send_to(msg.as_bytes(), addr).await.unwrap() });
-        }
-
-        while let Some(res) = tasks.join_next().await {
-            assert_eq!(res.unwrap(), msg.len());
-        }
-
-        for _ in 0..WORKER_COUNT {
-            assert_eq!(
-                msg,
-                sb.timeout(20, packet_rx.recv())
-                    .await
-                    .expect("should receive a packet")
-            );
-        }
+    for wn in workers {
+        sb.timeout(200, wn.notified()).await;
     }
-);
+
+    let socket = std::sync::Arc::new(sb.client());
+    let msg = "recv-from";
+
+    let mut tasks = tokio::task::JoinSet::new();
+
+    for _ in 0..WORKER_COUNT {
+        let ss = socket.clone();
+        tasks.spawn(async move { ss.send_to(msg.as_bytes(), addr).await.unwrap() });
+    }
+
+    while let Some(res) = tasks.join_next().await {
+        assert_eq!(res.unwrap(), msg.len());
+    }
+
+    for _ in 0..WORKER_COUNT {
+        assert_eq!(
+            msg,
+            sb.timeout(20, packet_rx.recv())
+                .await
+                .expect("should receive a packet")
+        );
+    }
+});
