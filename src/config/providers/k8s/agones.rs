@@ -15,7 +15,6 @@
  */
 
 use k8s_openapi::{
-    api::core::v1::NodeAddress,
     apiextensions_apiserver::pkg::apis::apiextensions::v1::{
         CustomResourceDefinition, CustomResourceDefinitionNames, CustomResourceDefinitionSpec,
         CustomResourceDefinitionVersion, CustomResourceValidation,
@@ -41,11 +40,8 @@ pub struct GameServer {
 }
 
 impl GameServer {
-    pub fn endpoint(
-        &self,
-        address_selector: Option<&crate::config::AddressSelector>,
-    ) -> Option<Endpoint> {
-        self.status.as_ref().and_then(|status| {
+    pub fn endpoint(&self) -> Option<Endpoint> {
+        self.status.as_ref().map(|status| {
             let port = status
                 .ports
                 .as_ref()
@@ -62,32 +58,13 @@ impl GameServer {
                 map
             };
 
-            let address = if let Some(ads) = address_selector {
-                status.addresses.iter().find_map(|adr| {
-                    if adr.type_ != ads.name {
-                        return None;
-                    }
-
-                    use crate::config::AddrKind;
-                    match ads.kind {
-                        AddrKind::Any => Some(adr.address.clone()),
-                        AddrKind::Ipv4 => (!adr.address.contains(':')).then(|| adr.address.clone()),
-                        AddrKind::Ipv6 => adr.address.contains(':').then(|| adr.address.clone()),
-                    }
-                })?
-            } else {
-                status.address.clone()
-            };
-
-            let ep = Endpoint::with_metadata(
-                (address, port).into(),
+            Endpoint::with_metadata(
+                (status.address.clone(), port).into(),
                 crate::net::endpoint::metadata::MetadataView::with_unknown(
                     crate::net::endpoint::Metadata { tokens },
                     extra_metadata,
                 ),
-            );
-
-            Some(ep)
+            )
         })
     }
 
@@ -156,7 +133,7 @@ impl GameServer {
 
     pub fn is_allocated(&self) -> bool {
         self.status.as_ref().map_or(false, |status| {
-            tracing::trace!(?status.addresses, ?status.state, "checking gameserver");
+            tracing::trace!(%status.address, ?status.state, "checking gameserver");
             matches!(status.state, GameServerState::Allocated)
         })
     }
@@ -312,6 +289,16 @@ impl Default for GameServerSpec {
     }
 }
 
+impl TryFrom<GameServer> for Endpoint {
+    type Error = tonic::Status;
+
+    fn try_from(server: GameServer) -> Result<Self, Self::Error> {
+        server
+            .endpoint()
+            .ok_or_else(|| tonic::Status::internal("No status found for game server"))
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 pub struct Health {
     /// Whether health checking is disabled or not
@@ -388,8 +375,6 @@ pub struct GameServerStatus {
     pub state: GameServerState,
     pub ports: Option<Vec<GameServerStatusPort>>,
     pub address: String,
-    #[serde(default)]
-    pub addresses: Vec<NodeAddress>,
     pub node_name: String,
     pub reserved_until: Option<k8s_openapi::apimachinery::pkg::apis::meta::v1::Time>,
 }
