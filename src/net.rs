@@ -29,7 +29,12 @@ macro_rules! uring_spawn {
                     match tokio_uring::Runtime::new(&tokio_uring::builder().entries(2048)) {
                         Ok(runtime) => {
                             let _ = tx.send(Ok(()));
-                            runtime.block_on($future.instrument($span));
+
+                            if let Some(span) = $span {
+                                runtime.block_on($future.instrument(span));
+                            } else {
+                                runtime.block_on($future);
+                            }
                         }
                         Err(error) => {
                             let _ = tx.send(Err(error.into()));
@@ -38,10 +43,17 @@ macro_rules! uring_spawn {
                 }).expect("failed to spawn io-uring thread");
             } else {
                 use tracing::instrument::WithSubscriber as _;
-                tokio::spawn(async move {
+
+                let fut = async move {
                     let _ = tx.send(Ok(()));
                     $future.await
-                }.instrument($span).with_current_subscriber());
+                };
+
+                if let Some(span) = $span {
+                    tokio::spawn(fut.instrument(span).with_current_subscriber());
+                } else {
+                    tokio::spawn(fut.with_current_subscriber());
+                }
             }
         }
         rx
@@ -59,6 +71,21 @@ macro_rules! uring_inner_spawn {
             }
         }
     };
+}
+
+/// Allows creation of spans only when debug_assertions are enabled, to avoid
+/// hitting the cap of 4096 threads that is unconfigurable in tracing_subscriber -> sharded_slab
+/// for span ids
+macro_rules! uring_span {
+    ($span:expr) => {{
+        cfg_if::cfg_if! {
+            if #[cfg(debug_assertions)] {
+                Some($span)
+            } else {
+                None
+            }
+        }
+    }};
 }
 
 pub mod cluster;

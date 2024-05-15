@@ -189,6 +189,19 @@ prost-types = "0.7"
 
 3. Generate Rust code from the proto file:
 
+### Generated - Recommended
+
+Use something like [proto-gen](https://github.com/EmbarkStudios/proto-gen) to generate Rust code for the protobuf.
+
+At that point it is just normal rust code and can be included from where you placed the generated code, eg. `generated`.
+
+```rust,no_run,noplayground,ignore
+mod generated;
+use generated::greet as proto;
+```
+
+### At build time
+
 There are a few ways to generate [Prost] code from proto, we will use the [prost_build] crate in this example.
 
 Add the following required crates to `Cargo.toml`, and then add a
@@ -205,17 +218,30 @@ prost-build = "0.7"
 
 ```rust,no_run,noplayground,ignore
 // src/build.rs
-{{#include ../../../../../examples/quilkin-filter-example/build.rs:build}}
+fn main() {
+    // Remove if you already have `protoc` installed in your system.
+    std::env::set_var("PROTOC", protobuf_src::protoc());
+
+    prost_build::compile_protos(&["src/greet.proto"], &["src/"]).unwrap();
+}
 ```
 
-To include the generated code, we'll use [`tonic::include_proto`], then we just
-need to implement [std::convert::TryFrom] for converting the protobuf message to
-equivalvent configuration.
+To include the generated code, we'll use [`tonic::include_proto`].
 
 ```rust,no_run,noplayground,ignore
 // src/main.rs
-{{#include ../../../../../examples/quilkin-filter-example/src/main.rs:include_proto}}
+#[allow(warnings, clippy::all)]
+// ANCHOR: include_proto
+mod proto {
+    tonic::include_proto!("greet");
+}
+```
 
+4. Then we just need to implement [std::convert::TryFrom] for converting the protobuf message to
+equivalent configuration.
+
+```rust,no_run,noplayground,ignore
+// src/main.rs
 {{#include ../../../../../examples/quilkin-filter-example/src/main.rs:TryFrom}}
 ```
 

@@ -116,6 +116,7 @@ impl Cli {
                 .from_env_lossy();
             let subscriber = tracing_subscriber::fmt()
                 .with_file(true)
+                .with_thread_ids(true)
                 .with_env_filter(env_filter);
 
             match self.log_format {
