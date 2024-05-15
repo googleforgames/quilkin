@@ -304,6 +304,13 @@
 <a href="#302" id="302">302</a>
 <a href="#303" id="303">303</a>
 <a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
 </pre></div><pre class="rust"><code><span class="kw">use super</span>::{
     sessions::{DownstreamReceiver, SessionKey},
     PipelineError, PipelineErrorDiscriminants, SessionPool,
@@ -355,7 +362,8 @@
         <span class="kw">let </span>notify = Arc::new(tokio::sync::Notify::new());
         <span class="kw">let </span>is_ready = notify.clone();
 
-        <span class="kw">let </span>thread_span = <span class="macro">tracing::debug_span!</span>(<span class="string">"receiver"</span>, id = worker_id).or_current();
+        <span class="kw">let </span>thread_span =
+            <span class="macro">uring_span!</span>(<span class="macro">tracing::debug_span!</span>(<span class="string">"receiver"</span>, id = worker_id).or_current());
 
         <span class="kw">let </span>worker = <span class="macro">uring_spawn!</span>(thread_span, <span class="kw">async move </span>{
             <span class="kw">let </span><span class="kw-2">mut </span>last_received_at = <span class="prelude-val">None</span>;
@@ -366,9 +374,7 @@
             <span class="macro">tracing::trace!</span>(port, <span class="string">"bound worker"</span>);
             <span class="kw">let </span>send_socket = socket.clone();
 
-            <span class="kw">let </span>upstream = <span class="macro">tracing::debug_span!</span>(<span class="string">"upstream"</span>).or_current();
-
-            <span class="macro">uring_inner_spawn!</span>(<span class="kw">async move </span>{
+            <span class="kw">let </span>inner_task = <span class="kw">async move </span>{
                 is_ready.notify_one();
 
                 <span class="kw">loop </span>{
@@ -415,7 +421,15 @@
                         }
                     }
                 }
-            }.instrument(upstream));
+            };
+
+            <span class="macro">cfg_if::cfg_if! </span>{
+                <span class="kw">if </span><span class="attr">#[cfg(debug_assertions)] </span>{
+                    <span class="macro">uring_inner_spawn!</span>(inner_task.instrument(<span class="macro">tracing::debug_span!</span>(<span class="string">"upstream"</span>).or_current()));
+                } <span class="kw">else </span>{
+                    <span class="macro">uring_inner_spawn!</span>(inner_task);
+                }
+            }
 
             <span class="kw">loop </span>{
                 <span class="comment">// Initialize a buffer for the UDP packet. We use the maximum size of a UDP

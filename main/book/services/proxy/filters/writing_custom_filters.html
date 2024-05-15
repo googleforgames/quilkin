@@ -370,6 +370,12 @@ message Greet {
 <ol start="3">
 <li>Generate Rust code from the proto file:</li>
 </ol>
+<h3 id="generated---recommended"><a class="header" href="#generated---recommended">Generated - Recommended</a></h3>
+<p>Use something like <a href="https://github.com/EmbarkStudios/proto-gen">proto-gen</a> to generate Rust code for the protobuf.</p>
+<p>At that point it is just normal rust code and can be included from where you placed the generated code, eg. <code>generated</code>.</p>
+<pre><code class="language-rust no_run noplayground ignore">mod generated;
+use generated::greet as proto;</code></pre>
+<h3 id="at-build-time"><a class="header" href="#at-build-time">At build time</a></h3>
 <p>There are a few ways to generate <a href="https://docs.rs/prost">Prost</a> code from proto, we will use the <a href="https://docs.rs/prost-build/0.7.0/prost_build/">prost_build</a> crate in this example.</p>
 <p>Add the following required crates to <code>Cargo.toml</code>, and then add a
 <a href="https://doc.rust-lang.org/cargo/reference/build-scripts.html">build script</a> to generate the following Rust code
@@ -381,13 +387,24 @@ bytes = "1.0"
 prost-build = "0.7"
 </code></pre>
 <pre><code class="language-rust no_run noplayground ignore">// src/build.rs
-{{#include ../../../../../examples/quilkin-filter-example/build.rs:build}}</code></pre>
-<p>To include the generated code, we'll use [<code>tonic::include_proto</code>], then we just
-need to implement <a href="https://doc.rust-lang.org/std/convert/trait.TryFrom.html">std::convert::TryFrom</a> for converting the protobuf message to
-equivalvent configuration.</p>
+fn main() {
+    // Remove if you already have `protoc` installed in your system.
+    std::env::set_var("PROTOC", protobuf_src::protoc());
+
+    prost_build::compile_protos(&amp;["src/greet.proto"], &amp;["src/"]).unwrap();
+}</code></pre>
+<p>To include the generated code, we'll use [<code>tonic::include_proto</code>].</p>
 <pre><code class="language-rust no_run noplayground ignore">// src/main.rs
-
-
+#[allow(warnings, clippy::all)]
+// ANCHOR: include_proto
+mod proto {
+    tonic::include_proto!("greet");
+}</code></pre>
+<ol start="4">
+<li>Then we just need to implement <a href="https://doc.rust-lang.org/std/convert/trait.TryFrom.html">std::convert::TryFrom</a> for converting the protobuf message to
+equivalent configuration.</li>
+</ol>
+<pre><code class="language-rust no_run noplayground ignore">// src/main.rs
 impl TryFrom&lt;proto::Greet&gt; for Config {
     type Error = ConvertProtoConfigError;
 

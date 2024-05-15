@@ -253,6 +253,7 @@
 <a href="#251" id="251">251</a>
 <a href="#252" id="252">252</a>
 <a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -371,6 +372,7 @@
                 .from_env_lossy();
             <span class="kw">let </span>subscriber = tracing_subscriber::fmt()
                 .with_file(<span class="bool-val">true</span>)
+                .with_thread_ids(<span class="bool-val">true</span>)
                 .with_env_filter(env_filter);
 
             <span class="kw">match </span><span class="self">self</span>.log_format {
