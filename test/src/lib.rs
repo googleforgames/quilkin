@@ -66,8 +66,7 @@ pub fn init_logging(level: Level, test_pkg: &'static str) -> DefaultGuard {
 
 #[macro_export]
 macro_rules! trace_test {
-    ($(#[$attr:meta])* $name:ident, $body:block) => {
-        $(#[$attr])*
+    ($name:ident, $body:block) => {
         #[tokio::test]
         async fn $name() {
             // Get the module name
