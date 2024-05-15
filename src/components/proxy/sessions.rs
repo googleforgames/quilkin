@@ -114,82 +114,89 @@ impl SessionPool {
 
         let pool = self.clone();
 
-        let initialised = uring_spawn!(tracing::debug_span!("session pool"), async move {
-            let mut last_received_at = None;
-            let mut shutdown_rx = pool.shutdown_rx.clone();
-            cfg_if::cfg_if! {
-                if #[cfg(target_os = "linux")] {
-                    let socket = std::rc::Rc::new(DualStackLocalSocket::from_raw(raw_socket));
-                } else {
-                    let socket = std::sync::Arc::new(DualStackLocalSocket::from_raw(raw_socket));
-                }
-            };
-            let socket2 = socket.clone();
+        let initialised = uring_spawn!(
+            uring_span!(tracing::debug_span!("session pool")),
+            async move {
+                let mut last_received_at = None;
+                let mut shutdown_rx = pool.shutdown_rx.clone();
+                cfg_if::cfg_if! {
+                    if #[cfg(target_os = "linux")] {
+                        let socket = std::rc::Rc::new(DualStackLocalSocket::from_raw(raw_socket));
+                    } else {
+                        let socket = std::sync::Arc::new(DualStackLocalSocket::from_raw(raw_socket));
+                    }
+                };
+                let socket2 = socket.clone();
 
-            uring_inner_spawn!(async move {
-                loop {
-                    match downstream_receiver.recv().await {
-                        None => {
-                            crate::metrics::errors_total(
-                                crate::metrics::WRITE,
-                                "downstream channel closed",
-                                None,
-                            )
-                            .inc();
-                        }
-                        Some((data, asn_info, send_addr)) => {
-                            tracing::trace!(%send_addr, length = data.len(), "sending packet upstream");
-                            let (result, _) = socket2.send_to(data, send_addr).await;
-                            let asn_info = asn_info.as_ref();
-                            match result {
-                                Ok(size) => {
-                                    crate::metrics::packets_total(crate::metrics::READ, asn_info)
+                uring_inner_spawn!(async move {
+                    loop {
+                        match downstream_receiver.recv().await {
+                            None => {
+                                crate::metrics::errors_total(
+                                    crate::metrics::WRITE,
+                                    "downstream channel closed",
+                                    None,
+                                )
+                                .inc();
+                                break;
+                            }
+                            Some((data, asn_info, send_addr)) => {
+                                tracing::trace!(%send_addr, length = data.len(), "sending packet upstream");
+                                let (result, _) = socket2.send_to(data, send_addr).await;
+                                let asn_info = asn_info.as_ref();
+                                match result {
+                                    Ok(size) => {
+                                        crate::metrics::packets_total(
+                                            crate::metrics::READ,
+                                            asn_info,
+                                        )
                                         .inc();
-                                    crate::metrics::bytes_total(crate::metrics::READ, asn_info)
-                                        .inc_by(size as u64);
-                                }
-                                Err(error) => {
-                                    tracing::trace!(%error, "sending packet upstream failed");
-                                    let source = error.to_string();
-                                    crate::metrics::errors_total(
-                                        crate::metrics::READ,
-                                        &source,
-                                        asn_info,
-                                    )
-                                    .inc();
-                                    crate::metrics::packets_dropped_total(
-                                        crate::metrics::READ,
-                                        &source,
-                                        asn_info,
-                                    )
-                                    .inc();
+                                        crate::metrics::bytes_total(crate::metrics::READ, asn_info)
+                                            .inc_by(size as u64);
+                                    }
+                                    Err(error) => {
+                                        tracing::trace!(%error, "sending packet upstream failed");
+                                        let source = error.to_string();
+                                        crate::metrics::errors_total(
+                                            crate::metrics::READ,
+                                            &source,
+                                            asn_info,
+                                        )
+                                        .inc();
+                                        crate::metrics::packets_dropped_total(
+                                            crate::metrics::READ,
+                                            &source,
+                                            asn_info,
+                                        )
+                                        .inc();
+                                    }
                                 }
                             }
                         }
                     }
-                }
-            });
+                });
 
-            loop {
-                let buf = pool.buffer_pool.clone().alloc();
-                tokio::select! {
-                    received = socket.recv_from(buf) => {
-                        let (result, buf) = received;
-                        match result {
-                            Err(error) => {
-                                tracing::trace!(%error, "error receiving packet");
-                                crate::metrics::errors_total(crate::metrics::WRITE, &error.to_string(), None).inc();
-                            },
-                            Ok((_size, recv_addr)) => pool.process_received_upstream_packet(buf, recv_addr, port, &mut last_received_at).await,
+                loop {
+                    let buf = pool.buffer_pool.clone().alloc();
+                    tokio::select! {
+                        received = socket.recv_from(buf) => {
+                            let (result, buf) = received;
+                            match result {
+                                Err(error) => {
+                                    tracing::trace!(%error, "error receiving packet");
+                                    crate::metrics::errors_total(crate::metrics::WRITE, &error.to_string(), None).inc();
+                                },
+                                Ok((_size, recv_addr)) => pool.process_received_upstream_packet(buf, recv_addr, port, &mut last_received_at).await,
+                            }
                         }
-                    }
-                    _ = shutdown_rx.changed() => {
-                        tracing::debug!("Closing upstream socket loop");
-                        return;
+                        _ = shutdown_rx.changed() => {
+                            tracing::debug!("Closing upstream socket loop");
+                            return;
+                        }
                     }
                 }
             }
-        });
+        );
 
         initialised.await.map_err(|error| eyre::eyre!(error))??;
 

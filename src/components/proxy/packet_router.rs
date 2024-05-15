@@ -49,7 +49,8 @@ impl DownstreamReceiveWorkerConfig {
         let notify = Arc::new(tokio::sync::Notify::new());
         let is_ready = notify.clone();
 
-        let thread_span = tracing::debug_span!("receiver", id = worker_id).or_current();
+        let thread_span =
+            uring_span!(tracing::debug_span!("receiver", id = worker_id).or_current());
 
         let worker = uring_spawn!(thread_span, async move {
             let mut last_received_at = None;
@@ -60,9 +61,7 @@ impl DownstreamReceiveWorkerConfig {
             tracing::trace!(port, "bound worker");
             let send_socket = socket.clone();
 
-            let upstream = tracing::debug_span!("upstream").or_current();
-
-            uring_inner_spawn!(async move {
+            let inner_task = async move {
                 is_ready.notify_one();
 
                 loop {
@@ -109,7 +108,15 @@ impl DownstreamReceiveWorkerConfig {
                         }
                     }
                 }
-            }.instrument(upstream));
+            };
+
+            cfg_if::cfg_if! {
+                if #[cfg(debug_assertions)] {
+                    uring_inner_spawn!(inner_task.instrument(tracing::debug_span!("upstream").or_current()));
+                } else {
+                    uring_inner_spawn!(inner_task);
+                }
+            }
 
             loop {
                 // Initialize a buffer for the UDP packet. We use the maximum size of a UDP

@@ -211,7 +211,7 @@ impl Measurement for QcmpMeasurement {
 pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) {
     let port = crate::net::socket_port(&socket);
 
-    uring_spawn!(tracing::debug_span!("qcmp"), async move {
+    uring_spawn!(uring_span!(tracing::debug_span!("qcmp")), async move {
         let mut input_buf = vec![0; 1 << 16];
         let socket = DualStackLocalSocket::new(port).unwrap();
         let mut output_buf = QcmpPacket::default();
