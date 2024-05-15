@@ -279,15 +279,6 @@ impl kube::core::object::HasSpec for GameServer {
     }
 }
 
-fn deserialize_null_default<'de, D, T>(deserializer: D) -> Result<T, D::Error>
-where
-    T: Default + Deserialize<'de>,
-    D: serde::de::Deserializer<'de>,
-{
-    let opt = Option::deserialize(deserializer)?;
-    Ok(opt.unwrap_or_default())
-}
-
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct GameServerSpec {
@@ -296,7 +287,7 @@ pub struct GameServerSpec {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub container: Option<String>,
     /// Ports are the array of ports that can be exposed via the game server
-    #[serde(deserialize_with = "deserialize_null_default")]
+    #[serde(default)]
     pub ports: Vec<GameServerPort>,
     /// Configures health checking
     pub health: Health,
@@ -397,7 +388,7 @@ pub struct GameServerStatus {
     pub state: GameServerState,
     pub ports: Option<Vec<GameServerStatusPort>>,
     pub address: String,
-    #[serde(deserialize_with = "deserialize_null_default")]
+    #[serde(default)]
     pub addresses: Vec<NodeAddress>,
     pub node_name: String,
     pub reserved_until: Option<k8s_openapi::apimachinery::pkg::apis::meta::v1::Time>,

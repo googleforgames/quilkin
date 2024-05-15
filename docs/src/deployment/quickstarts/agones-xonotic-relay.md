@@ -196,7 +196,7 @@ Labels:       agones.dev/fleet=xonotic
               agones.dev/gameserverset=xonotic-8ns7b
 Annotations:  agones.dev/last-allocated: 2023-10-04T19:47:04.047026419Z
               agones.dev/ready-container-id: containerd://b39d30965becdbc40336fd9aa642fe776421553615f642dd599e1b0d88c505b6
-              agones.dev/sdk-version: 1.40.0
+              agones.dev/sdk-version: 1.33.0
               quilkin.dev/tokens: NDU2
 API Version:  agones.dev/v1
 Kind:         GameServer
