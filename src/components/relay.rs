@@ -55,6 +55,7 @@ impl Relay {
                 Providers::Agones {
                     config_namespace, ..
                 } => {
+                    let config_namespace = config_namespace.unwrap_or_else(|| "default".into());
                     let fut = Providers::task(provider_is_healthy.clone(), move || {
                         let config = config.clone();
                         let config_namespace = config_namespace.clone();
@@ -69,7 +70,7 @@ impl Relay {
                             let configmap_reflector =
                                 crate::config::providers::k8s::update_filters_from_configmap(
                                     client.clone(),
-                                    config_namespace,
+                                    &config_namespace,
                                     config.clone(),
                                 );
 

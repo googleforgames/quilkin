@@ -33,6 +33,7 @@ impl Manage {
             ready.provider_is_healthy.clone(),
             self.locality,
             None,
+            false,
         );
 
         let _relay_stream = if !self.relay_servers.is_empty() {
