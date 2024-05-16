@@ -55,12 +55,13 @@ impl Agent {
         }
 
         let _mds_task = if !self.relay_servers.is_empty() {
-            let _provider_task = match self.provider.as_ref() {
+            let _provider_task = match self.provider {
                 Some(provider) => Some(provider.spawn(
                     config.clone(),
                     ready.provider_is_healthy.clone(),
                     self.locality,
                     self.address_selector,
+                    true,
                 )),
                 None => return Err(eyre::eyre!("no configuration provider given")),
             };

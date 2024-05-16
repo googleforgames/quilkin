@@ -15,13 +15,8 @@ pub enum Providers {
     /// and for a `ConfigMap` that specifies the filter configuration.
     Agones {
         /// The namespace under which the configmap is stored.
-        #[clap(
-            short,
-            long,
-            env = "QUILKIN_AGONES_CONFIG_NAMESPACE",
-            default_value = "default"
-        )]
-        config_namespace: String,
+        #[clap(short, long, env = "QUILKIN_AGONES_CONFIG_NAMESPACE")]
+        config_namespace: Option<String>,
         /// The namespace under which the game servers run.
         #[clap(
             short,
@@ -43,31 +38,43 @@ pub enum Providers {
 impl Providers {
     #[tracing::instrument(level = "trace", skip_all)]
     pub fn spawn(
-        &self,
+        self,
         config: std::sync::Arc<crate::Config>,
         health_check: Arc<AtomicBool>,
         locality: Option<crate::net::endpoint::Locality>,
         address_selector: Option<crate::config::AddressSelector>,
+        is_agent: bool,
     ) -> tokio::task::JoinHandle<crate::Result<()>> {
-        match &self {
+        match self {
             Self::Agones {
                 gameservers_namespace,
                 config_namespace,
-            } => tokio::spawn(Self::task(health_check.clone(), {
-                let gameservers_namespace = gameservers_namespace.clone();
-                let config_namespace = config_namespace.clone();
-                let health_check = health_check.clone();
-                move || {
-                    crate::config::watch::agones(
-                        gameservers_namespace.clone(),
-                        config_namespace.clone(),
-                        health_check.clone(),
-                        locality.clone(),
-                        config.clone(),
-                        address_selector.clone(),
-                    )
-                }
-            })),
+            } => tokio::spawn(async move {
+                let config_namespace = match (config_namespace, is_agent) {
+                    (Some(cns), false) => Some(cns),
+                    (None, true) => None,
+                    (None, false) => Some("default".into()),
+                    (Some(cns), true) => {
+                        tracing::warn!("'{cns}' via --config-namespace, -c, or QUILKIN_AGONES_CONFIG_NAMESPACE is ignored for agents and should not be set");
+                        None
+                    }
+                };
+
+                Self::task(health_check.clone(), {
+                    let health_check = health_check.clone();
+                    move || {
+                        crate::config::watch::agones(
+                            gameservers_namespace.clone(),
+                            config_namespace.clone(),
+                            health_check.clone(),
+                            locality.clone(),
+                            config.clone(),
+                            address_selector.clone(),
+                        )
+                    }
+                })
+                .await
+            }),
             Self::File { path } => tokio::spawn(Self::task(health_check.clone(), {
                 let path = path.clone();
                 let health_check = health_check.clone();
