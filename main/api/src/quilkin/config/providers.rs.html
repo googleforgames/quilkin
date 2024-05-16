@@ -107,6 +107,13 @@
 <a href="#105" id="105">105</a>
 <a href="#106" id="106">106</a>
 <a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
@@ -124,13 +131,8 @@
     /// and for a `ConfigMap` that specifies the filter configuration.
     </span>Agones {
         <span class="doccomment">/// The namespace under which the configmap is stored.
-        </span><span class="attr">#[clap(
-            short,
-            long,
-            env = <span class="string">"QUILKIN_AGONES_CONFIG_NAMESPACE"</span>,
-            default_value = <span class="string">"default"
-        </span>)]
-        </span>config_namespace: String,
+        </span><span class="attr">#[clap(short, long, env = <span class="string">"QUILKIN_AGONES_CONFIG_NAMESPACE"</span>)]
+        </span>config_namespace: <span class="prelude-ty">Option</span>&lt;String&gt;,
         <span class="doccomment">/// The namespace under which the game servers run.
         </span><span class="attr">#[clap(
             short,
@@ -152,31 +154,43 @@
 <span class="kw">impl </span>Providers {
     <span class="attr">#[tracing::instrument(level = <span class="string">"trace"</span>, skip_all)]
     </span><span class="kw">pub fn </span>spawn(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="self">self</span>,
         config: std::sync::Arc&lt;<span class="kw">crate</span>::Config&gt;,
         health_check: Arc&lt;AtomicBool&gt;,
         locality: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::net::endpoint::Locality&gt;,
         address_selector: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::config::AddressSelector&gt;,
+        is_agent: bool,
     ) -&gt; tokio::task::JoinHandle&lt;<span class="kw">crate</span>::Result&lt;()&gt;&gt; {
-        <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self </span>{
+        <span class="kw">match </span><span class="self">self </span>{
             <span class="self">Self</span>::Agones {
                 gameservers_namespace,
                 config_namespace,
-            } =&gt; tokio::spawn(<span class="self">Self</span>::task(health_check.clone(), {
-                <span class="kw">let </span>gameservers_namespace = gameservers_namespace.clone();
-                <span class="kw">let </span>config_namespace = config_namespace.clone();
-                <span class="kw">let </span>health_check = health_check.clone();
-                <span class="kw">move </span>|| {
-                    <span class="kw">crate</span>::config::watch::agones(
-                        gameservers_namespace.clone(),
-                        config_namespace.clone(),
-                        health_check.clone(),
-                        locality.clone(),
-                        config.clone(),
-                        address_selector.clone(),
-                    )
-                }
-            })),
+            } =&gt; tokio::spawn(<span class="kw">async move </span>{
+                <span class="kw">let </span>config_namespace = <span class="kw">match </span>(config_namespace, is_agent) {
+                    (<span class="prelude-val">Some</span>(cns), <span class="bool-val">false</span>) =&gt; <span class="prelude-val">Some</span>(cns),
+                    (<span class="prelude-val">None</span>, <span class="bool-val">true</span>) =&gt; <span class="prelude-val">None</span>,
+                    (<span class="prelude-val">None</span>, <span class="bool-val">false</span>) =&gt; <span class="prelude-val">Some</span>(<span class="string">"default"</span>.into()),
+                    (<span class="prelude-val">Some</span>(cns), <span class="bool-val">true</span>) =&gt; {
+                        <span class="macro">tracing::warn!</span>(<span class="string">"'{cns}' via --config-namespace, -c, or QUILKIN_AGONES_CONFIG_NAMESPACE is ignored for agents and should not be set"</span>);
+                        <span class="prelude-val">None
+                    </span>}
+                };
+
+                <span class="self">Self</span>::task(health_check.clone(), {
+                    <span class="kw">let </span>health_check = health_check.clone();
+                    <span class="kw">move </span>|| {
+                        <span class="kw">crate</span>::config::watch::agones(
+                            gameservers_namespace.clone(),
+                            config_namespace.clone(),
+                            health_check.clone(),
+                            locality.clone(),
+                            config.clone(),
+                            address_selector.clone(),
+                        )
+                    }
+                })
+                .<span class="kw">await
+            </span>}),
             <span class="self">Self</span>::File { path } =&gt; tokio::spawn(<span class="self">Self</span>::task(health_check.clone(), {
                 <span class="kw">let </span>path = path.clone();
                 <span class="kw">let </span>health_check = health_check.clone();

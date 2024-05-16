@@ -125,6 +125,7 @@
 <a href="#123" id="123">123</a>
 <a href="#124" id="124">124</a>
 <a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::RunArgs;
 <span class="kw">use crate</span>::{config::Providers, net::TcpListener};
 <span class="kw">use </span>std::sync::{
@@ -182,6 +183,7 @@
                 Providers::Agones {
                     config_namespace, ..
                 } =&gt; {
+                    <span class="kw">let </span>config_namespace = config_namespace.unwrap_or_else(|| <span class="string">"default"</span>.into());
                     <span class="kw">let </span>fut = Providers::task(provider_is_healthy.clone(), <span class="kw">move </span>|| {
                         <span class="kw">let </span>config = config.clone();
                         <span class="kw">let </span>config_namespace = config_namespace.clone();
@@ -196,7 +198,7 @@
                             <span class="kw">let </span>configmap_reflector =
                                 <span class="kw">crate</span>::config::providers::k8s::update_filters_from_configmap(
                                     client.clone(),
-                                    config_namespace,
+                                    <span class="kw-2">&amp;</span>config_namespace,
                                     config.clone(),
                                 );
 
