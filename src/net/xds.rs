@@ -19,7 +19,7 @@ pub(crate) use crate::generated::quilkin::relay::v1alpha1 as relay;
 pub(crate) mod client;
 pub(crate) mod metrics;
 mod resource;
-pub(crate) mod server;
+pub mod server;
 
 use crate::net::{cluster::EndpointSetVersion, endpoint::Locality};
 

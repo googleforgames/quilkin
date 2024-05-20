@@ -4,6 +4,7 @@ use quilkin::{
     net::endpoint::Endpoint,
     test::TestConfig,
 };
+use rand::SeedableRng;
 
 trace_test!(relay_routing, {
     struct Token {
@@ -11,15 +12,14 @@ trace_test!(relay_routing, {
     }
 
     impl Token {
-        fn new() -> Self {
+        fn new(rng: &mut rand::rngs::SmallRng) -> Self {
             const CHARS: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
             use rand::prelude::SliceRandom;
-            let mut rng = rand::thread_rng();
 
             let mut inner = [0; 3];
             for (v, slot) in CHARS
-                .choose_multiple(&mut rng, inner.len())
+                .choose_multiple(rng, inner.len())
                 .zip(inner.iter_mut())
             {
                 *slot = *v;
@@ -52,7 +52,7 @@ trace_test!(relay_routing, {
                         }),
                     })
                     .unwrap(),
-                    TokenRouter::as_filter_config(None).unwrap(),
+                    HashedTokenRouter::as_filter_config(None).unwrap(),
                 ])
                 .unwrap(),
                 ..Default::default()
@@ -63,7 +63,7 @@ trace_test!(relay_routing, {
     sc.push(
         "agent",
         AgentPailConfig {
-            endpoints: vec![("server", &["abc"])],
+            endpoints: vec![("server", &[])],
             ..Default::default()
         },
         &["server", "relay"],
@@ -86,17 +86,30 @@ trace_test!(relay_routing, {
 
     let client = sandbox.client();
 
+    let mut rng = rand::rngs::SmallRng::seed_from_u64(123);
+
     for _ in 0..5 {
-        let token = Token::new();
         sandbox.sleep(50).await;
+
+        let mut token = Token { inner: [0; 3] };
+
+        let tokens = (0..2000)
+            .into_iter()
+            .map(|i| {
+                let tok = Token::new(&mut rng);
+                if i == 1337 {
+                    token.inner = tok.inner;
+                }
+
+                tok.inner.to_vec()
+            })
+            .collect();
 
         ap.config_file.update(|config| {
             config.clusters.insert_default(
                 [Endpoint::with_metadata(
                     (std::net::Ipv6Addr::LOCALHOST, server_port).into(),
-                    quilkin::net::endpoint::Metadata {
-                        tokens: Some(token.inner.to_vec()).into_iter().collect(),
-                    },
+                    quilkin::net::endpoint::Metadata { tokens },
                 )]
                 .into(),
             );

@@ -175,13 +175,20 @@ impl EndpointSet {
     pub fn update(&mut self) {
         use std::hash::{Hash, Hasher};
         let mut hasher = seahash::SeaHasher::with_seeds(0, 1, 2, 3);
+        let mut token_map = TokenAddressMap::new();
 
         for ep in &self.endpoints {
             ep.hash(&mut hasher);
+
+            for tok in &ep.metadata.known.tokens {
+                let hash = seahash::hash(tok);
+                token_map.entry(hash).or_default().push(ep.address.clone());
+            }
         }
 
         self.hash = hasher.finish();
         self.version += 1;
+        self.token_map = token_map;
     }
 
     /// Creates a map of tokens -> address for the current set
@@ -209,9 +216,6 @@ impl EndpointSet {
         } else {
             self.hash = replacement.hash;
             self.version += 1;
-        }
-
-        if !self.token_map.is_empty() {
             self.build_token_map();
         }
 
