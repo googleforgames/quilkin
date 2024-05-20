@@ -726,6 +726,10 @@
 <a href="#724" id="724">724</a>
 <a href="#725" id="725">725</a>
 <a href="#726" id="726">726</a>
+<a href="#727" id="727">727</a>
+<a href="#728" id="728">728</a>
+<a href="#729" id="729">729</a>
+<a href="#730" id="730">730</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -903,13 +907,20 @@
     </span><span class="kw">pub fn </span>update(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="kw">use </span>std::hash::{Hash, Hasher};
         <span class="kw">let </span><span class="kw-2">mut </span>hasher = seahash::SeaHasher::with_seeds(<span class="number">0</span>, <span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>token_map = TokenAddressMap::new();
 
         <span class="kw">for </span>ep <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.endpoints {
             ep.hash(<span class="kw-2">&amp;mut </span>hasher);
+
+            <span class="kw">for </span>tok <span class="kw">in </span><span class="kw-2">&amp;</span>ep.metadata.known.tokens {
+                <span class="kw">let </span>hash = seahash::hash(tok);
+                token_map.entry(hash).or_default().push(ep.address.clone());
+            }
         }
 
         <span class="self">self</span>.hash = hasher.finish();
         <span class="self">self</span>.version += <span class="number">1</span>;
+        <span class="self">self</span>.token_map = token_map;
     }
 
     <span class="doccomment">/// Creates a map of tokens -&gt; address for the current set
@@ -937,9 +948,6 @@
         } <span class="kw">else </span>{
             <span class="self">self</span>.hash = replacement.hash;
             <span class="self">self</span>.version += <span class="number">1</span>;
-        }
-
-        <span class="kw">if </span>!<span class="self">self</span>.token_map.is_empty() {
             <span class="self">self</span>.build_token_map();
         }
 
