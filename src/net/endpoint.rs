@@ -17,7 +17,6 @@
 //! Types representing where the data is the sent.
 
 pub(crate) mod address;
-mod locality;
 pub mod metadata;
 
 use crate::net::cluster::proto;
@@ -26,9 +25,10 @@ use serde::{Deserialize, Serialize};
 
 pub use self::{
     address::{AddressKind, EndpointAddress},
-    locality::Locality,
     metadata::DynamicMetadata,
 };
+
+pub use xds::locality::Locality;
 
 pub type EndpointMetadata = metadata::MetadataView<Metadata>;
 pub use base64_set::Set;

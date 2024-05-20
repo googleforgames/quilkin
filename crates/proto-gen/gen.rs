@@ -211,7 +211,7 @@ fn execute(which: &str) {
         .arg("--generate-transport")
         .args(["--disable-comments", "."])
         .arg(which)
-        .args(["-o", "src/generated"]);
+        .args(["-o", "crates/quilkin-proto/src/generated"]);
 
     for (dir, files) in files {
         cmd.arg("-d");

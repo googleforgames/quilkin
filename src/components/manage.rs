@@ -54,11 +54,14 @@ impl Manage {
             // Attempt to connect to a delta stream if the relay has one
             // available, otherwise fallback to the regular aggregated stream
             Some(
-                match client.delta_stream(config.clone(), ready.clone()).await {
+                match client
+                    .delta_stream(config.clone(), ready.relay_is_healthy.clone())
+                    .await
+                {
                     Ok(ds) => XdsTask::Delta(ds),
-                    Err(client) => {
-                        XdsTask::Aggregated(client.mds_client_stream(config.clone(), ready))
-                    }
+                    Err(client) => XdsTask::Aggregated(
+                        client.mds_client_stream(config.clone(), ready.relay_is_healthy.clone()),
+                    ),
                 },
             )
         } else {

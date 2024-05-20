@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
-pub(crate) use crate::generated::quilkin::relay::v1alpha1 as relay;
-
-pub(crate) mod client;
-pub(crate) mod metrics;
-mod resource;
+pub mod client;
+pub mod config;
+pub mod locality;
+pub mod metrics;
+pub mod net;
+pub mod resource;
 pub mod server;
 
-use crate::net::{cluster::EndpointSetVersion, endpoint::Locality};
+use crate::locality::Locality;
 
 pub use crate::generated::envoy::{
     config::core::v3::{self as core, socket_address},
@@ -29,8 +30,11 @@ pub use crate::generated::envoy::{
     service::discovery::v3 as discovery,
 };
 pub use client::{AdsClient, Client};
+pub use quilkin_proto as generated;
 pub use resource::{Resource, ResourceType};
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt};
+
+pub type Result<T, E = eyre::Error> = std::result::Result<T, E>;
 
 /// Keeps track of what resource versions a particular client has
 pub enum ClientVersions {
@@ -137,6 +141,40 @@ impl ClientVersions {
         }
 
         Ok(())
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub struct EndpointSetVersion(u64);
+
+impl EndpointSetVersion {
+    pub fn from_number(version: u64) -> Self {
+        Self(version)
+    }
+
+    pub fn number(&self) -> u64 {
+        self.0
+    }
+}
+
+impl fmt::Display for EndpointSetVersion {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::LowerHex::fmt(&self.0, f)
+    }
+}
+
+impl fmt::Debug for EndpointSetVersion {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::LowerHex::fmt(&self.0, f)
+    }
+}
+
+impl std::str::FromStr for EndpointSetVersion {
+    type Err = eyre::Error;
+
+    #[inline]
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(u64::from_str_radix(s, 16)?))
     }
 }
 
