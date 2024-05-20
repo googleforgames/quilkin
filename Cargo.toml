@@ -65,7 +65,7 @@ test = false
 
 [dependencies]
 # Local
-quilkin-macros = { version = "0.9.0-dev", path = "./macros" }
+quilkin-macros = { version = "0.9.0-dev", path = "./crates/macros" }
 
 # Crates.io
 arc-swap = { version = "1.6.0", features = ["serde"] }
@@ -165,7 +165,7 @@ instrument = []
 debug = true
 
 [workspace]
-members = [".", "./macros", "./agones", "./proto-gen", "./test"]
+members = [".", "crates/*"]
 
 [workspace.dependencies]
 async-channel = "2.1.0"

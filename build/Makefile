@@ -208,14 +208,14 @@ test-agones:
 
 run-test-agones: ensure-kube-dirs
 run-test-agones:
-	docker run --rm $(DOCKER_RUN_ARGS) $(common_rust_args) -w /workspace/agones  \
+	docker run --rm $(DOCKER_RUN_ARGS) $(common_rust_args) -w /workspace/crates/agones  \
 			--entrypoint=cargo $(BUILD_IMAGE_TAG) clippy --tests -- -D warnings
-	docker run --rm $(DOCKER_RUN_ARGS) $(common_rust_args) -w /workspace/agones \
+	docker run --rm $(DOCKER_RUN_ARGS) $(common_rust_args) -w /workspace/crates/agones \
 		--entrypoint=cargo $(BUILD_IMAGE_TAG) fmt -- --check
 	# Confirm access to K8s, and force refresh of the auth token for the kube context
-	docker run --rm $(DOCKER_RUN_ARGS) $(common_rust_args) $(kube_mount_args) -w /workspace/agones \
+	docker run --rm $(DOCKER_RUN_ARGS) $(common_rust_args) $(kube_mount_args) -w /workspace/crates/agones \
 		--entrypoint=kubectl $(BUILD_IMAGE_TAG) get ns
-	docker run --rm $(DOCKER_RUN_ARGS) $(common_rust_args) $(kube_mount_args) -w /workspace/agones \
+	docker run --rm $(DOCKER_RUN_ARGS) $(common_rust_args) $(kube_mount_args) -w /workspace/crates/agones \
 			-e "RUST_BACKTRACE=1" -e "IMAGE_TAG=${IMAGE_TAG}" --entrypoint=cargo $(BUILD_IMAGE_TAG) test $(ARGS)
 
 # Convenience target to build and push quilkin images to a repository.
