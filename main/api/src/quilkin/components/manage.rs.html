@@ -83,6 +83,9 @@
 <a href="#81" id="81">81</a>
 <a href="#82" id="82">82</a>
 <a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
 </pre></div><pre class="rust"><code><span class="kw">pub use </span><span class="kw">super</span>::agent::Ready;
 <span class="kw">use </span><span class="kw">super</span>::RunArgs;
 <span class="kw">pub use crate</span>::{
@@ -139,11 +142,14 @@
             <span class="comment">// Attempt to connect to a delta stream if the relay has one
             // available, otherwise fallback to the regular aggregated stream
             </span><span class="prelude-val">Some</span>(
-                <span class="kw">match </span>client.delta_stream(config.clone(), ready.clone()).<span class="kw">await </span>{
+                <span class="kw">match </span>client
+                    .delta_stream(config.clone(), ready.relay_is_healthy.clone())
+                    .<span class="kw">await
+                </span>{
                     <span class="prelude-val">Ok</span>(ds) =&gt; XdsTask::Delta(ds),
-                    <span class="prelude-val">Err</span>(client) =&gt; {
-                        XdsTask::Aggregated(client.mds_client_stream(config.clone(), ready))
-                    }
+                    <span class="prelude-val">Err</span>(client) =&gt; XdsTask::Aggregated(
+                        client.mds_client_stream(config.clone(), ready.relay_is_healthy.clone()),
+                    ),
                 },
             )
         } <span class="kw">else </span>{

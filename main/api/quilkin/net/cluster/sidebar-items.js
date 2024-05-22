@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["ClusterMap","ClusterMapDeser","EndpointSet","EndpointSetVersion","Token"],"type":["TokenAddressMap"]};
+window.SIDEBAR_ITEMS = {"mod":["proto"],"struct":["ClusterMap","ClusterMapDeser","EndpointSet","Token"],"type":["TokenAddressMap"]};

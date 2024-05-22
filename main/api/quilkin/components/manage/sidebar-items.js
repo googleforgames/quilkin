@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["Manage"]};
+window.SIDEBAR_ITEMS = {"struct":["Locality","Manage"]};

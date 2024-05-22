@@ -190,10 +190,10 @@
 
                     <span class="comment">// Attempt to connect to a delta stream if the relay has one
                     // available, otherwise fallback to the regular aggregated stream
-                    </span><span class="prelude-val">Some</span>(<span class="kw">match </span>client.delta_stream(config.clone(), ready.clone()).<span class="kw">await </span>{
+                    </span><span class="prelude-val">Some</span>(<span class="kw">match </span>client.delta_stream(config.clone(), ready.relay_is_healthy.clone()).<span class="kw">await </span>{
                         <span class="prelude-val">Ok</span>(ds) =&gt; XdsTask::Delta(ds),
                         <span class="prelude-val">Err</span>(client) =&gt; {
-                            XdsTask::Aggregated(client.mds_client_stream(config, ready))
+                            XdsTask::Aggregated(client.mds_client_stream(config, ready.relay_is_healthy.clone()))
                         }
                     })
                 }

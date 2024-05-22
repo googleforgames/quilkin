@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["Agent","Ready"]};
+window.SIDEBAR_ITEMS = {"struct":["Agent","Locality","Ready"]};

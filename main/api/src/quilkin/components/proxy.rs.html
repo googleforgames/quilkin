@@ -260,6 +260,9 @@
 <a href="#258" id="258">258</a>
 <a href="#259" id="259">259</a>
 <a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
 </pre></div><pre class="rust"><code><span class="kw">pub mod </span>packet_router;
 <span class="kw">mod </span>sessions;
 
@@ -429,11 +432,13 @@
 
                             <span class="kw">let </span><span class="kw-2">mut </span>delta_sub = <span class="prelude-val">None</span>;
                             <span class="kw">let </span><span class="kw-2">mut </span>state_sub = <span class="prelude-val">None</span>;
+                            <span class="kw">let </span>xds_is_healthy =
+                                ready.xds_is_healthy.read().as_ref().unwrap().clone();
 
                             <span class="kw">match </span>client
                                 .delta_subscribe(
                                     config.clone(),
-                                    ready.clone(),
+                                    xds_is_healthy.clone(),
                                     [
                                         (ResourceType::Cluster, Vec::new()),
                                         (ResourceType::Listener, Vec::new()),
@@ -444,7 +449,8 @@
                             </span>{
                                 <span class="prelude-val">Ok</span>(ds) =&gt; delta_sub = <span class="prelude-val">Some</span>(ds),
                                 <span class="prelude-val">Err</span>(client) =&gt; {
-                                    <span class="kw">let </span><span class="kw-2">mut </span>stream = client.xds_client_stream(config, ready);
+                                    <span class="kw">let </span><span class="kw-2">mut </span>stream =
+                                        client.xds_client_stream(config, xds_is_healthy);
 
                                     tokio::time::sleep(std::time::Duration::from_nanos(<span class="number">1</span>)).<span class="kw">await</span>;
                                     stream
