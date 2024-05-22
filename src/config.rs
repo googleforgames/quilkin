@@ -49,25 +49,10 @@ mod error;
 pub mod providers;
 mod slot;
 pub mod watch;
-pub(crate) mod xds;
-
-base64_serde_type!(pub Base64Standard, base64::engine::general_purpose::STANDARD);
 
 pub(crate) const BACKOFF_INITIAL_DELAY: Duration = Duration::from_millis(500);
-pub(crate) const BACKOFF_MAX_DELAY: Duration = Duration::from_secs(30);
-pub(crate) const BACKOFF_MAX_JITTER: Duration = Duration::from_millis(2000);
-pub(crate) const CONNECTION_TIMEOUT: Duration = Duration::from_secs(5);
 
-/// Returns the configured maximum allowed message size for gRPC messages.
-/// When using State Of The World xDS, the message size can get large enough
-/// that it can exceed the default limits.
-pub fn max_grpc_message_size() -> usize {
-    std::env::var("QUILKIN_MAX_GRPC_MESSAGE_SIZE")
-        .as_deref()
-        .ok()
-        .and_then(|var| var.parse().ok())
-        .unwrap_or(256 * 1024 * 1024)
-}
+base64_serde_type!(pub Base64Standard, base64::engine::general_purpose::STANDARD);
 
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 #[serde(untagged)]
@@ -103,13 +88,89 @@ pub struct Config {
     pub datacenter: DatacenterConfig,
 }
 
-pub struct DeltaDiscoveryRes {
-    pub resources: Vec<XdsResource>,
-    pub awaiting_ack: crate::net::xds::AwaitingAck,
-    pub removed: Vec<String>,
+impl xds::config::Configuration for Config {
+    fn identifier(&self) -> String {
+        (*self.id.load()).clone()
+    }
+
+    fn apply(&self, response: xds::Resource) -> crate::Result<()> {
+        self.apply(response)
+    }
+
+    fn apply_delta(
+        &self,
+        resource_type: ResourceType,
+        resources: impl Iterator<Item = crate::Result<(xds::Resource, String)>>,
+        removed_resources: Vec<String>,
+        local_versions: &mut HashMap<String, String>,
+    ) -> crate::Result<()> {
+        self.apply_delta(resource_type, resources, removed_resources, local_versions)
+    }
+
+    fn discovery_request(
+        &self,
+        _node_id: &str,
+        resource_type: ResourceType,
+        names: &[String],
+    ) -> Result<Vec<prost_types::Any>, eyre::Error> {
+        self.discovery_request(_node_id, resource_type, names)
+    }
+
+    fn delta_discovery_request(
+        &self,
+        subscribed: &std::collections::BTreeSet<String>,
+        client_versions: &xds::ClientVersions,
+    ) -> crate::Result<DeltaDiscoveryRes> {
+        self.delta_discovery_request(subscribed, client_versions)
+    }
+
+    fn on_changed(
+        &self,
+        control_plane: xds::server::ControlPlane<Self>,
+    ) -> impl std::future::Future<Output = ()> + Send + 'static {
+        let mut cluster_watcher = self.clusters.watch();
+        self.filters.watch({
+            let this = control_plane.clone();
+            move |_| {
+                this.push_update(ResourceType::Listener);
+            }
+        });
+
+        tracing::trace!("waiting for changes");
+
+        async move {
+            match &control_plane.config.datacenter {
+                crate::config::DatacenterConfig::Agent { .. } => loop {
+                    match cluster_watcher.changed().await {
+                        Ok(()) => control_plane.push_update(ResourceType::Cluster),
+                        Err(error) => tracing::error!(%error, "error watching changes"),
+                    }
+                },
+                crate::config::DatacenterConfig::NonAgent { datacenters } => {
+                    let mut dc_watcher = datacenters.watch();
+                    loop {
+                        tokio::select! {
+                            result = cluster_watcher.changed() => {
+                                match result {
+                                    Ok(()) => control_plane.push_update(ResourceType::Cluster),
+                                    Err(error) => tracing::error!(%error, "error watching changes"),
+                                }
+                            }
+                            result = dc_watcher.changed() => {
+                                match result {
+                                    Ok(()) => control_plane.push_update(ResourceType::Datacenter),
+                                    Err(error) => tracing::error!(%error, "error watching changes"),
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
-use crate::net::xds::ClientVersions;
+use crate::net::xds::{config::DeltaDiscoveryRes, ClientVersions};
 
 impl Config {
     /// Attempts to deserialize `input` as a YAML object representing `Self`.
@@ -203,20 +264,20 @@ impl Config {
                 if names.is_empty() {
                     for cluster in self.clusters.read().iter() {
                         resources.push(resource_type.encode_to_any(
-                            &crate::net::cluster::proto::Cluster::from((
+                            &crate::net::cluster::locality_and_set_to_proto(
                                 cluster.key(),
                                 &cluster.value().endpoints,
-                            )),
+                            ),
                         )?);
                     }
                 } else {
                     for locality in names.iter().filter_map(|name| name.parse().ok()) {
                         if let Some(cluster) = self.clusters.read().get(&Some(locality)) {
                             resources.push(resource_type.encode_to_any(
-                                &crate::net::cluster::proto::Cluster::from((
+                                &crate::net::cluster::locality_and_set_to_proto(
                                     cluster.key(),
                                     &cluster.value().endpoints,
-                                )),
+                                ),
                             )?);
                         }
                     }
@@ -325,7 +386,7 @@ impl Config {
                         name: key.as_ref().map(|k| k.to_string()).unwrap_or_default(),
                         version: current_version.to_string(),
                         resource: Some(resource_type.encode_to_any(
-                            &crate::net::cluster::proto::Cluster::from((key, &value.endpoints)),
+                            &crate::net::cluster::locality_and_set_to_proto(key, &value.endpoints),
                         )?),
                         ..Default::default()
                     });

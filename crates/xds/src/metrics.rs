@@ -14,12 +14,32 @@
  *  limitations under the License.
  */
 
+use arc_swap::ArcSwap;
 use once_cell::sync::Lazy;
-use prometheus::{IntCounterVec, IntGaugeVec};
+use prometheus::{IntCounterVec, IntGaugeVec, Registry};
 
 pub(crate) const NODE_LABEL: &str = "node";
 pub(crate) const CONTROL_PLANE_LABEL: &str = "control_plane";
 pub(crate) const TYPE_LABEL: &str = "type";
+
+/// TODO: Remove and replace with a local registry.
+static REGISTRY: Lazy<ArcSwap<Registry>> = Lazy::new(|| {
+    ArcSwap::new(std::sync::Arc::new(
+        Registry::new_custom(Some("quilkin".into()), None).unwrap(),
+    ))
+});
+
+/// Sets the [prometheus::Registry] containing all the metrics
+/// registered in xDS.
+pub fn set_registry(registry: std::sync::Arc<Registry>) {
+    REGISTRY.store(registry);
+}
+
+/// Returns the [prometheus::Registry] containing all the metrics
+/// registered in xDS.
+pub fn registry() -> arc_swap::Guard<std::sync::Arc<Registry>> {
+    REGISTRY.load()
+}
 
 pub(crate) fn active_control_planes(control_plane: &str) -> prometheus::IntGauge {
     static ACTIVE_CONTROL_PLANES: Lazy<IntGaugeVec> = Lazy::new(|| {

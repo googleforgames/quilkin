@@ -20,7 +20,7 @@ use std::num::NonZeroUsize;
 type FixedBuffer = fixedstr::Flexstr<64>;
 const SEP: char = ':';
 
-/// The location of an [`Endpoint`][super::Endpoint].
+/// The location of an `Endpoint`.
 #[derive(Clone, Default, Debug, Hash, Eq, PartialEq, PartialOrd, Ord)]
 pub struct Locality {
     /// Internal buffer with the full string
@@ -61,7 +61,6 @@ impl Locality {
         }
     }
 
-    #[cfg(test)]
     pub fn with_region(region: impl AsRef<str>) -> Self {
         let region = region.as_ref();
         Self {
@@ -136,14 +135,14 @@ impl std::str::FromStr for Locality {
     }
 }
 
-impl From<crate::net::cluster::proto::Locality> for Locality {
+impl From<crate::resource::proto::Locality> for Locality {
     #[inline]
-    fn from(value: crate::net::cluster::proto::Locality) -> Self {
+    fn from(value: crate::resource::proto::Locality) -> Self {
         Self::new(value.region, value.zone, value.sub_zone)
     }
 }
 
-impl From<Locality> for crate::net::cluster::proto::Locality {
+impl From<Locality> for crate::resource::proto::Locality {
     #[inline]
     fn from(value: Locality) -> Self {
         Self {

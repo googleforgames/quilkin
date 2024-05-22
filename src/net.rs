@@ -92,7 +92,9 @@ pub mod cluster;
 pub mod endpoint;
 pub(crate) mod maxmind_db;
 pub mod phoenix;
-pub mod xds;
+
+pub use xds;
+pub use xds::net::TcpListener;
 
 use std::{
     io,
@@ -325,46 +327,6 @@ impl DualStackEpollSocket {
         target: A,
     ) -> io::Result<usize> {
         self.socket.send_to(buf, target).await
-    }
-}
-
-/// TCP listener for a GRPC service, always binds to the local IPv6 address
-pub struct TcpListener {
-    inner: std::net::TcpListener,
-}
-
-impl TcpListener {
-    /// Binds a TCP listener, if `None` is passed, binds to an ephemeral port
-    #[inline]
-    pub fn bind(port: Option<u16>) -> io::Result<Self> {
-        std::net::TcpListener::bind((std::net::Ipv6Addr::UNSPECIFIED, port.unwrap_or_default()))
-            .map(|inner| Self { inner })
-    }
-
-    /// Retrieves the port the listener is bound to
-    #[inline]
-    pub fn port(&self) -> u16 {
-        self.inner.local_addr().expect("failed to bind").port()
-    }
-
-    /// Retrieves the local address the listener is bound to
-    #[inline]
-    pub fn local_addr(&self) -> SocketAddr {
-        self.inner.local_addr().expect("failed to bind")
-    }
-
-    #[inline]
-    pub fn into_stream(self) -> io::Result<tokio_stream::wrappers::TcpListenerStream> {
-        self.inner.set_nonblocking(true)?;
-        let tl = tokio::net::TcpListener::from_std(self.inner)?;
-        Ok(tokio_stream::wrappers::TcpListenerStream::new(tl))
-    }
-}
-
-impl From<TcpListener> for std::net::TcpListener {
-    #[inline]
-    fn from(value: TcpListener) -> Self {
-        value.inner
     }
 }
 

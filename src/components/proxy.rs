@@ -167,11 +167,13 @@ impl Proxy {
 
                             let mut delta_sub = None;
                             let mut state_sub = None;
+                            let xds_is_healthy =
+                                ready.xds_is_healthy.read().as_ref().unwrap().clone();
 
                             match client
                                 .delta_subscribe(
                                     config.clone(),
-                                    ready.clone(),
+                                    xds_is_healthy.clone(),
                                     [
                                         (ResourceType::Cluster, Vec::new()),
                                         (ResourceType::Listener, Vec::new()),
@@ -182,7 +184,8 @@ impl Proxy {
                             {
                                 Ok(ds) => delta_sub = Some(ds),
                                 Err(client) => {
-                                    let mut stream = client.xds_client_stream(config, ready);
+                                    let mut stream =
+                                        client.xds_client_stream(config, xds_is_healthy);
 
                                     tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
                                     stream

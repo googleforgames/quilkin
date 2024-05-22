@@ -39,12 +39,14 @@ type_urls! {
     }
 }
 
+pub use crate::generated::quilkin::config::v1alpha1 as proto;
+
 #[derive(Clone, Debug)]
 pub enum Resource {
-    Cluster(Box<crate::net::cluster::proto::Cluster>),
-    Datacenter(Box<crate::net::cluster::proto::Datacenter>),
+    Cluster(Box<proto::Cluster>),
+    Datacenter(Box<proto::Datacenter>),
     Listener(Box<Listener>),
-    FilterChain(crate::net::cluster::proto::FilterChain),
+    FilterChain(proto::FilterChain),
 }
 
 impl Resource {
@@ -54,7 +56,7 @@ impl Resource {
             Self::Cluster(cluster) => cluster
                 .locality
                 .clone()
-                .map(|locality| crate::net::endpoint::Locality::from(locality).to_string())
+                .map(|locality| crate::locality::Locality::from(locality).to_string())
                 .unwrap_or_default(),
             Self::Listener(listener) => listener.name.to_string(),
             Self::FilterChain(_fc) => String::new(),
@@ -144,7 +146,11 @@ impl ResourceType {
     ) -> Result<prost_types::Any, prost::EncodeError> {
         Ok(prost_types::Any {
             type_url: self.type_url().into(),
-            value: crate::codec::prost::encode(message)?,
+            value: {
+                let mut buf = Vec::with_capacity(message.encoded_len());
+                message.encode(&mut buf)?;
+                buf
+            },
         })
     }
 }

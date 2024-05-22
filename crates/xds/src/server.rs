@@ -22,30 +22,24 @@ use tokio_stream::StreamExt;
 use tracing_futures::Instrument;
 
 use crate::{
-    config::Config,
-    net::{
-        xds::{
-            discovery::{
-                aggregated_discovery_service_server::{
-                    AggregatedDiscoveryService, AggregatedDiscoveryServiceServer,
-                },
-                DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
-            },
-            metrics,
-            relay::aggregated_control_plane_discovery_service_server::{
-                AggregatedControlPlaneDiscoveryService,
-                AggregatedControlPlaneDiscoveryServiceServer,
-            },
-            ResourceType,
+    discovery::{
+        aggregated_discovery_service_server::{
+            AggregatedDiscoveryService, AggregatedDiscoveryServiceServer,
         },
-        TcpListener,
+        DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
     },
+    generated::quilkin::relay::v1alpha1::aggregated_control_plane_discovery_service_server::{
+        AggregatedControlPlaneDiscoveryService, AggregatedControlPlaneDiscoveryServiceServer,
+    },
+    metrics,
+    net::TcpListener,
+    ResourceType,
 };
 
 #[tracing::instrument(skip_all)]
-pub fn spawn(
+pub fn spawn<C: crate::config::Configuration>(
     listener: TcpListener,
-    config: std::sync::Arc<crate::Config>,
+    config: std::sync::Arc<C>,
     idle_request_interval: Duration,
 ) -> io::Result<impl std::future::Future<Output = crate::Result<()>>> {
     let server = AggregatedDiscoveryServiceServer::new(ControlPlane::from_arc(
@@ -60,9 +54,9 @@ pub fn spawn(
         .map_err(From::from))
 }
 
-pub(crate) fn control_plane_discovery_server(
+pub fn control_plane_discovery_server<C: crate::config::Configuration>(
     listener: TcpListener,
-    config: Arc<Config>,
+    config: Arc<C>,
     idle_request_interval: Duration,
 ) -> io::Result<impl std::future::Future<Output = crate::Result<()>>> {
     let server = AggregatedControlPlaneDiscoveryServiceServer::new(ControlPlane::from_arc(
@@ -77,11 +71,20 @@ pub(crate) fn control_plane_discovery_server(
         .map_err(From::from))
 }
 
-#[derive(Clone)]
-pub struct ControlPlane {
-    config: Arc<Config>,
+pub struct ControlPlane<C> {
+    pub config: Arc<C>,
     idle_request_interval: Duration,
-    watchers: Arc<crate::net::xds::resource::ResourceMap<Watchers>>,
+    watchers: Arc<crate::resource::ResourceMap<Watchers>>,
+}
+
+impl<C> Clone for ControlPlane<C> {
+    fn clone(&self) -> Self {
+        Self {
+            config: self.config.clone(),
+            idle_request_interval: self.idle_request_interval,
+            watchers: self.watchers.clone(),
+        }
+    }
 }
 
 struct Watchers {
@@ -101,8 +104,8 @@ impl Default for Watchers {
     }
 }
 
-impl ControlPlane {
-    pub fn from_arc(config: Arc<Config>, idle_request_interval: Duration) -> Self {
+impl<C: crate::config::Configuration> ControlPlane<C> {
+    pub fn from_arc(config: Arc<C>, idle_request_interval: Duration) -> Self {
         let this = Self {
             config,
             idle_request_interval,
@@ -110,55 +113,14 @@ impl ControlPlane {
         };
 
         tokio::spawn({
-            let this = this.clone();
-            async move {
-                let mut cluster_watcher = this.config.clusters.watch();
-                tracing::trace!("waiting for changes");
-
-                match &this.config.datacenter {
-                    crate::config::DatacenterConfig::Agent {..} => {
-                        loop {
-                            match cluster_watcher.changed().await {
-                                Ok(()) => this.push_update(ResourceType::Cluster),
-                                Err(error) => tracing::error!(%error, "error watching changes"),
-                            }
-                        }
-                    }
-                    crate::config::DatacenterConfig::NonAgent { datacenters } => {
-                        let mut dc_watcher = datacenters.watch();
-                        loop {
-                            tokio::select! {
-                                result = cluster_watcher.changed() => {
-                                    match result {
-                                        Ok(()) => this.push_update(ResourceType::Cluster),
-                                        Err(error) => tracing::error!(%error, "error watching changes"),
-                                    }
-                                }
-                                result = dc_watcher.changed() => {
-                                    match result {
-                                        Ok(()) => this.push_update(ResourceType::Datacenter),
-                                        Err(error) => tracing::error!(%error, "error watching changes"),
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            .instrument(tracing::debug_span!("control_plane_watch_cluster"))
-        });
-
-        this.config.filters.watch({
-            let this = this.clone();
-            move |_| {
-                this.push_update(ResourceType::Listener);
-            }
+            let this2 = this.clone();
+            this.config.on_changed(this2)
         });
 
         this
     }
 
-    fn push_update(&self, resource_type: ResourceType) {
+    pub fn push_update(&self, resource_type: ResourceType) {
         let watchers = &self.watchers[resource_type];
         watchers
             .version
@@ -188,8 +150,8 @@ impl ControlPlane {
                 .version
                 .load(std::sync::atomic::Ordering::Relaxed)
                 .to_string(),
-            control_plane: Some(crate::net::xds::core::ControlPlane {
-                identifier: (*self.config.id.load()).clone(),
+            control_plane: Some(crate::core::ControlPlane {
+                identifier: self.config.identifier(),
             }),
             type_url: resource_type.type_url().to_owned(),
             canary: false,
@@ -311,7 +273,7 @@ impl ControlPlane {
             + std::marker::Unpin
             + 'static,
     {
-        use crate::net::xds::{AwaitingAck, ClientVersions};
+        use crate::{AwaitingAck, ClientVersions};
         use std::collections::BTreeSet;
 
         tracing::debug!("starting delta stream");
@@ -330,8 +292,8 @@ impl ControlPlane {
         let mut pending_acks = cached::TimedSizedCache::with_size_and_lifespan(50, 1);
         let this = Self::clone(self);
 
-        let control_plane_id = crate::net::xds::core::ControlPlane {
-            identifier: (*this.config.id.load()).clone(),
+        let control_plane_id = crate::core::ControlPlane {
+            identifier: this.config.identifier(),
         };
 
         struct ResourceTypeTracker {
@@ -551,7 +513,7 @@ impl ControlPlane {
 }
 
 #[tonic::async_trait]
-impl AggregatedDiscoveryService for ControlPlane {
+impl<C: crate::config::Configuration> AggregatedDiscoveryService for ControlPlane<C> {
     type StreamAggregatedResourcesStream =
         std::pin::Pin<Box<dyn Stream<Item = Result<DiscoveryResponse, tonic::Status>> + Send>>;
     type DeltaAggregatedResourcesStream =
@@ -583,7 +545,7 @@ impl AggregatedDiscoveryService for ControlPlane {
 }
 
 #[tonic::async_trait]
-impl AggregatedControlPlaneDiscoveryService for ControlPlane {
+impl<C: crate::config::Configuration> AggregatedControlPlaneDiscoveryService for ControlPlane<C> {
     type StreamAggregatedResourcesStream =
         std::pin::Pin<Box<dyn Stream<Item = Result<DiscoveryRequest, tonic::Status>> + Send>>;
     type DeltaAggregatedResourcesStream =
@@ -618,18 +580,18 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
             Arc::from(&*identifier),
             move |(mut requests, _rx), _subscribed_resources| async move {
                 tracing::info!(%identifier, "sending initial discovery request");
-                crate::net::xds::client::MdsStream::discovery_request_without_cache(
+                crate::client::MdsStream::discovery_request_without_cache(
                     &identifier,
                     &mut requests,
-                    crate::net::xds::ResourceType::Cluster,
+                    crate::ResourceType::Cluster,
                     &[],
                 )
                 .map_err(|error| tonic::Status::internal(error.to_string()))?;
 
-                crate::net::xds::client::MdsStream::discovery_request_without_cache(
+                crate::client::MdsStream::discovery_request_without_cache(
                     &identifier,
                     &mut requests,
-                    crate::net::xds::ResourceType::Datacenter,
+                    crate::ResourceType::Datacenter,
                     &[],
                 )
                 .map_err(|error| tonic::Status::internal(error.to_string()))?;
@@ -652,10 +614,10 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
                         requests.send(ack?)?;
                     } else {
                         tracing::trace!("exceeded idle interval, sending request");
-                        crate::net::xds::client::MdsStream::discovery_request_without_cache(
+                        crate::client::MdsStream::discovery_request_without_cache(
                             &identifier,
                             &mut requests,
-                            crate::net::xds::ResourceType::Cluster,
+                            crate::ResourceType::Cluster,
                             &[],
                         )
                         .map_err(|error| tonic::Status::internal(error.to_string()))?;
@@ -678,7 +640,7 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
         &self,
         responses: tonic::Request<tonic::Streaming<DeltaDiscoveryResponse>>,
     ) -> Result<tonic::Response<Self::DeltaAggregatedResourcesStream>, tonic::Status> {
-        use crate::net::xds::ResourceType;
+        use crate::ResourceType;
 
         let remote_addr = responses
             .remote_addr()
@@ -708,7 +670,7 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
             async move {
                 tracing::info!(identifier, "sending initial delta discovery request");
 
-                let local = Arc::new(crate::config::xds::LocalVersions::default());
+                let local = Arc::new(crate::config::LocalVersions::default());
 
                 ds.refresh(
                     &identifier,
@@ -721,7 +683,7 @@ impl AggregatedControlPlaneDiscoveryService for ControlPlane {
                 .await
                 .map_err(|error| tonic::Status::internal(error.to_string()))?;
 
-                let mut response_stream = crate::config::xds::handle_delta_discovery_responses(
+                let mut response_stream = crate::config::handle_delta_discovery_responses(
                     identifier.clone(),
                     responses,
                     config.clone(),
@@ -771,7 +733,7 @@ mod tests {
     use tokio::time::timeout;
 
     use super::*;
-    use crate::net::xds::{
+    use crate::{
         core::Node,
         //     listener::v3::{FilterChain, Listener},
         // },

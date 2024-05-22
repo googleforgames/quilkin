@@ -15,6 +15,7 @@
  */
 
 use std::{
+    borrow::Borrow,
     collections::{hash_map::RandomState, BTreeSet},
     fmt,
     sync::atomic::{AtomicU64, AtomicUsize, Ordering::Relaxed},
@@ -25,6 +26,7 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
 use crate::net::endpoint::{Endpoint, EndpointAddress, Locality};
+use xds::EndpointSetVersion;
 
 const SUBSYSTEM: &str = "cluster";
 
@@ -58,30 +60,6 @@ pub(crate) fn active_endpoints() -> &'static prometheus::IntGauge {
     });
 
     &ACTIVE_ENDPOINTS
-}
-
-#[derive(Copy, Clone, PartialEq, Eq)]
-pub struct EndpointSetVersion(u64);
-
-impl fmt::Display for EndpointSetVersion {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::LowerHex::fmt(&self.0, f)
-    }
-}
-
-impl fmt::Debug for EndpointSetVersion {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::LowerHex::fmt(&self.0, f)
-    }
-}
-
-impl std::str::FromStr for EndpointSetVersion {
-    type Err = eyre::Error;
-
-    #[inline]
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self(u64::from_str_radix(s, 16)?))
-    }
 }
 
 pub type TokenAddressMap = std::collections::BTreeMap<u64, Vec<EndpointAddress>>;
@@ -132,7 +110,7 @@ impl EndpointSet {
         let mut this = Self {
             endpoints,
             token_map: TokenAddressMap::new(),
-            hash: hash.0,
+            hash: hash.number(),
             version: 1,
         };
 
@@ -165,7 +143,7 @@ impl EndpointSet {
     /// Unique version for this endpoint set
     #[inline]
     pub fn version(&self) -> EndpointSetVersion {
-        EndpointSetVersion(self.hash)
+        EndpointSetVersion::from_number(self.hash)
     }
 
     /// Bumps the version, calculating a hash for the entire endpoint set
@@ -654,24 +632,6 @@ where
     }
 }
 
-impl From<(Option<Locality>, BTreeSet<Endpoint>)> for proto::Cluster {
-    fn from((locality, endpoints): (Option<Locality>, BTreeSet<Endpoint>)) -> Self {
-        Self {
-            locality: locality.map(From::from),
-            endpoints: endpoints.iter().map(From::from).collect(),
-        }
-    }
-}
-
-impl From<(&Option<Locality>, &BTreeSet<Endpoint>)> for proto::Cluster {
-    fn from((locality, endpoints): (&Option<Locality>, &BTreeSet<Endpoint>)) -> Self {
-        Self {
-            locality: locality.clone().map(From::from),
-            endpoints: endpoints.iter().map(From::from).collect(),
-        }
-    }
-}
-
 impl From<&'_ Endpoint> for proto::Endpoint {
     fn from(endpoint: &Endpoint) -> Self {
         Self {
@@ -680,6 +640,16 @@ impl From<&'_ Endpoint> for proto::Endpoint {
             metadata: Some((&endpoint.metadata).into()),
             host2: None,
         }
+    }
+}
+
+pub(crate) fn locality_and_set_to_proto(
+    locality: impl Borrow<Option<Locality>>,
+    endpoints: impl Borrow<BTreeSet<Endpoint>>,
+) -> proto::Cluster {
+    proto::Cluster {
+        locality: locality.borrow().clone().map(From::from),
+        endpoints: endpoints.borrow().iter().map(From::from).collect(),
     }
 }
 

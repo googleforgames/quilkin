@@ -14,7 +14,12 @@
  * limitations under the License.
  */
 
-use std::{collections::HashSet, sync::atomic::Ordering, sync::Arc, time::Duration};
+use std::{
+    collections::HashSet,
+    sync::atomic::{AtomicBool, Ordering},
+    sync::Arc,
+    time::Duration,
+};
 
 use futures::StreamExt;
 use rand::Rng;
@@ -27,7 +32,6 @@ use tryhard::{
 };
 
 use crate::{
-    config::Config,
     generated::{
         envoy::{
             config::core::v3::Node,
@@ -38,7 +42,7 @@ use crate::{
         },
         quilkin::relay::v1alpha1::aggregated_control_plane_discovery_service_client::AggregatedControlPlaneDiscoveryServiceClient,
     },
-    net::xds::{Resource, ResourceType},
+    resource::{Resource, ResourceType},
     Result,
 };
 
@@ -50,6 +54,8 @@ pub type AdsClient = Client<AdsGrpcClient>;
 pub type AdsStream = BidirectionalStream<AdsGrpcClient>;
 pub type MdsClient = Client<MdsGrpcClient>;
 pub type MdsStream = BidirectionalStream<MdsGrpcClient>;
+
+pub(crate) const IDLE_REQUEST_INTERVAL: Duration = Duration::from_secs(30);
 
 #[tonic::async_trait]
 pub trait ServiceClient: Clone + Sized + Send + 'static {
@@ -215,18 +221,18 @@ impl<C: ServiceClient> Client<C> {
 }
 
 impl MdsClient {
-    pub fn mds_client_stream(
+    pub fn mds_client_stream<C: crate::config::Configuration>(
         &self,
-        config: Arc<Config>,
-        rt_config: crate::components::agent::Ready,
+        config: Arc<C>,
+        is_healthy: Arc<AtomicBool>,
     ) -> MdsStream {
-        MdsStream::mds_client_stream(self, config, rt_config)
+        MdsStream::mds_client_stream(self, config, is_healthy)
     }
 
-    pub async fn delta_stream(
+    pub async fn delta_stream<C: crate::config::Configuration>(
         self,
-        config: Arc<Config>,
-        rt_config: crate::components::agent::Ready,
+        config: Arc<C>,
+        is_healthy: Arc<AtomicBool>,
     ) -> Result<DeltaSubscription, Self> {
         let identifier = String::from(&*self.identifier);
 
@@ -250,10 +256,10 @@ impl MdsClient {
                     {
                         let control_plane = super::server::ControlPlane::from_arc(
                             config.clone(),
-                            crate::components::admin::IDLE_REQUEST_INTERVAL,
+                            IDLE_REQUEST_INTERVAL,
                         );
                         let mut stream = control_plane.delta_aggregated_resources(stream).await?;
-                        rt_config.relay_is_healthy.store(true, Ordering::SeqCst);
+                        is_healthy.store(true, Ordering::SeqCst);
 
                         while let Some(result) = stream.next().await {
                             let response = result?;
@@ -262,7 +268,7 @@ impl MdsClient {
                         }
                     }
 
-                    rt_config.relay_is_healthy.store(false, Ordering::SeqCst);
+                    is_healthy.store(false, Ordering::SeqCst);
 
                     //tracing::warn!("lost connection to relay server, retrying");
                     let new_client = MdsClient::connect_with_backoff(&self.management_servers)
@@ -326,7 +332,7 @@ impl DeltaClientStream {
         &self,
         identifier: &str,
         subs: &[(ResourceType, Vec<String>)],
-        local: &crate::config::xds::LocalVersions,
+        local: &crate::config::LocalVersions,
     ) -> Result<()> {
         for (rt, names) in subs {
             let initial_resource_versions = local.get(*rt).clone();
@@ -374,7 +380,7 @@ impl DeltaServerStream {
 
         res_tx
             .send(DeltaDiscoveryResponse {
-                control_plane: Some(crate::net::xds::core::ControlPlane { identifier }),
+                control_plane: Some(crate::core::ControlPlane { identifier }),
                 ..Default::default()
             })
             .await?;
@@ -407,20 +413,20 @@ impl Drop for DeltaSubscription {
 
 impl AdsClient {
     /// Starts a new stream to the xDS management server.
-    pub fn xds_client_stream(
+    pub fn xds_client_stream<C: crate::config::Configuration>(
         &self,
-        config: Arc<Config>,
-        rt_config: crate::components::proxy::Ready,
+        config: Arc<C>,
+        is_healthy: Arc<AtomicBool>,
     ) -> AdsStream {
-        AdsStream::xds_client_stream(self, config, rt_config)
+        AdsStream::xds_client_stream(self, config, is_healthy)
     }
 
     /// Attempts to start a new delta stream to the xDS management server, if the
     /// management server does not support delta xDS we return the client as an error
-    pub async fn delta_subscribe(
+    pub async fn delta_subscribe<C: crate::config::Configuration>(
         self,
-        config: Arc<Config>,
-        rt_config: crate::components::proxy::Ready,
+        config: Arc<C>,
+        is_healthy: Arc<AtomicBool>,
         resources: impl IntoIterator<Item = (ResourceType, Vec<String>)>,
     ) -> Result<DeltaSubscription, Self> {
         let resource_subscriptions: Vec<_> = resources.into_iter().collect();
@@ -445,7 +451,7 @@ impl AdsClient {
         // the future we'll send the resources we already have locally to hopefully
         // reduce the amount of response data if those resources are already up
         // to date with the current state of the management server
-        let local = Arc::new(crate::config::xds::LocalVersions::default());
+        let local = Arc::new(crate::config::LocalVersions::default());
         if let Err(err) = ds
             .refresh(&identifier, &resource_subscriptions, &local)
             .await
@@ -461,7 +467,7 @@ impl AdsClient {
 
                 loop {
                     tracing::trace!("creating discovery response handler");
-                    let mut response_stream = crate::config::xds::handle_delta_discovery_responses(
+                    let mut response_stream = crate::config::handle_delta_discovery_responses(
                         identifier.clone(),
                         stream,
                         config.clone(),
@@ -470,19 +476,12 @@ impl AdsClient {
                     );
 
                     loop {
-                        let next_response = tokio::time::timeout(
-                            rt_config.idle_request_interval,
-                            response_stream.next(),
-                        );
+                        let next_response =
+                            tokio::time::timeout(IDLE_REQUEST_INTERVAL, response_stream.next());
 
                         match next_response.await {
                             Ok(Some(Ok(response))) => {
-                                rt_config
-                                    .xds_is_healthy
-                                    .read()
-                                    .as_deref()
-                                    .unwrap()
-                                    .store(true, Ordering::SeqCst);
+                                is_healthy.store(true, Ordering::SeqCst);
 
                                 tracing::trace!("received delta response");
                                 ds.send_response(response).await?;
@@ -506,12 +505,7 @@ impl AdsClient {
                         }
                     }
 
-                    rt_config
-                        .xds_is_healthy
-                        .read()
-                        .as_deref()
-                        .unwrap()
-                        .store(false, Ordering::SeqCst);
+                    is_healthy.store(false, Ordering::SeqCst);
 
                     tracing::info!("Lost connection to xDS, retrying");
                     let (new_client, _) =
@@ -539,15 +533,15 @@ pub struct BidirectionalStream<C: ServiceClient> {
 }
 
 impl AdsStream {
-    pub fn xds_client_stream(
+    pub fn xds_client_stream<C: crate::config::Configuration>(
         Client {
             client,
             identifier,
             management_servers,
             ..
         }: &AdsClient,
-        config: Arc<Config>,
-        rt_config: crate::components::proxy::Ready,
+        config: Arc<C>,
+        is_healthy: Arc<AtomicBool>,
     ) -> Self {
         let mut client = client.clone();
         let identifier = identifier.clone();
@@ -599,17 +593,11 @@ impl AdsStream {
 
                     loop {
                         let next_response =
-                            tokio::time::timeout(rt_config.idle_request_interval, stream.next());
+                            tokio::time::timeout(IDLE_REQUEST_INTERVAL, stream.next());
 
                         match next_response.await {
                             Ok(Some(Ok(ack))) => {
-                                rt_config
-                                    .xds_is_healthy
-                                    .read()
-                                    .as_deref()
-                                    .unwrap()
-                                    .store(true, Ordering::SeqCst);
-
+                                is_healthy.store(true, Ordering::SeqCst);
                                 tracing::trace!("received ack");
                                 requests.send(ack)?;
                                 continue;
@@ -636,13 +624,7 @@ impl AdsStream {
                         }
                     }
 
-                    rt_config
-                        .xds_is_healthy
-                        .read()
-                        .as_deref()
-                        .unwrap()
-                        .store(false, Ordering::SeqCst);
-
+                    is_healthy.store(false, Ordering::SeqCst);
                     tracing::info!("Lost connection to xDS, retrying");
                     client = AdsClient::connect_with_backoff(&management_servers)
                         .await?
@@ -675,15 +657,15 @@ impl AdsStream {
 }
 
 impl MdsStream {
-    pub fn mds_client_stream(
+    pub fn mds_client_stream<C: crate::config::Configuration>(
         Client {
             client,
             identifier,
             management_servers,
             ..
         }: &MdsClient,
-        config: Arc<Config>,
-        rt_config: crate::components::agent::Ready,
+        config: Arc<C>,
+        is_healthy: Arc<AtomicBool>,
     ) -> Self {
         let mut client = client.clone();
         let identifier = identifier.clone();
@@ -696,7 +678,7 @@ impl MdsStream {
 
                 loop {
                     let initial_response = DiscoveryResponse {
-                        control_plane: Some(crate::net::xds::core::ControlPlane {
+                        control_plane: Some(crate::core::ControlPlane {
                             identifier: (&*identifier).into(),
                         }),
                         ..<_>::default()
@@ -717,18 +699,18 @@ impl MdsStream {
 
                     let control_plane = super::server::ControlPlane::from_arc(
                         config.clone(),
-                        crate::components::admin::IDLE_REQUEST_INTERVAL,
+                        IDLE_REQUEST_INTERVAL,
                     );
                     let mut stream = control_plane.stream_resources(stream).await?;
-                    rt_config.relay_is_healthy.store(true, Ordering::SeqCst);
+                    is_healthy.store(true, Ordering::SeqCst);
 
                     while let Some(result) = stream.next().await {
                         let response = result?;
-                        tracing::debug!(config=%serde_json::to_value(&config).unwrap(), "received discovery response");
+                        tracing::debug!("received discovery response");
                         requests.send(response)?;
                     }
 
-                    rt_config.relay_is_healthy.store(false, Ordering::SeqCst);
+                    is_healthy.store(false, Ordering::SeqCst);
 
                     tracing::warn!("lost connection to relay server, retrying");
                     client = MdsClient::connect_with_backoff(&management_servers)
