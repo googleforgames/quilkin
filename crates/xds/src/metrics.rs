@@ -57,22 +57,6 @@ pub(crate) fn active_control_planes(control_plane: &str) -> prometheus::IntGauge
     ACTIVE_CONTROL_PLANES.with_label_values(&[control_plane])
 }
 
-pub(crate) fn discovery_requests(node: &str, type_url: &str) -> prometheus::IntCounter {
-    static DISCOVERY_REQUESTS: Lazy<IntCounterVec> = Lazy::new(|| {
-        prometheus::register_int_counter_vec_with_registry! {
-            prometheus::opts! {
-                "discovery_requests",
-                "Total number of xDS discovery requests",
-            },
-            &[NODE_LABEL, TYPE_LABEL],
-            crate::metrics::registry(),
-        }
-        .unwrap()
-    });
-
-    DISCOVERY_REQUESTS.with_label_values(&[node, type_url])
-}
-
 pub(crate) fn delta_discovery_requests(node: &str, type_url: &str) -> prometheus::IntCounter {
     static DELTA_DISCOVERY_REQUESTS: Lazy<IntCounterVec> = Lazy::new(|| {
         prometheus::register_int_counter_vec_with_registry! {

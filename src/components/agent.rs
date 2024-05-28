@@ -75,21 +75,9 @@ impl Agent {
                 result = task => {
                     let client = result?;
 
-                    // The inner fields are unused.
-                    #[allow(dead_code)]
-                    enum XdsTask {
-                        Delta(crate::net::xds::client::DeltaSubscription),
-                        Aggregated(crate::net::xds::client::MdsStream),
-                    }
-
                     // Attempt to connect to a delta stream if the relay has one
                     // available, otherwise fallback to the regular aggregated stream
-                    Some(match client.delta_stream(config.clone(), ready.relay_is_healthy.clone()).await {
-                        Ok(ds) => XdsTask::Delta(ds),
-                        Err(client) => {
-                            XdsTask::Aggregated(client.mds_client_stream(config, ready.relay_is_healthy.clone()))
-                        }
-                    })
+                    Some(client.delta_stream(config.clone(), ready.relay_is_healthy.clone()).await.map_err(|_| eyre::eyre!("failed to acquire delta stream"))?)
                 }
                 _ = shutdown_rx.changed() => return Ok(()),
             }

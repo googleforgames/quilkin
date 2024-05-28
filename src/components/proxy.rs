@@ -165,12 +165,10 @@ impl Proxy {
                             )
                             .await?;
 
-                            let mut delta_sub = None;
-                            let mut state_sub = None;
                             let xds_is_healthy =
                                 ready.xds_is_healthy.read().as_ref().unwrap().clone();
 
-                            match client
+                            let _stream = client
                                 .delta_subscribe(
                                     config.clone(),
                                     xds_is_healthy.clone(),
@@ -181,32 +179,9 @@ impl Proxy {
                                     ],
                                 )
                                 .await
-                            {
-                                Ok(ds) => delta_sub = Some(ds),
-                                Err(client) => {
-                                    let mut stream =
-                                        client.xds_client_stream(config, xds_is_healthy);
-
-                                    tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
-                                    stream
-                                        .aggregated_subscribe(ResourceType::Cluster, &[])
-                                        .await?;
-                                    tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
-                                    stream
-                                        .aggregated_subscribe(ResourceType::Listener, &[])
-                                        .await?;
-                                    tokio::time::sleep(std::time::Duration::from_nanos(1)).await;
-                                    stream
-                                        .aggregated_subscribe(ResourceType::Datacenter, &[])
-                                        .await?;
-
-                                    state_sub = Some(stream);
-                                }
-                            }
+                                .map_err(|_| eyre::eyre!("failed to acquire delta stream"))?;
 
                             let _ = shutdown_rx.changed().await;
-                            drop(delta_sub);
-                            drop(state_sub);
                             Ok::<_, eyre::Error>(())
                         })
                     }
