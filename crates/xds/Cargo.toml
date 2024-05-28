@@ -33,3 +33,4 @@ tracing-futures.workspace = true
 tracing.workspace = true
 tryhard.workspace = true
 uuid.workspace = true
+url.workspace = true
