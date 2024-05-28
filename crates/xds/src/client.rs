@@ -248,7 +248,8 @@ impl MdsClient {
                         );
 
                         let change_watcher = tokio::spawn({
-                            let this = control_plane.clone();
+                            let mut this = control_plane.clone();
+                            this.is_relay = true; // This is a lie, but means we don't unneccessarily watch for filter changes on the agent, which doesn't perform them
                             control_plane.config.on_changed(this)
                         });
 
