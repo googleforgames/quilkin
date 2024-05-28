@@ -537,6 +537,7 @@
 <a href="#535" id="535">535</a>
 <a href="#536" id="536">536</a>
 <a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -847,6 +848,7 @@
                 socket: <span class="kw">crate</span>::net::raw_socket_with_reuse(<span class="number">0</span>).unwrap(),
                 qcmp,
                 phoenix,
+                notifier: <span class="prelude-val">None</span>,
             }
         });
 

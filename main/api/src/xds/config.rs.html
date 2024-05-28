@@ -154,6 +154,13 @@
 <a href="#152" id="152">152</a>
 <a href="#153" id="153">153</a>
 <a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
 </pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
     discovery::{DeltaDiscoveryRequest, DeltaDiscoveryResponse},
     ResourceType,
@@ -237,6 +244,7 @@
     config: Arc&lt;C&gt;,
     local: Arc&lt;LocalVersions&gt;,
     remote_addr: <span class="prelude-ty">Option</span>&lt;std::net::SocketAddr&gt;,
+    <span class="kw-2">mut </span>notifier: <span class="prelude-ty">Option</span>&lt;tokio::sync::mpsc::UnboundedSender&lt;ResourceType&gt;&gt;,
 ) -&gt; std::pin::Pin&lt;Box&lt;<span class="kw">dyn </span>futures::Stream&lt;Item = <span class="kw">crate</span>::Result&lt;DeltaDiscoveryRequest&gt;&gt; + Send&gt;&gt; {
     Box::pin(<span class="macro">async_stream::try_stream! </span>{
         <span class="kw">let </span>_stream_metrics = <span class="kw">crate</span>::metrics::StreamConnectionMetrics::new(identifier.clone());
@@ -286,6 +294,12 @@
                         })
                     }), response.removed_resources, <span class="kw-2">&amp;mut </span>lock)
             };
+
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(note) = <span class="kw-2">&amp;</span>notifier {
+                <span class="kw">if </span>note.send(resource_type).is_err() {
+                    notifier = <span class="prelude-val">None</span>;
+                }
+            }
 
             <span class="kw">let </span>error_detail = <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = result {
                 <span class="kw">crate</span>::metrics::nacks(control_plane_identifier, <span class="kw-2">&amp;</span>response.type_url).inc();

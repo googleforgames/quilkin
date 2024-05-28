@@ -582,6 +582,22 @@
 <a href="#580" id="580">580</a>
 <a href="#581" id="581">581</a>
 <a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
+<a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -819,6 +835,7 @@
                 }
             };
 
+        <span class="kw">let </span>id = identifier.clone();
         <span class="kw">let </span>handle = tokio::task::spawn(
             <span class="kw">async move </span>{
                 <span class="macro">tracing::trace!</span>(<span class="string">"starting relay client delta stream task"</span>);
@@ -829,6 +846,13 @@
                             config.clone(),
                             IDLE_REQUEST_INTERVAL,
                         );
+
+                        <span class="kw">let </span>change_watcher = tokio::spawn({
+                            <span class="kw">let </span><span class="kw-2">mut </span>this = control_plane.clone();
+                            this.is_relay = <span class="bool-val">true</span>; <span class="comment">// This is a lie, but means we don't unneccessarily watch for filter changes on the agent, which doesn't perform them
+                            </span>control_plane.config.on_changed(this)
+                        });
+
                         <span class="kw">let </span><span class="kw-2">mut </span>stream = control_plane.delta_aggregated_resources(stream).<span class="kw">await</span><span class="question-mark">?</span>;
                         is_healthy.store(<span class="bool-val">true</span>, Ordering::SeqCst);
 
@@ -837,6 +861,9 @@
                             <span class="macro">tracing::trace!</span>(<span class="string">"received delta discovery response"</span>);
                             ds.send_response(response).<span class="kw">await</span><span class="question-mark">?</span>;
                         }
+
+                        change_watcher.abort();
+                        <span class="kw">let _ </span>= change_watcher.<span class="kw">await</span>;
                     }
 
                     is_healthy.store(<span class="bool-val">false</span>, Ordering::SeqCst);
@@ -850,7 +877,7 @@
                         DeltaServerStream::connect(new_client, identifier.clone()).<span class="kw">await</span><span class="question-mark">?</span>;
                 }
             }
-            .instrument(<span class="macro">tracing::trace_span!</span>(<span class="string">"handle_delta_discovery_response"</span>)),
+            .instrument(<span class="macro">tracing::trace_span!</span>(<span class="string">"handle_delta_discovery_response"</span>, id)),
         );
 
         <span class="prelude-val">Ok</span>(DeltaSubscription { handle })
@@ -867,7 +894,8 @@
         <span class="kw-2">mut </span>client: AdsGrpcClient,
         identifier: String,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>, tonic::Streaming&lt;DeltaDiscoveryResponse&gt;)&gt; {
-        <span class="kw">let </span>(req_tx, requests_rx) = tokio::sync::mpsc::channel(ResourceType::VARIANTS.len());
+        <span class="kw">let </span>(req_tx, requests_rx) =
+            tokio::sync::mpsc::channel(<span class="number">100 </span><span class="comment">/*ResourceType::VARIANTS.len()*/</span>);
 
         <span class="comment">// Since we are doing exploratory requests to see if the remote endpoint supports delta streams, we unfortunately
         // need to actually send something before the full roundtrip occurs. This can be removed once delta discovery
@@ -978,6 +1006,7 @@
 
 <span class="kw">impl </span>Drop <span class="kw">for </span>DeltaSubscription {
     <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="macro">tracing::debug!</span>(<span class="string">"dropped client delta stream"</span>);
         <span class="self">self</span>.handle.abort();
     }
 }
@@ -989,6 +1018,7 @@
         <span class="self">self</span>,
         config: Arc&lt;C&gt;,
         is_healthy: Arc&lt;AtomicBool&gt;,
+        notifier: <span class="prelude-ty">Option</span>&lt;tokio::sync::mpsc::UnboundedSender&lt;ResourceType&gt;&gt;,
         resources: <span class="kw">impl </span>IntoIterator&lt;Item = (ResourceType, Vec&lt;String&gt;)&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;DeltaSubscription, <span class="self">Self</span>&gt; {
         <span class="kw">let </span>resource_subscriptions: Vec&lt;<span class="kw">_</span>&gt; = resources.into_iter().collect();
@@ -1022,6 +1052,7 @@
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="self">self</span>);
         }
 
+        <span class="kw">let </span>id = identifier.clone();
         <span class="kw">let </span>handle = tokio::task::spawn(
             <span class="kw">async move </span>{
                 <span class="macro">tracing::trace!</span>(<span class="string">"starting xDS delta stream task"</span>);
@@ -1035,6 +1066,7 @@
                         config.clone(),
                         local.clone(),
                         <span class="prelude-val">None</span>,
+                        notifier.clone(),
                     );
 
                     <span class="kw">loop </span>{
@@ -1079,7 +1111,7 @@
                         .<span class="kw">await</span><span class="question-mark">?</span>;
                 }
             }
-            .instrument(<span class="macro">tracing::trace_span!</span>(<span class="string">"handle_delta_discovery_response"</span>)),
+            .instrument(<span class="macro">tracing::trace_span!</span>(<span class="string">"xds_client_stream"</span>, id)),
         );
 
         <span class="prelude-val">Ok</span>(DeltaSubscription { handle })

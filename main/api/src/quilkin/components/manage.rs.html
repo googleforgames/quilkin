@@ -74,6 +74,8 @@
 <a href="#72" id="72">72</a>
 <a href="#73" id="73">73</a>
 <a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
+<a href="#76" id="76">76</a>
 </pre></div><pre class="rust"><code><span class="kw">pub use </span><span class="kw">super</span>::agent::Ready;
 <span class="kw">use </span><span class="kw">super</span>::RunArgs;
 <span class="kw">pub use crate</span>::{
@@ -133,11 +135,13 @@
         </span>};
 
         <span class="kw">use </span>futures::TryFutureExt <span class="kw">as _</span>;
-        <span class="kw">let </span>server_task = tokio::spawn(<span class="kw">crate</span>::net::xds::server::spawn(
-            <span class="self">self</span>.listener,
-            config,
-            <span class="kw">crate</span>::components::admin::IDLE_REQUEST_INTERVAL,
-        )<span class="question-mark">?</span>)
+        <span class="kw">let </span>server_task = tokio::spawn(
+            <span class="kw">crate</span>::net::xds::server::ControlPlane::from_arc(
+                config,
+                <span class="kw">crate</span>::components::admin::IDLE_REQUEST_INTERVAL,
+            )
+            .management_server(<span class="self">self</span>.listener)<span class="question-mark">?</span>,
+        )
         .map_err(From::from)
         .and_then(std::future::ready);
 

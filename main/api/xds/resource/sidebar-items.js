@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["Resource","ResourceType"],"mod":["proto"],"struct":["UnknownResourceType"],"type":["ResourceMap"]};
+window.SIDEBAR_ITEMS = {"enum":["Resource","ResourceType"],"mod":["proto"],"struct":["UnknownResourceType"]};

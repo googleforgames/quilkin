@@ -642,10 +642,6 @@
 <a href="#640" id="640">640</a>
 <a href="#641" id="641">641</a>
 <a href="#642" id="642">642</a>
-<a href="#643" id="643">643</a>
-<a href="#644" id="644">644</a>
-<a href="#645" id="645">645</a>
-<a href="#646" id="646">646</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -684,45 +680,11 @@
     ResourceType,
 };
 
-<span class="attr">#[tracing::instrument(skip_all)]
-</span><span class="kw">pub fn </span>spawn&lt;C: <span class="kw">crate</span>::config::Configuration&gt;(
-    listener: TcpListener,
-    config: std::sync::Arc&lt;C&gt;,
-    idle_request_interval: Duration,
-) -&gt; io::Result&lt;<span class="kw">impl </span>std::future::Future&lt;Output = <span class="kw">crate</span>::Result&lt;()&gt;&gt;&gt; {
-    <span class="kw">let </span>server = AggregatedDiscoveryServiceServer::new(ControlPlane::from_arc(
-        config,
-        idle_request_interval,
-    ))
-    .max_encoding_message_size(<span class="kw">crate</span>::config::max_grpc_message_size());
-    <span class="kw">let </span>server = tonic::transport::Server::builder().add_service(server);
-    <span class="macro">tracing::info!</span>(<span class="string">"serving management server on port `{}`"</span>, listener.port());
-    <span class="prelude-val">Ok</span>(server
-        .serve_with_incoming(listener.into_stream()<span class="question-mark">?</span>)
-        .map_err(From::from))
-}
-
-<span class="kw">pub fn </span>control_plane_discovery_server&lt;C: <span class="kw">crate</span>::config::Configuration&gt;(
-    listener: TcpListener,
-    config: Arc&lt;C&gt;,
-    idle_request_interval: Duration,
-) -&gt; io::Result&lt;<span class="kw">impl </span>std::future::Future&lt;Output = <span class="kw">crate</span>::Result&lt;()&gt;&gt;&gt; {
-    <span class="kw">let </span>server = AggregatedControlPlaneDiscoveryServiceServer::new(ControlPlane::from_arc(
-        config,
-        idle_request_interval,
-    ))
-    .max_encoding_message_size(<span class="kw">crate</span>::config::max_grpc_message_size());
-    <span class="kw">let </span>server = tonic::transport::Server::builder().add_service(server);
-    <span class="macro">tracing::info!</span>(<span class="string">"serving relay server on port `{}`"</span>, listener.port());
-    <span class="prelude-val">Ok</span>(server
-        .serve_with_incoming(listener.into_stream()<span class="question-mark">?</span>)
-        .map_err(From::from))
-}
-
 <span class="kw">pub struct </span>ControlPlane&lt;C&gt; {
     <span class="kw">pub </span>config: Arc&lt;C&gt;,
     idle_request_interval: Duration,
-    watchers: Arc&lt;<span class="kw">crate</span>::resource::ResourceMap&lt;Watchers&gt;&gt;,
+    tx: tokio::sync::broadcast::Sender&lt;ResourceType&gt;,
+    <span class="kw">pub </span>is_relay: bool,
 }
 
 <span class="kw">impl</span>&lt;C&gt; Clone <span class="kw">for </span>ControlPlane&lt;C&gt; {
@@ -730,52 +692,67 @@
         <span class="self">Self </span>{
             config: <span class="self">self</span>.config.clone(),
             idle_request_interval: <span class="self">self</span>.idle_request_interval,
-            watchers: <span class="self">self</span>.watchers.clone(),
-        }
-    }
-}
-
-<span class="kw">struct </span>Watchers {
-    sender: tokio::sync::watch::Sender&lt;()&gt;,
-    receiver: tokio::sync::watch::Receiver&lt;()&gt;,
-    version: std::sync::atomic::AtomicU64,
-}
-
-<span class="kw">impl </span>Default <span class="kw">for </span>Watchers {
-    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>(sender, receiver) = tokio::sync::watch::channel(());
-        <span class="self">Self </span>{
-            sender,
-            receiver,
-            version: &lt;<span class="kw">_</span>&gt;::default(),
+            tx: <span class="self">self</span>.tx.clone(),
+            is_relay: <span class="self">self</span>.is_relay,
         }
     }
 }
 
 <span class="kw">impl</span>&lt;C: <span class="kw">crate</span>::config::Configuration&gt; ControlPlane&lt;C&gt; {
     <span class="kw">pub fn </span>from_arc(config: Arc&lt;C&gt;, idle_request_interval: Duration) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>this = <span class="self">Self </span>{
+        <span class="kw">let </span>(tx, <span class="kw">_</span>) = tokio::sync::broadcast::channel(<span class="number">10</span>);
+
+        <span class="self">Self </span>{
             config,
             idle_request_interval,
-            watchers: Default::default(),
-        };
-
-        tokio::spawn({
-            <span class="kw">let </span>this2 = this.clone();
-            this.config.on_changed(this2)
-        });
-
-        this
+            tx,
+            is_relay: <span class="bool-val">false</span>,
+        }
     }
 
-    <span class="kw">pub fn </span>push_update(<span class="kw-2">&amp;</span><span class="self">self</span>, resource_type: ResourceType) {
-        <span class="kw">let </span>watchers = <span class="kw-2">&amp;</span><span class="self">self</span>.watchers[resource_type];
-        watchers
-            .version
-            .fetch_add(<span class="number">1</span>, std::sync::atomic::Ordering::Relaxed);
-        <span class="macro">tracing::trace!</span>(%resource_type, watchers=watchers.sender.receiver_count(), <span class="string">"pushing update"</span>);
-        <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = watchers.sender.send(()) {
-            <span class="macro">tracing::warn!</span>(%error, <span class="string">"pushing update failed"</span>);
+    <span class="kw">pub fn </span>management_server(
+        <span class="kw-2">mut </span><span class="self">self</span>,
+        listener: TcpListener,
+    ) -&gt; io::Result&lt;<span class="kw">impl </span>std::future::Future&lt;Output = <span class="kw">crate</span>::Result&lt;()&gt;&gt;&gt; {
+        <span class="self">self</span>.is_relay = <span class="bool-val">false</span>;
+        tokio::spawn({
+            <span class="kw">let </span>this = <span class="self">self</span>.clone();
+            <span class="self">self</span>.config.on_changed(this)
+        });
+
+        <span class="kw">let </span>server = AggregatedDiscoveryServiceServer::new(<span class="self">self</span>)
+            .max_encoding_message_size(<span class="kw">crate</span>::config::max_grpc_message_size());
+        <span class="kw">let </span>server = tonic::transport::Server::builder().add_service(server);
+        <span class="macro">tracing::info!</span>(<span class="string">"serving management server on port `{}`"</span>, listener.port());
+        <span class="prelude-val">Ok</span>(server
+            .serve_with_incoming(listener.into_stream()<span class="question-mark">?</span>)
+            .map_err(From::from))
+    }
+
+    <span class="kw">pub fn </span>relay_server(
+        <span class="kw-2">mut </span><span class="self">self</span>,
+        listener: TcpListener,
+    ) -&gt; io::Result&lt;<span class="kw">impl </span>std::future::Future&lt;Output = <span class="kw">crate</span>::Result&lt;()&gt;&gt;&gt; {
+        <span class="self">self</span>.is_relay = <span class="bool-val">true</span>;
+        tokio::spawn({
+            <span class="kw">let </span>this = <span class="self">self</span>.clone();
+            <span class="self">self</span>.config.on_changed(this)
+        });
+
+        <span class="kw">let </span>server = AggregatedControlPlaneDiscoveryServiceServer::new(<span class="self">self</span>)
+            .max_encoding_message_size(<span class="kw">crate</span>::config::max_grpc_message_size());
+        <span class="kw">let </span>server = tonic::transport::Server::builder().add_service(server);
+        <span class="macro">tracing::info!</span>(<span class="string">"serving relay server on port `{}`"</span>, listener.port());
+        <span class="prelude-val">Ok</span>(server
+            .serve_with_incoming(listener.into_stream()<span class="question-mark">?</span>)
+            .map_err(From::from))
+    }
+
+    <span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>push_update(<span class="kw-2">&amp;</span><span class="self">self</span>, resource_type: ResourceType) {
+        <span class="macro">tracing::debug!</span>(%resource_type, id=<span class="self">self</span>.config.identifier(), is_relay = <span class="self">self</span>.is_relay, <span class="string">"pushing update"</span>);
+        <span class="kw">if </span><span class="self">self</span>.tx.send(resource_type).is_err() {
+            <span class="macro">tracing::debug!</span>(<span class="string">"no client connections currently subscribed"</span>);
         }
     }
 
@@ -810,15 +787,26 @@
 
         <span class="kw">let </span><span class="kw-2">mut </span>pending_acks = cached::TimedSizedCache::with_size_and_lifespan(<span class="number">50</span>, <span class="number">1</span>);
         <span class="kw">let </span>this = <span class="self">Self</span>::clone(<span class="self">self</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>rx = this.tx.subscribe();
+
+        <span class="kw">let </span>id = this.config.identifier();
+        <span class="macro">tracing::debug!</span>(
+            id,
+            client = node_id,
+            count = this.tx.receiver_count(),
+            is_relay = this.is_relay,
+            <span class="string">"subscribed to config updates"
+        </span>);
 
         <span class="kw">let </span>control_plane_id = <span class="kw">crate</span>::core::ControlPlane {
-            identifier: this.config.identifier(),
+            identifier: id.clone(),
         };
 
         <span class="kw">struct </span>ResourceTypeTracker {
             client: ClientVersions,
             subscribed: BTreeSet&lt;String&gt;,
             kind: ResourceType,
+            subbed: bool,
         }
 
         <span class="comment">// Keep track of the resource versions that the client has so we can only
@@ -828,12 +816,14 @@
                 client: ClientVersions::new(ResourceType::Cluster),
                 subscribed: BTreeSet::new(),
                 kind: ResourceType::Cluster,
+                subbed: <span class="bool-val">false</span>,
             },
             ResourceType::Listener =&gt; {
                 ResourceTypeTracker {
                     client: ClientVersions::new(ResourceType::Listener),
                     subscribed: BTreeSet::new(),
                     kind: ResourceType::Listener,
+                    subbed: <span class="bool-val">false</span>,
                 }
             },
             ResourceType::FilterChain =&gt; {
@@ -841,6 +831,7 @@
                     client: ClientVersions::new(ResourceType::FilterChain),
                     subscribed: BTreeSet::new(),
                     kind: ResourceType::FilterChain,
+                    subbed: <span class="bool-val">false</span>,
                 }
             },
             ResourceType::Datacenter =&gt; {
@@ -848,23 +839,19 @@
                     client: ClientVersions::new(ResourceType::Datacenter),
                     subscribed: BTreeSet::new(),
                     kind: ResourceType::Datacenter,
+                    subbed: <span class="bool-val">false</span>,
                 }
             }
         };
 
-        <span class="kw">let </span><span class="kw-2">mut </span>cluster_rx = <span class="self">self</span>.watchers[ResourceType::Cluster].receiver.clone();
-        <span class="kw">let </span><span class="kw-2">mut </span>listener_rx = <span class="self">self</span>.watchers[ResourceType::Listener].receiver.clone();
-        <span class="kw">let </span><span class="kw-2">mut </span>fc_rx = <span class="self">self</span>.watchers[ResourceType::FilterChain].receiver.clone();
-        <span class="kw">let </span><span class="kw-2">mut </span>dc_rx = <span class="self">self</span>.watchers[ResourceType::Datacenter].receiver.clone();
-
-        <span class="kw">let </span>id = node_id.clone();
+        <span class="kw">let </span>client = node_id.clone();
         <span class="kw">let </span>responder =
             <span class="kw">move </span>|req: <span class="prelude-ty">Option</span>&lt;DeltaDiscoveryRequest&gt;,
                   tracker: <span class="kw-2">&amp;mut </span>ResourceTypeTracker,
                   pending_acks: <span class="kw-2">&amp;mut </span>cached::TimedSizedCache&lt;uuid::Uuid, AwaitingAck&gt;|
                   -&gt; <span class="prelude-ty">Result</span>&lt;DeltaDiscoveryResponse, tonic::Status&gt; {
                 <span class="kw">if let </span><span class="prelude-val">Some</span>(req) = req {
-                    metrics::delta_discovery_requests(<span class="kw-2">&amp;</span>id, tracker.kind.type_url()).inc();
+                    metrics::delta_discovery_requests(<span class="kw-2">&amp;</span>client, tracker.kind.type_url()).inc();
 
                     <span class="comment">// If the request has filled out the initial_versions field, it means the connected management servers has
                     // already had a connection with a control plane, so hard reset our state to what it says it has
@@ -895,6 +882,9 @@
                             tracker.client.remove(sub);
                         }
                     }
+                    <span class="macro">tracing::debug!</span>(kind = %tracker.kind, <span class="string">"sending delta for resource update"</span>);
+                } <span class="kw">else </span>{
+                    <span class="macro">tracing::debug!</span>(kind = %tracker.kind, <span class="string">"sending delta update"</span>);
                 }
 
                 <span class="kw">let </span>req = this
@@ -924,9 +914,11 @@
                 <span class="prelude-val">Ok</span>(response)
             };
 
+        <span class="kw">let </span>nid = node_id.clone();
+
         <span class="kw">let </span>response = {
             <span class="kw">if </span>message.type_url == <span class="string">"ignore-me" </span>{
-                <span class="macro">tracing::debug!</span>(id = %node_id, <span class="string">"initial delta response"</span>);
+                <span class="macro">tracing::debug!</span>(id, client = nid, <span class="string">"initial delta response"</span>);
                 DeltaDiscoveryResponse {
                     resources: Vec::new(),
                     nonce: String::new(),
@@ -938,7 +930,7 @@
                 }
             } <span class="kw">else </span>{
                 <span class="kw">let </span>resource_type: ResourceType = message.type_url.parse()<span class="question-mark">?</span>;
-                <span class="macro">tracing::debug!</span>(id = %node_id, %resource_type, <span class="string">"initial delta response"</span>);
+                <span class="macro">tracing::debug!</span>(client = %node_id, %resource_type, <span class="string">"initial delta response"</span>);
                 responder(
                     <span class="prelude-val">Some</span>(message),
                     <span class="kw-2">&amp;mut </span>trackers[resource_type],
@@ -947,7 +939,6 @@
             </span>}
         };
 
-        <span class="kw">let </span>nid = node_id.clone();
         <span class="kw">let </span>stream = <span class="macro">async_stream::try_stream! </span>{
             <span class="kw">yield </span>response;
 
@@ -955,25 +946,23 @@
                 <span class="macro">tokio::select! </span>{
                     <span class="comment">// The resource(s) have changed, inform the connected client, but only
                     // send the changed resources that the client doesn't already have
-                    </span><span class="kw">_ </span>= cluster_rx.changed() =&gt; {
-                        <span class="macro">tracing::trace!</span>(<span class="string">"sending new cluster delta discovery response"</span>);
-
-                        <span class="kw">yield </span>responder(<span class="prelude-val">None</span>, <span class="kw-2">&amp;mut </span>trackers[ResourceType::Cluster], <span class="kw-2">&amp;mut </span>pending_acks)<span class="question-mark">?</span>;
-                    }
-                    <span class="kw">_ </span>= listener_rx.changed() =&gt; {
-                        <span class="macro">tracing::trace!</span>(<span class="string">"sending new listener delta discovery response"</span>);
-
-                        <span class="kw">yield </span>responder(<span class="prelude-val">None</span>, <span class="kw-2">&amp;mut </span>trackers[ResourceType::Listener], <span class="kw-2">&amp;mut </span>pending_acks)<span class="question-mark">?</span>;
-                    }
-                    <span class="kw">_ </span>= fc_rx.changed() =&gt; {
-                        <span class="macro">tracing::trace!</span>(<span class="string">"sending new filter chain delta discovery response"</span>);
-
-                        <span class="kw">yield </span>responder(<span class="prelude-val">None</span>, <span class="kw-2">&amp;mut </span>trackers[ResourceType::FilterChain], <span class="kw-2">&amp;mut </span>pending_acks)<span class="question-mark">?</span>;
-                    }
-                    <span class="kw">_ </span>= dc_rx.changed() =&gt; {
-                        <span class="macro">tracing::trace!</span>(<span class="string">"sending new datacenter delta discovery response"</span>);
-
-                        <span class="kw">yield </span>responder(<span class="prelude-val">None</span>, <span class="kw-2">&amp;mut </span>trackers[ResourceType::Datacenter], <span class="kw-2">&amp;mut </span>pending_acks)<span class="question-mark">?</span>;
+                    </span>res = rx.recv() =&gt; {
+                        <span class="kw">match </span>res {
+                            <span class="prelude-val">Ok</span>(rt) =&gt; {
+                                <span class="kw">let </span>tracker = <span class="kw-2">&amp;mut </span>trackers[rt];
+                                <span class="kw">if </span>tracker.subbed {
+                                    <span class="kw">yield </span>responder(<span class="prelude-val">None</span>, tracker, <span class="kw-2">&amp;mut </span>pending_acks)<span class="question-mark">?</span>;
+                                }
+                            }
+                            <span class="prelude-val">Err</span>(tokio::sync::broadcast::error::RecvError::Closed) =&gt; <span class="kw">break</span>,
+                            <span class="prelude-val">Err</span>(tokio::sync::broadcast::error::RecvError::Lagged(<span class="kw">_</span>)) =&gt; {
+                                <span class="kw">for </span>(<span class="kw">_</span>, tracker) <span class="kw">in </span><span class="kw-2">&amp;mut </span>trackers {
+                                    <span class="kw">if </span>tracker.subbed {
+                                        <span class="kw">yield </span>responder(<span class="prelude-val">None</span>, tracker, <span class="kw-2">&amp;mut </span>pending_acks)<span class="question-mark">?</span>;
+                                    }
+                                }
+                            }
+                        }
                     }
                     client_request = streaming.next() =&gt; {
                         <span class="kw">let </span>client_request = <span class="kw">match </span>client_request.transpose() {
@@ -998,9 +987,10 @@
                             }
                         };
 
-                        <span class="macro">tracing::trace!</span>(id, %resource_type, <span class="string">"new delta message"</span>);
+                        <span class="macro">tracing::trace!</span>(%resource_type, <span class="string">"new delta message"</span>);
 
                         <span class="kw">let </span>tracker = <span class="kw-2">&amp;mut </span>trackers[resource_type];
+                        tracker.subbed = <span class="bool-val">true</span>;
 
                         <span class="kw">if let </span><span class="prelude-val">Some</span>(error) = <span class="kw-2">&amp;</span>client_request.error_detail {
                             metrics::nacks(id, resource_type.type_url()).inc();
@@ -1022,12 +1012,14 @@
                 }
             }
 
-            <span class="macro">tracing::info!</span>(<span class="string">"terminating delta stream"</span>);
+            <span class="macro">tracing::info!</span>(<span class="string">"terminating stream"</span>);
         };
 
-        <span class="prelude-val">Ok</span>(Box::pin(stream.instrument(
-            <span class="macro">tracing::info_span!</span>(<span class="string">"xds_delta_stream"</span>, id = %nid),
-        )))
+        <span class="prelude-val">Ok</span>(Box::pin(stream.instrument(<span class="macro">tracing::info_span!</span>(
+            <span class="string">"xds_server_stream"</span>,
+            id,
+            client = nid
+        ))))
     }
 }
 
@@ -1132,6 +1124,7 @@
                     config.clone(),
                     local.clone(),
                     <span class="prelude-val">Some</span>(remote_addr),
+                    <span class="prelude-val">None</span>,
                 );
 
                 <span class="kw">loop </span>{
@@ -1178,9 +1171,8 @@
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
     <span class="kw">use crate</span>::{
         core::Node,
-        <span class="comment">//     listener::v3::{FilterChain, Listener},
-        // },
-        </span>listener::{FilterChain, Listener},
+        listener::v3::{FilterChain, Listener},
+        listener::{FilterChain, Listener},
         ResourceType,
     };
 

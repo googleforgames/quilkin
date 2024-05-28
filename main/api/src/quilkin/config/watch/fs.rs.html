@@ -128,6 +128,7 @@
 <a href="#126" id="126">126</a>
 <a href="#127" id="127">127</a>
 <a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -161,7 +162,8 @@
     locality: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::net::endpoint::Locality&gt;,
 ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
     <span class="kw">let </span>path = path.into();
-    <span class="kw">let </span>span = <span class="macro">tracing::info_span!</span>(<span class="string">"config_provider"</span>, path = %path.display());
+    <span class="kw">let </span>span =
+        <span class="macro">tracing::info_span!</span>(<span class="string">"config_provider"</span>, path = %path.display(), id = %config.id.load());
     <span class="kw">let </span>(tx, <span class="kw-2">mut </span>rx) = tokio::sync::mpsc::unbounded_channel();
 
     <span class="kw">async fn </span>watch_inner(

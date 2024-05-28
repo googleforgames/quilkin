@@ -1228,6 +1228,9 @@
 <a href="#1226" id="1226">1226</a>
 <a href="#1227" id="1227">1227</a>
 <a href="#1228" id="1228">1228</a>
+<a href="#1229" id="1229">1229</a>
+<a href="#1230" id="1230">1230</a>
+<a href="#1231" id="1231">1231</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -1359,12 +1362,15 @@
         control_plane: xds::server::ControlPlane&lt;<span class="self">Self</span>&gt;,
     ) -&gt; <span class="kw">impl </span>std::future::Future&lt;Output = ()&gt; + Send + <span class="lifetime">'static </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>cluster_watcher = <span class="self">self</span>.clusters.watch();
-        <span class="self">self</span>.filters.watch({
-            <span class="kw">let </span>this = control_plane.clone();
-            <span class="kw">move </span>|<span class="kw">_</span>| {
-                this.push_update(ResourceType::Listener);
-            }
-        });
+
+        <span class="kw">if </span>!control_plane.is_relay {
+            <span class="self">self</span>.filters.watch({
+                <span class="kw">let </span>this = control_plane.clone();
+                <span class="kw">move </span>|<span class="kw">_</span>| {
+                    this.push_update(ResourceType::Listener);
+                }
+            });
+        }
 
         <span class="macro">tracing::trace!</span>(<span class="string">"waiting for changes"</span>);
 
@@ -1735,7 +1741,7 @@
         <span class="kw">match </span>resource_type {
             ResourceType::Listener =&gt; {
                 <span class="kw">for </span>res <span class="kw">in </span>resources {
-                    <span class="kw">let </span>(resource, <span class="kw">_</span>) = res<span class="question-mark">?</span>;
+                    <span class="kw">let </span>(resource, version) = res<span class="question-mark">?</span>;
                     <span class="kw">let </span>Resource::Listener(<span class="kw-2">mut </span>listener) = resource <span class="kw">else </span>{
                         <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">"a non-listener resource was present"</span>));
                     };
@@ -1749,7 +1755,7 @@
                     </span>};
 
                     <span class="self">self</span>.filters.store(Arc::new(chain));
-                    local_versions.insert(listener.name, <span class="string">""</span>.into());
+                    local_versions.insert(listener.name, version);
                 }
             }
             ResourceType::FilterChain =&gt; {
@@ -1759,11 +1765,11 @@
                         <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">"a non-filterchain resource was present"</span>));
                     };
 
-                    <span class="self">self</span>.filters
-                        .store(Arc::new(<span class="kw">crate</span>::filters::FilterChain::try_create_fallible(
-                            fc.filters.into_iter(),
-                        )<span class="question-mark">?</span>));
-                    local_versions.insert(String::new(), <span class="string">""</span>.into());
+                    <span class="kw">let </span>fc =
+                        <span class="kw">crate</span>::filters::FilterChain::try_create_fallible(fc.filters.into_iter())<span class="question-mark">?</span>;
+
+                    <span class="self">self</span>.filters.store(Arc::new(fc));
+                    local_versions.insert(String::new(), <span class="string">"0"</span>.into());
                 }
             }
             ResourceType::Datacenter =&gt; {

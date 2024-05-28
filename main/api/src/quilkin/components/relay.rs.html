@@ -126,6 +126,11 @@
 <a href="#124" id="124">124</a>
 <a href="#125" id="125">125</a>
 <a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::RunArgs;
 <span class="kw">use crate</span>::{config::Providers, net::TcpListener};
 <span class="kw">use </span>std::sync::{
@@ -133,10 +138,19 @@
     Arc,
 };
 
-<span class="attr">#[derive(Clone, Debug, Default)]
+<span class="attr">#[derive(Clone, Debug)]
 </span><span class="kw">pub struct </span>Ready {
     <span class="kw">pub </span>idle_request_interval: std::time::Duration,
     <span class="kw">pub </span>provider_is_healthy: Arc&lt;AtomicBool&gt;,
+}
+
+<span class="kw">impl </span>Default <span class="kw">for </span>Ready {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            idle_request_interval: <span class="kw">crate</span>::components::admin::IDLE_REQUEST_INTERVAL,
+            provider_is_healthy: Default::default(),
+        }
+    }
 }
 
 <span class="kw">impl </span>Ready {
@@ -162,18 +176,14 @@
             <span class="kw-2">mut </span>shutdown_rx,
         }: RunArgs&lt;Ready&gt;,
     ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
-        <span class="kw">use </span><span class="kw">crate</span>::net::xds::server;
+        <span class="kw">use </span><span class="kw">crate</span>::net::xds::server::ControlPlane;
 
-        <span class="kw">let </span>xds_server = server::spawn(
-            <span class="self">self</span>.xds_listener,
-            config.clone(),
-            ready.idle_request_interval,
-        )<span class="question-mark">?</span>;
-        <span class="kw">let </span>mds_server = tokio::spawn(server::control_plane_discovery_server(
-            <span class="self">self</span>.mds_listener,
-            config.clone(),
-            ready.idle_request_interval,
-        )<span class="question-mark">?</span>);
+        <span class="kw">let </span>xds_server = ControlPlane::from_arc(config.clone(), ready.idle_request_interval)
+            .management_server(<span class="self">self</span>.xds_listener)<span class="question-mark">?</span>;
+        <span class="kw">let </span>mds_server = tokio::spawn(
+            ControlPlane::from_arc(config.clone(), ready.idle_request_interval)
+                .relay_server(<span class="self">self</span>.mds_listener)<span class="question-mark">?</span>,
+        );
 
         <span class="kw">let </span>_provider_task = <span class="self">self</span>.provider.map(|provider| {
             <span class="kw">let </span>config = config.clone();
