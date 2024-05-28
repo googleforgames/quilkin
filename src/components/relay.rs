@@ -5,10 +5,19 @@ use std::sync::{
     Arc,
 };
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct Ready {
     pub idle_request_interval: std::time::Duration,
     pub provider_is_healthy: Arc<AtomicBool>,
+}
+
+impl Default for Ready {
+    fn default() -> Self {
+        Self {
+            idle_request_interval: crate::components::admin::IDLE_REQUEST_INTERVAL,
+            provider_is_healthy: Default::default(),
+        }
+    }
 }
 
 impl Ready {
@@ -34,18 +43,14 @@ impl Relay {
             mut shutdown_rx,
         }: RunArgs<Ready>,
     ) -> crate::Result<()> {
-        use crate::net::xds::server;
+        use crate::net::xds::server::ControlPlane;
 
-        let xds_server = server::spawn(
-            self.xds_listener,
-            config.clone(),
-            ready.idle_request_interval,
-        )?;
-        let mds_server = tokio::spawn(server::control_plane_discovery_server(
-            self.mds_listener,
-            config.clone(),
-            ready.idle_request_interval,
-        )?);
+        let xds_server = ControlPlane::from_arc(config.clone(), ready.idle_request_interval)
+            .management_server(self.xds_listener)?;
+        let mds_server = tokio::spawn(
+            ControlPlane::from_arc(config.clone(), ready.idle_request_interval)
+                .relay_server(self.mds_listener)?,
+        );
 
         let _provider_task = self.provider.map(|provider| {
             let config = config.clone();

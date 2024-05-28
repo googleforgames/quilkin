@@ -31,7 +31,8 @@ pub async fn watch(
     locality: Option<crate::net::endpoint::Locality>,
 ) -> crate::Result<()> {
     let path = path.into();
-    let span = tracing::info_span!("config_provider", path = %path.display());
+    let span =
+        tracing::info_span!("config_provider", path = %path.display(), id = %config.id.load());
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
 
     async fn watch_inner(

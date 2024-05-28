@@ -505,7 +505,7 @@ impl Config {
         match resource_type {
             ResourceType::Listener => {
                 for res in resources {
-                    let (resource, _) = res?;
+                    let (resource, version) = res?;
                     let Resource::Listener(mut listener) = resource else {
                         return Err(eyre::eyre!("a non-listener resource was present"));
                     };
@@ -518,8 +518,11 @@ impl Config {
                         )?
                     };
 
+                    //dbg!(&chain, self.id.load());
+
                     self.filters.store(Arc::new(chain));
-                    local_versions.insert(listener.name, "".into());
+                    //dbg!(self.filters.load(), self.id.load());
+                    local_versions.insert(listener.name, version);
                 }
             }
             ResourceType::FilterChain => {
@@ -529,11 +532,11 @@ impl Config {
                         return Err(eyre::eyre!("a non-filterchain resource was present"));
                     };
 
-                    self.filters
-                        .store(Arc::new(crate::filters::FilterChain::try_create_fallible(
-                            fc.filters.into_iter(),
-                        )?));
-                    local_versions.insert(String::new(), "".into());
+                    let fc =
+                        crate::filters::FilterChain::try_create_fallible(fc.filters.into_iter())?;
+
+                    self.filters.store(Arc::new(fc));
+                    local_versions.insert(String::new(), "0".into());
                 }
             }
             ResourceType::Datacenter => {

@@ -308,6 +308,7 @@ impl TestHelper {
                 socket: crate::net::raw_socket_with_reuse(0).unwrap(),
                 qcmp,
                 phoenix,
+                notifier: None,
             }
         });
 

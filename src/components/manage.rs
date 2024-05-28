@@ -57,11 +57,13 @@ impl Manage {
         };
 
         use futures::TryFutureExt as _;
-        let server_task = tokio::spawn(crate::net::xds::server::spawn(
-            self.listener,
-            config,
-            crate::components::admin::IDLE_REQUEST_INTERVAL,
-        )?)
+        let server_task = tokio::spawn(
+            crate::net::xds::server::ControlPlane::from_arc(
+                config,
+                crate::components::admin::IDLE_REQUEST_INTERVAL,
+            )
+            .management_server(self.listener)?,
+        )
         .map_err(From::from)
         .and_then(std::future::ready);
 

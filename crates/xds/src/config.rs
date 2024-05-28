@@ -81,6 +81,7 @@ pub fn handle_delta_discovery_responses<C: Configuration>(
     config: Arc<C>,
     local: Arc<LocalVersions>,
     remote_addr: Option<std::net::SocketAddr>,
+    mut notifier: Option<tokio::sync::mpsc::UnboundedSender<ResourceType>>,
 ) -> std::pin::Pin<Box<dyn futures::Stream<Item = crate::Result<DeltaDiscoveryRequest>> + Send>> {
     Box::pin(async_stream::try_stream! {
         let _stream_metrics = crate::metrics::StreamConnectionMetrics::new(identifier.clone());
@@ -130,6 +131,12 @@ pub fn handle_delta_discovery_responses<C: Configuration>(
                         })
                     }), response.removed_resources, &mut lock)
             };
+
+            if let Some(note) = &notifier {
+                if note.send(resource_type).is_err() {
+                    notifier = None;
+                }
+            }
 
             let error_detail = if let Err(error) = result {
                 crate::metrics::nacks(control_plane_identifier, &response.type_url).inc();

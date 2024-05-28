@@ -32,11 +32,20 @@ pub enum PipelineError {
     ChannelFull,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct Ready {
     pub idle_request_interval: std::time::Duration,
     // RwLock as this check is conditional on the proxy using xDS.
     pub xds_is_healthy: Arc<parking_lot::RwLock<Option<Arc<AtomicBool>>>>,
+}
+
+impl Default for Ready {
+    fn default() -> Self {
+        Self {
+            idle_request_interval: crate::components::admin::IDLE_REQUEST_INTERVAL,
+            xds_is_healthy: Default::default(),
+        }
+    }
 }
 
 impl Ready {
@@ -57,6 +66,7 @@ pub struct Proxy {
     pub socket: socket2::Socket,
     pub qcmp: socket2::Socket,
     pub phoenix: crate::net::TcpListener,
+    pub notifier: Option<tokio::sync::mpsc::UnboundedSender<crate::net::xds::ResourceType>>,
 }
 
 impl Default for Proxy {
@@ -72,6 +82,7 @@ impl Default for Proxy {
             socket: crate::net::raw_socket_with_reuse(0).unwrap(),
             qcmp,
             phoenix,
+            notifier: None,
         }
     }
 }
@@ -144,6 +155,7 @@ impl Proxy {
                     let config = config.clone();
                     let mut shutdown_rx = shutdown_rx.clone();
                     let management_servers = self.management_servers.clone();
+                    let tx = self.notifier.as_ref().map(|n| n.clone());
 
                     move || {
                         let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -171,7 +183,8 @@ impl Proxy {
                             let _stream = client
                                 .delta_subscribe(
                                     config.clone(),
-                                    xds_is_healthy.clone(),
+                                    ready.clone(),
+                                    tx,
                                     [
                                         (ResourceType::Cluster, Vec::new()),
                                         (ResourceType::Listener, Vec::new()),

@@ -235,6 +235,7 @@ impl MdsClient {
                 }
             };
 
+        let id = identifier.clone();
         let handle = tokio::task::spawn(
             async move {
                 tracing::trace!("starting relay client delta stream task");
@@ -250,7 +251,7 @@ impl MdsClient {
 
                         while let Some(result) = stream.next().await {
                             let response = result?;
-                            tracing::trace!("received delta discovery response");
+                            tracing::debug!("received delta discovery response");
                             ds.send_response(response).await?;
                         }
                     }
@@ -266,7 +267,7 @@ impl MdsClient {
                         DeltaServerStream::connect(new_client, identifier.clone()).await?;
                 }
             }
-            .instrument(tracing::trace_span!("handle_delta_discovery_response")),
+            .instrument(tracing::debug_span!("handle_delta_discovery_response", id)),
         );
 
         Ok(DeltaSubscription { handle })
@@ -283,7 +284,8 @@ impl DeltaClientStream {
         mut client: AdsGrpcClient,
         identifier: String,
     ) -> Result<(Self, tonic::Streaming<DeltaDiscoveryResponse>)> {
-        let (req_tx, requests_rx) = tokio::sync::mpsc::channel(ResourceType::VARIANTS.len());
+        let (req_tx, requests_rx) =
+            tokio::sync::mpsc::channel(100 /*ResourceType::VARIANTS.len()*/);
 
         // Since we are doing exploratory requests to see if the remote endpoint supports delta streams, we unfortunately
         // need to actually send something before the full roundtrip occurs. This can be removed once delta discovery
@@ -394,6 +396,7 @@ pub struct DeltaSubscription {
 
 impl Drop for DeltaSubscription {
     fn drop(&mut self) {
+        tracing::debug!("dropped client delta stream");
         self.handle.abort();
     }
 }
@@ -403,13 +406,14 @@ impl AdsClient {
     /// management server does not support delta xDS we return the client as an error
     pub async fn delta_subscribe<C: crate::config::Configuration>(
         self,
-        config: Arc<C>,
-        is_healthy: Arc<AtomicBool>,
+        config: Arc<Config>,
+        rt_config: crate::components::proxy::Ready,
+        notifier: Option<tokio::sync::mpsc::UnboundedSender<ResourceType>>,
         resources: impl IntoIterator<Item = (ResourceType, Vec<String>)>,
     ) -> Result<DeltaSubscription, Self> {
         let resource_subscriptions: Vec<_> = resources.into_iter().collect();
 
-        let identifier = String::from(&*self.identifier);
+        let identifier = dbg!(String::from(&*self.identifier));
 
         let (mut ds, stream) = match DeltaClientStream::connect(
             self.client.clone(),
@@ -438,6 +442,7 @@ impl AdsClient {
             return Err(self);
         }
 
+        let id = identifier.clone();
         let handle = tokio::task::spawn(
             async move {
                 tracing::trace!("starting xDS delta stream task");
@@ -451,6 +456,7 @@ impl AdsClient {
                         config.clone(),
                         local.clone(),
                         None,
+                        notifier.clone(),
                     );
 
                     loop {
@@ -495,7 +501,7 @@ impl AdsClient {
                         .await?;
                 }
             }
-            .instrument(tracing::trace_span!("handle_delta_discovery_response")),
+            .instrument(tracing::debug_span!("xds_client_stream", id)),
         );
 
         Ok(DeltaSubscription { handle })

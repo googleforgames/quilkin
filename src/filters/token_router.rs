@@ -126,7 +126,7 @@ impl Router for HashedTokenRouter {
 
                 let tok = crate::net::cluster::Token::new(token);
 
-                for ep in ctx.endpoints.iter() {
+                for ep in dbg!(&ctx.endpoints).iter() {
                     ep.value().addresses_for_token(tok, &mut destinations);
 
                     if !destinations.is_empty() {
@@ -139,7 +139,7 @@ impl Router for HashedTokenRouter {
                 if ctx.destinations.is_empty() {
                     Err(FilterError::new(Error::NoEndpointMatch(
                         self.config.metadata_key,
-                        crate::codec::base64::encode(token),
+                        crate::codec::base64::encode(dbg!(token)),
                     )))
                 } else {
                     Ok(())

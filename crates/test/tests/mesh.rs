@@ -72,17 +72,9 @@ trace_test!(relay_routing, {
 
     let mut sandbox = sc.spinup().await;
 
-    let (server_port, mut server_rx) = {
-        let Some(Pail::Server(sp)) = sandbox.pails.get_mut("server") else {
-            unreachable!()
-        };
-
-        (sp.port, sp.packet_rx.take().unwrap())
-    };
-    let proxy_address = sandbox.proxy_addr();
-    let Pail::Agent(ap) = &sandbox.pails["agent"] else {
-        unreachable!()
-    };
+    let (mut server_rx, server_addr) = sandbox.server("server");
+    let (proxy_address, _) = sandbox.proxy("proxy");
+    let mut agent_config = sandbox.config_file("agent");
 
     let client = sandbox.client();
 
@@ -105,10 +97,10 @@ trace_test!(relay_routing, {
             })
             .collect();
 
-        ap.config_file.update(|config| {
+        agent_config.update(|config| {
             config.clusters.insert_default(
                 [Endpoint::with_metadata(
-                    (std::net::Ipv6Addr::LOCALHOST, server_port).into(),
+                    server_addr.into(),
                     quilkin::net::endpoint::Metadata { tokens },
                 )]
                 .into(),
@@ -204,4 +196,127 @@ trace_test!(datacenter_discovery, {
 
     assert_config(&relay_config, &datacenter);
     assert_config(&proxy_config, &datacenter);
+});
+
+trace_test!(filter_update, {
+    let mut sc = qt::sandbox_config!();
+
+    sc.push("server", ServerPailConfig::default(), &[]);
+    sc.push(
+        "relay",
+        RelayPailConfig {
+            config: Some(TestConfig {
+                filters: FilterChain::try_create([
+                    Capture::as_filter_config(capture::Config {
+                        metadata_key: filters::capture::CAPTURED_BYTES.into(),
+                        strategy: filters::capture::Strategy::Suffix(capture::Suffix {
+                            size: 0,
+                            remove: true,
+                        }),
+                    })
+                    .unwrap(),
+                    HashedTokenRouter::as_filter_config(None).unwrap(),
+                ])
+                .unwrap(),
+                ..Default::default()
+            }),
+        },
+        &[],
+    );
+    sc.push(
+        "agent",
+        AgentPailConfig {
+            endpoints: vec![("server", &[])],
+            ..Default::default()
+        },
+        &["server", "relay"],
+    );
+    sc.push("proxy", ProxyPailConfig::default(), &["relay"]);
+
+    let mut sandbox = sc.spinup().await;
+
+    let (mut server_rx, server_addr) = sandbox.server("server");
+    let (proxy_address, mut proxy_delta_rx) = sandbox.proxy("proxy");
+
+    let mut agent_config = sandbox.config_file("agent");
+    let mut relay_config = sandbox.config_file("relay");
+
+    let client = sandbox.client();
+
+    let mut token = b"g".to_vec();
+
+    sandbox.sleep(1000).await;
+    loop {
+        match proxy_delta_rx.try_recv() {
+            Ok(_rt) => {}
+            Err(tokio::sync::mpsc::error::TryRecvError::Empty) => break,
+            Err(_) => unreachable!(),
+        }
+    }
+
+    for _ in 0..100 {
+        relay_config.update(|config| {
+            config.filters = FilterChain::try_create([
+                Capture::as_labeled_filter_config(
+                    capture::Config {
+                        metadata_key: filters::capture::CAPTURED_BYTES.into(),
+                        strategy: filters::capture::Strategy::Suffix(capture::Suffix {
+                            size: token.len() as _,
+                            remove: true,
+                        }),
+                    },
+                    token.len().to_string(),
+                )
+                .unwrap(),
+                HashedTokenRouter::as_filter_config(None).unwrap(),
+            ])
+            .unwrap();
+        });
+
+        agent_config.update(|config| {
+            config.clusters.insert_default(
+                [Endpoint::with_metadata(
+                    server_addr.into(),
+                    quilkin::net::endpoint::Metadata {
+                        tokens: Some(dbg!(&token).clone()).into_iter().collect(),
+                    },
+                )]
+                .into(),
+            );
+        });
+
+        let mut updates = 0x0;
+        while (dbg!(updates) & 0x11) != 0x11 {
+            let rt = sandbox.timeout(10000, proxy_delta_rx.recv()).await.unwrap();
+
+            match rt {
+                quilkin::net::xds::ResourceType::Listener => updates |= 0x1,
+                quilkin::net::xds::ResourceType::Cluster => updates |= 0x10,
+                _ => {}
+            }
+        }
+
+        let mut msg = b"hello".to_vec();
+        msg.extend_from_slice(&token);
+
+        tracing::info!(len = token.len(), "sending packet");
+        client.send_to(&msg, &proxy_address).await.unwrap();
+
+        tracing::info!(len = token.len(), "received packet");
+        assert_eq!(
+            "hello",
+            sandbox.timeout(10000, server_rx.recv()).await.unwrap()
+        );
+
+        tracing::info!(len = token.len(), "sending bad packet");
+        // send an invalid packet
+        msg.truncate(5);
+        msg.extend((0..token.len()).into_iter().map(|_| b'b'));
+        client.send_to(&msg, &proxy_address).await.unwrap();
+
+        sandbox.expect_timeout(50, server_rx.recv()).await;
+        tracing::info!(len = token.len(), "didn't receive bad packet");
+
+        token.push(b'g');
+    }
 });

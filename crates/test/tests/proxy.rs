@@ -14,7 +14,7 @@ trace_test!(server, {
     let mut server1_rx = sb.packet_rx("server1");
     let mut server2_rx = sb.packet_rx("server2");
 
-    let addr = sb.proxy_addr();
+    let (addr, _) = sb.proxy("proxy");
 
     tracing::trace!(%addr, "sending packet");
     let msg = "hello";
@@ -45,7 +45,7 @@ trace_test!(client, {
     let mut sb = sc.spinup().await;
 
     let mut dest_rx = sb.packet_rx("dest");
-    let local_addr = sb.proxy_addr();
+    let (local_addr, _) = sb.proxy("proxy");
     let client = sb.client();
 
     let msg = "hello";
@@ -68,7 +68,7 @@ trace_test!(with_filter, {
     );
 
     let mut sb = sc.spinup().await;
-    let local_addr = sb.proxy_addr();
+    let (local_addr, _) = sb.proxy("proxy");
     let mut rx = sb.packet_rx("server");
     let client = sb.client();
 
