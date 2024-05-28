@@ -105,6 +105,7 @@ impl Proxy {
             socket,
             qcmp,
             phoenix,
+            notifier: None,
         }
         .run(
             crate::components::RunArgs {

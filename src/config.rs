@@ -129,12 +129,15 @@ impl xds::config::Configuration for Config {
         control_plane: xds::server::ControlPlane<Self>,
     ) -> impl std::future::Future<Output = ()> + Send + 'static {
         let mut cluster_watcher = self.clusters.watch();
-        self.filters.watch({
-            let this = control_plane.clone();
-            move |_| {
-                this.push_update(ResourceType::Listener);
-            }
-        });
+
+        if !control_plane.is_relay {
+            self.filters.watch({
+                let this = control_plane.clone();
+                move |_| {
+                    this.push_update(ResourceType::Listener);
+                }
+            });
+        }
 
         tracing::trace!("waiting for changes");
 
@@ -505,7 +508,7 @@ impl Config {
         match resource_type {
             ResourceType::Listener => {
                 for res in resources {
-                    let (resource, _) = res?;
+                    let (resource, version) = res?;
                     let Resource::Listener(mut listener) = resource else {
                         return Err(eyre::eyre!("a non-listener resource was present"));
                     };
@@ -519,7 +522,7 @@ impl Config {
                     };
 
                     self.filters.store(Arc::new(chain));
-                    local_versions.insert(listener.name, "".into());
+                    local_versions.insert(listener.name, version);
                 }
             }
             ResourceType::FilterChain => {
@@ -529,11 +532,11 @@ impl Config {
                         return Err(eyre::eyre!("a non-filterchain resource was present"));
                     };
 
-                    self.filters
-                        .store(Arc::new(crate::filters::FilterChain::try_create_fallible(
-                            fc.filters.into_iter(),
-                        )?));
-                    local_versions.insert(String::new(), "".into());
+                    let fc =
+                        crate::filters::FilterChain::try_create_fallible(fc.filters.into_iter())?;
+
+                    self.filters.store(Arc::new(fc));
+                    local_versions.insert(String::new(), "0".into());
                 }
             }
             ResourceType::Datacenter => {

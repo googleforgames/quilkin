@@ -84,7 +84,8 @@ impl ClientVersions {
     pub fn ack(&mut self, ack: AwaitingAck) {
         match (self, ack) {
             (Self::Listener, AwaitingAck::Listener)
-            | (Self::Datacenter, AwaitingAck::Datacenter) => {}
+            | (Self::Datacenter, AwaitingAck::Datacenter)
+            | (Self::FilterChain, AwaitingAck::FilterChain) => {}
             (
                 Self::Cluster(map),
                 AwaitingAck::Cluster {
@@ -232,21 +233,21 @@ mod tests {
 
         // Test that the client can handle the manager dropping out.
         let handle = tokio::spawn(
-            server::spawn(
-                xds_one,
+            server::ControlPlane::from_arc(
                 xds_config.clone(),
                 crate::components::admin::IDLE_REQUEST_INTERVAL,
             )
+            .management_server(xds_one)
             .unwrap(),
         );
 
         let (_shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(crate::ShutdownKind::Testing);
         tokio::spawn(
-            server::spawn(
-                xds_two,
+            server::ControlPlane::from_arc(
                 xds_config.clone(),
                 crate::components::admin::IDLE_REQUEST_INTERVAL,
             )
+            .management_server(xds_two)
             .unwrap(),
         );
         let client_proxy = crate::cli::Proxy {
@@ -358,7 +359,12 @@ mod tests {
         let listener = TcpListener::bind(None).unwrap();
         let port = listener.port();
         tokio::spawn(
-            server::spawn(listener, config.clone(), proxy_config.idle_request_interval).unwrap(),
+            crate::net::xds::server::ControlPlane::from_arc(
+                config.clone(),
+                proxy_config.idle_request_interval,
+            )
+            .management_server(listener)
+            .unwrap(),
         );
         let client = Client::connect(
             "test-client".into(),

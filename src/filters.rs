@@ -170,6 +170,21 @@ where
                 .transpose()?,
         })
     }
+
+    #[inline]
+    fn as_labeled_filter_config(
+        config: impl Into<Option<Self::Configuration>>,
+        label: String,
+    ) -> Result<crate::config::Filter, CreationError> {
+        Ok(crate::config::Filter {
+            name: Self::NAME.into(),
+            label: Some(label),
+            config: config
+                .into()
+                .map(|config| serde_json::to_value(&config))
+                .transpose()?,
+        })
+    }
 }
 
 /// Trait for routing and manipulating packets.

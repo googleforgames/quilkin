@@ -36,45 +36,11 @@ use crate::{
     ResourceType,
 };
 
-#[tracing::instrument(skip_all)]
-pub fn spawn<C: crate::config::Configuration>(
-    listener: TcpListener,
-    config: std::sync::Arc<C>,
-    idle_request_interval: Duration,
-) -> io::Result<impl std::future::Future<Output = crate::Result<()>>> {
-    let server = AggregatedDiscoveryServiceServer::new(ControlPlane::from_arc(
-        config,
-        idle_request_interval,
-    ))
-    .max_encoding_message_size(crate::config::max_grpc_message_size());
-    let server = tonic::transport::Server::builder().add_service(server);
-    tracing::info!("serving management server on port `{}`", listener.port());
-    Ok(server
-        .serve_with_incoming(listener.into_stream()?)
-        .map_err(From::from))
-}
-
-pub fn control_plane_discovery_server<C: crate::config::Configuration>(
-    listener: TcpListener,
-    config: Arc<C>,
-    idle_request_interval: Duration,
-) -> io::Result<impl std::future::Future<Output = crate::Result<()>>> {
-    let server = AggregatedControlPlaneDiscoveryServiceServer::new(ControlPlane::from_arc(
-        config,
-        idle_request_interval,
-    ))
-    .max_encoding_message_size(crate::config::max_grpc_message_size());
-    let server = tonic::transport::Server::builder().add_service(server);
-    tracing::info!("serving relay server on port `{}`", listener.port());
-    Ok(server
-        .serve_with_incoming(listener.into_stream()?)
-        .map_err(From::from))
-}
-
 pub struct ControlPlane<C> {
     pub config: Arc<C>,
     idle_request_interval: Duration,
-    watchers: Arc<crate::resource::ResourceMap<Watchers>>,
+    tx: tokio::sync::broadcast::Sender<ResourceType>,
+    pub is_relay: bool,
 }
 
 impl<C> Clone for ControlPlane<C> {
@@ -82,52 +48,67 @@ impl<C> Clone for ControlPlane<C> {
         Self {
             config: self.config.clone(),
             idle_request_interval: self.idle_request_interval,
-            watchers: self.watchers.clone(),
-        }
-    }
-}
-
-struct Watchers {
-    sender: tokio::sync::watch::Sender<()>,
-    receiver: tokio::sync::watch::Receiver<()>,
-    version: std::sync::atomic::AtomicU64,
-}
-
-impl Default for Watchers {
-    fn default() -> Self {
-        let (sender, receiver) = tokio::sync::watch::channel(());
-        Self {
-            sender,
-            receiver,
-            version: <_>::default(),
+            tx: self.tx.clone(),
+            is_relay: self.is_relay,
         }
     }
 }
 
 impl<C: crate::config::Configuration> ControlPlane<C> {
     pub fn from_arc(config: Arc<C>, idle_request_interval: Duration) -> Self {
-        let this = Self {
+        let (tx, _) = tokio::sync::broadcast::channel(10);
+
+        Self {
             config,
             idle_request_interval,
-            watchers: Default::default(),
-        };
-
-        tokio::spawn({
-            let this2 = this.clone();
-            this.config.on_changed(this2)
-        });
-
-        this
+            tx,
+            is_relay: false,
+        }
     }
 
+    pub fn management_server(
+        mut self,
+        listener: TcpListener,
+    ) -> io::Result<impl std::future::Future<Output = crate::Result<()>>> {
+        self.is_relay = false;
+        tokio::spawn({
+            let this = self.clone();
+            self.config.on_changed(this)
+        });
+
+        let server = AggregatedDiscoveryServiceServer::new(self)
+            .max_encoding_message_size(crate::config::max_grpc_message_size());
+        let server = tonic::transport::Server::builder().add_service(server);
+        tracing::info!("serving management server on port `{}`", listener.port());
+        Ok(server
+            .serve_with_incoming(listener.into_stream()?)
+            .map_err(From::from))
+    }
+
+    pub fn relay_server(
+        mut self,
+        listener: TcpListener,
+    ) -> io::Result<impl std::future::Future<Output = crate::Result<()>>> {
+        self.is_relay = true;
+        tokio::spawn({
+            let this = self.clone();
+            self.config.on_changed(this)
+        });
+
+        let server = AggregatedControlPlaneDiscoveryServiceServer::new(self)
+            .max_encoding_message_size(crate::config::max_grpc_message_size());
+        let server = tonic::transport::Server::builder().add_service(server);
+        tracing::info!("serving relay server on port `{}`", listener.port());
+        Ok(server
+            .serve_with_incoming(listener.into_stream()?)
+            .map_err(From::from))
+    }
+
+    #[inline]
     pub fn push_update(&self, resource_type: ResourceType) {
-        let watchers = &self.watchers[resource_type];
-        watchers
-            .version
-            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        tracing::trace!(%resource_type, watchers=watchers.sender.receiver_count(), "pushing update");
-        if let Err(error) = watchers.sender.send(()) {
-            tracing::warn!(%error, "pushing update failed");
+        tracing::debug!(%resource_type, id=self.config.identifier(), is_relay = self.is_relay, "pushing update");
+        if self.tx.send(resource_type).is_err() {
+            tracing::debug!("no client connections currently subscribed");
         }
     }
 
@@ -162,15 +143,26 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
 
         let mut pending_acks = cached::TimedSizedCache::with_size_and_lifespan(50, 1);
         let this = Self::clone(self);
+        let mut rx = this.tx.subscribe();
+
+        let id = this.config.identifier();
+        tracing::debug!(
+            id,
+            client = node_id,
+            count = this.tx.receiver_count(),
+            is_relay = this.is_relay,
+            "subscribed to config updates"
+        );
 
         let control_plane_id = crate::core::ControlPlane {
-            identifier: this.config.identifier(),
+            identifier: id.clone(),
         };
 
         struct ResourceTypeTracker {
             client: ClientVersions,
             subscribed: BTreeSet<String>,
             kind: ResourceType,
+            subbed: bool,
         }
 
         // Keep track of the resource versions that the client has so we can only
@@ -180,12 +172,14 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                 client: ClientVersions::new(ResourceType::Cluster),
                 subscribed: BTreeSet::new(),
                 kind: ResourceType::Cluster,
+                subbed: false,
             },
             ResourceType::Listener => {
                 ResourceTypeTracker {
                     client: ClientVersions::new(ResourceType::Listener),
                     subscribed: BTreeSet::new(),
                     kind: ResourceType::Listener,
+                    subbed: false,
                 }
             },
             ResourceType::FilterChain => {
@@ -193,6 +187,7 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                     client: ClientVersions::new(ResourceType::FilterChain),
                     subscribed: BTreeSet::new(),
                     kind: ResourceType::FilterChain,
+                    subbed: false,
                 }
             },
             ResourceType::Datacenter => {
@@ -200,23 +195,19 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                     client: ClientVersions::new(ResourceType::Datacenter),
                     subscribed: BTreeSet::new(),
                     kind: ResourceType::Datacenter,
+                    subbed: false,
                 }
             }
         };
 
-        let mut cluster_rx = self.watchers[ResourceType::Cluster].receiver.clone();
-        let mut listener_rx = self.watchers[ResourceType::Listener].receiver.clone();
-        let mut fc_rx = self.watchers[ResourceType::FilterChain].receiver.clone();
-        let mut dc_rx = self.watchers[ResourceType::Datacenter].receiver.clone();
-
-        let id = node_id.clone();
+        let client = node_id.clone();
         let responder =
             move |req: Option<DeltaDiscoveryRequest>,
                   tracker: &mut ResourceTypeTracker,
                   pending_acks: &mut cached::TimedSizedCache<uuid::Uuid, AwaitingAck>|
                   -> Result<DeltaDiscoveryResponse, tonic::Status> {
                 if let Some(req) = req {
-                    metrics::delta_discovery_requests(&id, tracker.kind.type_url()).inc();
+                    metrics::delta_discovery_requests(&client, tracker.kind.type_url()).inc();
 
                     // If the request has filled out the initial_versions field, it means the connected management servers has
                     // already had a connection with a control plane, so hard reset our state to what it says it has
@@ -247,6 +238,9 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                             tracker.client.remove(sub);
                         }
                     }
+                    tracing::debug!(kind = %tracker.kind, "sending delta for resource update");
+                } else {
+                    tracing::debug!(kind = %tracker.kind, "sending delta update");
                 }
 
                 let req = this
@@ -276,9 +270,11 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                 Ok(response)
             };
 
+        let nid = node_id.clone();
+
         let response = {
             if message.type_url == "ignore-me" {
-                tracing::debug!(id = %node_id, "initial delta response");
+                tracing::debug!(id, client = nid, "initial delta response");
                 DeltaDiscoveryResponse {
                     resources: Vec::new(),
                     nonce: String::new(),
@@ -290,7 +286,7 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                 }
             } else {
                 let resource_type: ResourceType = message.type_url.parse()?;
-                tracing::debug!(id = %node_id, %resource_type, "initial delta response");
+                tracing::debug!(client = %node_id, %resource_type, "initial delta response");
                 responder(
                     Some(message),
                     &mut trackers[resource_type],
@@ -299,7 +295,6 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
             }
         };
 
-        let nid = node_id.clone();
         let stream = async_stream::try_stream! {
             yield response;
 
@@ -307,25 +302,23 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                 tokio::select! {
                     // The resource(s) have changed, inform the connected client, but only
                     // send the changed resources that the client doesn't already have
-                    _ = cluster_rx.changed() => {
-                        tracing::trace!("sending new cluster delta discovery response");
-
-                        yield responder(None, &mut trackers[ResourceType::Cluster], &mut pending_acks)?;
-                    }
-                    _ = listener_rx.changed() => {
-                        tracing::trace!("sending new listener delta discovery response");
-
-                        yield responder(None, &mut trackers[ResourceType::Listener], &mut pending_acks)?;
-                    }
-                    _ = fc_rx.changed() => {
-                        tracing::trace!("sending new filter chain delta discovery response");
-
-                        yield responder(None, &mut trackers[ResourceType::FilterChain], &mut pending_acks)?;
-                    }
-                    _ = dc_rx.changed() => {
-                        tracing::trace!("sending new datacenter delta discovery response");
-
-                        yield responder(None, &mut trackers[ResourceType::Datacenter], &mut pending_acks)?;
+                    res = rx.recv() => {
+                        match res {
+                            Ok(rt) => {
+                                let tracker = &mut trackers[rt];
+                                if tracker.subbed {
+                                    yield responder(None, tracker, &mut pending_acks)?;
+                                }
+                            }
+                            Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
+                            Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {
+                                for (_, tracker) in &mut trackers {
+                                    if tracker.subbed {
+                                        yield responder(None, tracker, &mut pending_acks)?;
+                                    }
+                                }
+                            }
+                        }
                     }
                     client_request = streaming.next() => {
                         let client_request = match client_request.transpose() {
@@ -350,9 +343,10 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                             }
                         };
 
-                        tracing::trace!(id, %resource_type, "new delta message");
+                        tracing::trace!(%resource_type, "new delta message");
 
                         let tracker = &mut trackers[resource_type];
+                        tracker.subbed = true;
 
                         if let Some(error) = &client_request.error_detail {
                             metrics::nacks(id, resource_type.type_url()).inc();
@@ -374,12 +368,14 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                 }
             }
 
-            tracing::info!("terminating delta stream");
+            tracing::info!("terminating stream");
         };
 
-        Ok(Box::pin(stream.instrument(
-            tracing::info_span!("xds_delta_stream", id = %nid),
-        )))
+        Ok(Box::pin(stream.instrument(tracing::info_span!(
+            "xds_server_stream",
+            id,
+            client = nid
+        ))))
     }
 }
 
@@ -484,6 +480,7 @@ impl<C: crate::config::Configuration> AggregatedControlPlaneDiscoveryService for
                     config.clone(),
                     local.clone(),
                     Some(remote_addr),
+                    None,
                 );
 
                 loop {
@@ -530,8 +527,7 @@ mod tests {
     use super::*;
     use crate::{
         core::Node,
-        //     listener::v3::{FilterChain, Listener},
-        // },
+        listener::v3::{FilterChain, Listener},
         listener::{FilterChain, Listener},
         ResourceType,
     };

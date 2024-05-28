@@ -159,8 +159,8 @@ pub struct ConfigFile {
 }
 
 impl ConfigFile {
-    pub fn update(&self, update: impl FnOnce(&TestConfig)) {
-        update(&self.config);
+    pub fn update(&mut self, update: impl FnOnce(&mut TestConfig)) {
+        update(&mut self.config);
         self.config.write_to_file(&self.path)
     }
 }
@@ -204,6 +204,7 @@ pub struct RelayPail {
     pub mds_port: u16,
     pub task: JoinHandle,
     pub shutdown: ShutdownTx,
+    pub config_file: Option<ConfigFile>,
     pub config: Arc<Config>,
 }
 
@@ -213,7 +214,7 @@ pub struct AgentPail {
     pub qcmp_port: u16,
     pub task: JoinHandle,
     pub shutdown: ShutdownTx,
-    pub config_file: ConfigFile,
+    pub config_file: Option<ConfigFile>,
     pub config: Arc<Config>,
 }
 
@@ -226,6 +227,8 @@ pub struct ProxyPail {
     pub task: JoinHandle,
     pub shutdown: ShutdownTx,
     pub config: Arc<Config>,
+    pub delta_applies:
+        Option<tokio::sync::mpsc::UnboundedReceiver<quilkin::net::xds::ResourceType>>,
 }
 
 abort_task!(ProxyPail);
@@ -313,14 +316,17 @@ impl Pail {
                 let mds_port = mds_listener.port();
 
                 let path = td.join(spc.name);
-                if let Some(cfg) = rpc.config {
-                    cfg.write_to_file(&path);
-                }
+                let mut tc = rpc.config.unwrap_or_default();
+                tc.id = spc.name.into();
+                tc.write_to_file(&path);
+
+                let config_path = path.clone();
 
                 let (shutdown, shutdown_rx) =
                     quilkin::make_shutdown_channel(quilkin::ShutdownKind::Testing);
 
                 let config = Arc::new(Config::default_non_agent());
+                config.id.store(Arc::new(spc.name.into()));
 
                 let task = tokio::spawn(
                     relay::Relay {
@@ -340,6 +346,10 @@ impl Pail {
                     mds_port,
                     task,
                     shutdown,
+                    config_file: Some(ConfigFile {
+                        path: config_path,
+                        config: tc,
+                    }),
                     config,
                 })
             }
@@ -359,8 +369,9 @@ impl Pail {
                     ));
                 }
 
-                let tc = TestConfig::new();
+                let mut tc = TestConfig::new();
                 tc.clusters.insert_default(endpoints);
+                tc.id = spc.name.into();
 
                 let path = td.join(spc.name);
                 tc.write_to_file(&path);
@@ -389,7 +400,8 @@ impl Pail {
 
                 let config_path = path.clone();
                 let config = Arc::new(Config::default_agent());
-                let aconfig = Arc::new(Config::default_agent());
+                config.id.store(Arc::new(spc.name.into()));
+                let acfg = config.clone();
 
                 let task = tokio::spawn(async move {
                     components::agent::Agent {
@@ -401,7 +413,7 @@ impl Pail {
                         address_selector: None,
                     }
                     .run(RunArgs {
-                        config: aconfig,
+                        config,
                         ready: Default::default(),
                         shutdown_rx,
                     })
@@ -412,11 +424,11 @@ impl Pail {
                     qcmp_port,
                     task,
                     shutdown,
-                    config_file: ConfigFile {
+                    config_file: Some(ConfigFile {
                         path: config_path,
                         config: tc,
-                    },
-                    config,
+                    }),
+                    config: acfg,
                 })
             }
             PailConfig::Proxy(ppc) => {
@@ -481,7 +493,10 @@ impl Pail {
                         .modify(|clusters| clusters.insert_default(endpoints));
                 }
 
+                config.id.store(Arc::new(spc.name.into()));
                 let pconfig = config.clone();
+
+                let (rttx, rtrx) = tokio::sync::mpsc::unbounded_channel();
 
                 let task = tokio::spawn(async move {
                     components::proxy::Proxy {
@@ -492,6 +507,7 @@ impl Pail {
                         socket,
                         qcmp,
                         phoenix,
+                        notifier: Some(rttx),
                     }
                     .run(
                         RunArgs {
@@ -513,6 +529,7 @@ impl Pail {
                     shutdown,
                     task,
                     config,
+                    delta_applies: Some(rtrx),
                 })
             }
         };
@@ -614,11 +631,20 @@ impl SandboxConfig {
 
 impl Sandbox {
     #[inline]
-    pub fn proxy_addr(&self) -> SocketAddr {
-        let Pail::Proxy(pp) = &self.pails["proxy"] else {
+    pub fn proxy(
+        &mut self,
+        name: &str,
+    ) -> (
+        SocketAddr,
+        tokio::sync::mpsc::UnboundedReceiver<quilkin::net::xds::ResourceType>,
+    ) {
+        let Some(Pail::Proxy(pp)) = self.pails.get_mut(name) else {
             unreachable!()
         };
-        SocketAddr::from((std::net::Ipv6Addr::LOCALHOST, pp.port))
+        (
+            SocketAddr::from((std::net::Ipv6Addr::LOCALHOST, pp.port)),
+            pp.delta_applies.take().unwrap(),
+        )
     }
 
     #[inline]
@@ -638,6 +664,17 @@ impl Sandbox {
             pp.packet_rx.take().unwrap(),
             SocketAddr::from((std::net::Ipv6Addr::LOCALHOST, pp.port)),
         )
+    }
+
+    #[inline]
+    pub fn config_file(&mut self, name: &str) -> ConfigFile {
+        let pail = self.pails.get_mut(name).unwrap();
+
+        match pail {
+            Pail::Relay(rp) => rp.config_file.take().unwrap(),
+            Pail::Agent(ap) => ap.config_file.take().unwrap(),
+            _ => unimplemented!("no config_file for this pail"),
+        }
     }
 
     #[inline]

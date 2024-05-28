@@ -18,8 +18,6 @@ use prost::Message;
 
 use crate::generated::envoy::config::listener::v3::Listener;
 
-pub type ResourceMap<V> = enum_map::EnumMap<ResourceType, V>;
-
 macro_rules! type_urls {
      ($($base_url:literal : {$($const_name:ident = $type_url:literal),+ $(,)?})+) => {
          $(

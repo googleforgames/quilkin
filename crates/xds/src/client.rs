@@ -235,6 +235,7 @@ impl MdsClient {
                 }
             };
 
+        let id = identifier.clone();
         let handle = tokio::task::spawn(
             async move {
                 tracing::trace!("starting relay client delta stream task");
@@ -245,6 +246,13 @@ impl MdsClient {
                             config.clone(),
                             IDLE_REQUEST_INTERVAL,
                         );
+
+                        let change_watcher = tokio::spawn({
+                            let mut this = control_plane.clone();
+                            this.is_relay = true; // This is a lie, but means we don't unneccessarily watch for filter changes on the agent, which doesn't perform them
+                            control_plane.config.on_changed(this)
+                        });
+
                         let mut stream = control_plane.delta_aggregated_resources(stream).await?;
                         is_healthy.store(true, Ordering::SeqCst);
 
@@ -253,6 +261,9 @@ impl MdsClient {
                             tracing::trace!("received delta discovery response");
                             ds.send_response(response).await?;
                         }
+
+                        change_watcher.abort();
+                        let _ = change_watcher.await;
                     }
 
                     is_healthy.store(false, Ordering::SeqCst);
@@ -266,7 +277,7 @@ impl MdsClient {
                         DeltaServerStream::connect(new_client, identifier.clone()).await?;
                 }
             }
-            .instrument(tracing::trace_span!("handle_delta_discovery_response")),
+            .instrument(tracing::trace_span!("handle_delta_discovery_response", id)),
         );
 
         Ok(DeltaSubscription { handle })
@@ -283,7 +294,8 @@ impl DeltaClientStream {
         mut client: AdsGrpcClient,
         identifier: String,
     ) -> Result<(Self, tonic::Streaming<DeltaDiscoveryResponse>)> {
-        let (req_tx, requests_rx) = tokio::sync::mpsc::channel(ResourceType::VARIANTS.len());
+        let (req_tx, requests_rx) =
+            tokio::sync::mpsc::channel(100 /*ResourceType::VARIANTS.len()*/);
 
         // Since we are doing exploratory requests to see if the remote endpoint supports delta streams, we unfortunately
         // need to actually send something before the full roundtrip occurs. This can be removed once delta discovery
@@ -394,6 +406,7 @@ pub struct DeltaSubscription {
 
 impl Drop for DeltaSubscription {
     fn drop(&mut self) {
+        tracing::debug!("dropped client delta stream");
         self.handle.abort();
     }
 }
@@ -405,6 +418,7 @@ impl AdsClient {
         self,
         config: Arc<C>,
         is_healthy: Arc<AtomicBool>,
+        notifier: Option<tokio::sync::mpsc::UnboundedSender<ResourceType>>,
         resources: impl IntoIterator<Item = (ResourceType, Vec<String>)>,
     ) -> Result<DeltaSubscription, Self> {
         let resource_subscriptions: Vec<_> = resources.into_iter().collect();
@@ -438,6 +452,7 @@ impl AdsClient {
             return Err(self);
         }
 
+        let id = identifier.clone();
         let handle = tokio::task::spawn(
             async move {
                 tracing::trace!("starting xDS delta stream task");
@@ -451,6 +466,7 @@ impl AdsClient {
                         config.clone(),
                         local.clone(),
                         None,
+                        notifier.clone(),
                     );
 
                     loop {
@@ -495,7 +511,7 @@ impl AdsClient {
                         .await?;
                 }
             }
-            .instrument(tracing::trace_span!("handle_delta_discovery_response")),
+            .instrument(tracing::trace_span!("xds_client_stream", id)),
         );
 
         Ok(DeltaSubscription { handle })
