@@ -406,8 +406,8 @@ impl AdsClient {
     /// management server does not support delta xDS we return the client as an error
     pub async fn delta_subscribe<C: crate::config::Configuration>(
         self,
-        config: Arc<Config>,
-        rt_config: crate::components::proxy::Ready,
+        config: Arc<C>,
+        is_healthy: Arc<AtomicBool>,
         notifier: Option<tokio::sync::mpsc::UnboundedSender<ResourceType>>,
         resources: impl IntoIterator<Item = (ResourceType, Vec<String>)>,
     ) -> Result<DeltaSubscription, Self> {

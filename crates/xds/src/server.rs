@@ -36,16 +36,26 @@ use crate::{
     ResourceType,
 };
 
-#[derive(Clone)]
-pub struct ControlPlane {
-    config: Arc<Config>,
+pub struct ControlPlane<C> {
+    pub config: Arc<C>,
     idle_request_interval: Duration,
     tx: tokio::sync::broadcast::Sender<ResourceType>,
-    is_relay: bool,
+    pub is_relay: bool,
 }
 
-impl ControlPlane {
-    pub fn from_arc(config: Arc<Config>, idle_request_interval: Duration) -> Self {
+impl<C> Clone for ControlPlane<C> {
+    fn clone(&self) -> Self {
+        Self {
+            config: self.config.clone(),
+            idle_request_interval: self.idle_request_interval,
+            tx: self.tx.clone(),
+            is_relay: self.is_relay,
+        }
+    }
+}
+
+impl<C: crate::config::Configuration> ControlPlane<C> {
+    pub fn from_arc(config: Arc<C>, idle_request_interval: Duration) -> Self {
         let (tx, _) = tokio::sync::broadcast::channel(10);
 
         Self {
@@ -56,64 +66,15 @@ impl ControlPlane {
         }
     }
 
-    fn subscribe_to_config_changes(&self) {
-        let id = self.config.id.load().to_string();
-
-        tokio::spawn({
-            let this = self.clone();
-            async move {
-                let mut cluster_watcher = this.config.clusters.watch();
-                tracing::debug!("waiting for changes");
-
-                match &this.config.datacenter {
-                    crate::config::DatacenterConfig::Agent {..} => {
-                        loop {
-                            match cluster_watcher.changed().await {
-                                Ok(()) => this.push_update(ResourceType::Cluster),
-                                Err(error) => tracing::error!(%error, "error watching changes"),
-                            }
-                        }
-                    }
-                    crate::config::DatacenterConfig::NonAgent { datacenters } => {
-                        let mut dc_watcher = datacenters.watch();
-                        loop {
-                            tokio::select! {
-                                result = cluster_watcher.changed() => {
-                                    match result {
-                                        Ok(()) => this.push_update(ResourceType::Cluster),
-                                        Err(error) => tracing::error!(%error, "error watching changes"),
-                                    }
-                                }
-                                result = dc_watcher.changed() => {
-                                    match result {
-                                        Ok(()) => this.push_update(ResourceType::Datacenter),
-                                        Err(error) => tracing::error!(%error, "error watching changes"),
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            .instrument(tracing::debug_span!("control_plane_watch_cluster", id, is_relay = self.is_relay))
-        });
-
-        if !self.is_relay {
-            self.config.filters.watch({
-                let this = self.clone();
-                move |_| {
-                    this.push_update(ResourceType::Listener);
-                }
-            });
-        }
-    }
-
     pub fn management_server(
         mut self,
         listener: TcpListener,
     ) -> io::Result<impl std::future::Future<Output = crate::Result<()>>> {
         self.is_relay = false;
-        self.subscribe_to_config_changes();
+        tokio::spawn({
+            let this = self.clone();
+            self.config.on_changed(this)
+        });
 
         let server = AggregatedDiscoveryServiceServer::new(self)
             .max_encoding_message_size(crate::config::max_grpc_message_size());
@@ -124,12 +85,15 @@ impl ControlPlane {
             .map_err(From::from))
     }
 
-    pub(crate) fn relay_server(
+    pub fn relay_server(
         mut self,
         listener: TcpListener,
     ) -> io::Result<impl std::future::Future<Output = crate::Result<()>>> {
         self.is_relay = true;
-        self.subscribe_to_config_changes();
+        tokio::spawn({
+            let this = self.clone();
+            self.config.on_changed(this)
+        });
 
         let server = AggregatedControlPlaneDiscoveryServiceServer::new(self)
             .max_encoding_message_size(crate::config::max_grpc_message_size());
@@ -141,8 +105,8 @@ impl ControlPlane {
     }
 
     #[inline]
-    fn push_update(&self, resource_type: ResourceType) {
-        tracing::debug!(%resource_type, id=%self.config.id.load(), is_relay = self.is_relay, "pushing update");
+    pub fn push_update(&self, resource_type: ResourceType) {
+        tracing::debug!(%resource_type, id=self.config.identifier(), is_relay = self.is_relay, "pushing update");
         if self.tx.send(resource_type).is_err() {
             tracing::debug!("no client connections currently subscribed");
         }
@@ -181,7 +145,7 @@ impl ControlPlane {
         let this = Self::clone(self);
         let mut rx = this.tx.subscribe();
 
-        let id = (*this.config.id.load()).clone();
+        let id = this.config.identifier();
         tracing::debug!(
             id,
             client = node_id,
@@ -190,7 +154,7 @@ impl ControlPlane {
             "subscribed to config updates"
         );
 
-        let control_plane_id = crate::net::xds::core::ControlPlane {
+        let control_plane_id = crate::core::ControlPlane {
             identifier: id.clone(),
         };
 
@@ -563,8 +527,7 @@ mod tests {
     use super::*;
     use crate::{
         core::Node,
-            listener::v3::{FilterChain, Listener},
-        },
+        listener::v3::{FilterChain, Listener},
         listener::{FilterChain, Listener},
         ResourceType,
     };

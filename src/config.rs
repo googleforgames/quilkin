@@ -129,12 +129,15 @@ impl xds::config::Configuration for Config {
         control_plane: xds::server::ControlPlane<Self>,
     ) -> impl std::future::Future<Output = ()> + Send + 'static {
         let mut cluster_watcher = self.clusters.watch();
-        self.filters.watch({
-            let this = control_plane.clone();
-            move |_| {
-                this.push_update(ResourceType::Listener);
-            }
-        });
+
+        if !control_plane.is_relay {
+            self.filters.watch({
+                let this = control_plane.clone();
+                move |_| {
+                    this.push_update(ResourceType::Listener);
+                }
+            });
+        }
 
         tracing::trace!("waiting for changes");
 

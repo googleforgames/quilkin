@@ -183,7 +183,7 @@ impl Proxy {
                             let _stream = client
                                 .delta_subscribe(
                                     config.clone(),
-                                    ready.clone(),
+                                    xds_is_healthy.clone(),
                                     tx,
                                     [
                                         (ResourceType::Cluster, Vec::new()),
