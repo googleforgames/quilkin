@@ -246,6 +246,12 @@ impl MdsClient {
                             config.clone(),
                             IDLE_REQUEST_INTERVAL,
                         );
+
+                        let change_watcher = tokio::spawn({
+                            let this = control_plane.clone();
+                            control_plane.config.on_changed(this)
+                        });
+
                         let mut stream = control_plane.delta_aggregated_resources(stream).await?;
                         is_healthy.store(true, Ordering::SeqCst);
 
@@ -254,6 +260,9 @@ impl MdsClient {
                             tracing::debug!("received delta discovery response");
                             ds.send_response(response).await?;
                         }
+
+                        change_watcher.abort();
+                        let _ = change_watcher.await;
                     }
 
                     is_healthy.store(false, Ordering::SeqCst);
@@ -413,7 +422,7 @@ impl AdsClient {
     ) -> Result<DeltaSubscription, Self> {
         let resource_subscriptions: Vec<_> = resources.into_iter().collect();
 
-        let identifier = dbg!(String::from(&*self.identifier));
+        let identifier = String::from(&*self.identifier);
 
         let (mut ds, stream) = match DeltaClientStream::connect(
             self.client.clone(),

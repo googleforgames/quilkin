@@ -278,7 +278,7 @@ trace_test!(filter_update, {
                 [Endpoint::with_metadata(
                     server_addr.into(),
                     quilkin::net::endpoint::Metadata {
-                        tokens: Some(dbg!(&token).clone()).into_iter().collect(),
+                        tokens: Some(token.clone()).into_iter().collect(),
                     },
                 )]
                 .into(),
@@ -286,7 +286,7 @@ trace_test!(filter_update, {
         });
 
         let mut updates = 0x0;
-        while (dbg!(updates) & 0x11) != 0x11 {
+        while (updates & 0x11) != 0x11 {
             let rt = sandbox.timeout(10000, proxy_delta_rx.recv()).await.unwrap();
 
             match rt {

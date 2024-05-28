@@ -238,11 +238,10 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                             tracker.client.remove(sub);
                         }
                     }
+                    tracing::debug!(kind = %tracker.kind, "sending delta for resource update");
                 } else {
                     tracing::debug!(kind = %tracker.kind, "sending delta update");
                 }
-
-                tracker.subbed = true;
 
                 let req = this
                     .config
@@ -347,6 +346,7 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                         tracing::trace!(%resource_type, "new delta message");
 
                         let tracker = &mut trackers[resource_type];
+                        tracker.subbed = true;
 
                         if let Some(error) = &client_request.error_detail {
                             metrics::nacks(id, resource_type.type_url()).inc();

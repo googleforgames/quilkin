@@ -521,10 +521,7 @@ impl Config {
                         )?
                     };
 
-                    //dbg!(&chain, self.id.load());
-
                     self.filters.store(Arc::new(chain));
-                    //dbg!(self.filters.load(), self.id.load());
                     local_versions.insert(listener.name, version);
                 }
             }
