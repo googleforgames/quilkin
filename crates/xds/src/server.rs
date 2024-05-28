@@ -17,7 +17,7 @@
 use std::{io, sync::Arc, time::Duration};
 
 use cached::Cached;
-use futures::{Stream, TryFutureExt, TryStreamExt};
+use futures::{Stream, TryFutureExt};
 use tokio_stream::StreamExt;
 use tracing_futures::Instrument;
 
@@ -129,135 +129,6 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
         if let Err(error) = watchers.sender.send(()) {
             tracing::warn!(%error, "pushing update failed");
         }
-    }
-
-    pub(crate) fn discovery_response(
-        &self,
-        id: &str,
-        resource_type: ResourceType,
-        names: &[String],
-    ) -> Result<DiscoveryResponse, tonic::Status> {
-        let resources = self
-            .config
-            .discovery_request(id, resource_type, names)
-            .map_err(|error| tonic::Status::internal(error.to_string()))?;
-        let watchers = &self.watchers[resource_type];
-
-        let response = DiscoveryResponse {
-            resources,
-            nonce: uuid::Uuid::new_v4().to_string(),
-            version_info: watchers
-                .version
-                .load(std::sync::atomic::Ordering::Relaxed)
-                .to_string(),
-            control_plane: Some(crate::core::ControlPlane {
-                identifier: self.config.identifier(),
-            }),
-            type_url: resource_type.type_url().to_owned(),
-            canary: false,
-        };
-
-        tracing::trace!(
-            id = &*response.version_info,
-            r#type = &*response.type_url,
-            nonce = &*response.nonce,
-            "discovery response"
-        );
-
-        Ok(response)
-    }
-
-    pub async fn stream_resources<S>(
-        &self,
-        mut streaming: S,
-    ) -> Result<impl Stream<Item = Result<DiscoveryResponse, tonic::Status>> + Send, tonic::Status>
-    where
-        S: Stream<Item = Result<DiscoveryRequest, tonic::Status>>
-            + Send
-            + std::marker::Unpin
-            + 'static,
-    {
-        tracing::trace!("starting stream");
-        let message = streaming.next().await.ok_or_else(|| {
-            tracing::error!("No message found");
-            tonic::Status::invalid_argument("No message found")
-        })??;
-
-        if message.node.is_none() {
-            tracing::error!("Node identifier was not found");
-            return Err(tonic::Status::invalid_argument("Node identifier required"));
-        }
-
-        let node = message.node.clone().unwrap();
-        let resource_type: ResourceType = message.type_url.parse()?;
-        let mut rx = self.watchers[resource_type].receiver.clone();
-        let mut pending_acks = cached::TimedSizedCache::with_size_and_lifespan(50, 1);
-        let this = Self::clone(self);
-        let id = node.id.clone();
-
-        tracing::debug!(id = %node.id, %resource_type, "initial request");
-        metrics::discovery_requests(&id, resource_type.type_url()).inc();
-        let response = this.discovery_response(&id, resource_type, &message.resource_names)?;
-        pending_acks.cache_set(response.nonce.clone(), ());
-
-        Ok(Box::pin(async_stream::try_stream! {
-            yield response;
-
-            loop {
-                tokio::select! {
-                    _ = rx.changed() => {
-                        tracing::trace!("sending new discovery response");
-                        yield this.discovery_response(&id, resource_type, &message.resource_names).map(|response| {
-                            pending_acks.cache_set(response.nonce.clone(), ());
-                            response
-                        })?;
-                    }
-                    new_message = streaming.next() => {
-                        let new_message = match new_message.transpose() {
-                            Ok(Some(value)) => value,
-                            Ok(None) => break,
-                            Err(error) => {
-                                tracing::error!(%error, "error receiving message");
-                                continue;
-                            }
-                        };
-
-                        tracing::trace!("new message");
-                        let id = new_message.node.as_ref().map(|node| &*node.id).unwrap_or(&*id);
-                        let resource_type = match new_message.type_url.parse::<ResourceType>() {
-                            Ok(value) => value,
-                            Err(error) => {
-                                tracing::error!(%error, url = %new_message.type_url, "unknown resource type");
-                                continue;
-                            }
-                        };
-
-                        metrics::discovery_requests(id, resource_type.type_url()).inc();
-
-                        if let Some(error) = &new_message.error_detail {
-                            metrics::nacks(id, resource_type.type_url()).inc();
-                            tracing::error!(nonce = %new_message.response_nonce, ?error, "NACK");
-                            // Currently just resend previous discovery response.
-                        } else if uuid::Uuid::parse_str(&new_message.response_nonce).is_ok() {
-                            if pending_acks.cache_get(&new_message.response_nonce).is_some() {
-                                tracing::debug!(nonce = %new_message.response_nonce, "ACK");
-                                continue
-                            } else {
-                                tracing::trace!(nonce = %new_message.response_nonce, "Unknown nonce: could not be found in cache");
-                                continue
-                            }
-                        }
-
-                        yield this.discovery_response(id, resource_type, &message.resource_names).map(|response| {
-                            pending_acks.cache_set(response.nonce.clone(), ());
-                            response
-                        }).unwrap();
-                    }
-                }
-            }
-
-            tracing::info!("terminating stream");
-        }.instrument(tracing::info_span!("xds_stream", %node.id, %resource_type))))
     }
 
     pub async fn delta_aggregated_resources<S>(
@@ -522,13 +393,11 @@ impl<C: crate::config::Configuration> AggregatedDiscoveryService for ControlPlan
     #[tracing::instrument(skip_all)]
     async fn stream_aggregated_resources(
         &self,
-        request: tonic::Request<tonic::Streaming<DiscoveryRequest>>,
+        _request: tonic::Request<tonic::Streaming<DiscoveryRequest>>,
     ) -> Result<tonic::Response<Self::StreamAggregatedResourcesStream>, tonic::Status> {
-        Ok(tonic::Response::new(Box::pin(
-            self.stream_resources(request.into_inner())
-                .in_current_span()
-                .await?,
-        )))
+        Err(tonic::Status::unimplemented(
+            "only delta streams are supported",
+        ))
     }
 
     #[tracing::instrument(skip_all)]
@@ -554,85 +423,11 @@ impl<C: crate::config::Configuration> AggregatedControlPlaneDiscoveryService for
     #[tracing::instrument(skip_all)]
     async fn stream_aggregated_resources(
         &self,
-        responses: tonic::Request<tonic::Streaming<DiscoveryResponse>>,
+        _responses: tonic::Request<tonic::Streaming<DiscoveryResponse>>,
     ) -> Result<tonic::Response<Self::StreamAggregatedResourcesStream>, tonic::Status> {
-        let mut remote_addr = responses
-            .remote_addr()
-            .ok_or_else(|| tonic::Status::invalid_argument("no remote address available"))?;
-        remote_addr.set_ip(remote_addr.ip().to_canonical());
-        let mut responses = responses.into_inner();
-        let Some(identifier) = responses
-            .next()
-            .await
-            .ok_or_else(|| tonic::Status::cancelled("received empty first response"))??
-            .control_plane
-            .map(|cp| cp.identifier)
-        else {
-            return Err(tonic::Status::invalid_argument(
-                "DiscoveryResponse.control_plane.identifier is required in the first message",
-            ));
-        };
-
-        tracing::info!(%identifier, "new control plane discovery stream");
-        let config = self.config.clone();
-        let idle_request_interval = self.idle_request_interval;
-        let stream = super::client::AdsStream::connect(
-            Arc::from(&*identifier),
-            move |(mut requests, _rx), _subscribed_resources| async move {
-                tracing::info!(%identifier, "sending initial discovery request");
-                crate::client::MdsStream::discovery_request_without_cache(
-                    &identifier,
-                    &mut requests,
-                    crate::ResourceType::Cluster,
-                    &[],
-                )
-                .map_err(|error| tonic::Status::internal(error.to_string()))?;
-
-                crate::client::MdsStream::discovery_request_without_cache(
-                    &identifier,
-                    &mut requests,
-                    crate::ResourceType::Datacenter,
-                    &[],
-                )
-                .map_err(|error| tonic::Status::internal(error.to_string()))?;
-
-                let mut response_handler = super::client::handle_discovery_responses(
-                    identifier.clone(),
-                    responses,
-                    move |mut resource| {
-                        resource.add_host_to_datacenter(remote_addr);
-                        config.apply(resource)
-                    },
-                );
-
-                loop {
-                    let next_response =
-                        tokio::time::timeout(idle_request_interval, response_handler.next());
-
-                    if let Ok(Some(ack)) = next_response.await {
-                        tracing::trace!("sending ack request");
-                        requests.send(ack?)?;
-                    } else {
-                        tracing::trace!("exceeded idle interval, sending request");
-                        crate::client::MdsStream::discovery_request_without_cache(
-                            &identifier,
-                            &mut requests,
-                            crate::ResourceType::Cluster,
-                            &[],
-                        )
-                        .map_err(|error| tonic::Status::internal(error.to_string()))?;
-                    }
-                }
-            },
-        );
-
-        Ok(tonic::Response::new(Box::pin(async_stream::stream! {
-            for await request in tokio_stream::wrappers::BroadcastStream::new(stream.requests().subscribe())
-                .map_err(|error| tonic::Status::internal(error.to_string()))
-            {
-                yield request;
-            }
-        })))
+        Err(tonic::Status::unimplemented(
+            "only delta streams are supported",
+        ))
     }
 
     #[tracing::instrument(skip_all)]
@@ -737,7 +532,6 @@ mod tests {
         core::Node,
         //     listener::v3::{FilterChain, Listener},
         // },
-        discovery::DiscoveryResponse,
         listener::{FilterChain, Listener},
         ResourceType,
     };
@@ -749,15 +543,13 @@ mod tests {
         const RESOURCE: ResourceType = ResourceType::Cluster;
         const LISTENER_TYPE: ResourceType = ResourceType::Listener;
 
-        let mut response = DiscoveryResponse {
-            version_info: String::new(),
+        let mut response = DeltaDiscoveryResponse {
             resources: vec![],
             type_url: RESOURCE.type_url().into(),
             ..<_>::default()
         };
 
-        let mut listener_response = DiscoveryResponse {
-            version_info: String::new(),
+        let mut listener_response = DeltaDiscoveryResponse {
             resources: vec![prost_types::Any {
                 type_url: LISTENER_TYPE.type_url().into(),
                 value: crate::codec::prost::encode(&Listener {
