@@ -258,7 +258,7 @@ impl MdsClient {
 
                         while let Some(result) = stream.next().await {
                             let response = result?;
-                            tracing::debug!("received delta discovery response");
+                            tracing::trace!("received delta discovery response");
                             ds.send_response(response).await?;
                         }
 
@@ -277,7 +277,7 @@ impl MdsClient {
                         DeltaServerStream::connect(new_client, identifier.clone()).await?;
                 }
             }
-            .instrument(tracing::debug_span!("handle_delta_discovery_response", id)),
+            .instrument(tracing::trace_span!("handle_delta_discovery_response", id)),
         );
 
         Ok(DeltaSubscription { handle })
@@ -511,7 +511,7 @@ impl AdsClient {
                         .await?;
                 }
             }
-            .instrument(tracing::debug_span!("xds_client_stream", id)),
+            .instrument(tracing::trace_span!("xds_client_stream", id)),
         );
 
         Ok(DeltaSubscription { handle })
