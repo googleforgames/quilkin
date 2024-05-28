@@ -178,7 +178,7 @@
 <ul>
 <li>A *nix terminal</li>
 <li>A binary release of Quilkin from the <a href="https://github.com/googleforgames/quilkin/releases">Github releases page</a> or by running <code>cargo install quilkin</code></li>
-<li><a href="https://nmap.org/ncat/guide/">ncat</a></li>
+<li><a href="https://www.google.com/search?q=ncat">ncat</a></li>
 <li><a href="http://netcat.sourceforge.net/">netcat</a></li>
 </ul>
 <h2 id="1-start-an-udp-echo-service"><a class="header" href="#1-start-an-udp-echo-service">1. Start an udp echo service</a></h2>
@@ -203,7 +203,7 @@ s":"0.0.0.0:8000"},"target":"quilkin::admin","filename":"src/admin.rs"}
 :"7e9fc464-6ccc-41fe-afc4-6c97089de9b8"},"target":"quilkin::proxy","filename":"src/proxy.rs"}
 {"timestamp":"2023-01-19T10:16:23.401192Z","level":"INFO","fields":{"message":"Quilkin is ready"},"target":"qui
 </code></pre>
-<h2 id="3-send-a-packet"><a class="header" href="#3-send-a-packet">3. Send a packet!</a></h2>
+<h2 id="3-send-a-packet"><a class="header" href="#3-send-a-packet">3. Send a packet</a></h2>
 <p>In (yet 😃) another shell, let's use netcat to send an udp packet.</p>
 <p>Run the following to connect netcat to Quilkin's receiving port of 7000 via UDP (<code>-u</code>):</p>
 <pre><code class="language-shell">nc -u 127.0.0.1 7777

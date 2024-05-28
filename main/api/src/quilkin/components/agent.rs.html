@@ -92,18 +92,6 @@
 <a href="#90" id="90">90</a>
 <a href="#91" id="91">91</a>
 <a href="#92" id="92">92</a>
-<a href="#93" id="93">93</a>
-<a href="#94" id="94">94</a>
-<a href="#95" id="95">95</a>
-<a href="#96" id="96">96</a>
-<a href="#97" id="97">97</a>
-<a href="#98" id="98">98</a>
-<a href="#99" id="99">99</a>
-<a href="#100" id="100">100</a>
-<a href="#101" id="101">101</a>
-<a href="#102" id="102">102</a>
-<a href="#103" id="103">103</a>
-<a href="#104" id="104">104</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::RunArgs;
 <span class="kw">use </span><span class="kw">crate</span>::config::{IcaoCode, Providers};
 <span class="kw">pub use </span><span class="kw">crate</span>::net::{endpoint::Locality, DualStackLocalSocket};
@@ -181,21 +169,9 @@
                 result = task =&gt; {
                     <span class="kw">let </span>client = result<span class="question-mark">?</span>;
 
-                    <span class="comment">// The inner fields are unused.
-                    </span><span class="attr">#[allow(dead_code)]
-                    </span><span class="kw">enum </span>XdsTask {
-                        Delta(<span class="kw">crate</span>::net::xds::client::DeltaSubscription),
-                        Aggregated(<span class="kw">crate</span>::net::xds::client::MdsStream),
-                    }
-
                     <span class="comment">// Attempt to connect to a delta stream if the relay has one
                     // available, otherwise fallback to the regular aggregated stream
-                    </span><span class="prelude-val">Some</span>(<span class="kw">match </span>client.delta_stream(config.clone(), ready.relay_is_healthy.clone()).<span class="kw">await </span>{
-                        <span class="prelude-val">Ok</span>(ds) =&gt; XdsTask::Delta(ds),
-                        <span class="prelude-val">Err</span>(client) =&gt; {
-                            XdsTask::Aggregated(client.mds_client_stream(config, ready.relay_is_healthy.clone()))
-                        }
-                    })
+                    </span><span class="prelude-val">Some</span>(client.delta_stream(config.clone(), ready.relay_is_healthy.clone()).<span class="kw">await</span>.map_err(|<span class="kw">_</span>| <span class="macro">eyre::eyre!</span>(<span class="string">"failed to acquire delta stream"</span>))<span class="question-mark">?</span>)
                 }
                 <span class="kw">_ </span>= shutdown_rx.changed() =&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(()),
             }
