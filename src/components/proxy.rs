@@ -155,7 +155,7 @@ impl Proxy {
                     let config = config.clone();
                     let mut shutdown_rx = shutdown_rx.clone();
                     let management_servers = self.management_servers.clone();
-                    let tx = self.notifier.as_ref().map(|n| n.clone());
+                    let tx = self.notifier.clone();
 
                     move || {
                         let runtime = tokio::runtime::Builder::new_multi_thread()
