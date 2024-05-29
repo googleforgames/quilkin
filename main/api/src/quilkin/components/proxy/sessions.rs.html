@@ -889,7 +889,7 @@
             .ok_or_else(|| <span class="macro">eyre::eyre!</span>(<span class="string">"couldn't get socket address from raw socket"</span>))
             .map_err(<span class="kw">super</span>::PipelineError::Session)<span class="question-mark">?
             </span>.port();
-        <span class="kw">let </span>(tx, <span class="kw-2">mut </span>downstream_receiver) = mpsc::channel::&lt;UpstreamChannelData&gt;(<span class="number">5</span>);
+        <span class="kw">let </span>(tx, <span class="kw-2">mut </span>downstream_receiver) = mpsc::channel::&lt;UpstreamChannelData&gt;(<span class="number">15</span>);
 
         <span class="kw">let </span>pool = <span class="self">self</span>.clone();
 
