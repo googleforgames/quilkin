@@ -14,7 +14,6 @@ use tokio::sync::mpsc;
 /// Packet received from local port
 #[derive(Debug)]
 struct DownstreamPacket {
-    asn_info: Option<crate::net::maxmind_db::IpNetEntry>,
     contents: PoolBuffer,
     received_at: UtcTimestamp,
     source: SocketAddr,
@@ -130,17 +129,13 @@ impl DownstreamReceiveWorkerConfig {
                         source.set_ip(source.ip().to_canonical());
                         let packet = DownstreamPacket {
                             received_at: UtcTimestamp::now(),
-                            asn_info: crate::net::maxmind_db::MaxmindDb::lookup(source.ip()),
                             contents,
                             source,
                         };
 
                         if let Some(last_received_at) = last_received_at {
-                            crate::metrics::packet_jitter(
-                                crate::metrics::READ,
-                                packet.asn_info.as_ref(),
-                            )
-                            .set((packet.received_at - last_received_at).nanos());
+                            crate::metrics::packet_jitter(crate::metrics::READ, None)
+                                .set((packet.received_at - last_received_at).nanos());
                         }
                         last_received_at = Some(packet.received_at);
 
@@ -184,19 +179,13 @@ impl DownstreamReceiveWorkerConfig {
         );
 
         let timer = crate::metrics::processing_time(crate::metrics::READ).start_timer();
-        let asn_info = packet.asn_info.clone();
-        let asn_info = asn_info.as_ref();
         match Self::process_downstream_received_packet(packet, config, sessions).await {
             Ok(()) => {}
             Err(error) => {
                 let discriminant = PipelineErrorDiscriminants::from(&error).to_string();
-                crate::metrics::errors_total(crate::metrics::READ, &discriminant, asn_info).inc();
-                crate::metrics::packets_dropped_total(
-                    crate::metrics::READ,
-                    &discriminant,
-                    asn_info,
-                )
-                .inc();
+                crate::metrics::errors_total(crate::metrics::READ, &discriminant, None).inc();
+                crate::metrics::packets_dropped_total(crate::metrics::READ, &discriminant, None)
+                    .inc();
                 let _ = error_sender.send(error);
             }
         }
@@ -241,9 +230,7 @@ impl DownstreamReceiveWorkerConfig {
                 dest: epa.to_socket_addr().await?,
             };
 
-            sessions
-                .send(session_key, packet.asn_info.clone(), contents.clone())
-                .await?;
+            sessions.send(session_key, contents.clone()).await?;
         }
 
         Ok(())
