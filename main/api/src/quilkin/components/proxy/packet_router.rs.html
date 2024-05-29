@@ -298,19 +298,6 @@
 <a href="#296" id="296">296</a>
 <a href="#297" id="297">297</a>
 <a href="#298" id="298">298</a>
-<a href="#299" id="299">299</a>
-<a href="#300" id="300">300</a>
-<a href="#301" id="301">301</a>
-<a href="#302" id="302">302</a>
-<a href="#303" id="303">303</a>
-<a href="#304" id="304">304</a>
-<a href="#305" id="305">305</a>
-<a href="#306" id="306">306</a>
-<a href="#307" id="307">307</a>
-<a href="#308" id="308">308</a>
-<a href="#309" id="309">309</a>
-<a href="#310" id="310">310</a>
-<a href="#311" id="311">311</a>
 </pre></div><pre class="rust"><code><span class="kw">use super</span>::{
     sessions::{DownstreamReceiver, SessionKey},
     PipelineError, PipelineErrorDiscriminants, SessionPool,
@@ -327,7 +314,6 @@
 <span class="doccomment">/// Packet received from local port
 </span><span class="attr">#[derive(Debug)]
 </span><span class="kw">struct </span>DownstreamPacket {
-    asn_info: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::net::maxmind_db::IpNetEntry&gt;,
     contents: PoolBuffer,
     received_at: UtcTimestamp,
     source: SocketAddr,
@@ -443,17 +429,13 @@
                         source.set_ip(source.ip().to_canonical());
                         <span class="kw">let </span>packet = DownstreamPacket {
                             received_at: UtcTimestamp::now(),
-                            asn_info: <span class="kw">crate</span>::net::maxmind_db::MaxmindDb::lookup(source.ip()),
                             contents,
                             source,
                         };
 
                         <span class="kw">if let </span><span class="prelude-val">Some</span>(last_received_at) = last_received_at {
-                            <span class="kw">crate</span>::metrics::packet_jitter(
-                                <span class="kw">crate</span>::metrics::READ,
-                                packet.asn_info.as_ref(),
-                            )
-                            .set((packet.received_at - last_received_at).nanos());
+                            <span class="kw">crate</span>::metrics::packet_jitter(<span class="kw">crate</span>::metrics::READ, <span class="prelude-val">None</span>)
+                                .set((packet.received_at - last_received_at).nanos());
                         }
                         last_received_at = <span class="prelude-val">Some</span>(packet.received_at);
 
@@ -497,19 +479,13 @@
         </span>);
 
         <span class="kw">let </span>timer = <span class="kw">crate</span>::metrics::processing_time(<span class="kw">crate</span>::metrics::READ).start_timer();
-        <span class="kw">let </span>asn_info = packet.asn_info.clone();
-        <span class="kw">let </span>asn_info = asn_info.as_ref();
         <span class="kw">match </span><span class="self">Self</span>::process_downstream_received_packet(packet, config, sessions).<span class="kw">await </span>{
             <span class="prelude-val">Ok</span>(()) =&gt; {}
             <span class="prelude-val">Err</span>(error) =&gt; {
                 <span class="kw">let </span>discriminant = PipelineErrorDiscriminants::from(<span class="kw-2">&amp;</span>error).to_string();
-                <span class="kw">crate</span>::metrics::errors_total(<span class="kw">crate</span>::metrics::READ, <span class="kw-2">&amp;</span>discriminant, asn_info).inc();
-                <span class="kw">crate</span>::metrics::packets_dropped_total(
-                    <span class="kw">crate</span>::metrics::READ,
-                    <span class="kw-2">&amp;</span>discriminant,
-                    asn_info,
-                )
-                .inc();
+                <span class="kw">crate</span>::metrics::errors_total(<span class="kw">crate</span>::metrics::READ, <span class="kw-2">&amp;</span>discriminant, <span class="prelude-val">None</span>).inc();
+                <span class="kw">crate</span>::metrics::packets_dropped_total(<span class="kw">crate</span>::metrics::READ, <span class="kw-2">&amp;</span>discriminant, <span class="prelude-val">None</span>)
+                    .inc();
                 <span class="kw">let _ </span>= error_sender.send(error);
             }
         }
@@ -554,9 +530,7 @@
                 dest: epa.to_socket_addr().<span class="kw">await</span><span class="question-mark">?</span>,
             };
 
-            sessions
-                .send(session_key, packet.asn_info.clone(), contents.clone())
-                .<span class="kw">await</span><span class="question-mark">?</span>;
+            sessions.send(session_key, contents.clone()).<span class="kw">await</span><span class="question-mark">?</span>;
         }
 
         <span class="prelude-val">Ok</span>(())

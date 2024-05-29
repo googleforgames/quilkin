@@ -778,9 +778,6 @@
 <a href="#776" id="776">776</a>
 <a href="#777" id="777">777</a>
 <a href="#778" id="778">778</a>
-<a href="#779" id="779">779</a>
-<a href="#780" id="780">780</a>
-<a href="#781" id="781">781</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -883,8 +880,7 @@
     </span><span class="kw">async fn </span>create_new_session_from_new_socket&lt;<span class="lifetime">'pool</span>&gt;(
         <span class="self">self</span>: <span class="kw-2">&amp;</span><span class="lifetime">'pool </span>Arc&lt;<span class="self">Self</span>&gt;,
         key: SessionKey,
-        asn_info: <span class="prelude-ty">Option</span>&lt;IpNetEntry&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;UpstreamSender, <span class="kw">super</span>::PipelineError&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="prelude-ty">Option</span>&lt;IpNetEntry&gt;, UpstreamSender), <span class="kw">super</span>::PipelineError&gt; {
         <span class="macro">tracing::trace!</span>(source=%key.source, dest=%key.dest, <span class="string">"creating new socket for session"</span>);
         <span class="kw">let </span>raw_socket = <span class="kw">crate</span>::net::raw_socket_with_reuse(<span class="number">0</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>port = raw_socket
@@ -992,7 +988,7 @@
         initialised.<span class="kw">await</span>.map_err(|error| <span class="macro">eyre::eyre!</span>(error))<span class="question-mark">??</span>;
 
         <span class="self">self</span>.ports_to_sockets.write().<span class="kw">await</span>.insert(port, tx.clone());
-        <span class="self">self</span>.create_session_from_existing_socket(key, tx, port, asn_info)
+        <span class="self">self</span>.create_session_from_existing_socket(key, tx, port)
             .<span class="kw">await
     </span>}
 
@@ -1051,13 +1047,12 @@
     </span><span class="kw">pub async fn </span>get&lt;<span class="lifetime">'pool</span>&gt;(
         <span class="self">self</span>: <span class="kw-2">&amp;</span><span class="lifetime">'pool </span>Arc&lt;<span class="self">Self</span>&gt;,
         key @ SessionKey { dest, .. }: SessionKey,
-        asn_info: <span class="prelude-ty">Option</span>&lt;IpNetEntry&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;UpstreamSender, <span class="kw">super</span>::PipelineError&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="prelude-ty">Option</span>&lt;IpNetEntry&gt;, UpstreamSender), <span class="kw">super</span>::PipelineError&gt; {
         <span class="macro">tracing::trace!</span>(source=%key.source, dest=%key.dest, <span class="string">"SessionPool::get"</span>);
         <span class="comment">// If we already have a session for the key pairing, return that session.
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(entry) = <span class="self">self</span>.session_map.get(<span class="kw-2">&amp;</span>key) {
             <span class="macro">tracing::trace!</span>(<span class="string">"returning existing session"</span>);
-            <span class="kw">return </span><span class="prelude-val">Ok</span>(entry.upstream_sender.clone());
+            <span class="kw">return </span><span class="prelude-val">Ok</span>((entry.asn_info.clone(), entry.upstream_sender.clone()));
         }
 
         <span class="comment">// If there's a socket_set available, it means there are sockets
@@ -1068,7 +1063,7 @@
             <span class="kw">let </span>no_sockets = <span class="self">self</span>.ports_to_sockets.read().<span class="kw">await</span>.is_empty();
             <span class="kw">return if </span>no_sockets {
                 <span class="comment">// Initial case where we have no allocated or reserved sockets.
-                </span><span class="self">self</span>.create_new_session_from_new_socket(key, asn_info).<span class="kw">await
+                </span><span class="self">self</span>.create_new_session_from_new_socket(key).<span class="kw">await
             </span>} <span class="kw">else </span>{
                 <span class="comment">// Where we have no allocated sockets for a destination, assign
                 // the first available one.
@@ -1084,7 +1079,7 @@
                     })
                     .map_err(<span class="kw">super</span>::PipelineError::Session)<span class="question-mark">?</span>;
 
-                <span class="self">self</span>.create_session_from_existing_socket(key, sender, port, asn_info)
+                <span class="self">self</span>.create_session_from_existing_socket(key, sender, port)
                     .<span class="kw">await
             </span>};
         };
@@ -1109,11 +1104,11 @@
                 })
                 .map_err(<span class="kw">super</span>::PipelineError::Session)<span class="question-mark">?
                 </span>.insert(port);
-            <span class="self">self</span>.create_session_from_existing_socket(key, socket, port, asn_info)
+            <span class="self">self</span>.create_session_from_existing_socket(key, socket, port)
                 .<span class="kw">await
         </span>} <span class="kw">else </span>{
             drop(storage);
-            <span class="self">self</span>.create_new_session_from_new_socket(key, asn_info).<span class="kw">await
+            <span class="self">self</span>.create_new_session_from_new_socket(key).<span class="kw">await
         </span>}
     }
 
@@ -1123,8 +1118,7 @@
         key: SessionKey,
         upstream_sender: UpstreamSender,
         socket_port: u16,
-        asn_info: <span class="prelude-ty">Option</span>&lt;IpNetEntry&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;UpstreamSender, <span class="kw">super</span>::PipelineError&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="prelude-ty">Option</span>&lt;IpNetEntry&gt;, UpstreamSender), <span class="kw">super</span>::PipelineError&gt; {
         <span class="macro">tracing::trace!</span>(source=%key.source, dest=%key.dest, <span class="string">"reusing socket for session"</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>storage = <span class="self">self</span>.storage.write().<span class="kw">await</span>;
         storage
@@ -1141,6 +1135,8 @@
             .destination_to_sources
             .insert((key.dest, socket_port), key.source);
 
+        <span class="kw">let </span>asn_info = <span class="kw">crate</span>::net::maxmind_db::MaxmindDb::lookup(key.source.ip());
+
         <span class="kw">if let </span><span class="prelude-val">Some</span>(asn_info) = <span class="kw-2">&amp;</span>asn_info {
             storage
                 .sources_to_asn_info
@@ -1153,12 +1149,12 @@
             upstream_sender.clone(),
             socket_port,
             <span class="self">self</span>.clone(),
-            asn_info,
+            asn_info.clone(),
         )<span class="question-mark">?</span>;
         <span class="macro">tracing::trace!</span>(<span class="string">"inserting session into map"</span>);
         <span class="self">self</span>.session_map.insert(key, session);
         <span class="macro">tracing::trace!</span>(<span class="string">"session inserted"</span>);
-        <span class="prelude-val">Ok</span>(upstream_sender)
+        <span class="prelude-val">Ok</span>((asn_info, upstream_sender))
     }
 
     <span class="doccomment">/// process_recv_packet processes a packet that is received by this session.
@@ -1196,14 +1192,14 @@
     </span><span class="kw">pub async fn </span>send(
         <span class="self">self</span>: <span class="kw-2">&amp;</span>Arc&lt;<span class="self">Self</span>&gt;,
         key: SessionKey,
-        asn_info: <span class="prelude-ty">Option</span>&lt;IpNetEntry&gt;,
         packet: FrozenPoolBuffer,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw">super</span>::PipelineError&gt; {
         <span class="kw">use </span>tokio::sync::mpsc::error::TrySendError;
 
-        <span class="self">self</span>.get(key, asn_info.clone())
-            .<span class="kw">await</span><span class="question-mark">?
-            </span>.try_send((packet, asn_info, key.dest))
+        <span class="kw">let </span>(asn_info, sender) = <span class="self">self</span>.get(key).<span class="kw">await</span><span class="question-mark">?</span>;
+
+        sender
+            .try_send((packet, asn_info, key.dest))
             .map_err(|error| <span class="kw">match </span>error {
                 TrySendError::Closed(<span class="kw">_</span>) =&gt; <span class="kw">super</span>::PipelineError::ChannelClosed,
                 TrySendError::Full(<span class="kw">_</span>) =&gt; <span class="kw">super</span>::PipelineError::ChannelFull,
@@ -1405,7 +1401,7 @@
         )
             .into();
 
-        <span class="kw">let </span>_session = pool.get(key, <span class="prelude-val">None</span>).<span class="kw">await</span>.unwrap();
+        <span class="kw">let </span>_session = pool.get(key).<span class="kw">await</span>.unwrap();
 
         <span class="macro">assert!</span>(pool.drop_session(key).<span class="kw">await</span>);
 
@@ -1426,8 +1422,8 @@
         )
             .into();
 
-        <span class="kw">let </span>_session1 = pool.get(key1, <span class="prelude-val">None</span>).<span class="kw">await</span>.unwrap();
-        <span class="kw">let </span>_session2 = pool.get(key2, <span class="prelude-val">None</span>).<span class="kw">await</span>.unwrap();
+        <span class="kw">let </span>_session1 = pool.get(key1).<span class="kw">await</span>.unwrap();
+        <span class="kw">let </span>_session2 = pool.get(key2).<span class="kw">await</span>.unwrap();
 
         <span class="macro">assert!</span>(pool.drop_session(key1).<span class="kw">await</span>);
         <span class="macro">assert!</span>(!pool.has_no_allocated_sockets().<span class="kw">await</span>);
@@ -1451,8 +1447,8 @@
         )
             .into();
 
-        <span class="kw">let </span>_socket1 = pool.get(key1, <span class="prelude-val">None</span>).<span class="kw">await</span>.unwrap();
-        <span class="kw">let </span>_socket2 = pool.get(key2, <span class="prelude-val">None</span>).<span class="kw">await</span>.unwrap();
+        <span class="kw">let </span>_socket1 = pool.get(key1).<span class="kw">await</span>.unwrap();
+        <span class="kw">let </span>_socket2 = pool.get(key2).<span class="kw">await</span>.unwrap();
         <span class="macro">assert_ne!</span>(
             pool.session_map.get(<span class="kw-2">&amp;</span>key1).unwrap().socket_port,
             pool.session_map.get(<span class="kw-2">&amp;</span>key2).unwrap().socket_port
@@ -1476,8 +1472,8 @@
         )
             .into();
 
-        <span class="kw">let </span>_socket1 = pool.get(key1, <span class="prelude-val">None</span>).<span class="kw">await</span>.unwrap();
-        <span class="kw">let </span>_socket2 = pool.get(key2, <span class="prelude-val">None</span>).<span class="kw">await</span>.unwrap();
+        <span class="kw">let </span>_socket1 = pool.get(key1).<span class="kw">await</span>.unwrap();
+        <span class="kw">let </span>_socket2 = pool.get(key2).<span class="kw">await</span>.unwrap();
 
         <span class="macro">assert_eq!</span>(
             pool.session_map.get(<span class="kw-2">&amp;</span>key1).unwrap().socket_port,
@@ -1499,13 +1495,13 @@
         )
             .into();
 
-        <span class="kw">let </span>socket1 = pool.get(key1, <span class="prelude-val">None</span>).<span class="kw">await</span>.unwrap();
+        <span class="kw">let </span>socket1 = pool.get(key1).<span class="kw">await</span>.unwrap();
 
         <span class="kw">let </span>task = tokio::spawn(<span class="kw">async move </span>{
             <span class="kw">let _ </span>= socket1;
         });
 
-        <span class="kw">let </span>_socket2 = pool.get(key2, <span class="prelude-val">None</span>).<span class="kw">await</span>.unwrap();
+        <span class="kw">let </span>_socket2 = pool.get(key2).<span class="kw">await</span>.unwrap();
 
         task.<span class="kw">await</span>.unwrap();
     }
@@ -1524,13 +1520,13 @@
         )
             .into();
 
-        <span class="kw">let </span>socket1 = pool.get(key1, <span class="prelude-val">None</span>).<span class="kw">await</span>.unwrap();
+        <span class="kw">let </span>socket1 = pool.get(key1).<span class="kw">await</span>.unwrap();
 
         <span class="kw">let </span>task = tokio::spawn(<span class="kw">async move </span>{
             <span class="kw">let _ </span>= socket1;
         });
 
-        <span class="kw">let </span>_socket2 = pool.get(key2, <span class="prelude-val">None</span>).<span class="kw">await</span>.unwrap();
+        <span class="kw">let </span>_socket2 = pool.get(key2).<span class="kw">await</span>.unwrap();
 
         task.<span class="kw">await</span>.unwrap();
     }
@@ -1550,9 +1546,7 @@
         <span class="kw">let </span>key: SessionKey = (source, dest).into();
         <span class="kw">let </span>msg = <span class="string">b"helloworld"</span>;
 
-        pool.send(key, <span class="prelude-val">None</span>, alloc_buffer(msg).freeze())
-            .<span class="kw">await
-            </span>.unwrap();
+        pool.send(key, alloc_buffer(msg).freeze()).<span class="kw">await</span>.unwrap();
 
         <span class="kw">let </span>(data, <span class="kw">_</span>, <span class="kw">_</span>) = tokio::time::timeout(std::time::Duration::from_secs(<span class="number">1</span>), receiver.recv())
             .<span class="kw">await
