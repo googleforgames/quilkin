@@ -109,7 +109,7 @@ impl SessionPool {
             .ok_or_else(|| eyre::eyre!("couldn't get socket address from raw socket"))
             .map_err(super::PipelineError::Session)?
             .port();
-        let (tx, mut downstream_receiver) = mpsc::channel::<UpstreamChannelData>(5);
+        let (tx, mut downstream_receiver) = mpsc::channel::<UpstreamChannelData>(15);
 
         let pool = self.clone();
 
