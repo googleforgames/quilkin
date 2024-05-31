@@ -2,7 +2,13 @@
 
 The filesystem provider watches a configuration file on disk and sends updates to proxies whenever that file changes.
 
-It can be started with using subcommand `manage file` as the following:
+To view all the options for the file provider subcommand, run:
+```shell
+$ quilkin manage agones --help
+{{#include ../../../../../target/quilkin.manage.file.commands}}
+```
+
+For example:
 ```sh
 quilkin manage file quilkin.yaml
 ```

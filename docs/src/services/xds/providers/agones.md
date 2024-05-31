@@ -7,6 +7,12 @@ This provider watches for changes in Agones
 [`GameServer` resources](https://agones.dev/site/docs/getting-started/create-gameserver/) in a cluster, and
 utilises that information to provide [Endpoint][Endpoints] information to connected Quilkin proxies.
 
+To view all the options for the agones provider subcommand, run:
+```shell
+$ quilkin manage agones --help
+{{#include ../../../../../target/quilkin.manage.agones.commands}}
+```
+
 > Currently, the Agones provider can only discover resources within the cluster it is running in.
 
 ## Endpoint Configuration

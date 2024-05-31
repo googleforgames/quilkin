@@ -22,6 +22,8 @@ cargo run -q --manifest-path ../Cargo.toml -- -q generate-config-schema -o ../ta
 cargo run -q --manifest-path ../Cargo.toml &> ../target/quilkin.commands || true
 cargo run -q --manifest-path ../Cargo.toml -- proxy --help &> ../target/quilkin.proxy.commands || true
 cargo run -q --manifest-path ../Cargo.toml -- manage --help &> ../target/quilkin.manage.commands || true
+cargo run -q --manifest-path ../Cargo.toml -- manage agones --help &> ../target/quilkin.manage.agones.commands || true
+cargo run -q --manifest-path ../Cargo.toml -- manage file --help &> ../target/quilkin.manage.file.commands || true
 cargo run -q --manifest-path ../Cargo.toml -- relay --help &> ../target/quilkin.relay.commands || true
 cargo run -q --manifest-path ../Cargo.toml -- agent --help &> ../target/quilkin.agent.commands || true
 
