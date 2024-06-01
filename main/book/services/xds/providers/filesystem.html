@@ -175,7 +175,19 @@
                     <main>
                         <h1 id="filesystem-xds-provider"><a class="header" href="#filesystem-xds-provider">Filesystem xDS Provider</a></h1>
 <p>The filesystem provider watches a configuration file on disk and sends updates to proxies whenever that file changes.</p>
-<p>It can be started with using subcommand <code>manage file</code> as the following:</p>
+<p>To view all the options for the file provider subcommand, run:</p>
+<pre><code class="language-shell">$ quilkin manage agones --help
+Watches for changes to the file located at `path`
+
+Usage: quilkin manage file &lt;PATH&gt;
+
+Arguments:
+  &lt;PATH&gt;  The path to the source config [env: QUILKIN_FS_PATH=]
+
+Options:
+  -h, --help  Print help
+</code></pre>
+<p>For example:</p>
 <pre><code class="language-sh">quilkin manage file quilkin.yaml
 </code></pre>
 <p>We run this on port 1800, in this example, in case you are running this locally, and the
