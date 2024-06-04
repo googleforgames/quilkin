@@ -55,7 +55,7 @@ pub fn init_logging(level: Level, test_pkg: &'static str) -> DefaultGuard {
         .with_test_writer()
         .with_filter(tracing_subscriber::filter::LevelFilter::from_level(level))
         .with_filter(tracing_subscriber::EnvFilter::new(format!(
-            "{test_pkg}=trace,qt=trace,quilkin=trace"
+            "{test_pkg}=trace,qt=trace,quilkin=trace,xds=trace"
         )));
     let sub = tracing_subscriber::Registry::default().with(layer);
     let disp = tracing::dispatcher::Dispatch::new(sub);
@@ -227,8 +227,7 @@ pub struct ProxyPail {
     pub task: JoinHandle,
     pub shutdown: ShutdownTx,
     pub config: Arc<Config>,
-    pub delta_applies:
-        Option<tokio::sync::mpsc::UnboundedReceiver<quilkin::net::xds::ResourceType>>,
+    pub delta_applies: Option<tokio::sync::mpsc::UnboundedReceiver<String>>,
 }
 
 abort_task!(ProxyPail);
@@ -634,10 +633,7 @@ impl Sandbox {
     pub fn proxy(
         &mut self,
         name: &str,
-    ) -> (
-        SocketAddr,
-        tokio::sync::mpsc::UnboundedReceiver<quilkin::net::xds::ResourceType>,
-    ) {
+    ) -> (SocketAddr, tokio::sync::mpsc::UnboundedReceiver<String>) {
         let Some(Pail::Proxy(pp)) = self.pails.get_mut(name) else {
             unreachable!()
         };
