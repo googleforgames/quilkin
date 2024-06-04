@@ -96,6 +96,13 @@ impl ClientState {
             }
         }
     }
+
+    pub fn version_matches(&self, key: &str, value: &str) -> bool {
+        self.versions
+            .get(key)
+            .map(|v| *v == value)
+            .unwrap_or_default()
+    }
 }
 
 pub struct AwaitingAck {
@@ -133,14 +140,35 @@ impl ClientTracker {
         self.states.keys().cloned()
     }
 
-    pub fn needs_ack(&mut self, ack: AwaitingAck) -> uuid::Uuid {
+    pub fn needs_ack(&mut self, ack: AwaitingAck) -> eyre::Result<uuid::Uuid> {
+        // Validate that no items are both updated/added and removed
+        for rem in &ack.removed {
+            eyre::ensure!(
+                !ack.versions.contains_key(rem),
+                "{rem} is both in the removed list and version map"
+            );
+        }
+
         let uuid = uuid::Uuid::new_v4();
         self.ack_map.insert(uuid, ack);
-        uuid
+        Ok(uuid)
     }
 
-    pub fn pop_ack(&mut self, uuid: uuid::Uuid) -> Option<AwaitingAck> {
-        self.ack_map.remove(&uuid)
+    pub fn apply_ack(&mut self, uuid: uuid::Uuid) -> eyre::Result<()> {
+        let Some(ack_state) = self.ack_map.remove(&uuid) else {
+            eyre::bail!("unknown nonce");
+        };
+        let Some(cs) = self.get_state(&ack_state.type_url) else {
+            eyre::bail!("unknown type url");
+        };
+
+        for removed in ack_state.removed {
+            cs.subscribed.remove(&removed);
+            cs.versions.remove(&removed);
+        }
+
+        cs.versions.extend(ack_state.versions);
+        Ok(())
     }
 }
 
@@ -160,29 +188,8 @@ pub trait Configuration: Send + Sync + Sized + 'static {
 
     fn delta_discovery_request(
         &self,
-        client_state: &mut ClientState,
+        client_state: &ClientState,
     ) -> crate::Result<DeltaDiscoveryRes>;
-
-    fn delta_discovery_ack(
-        &self,
-        ack_state: AwaitingAck,
-        client_versions: &mut ClientState,
-    ) -> crate::Result<()> {
-        for removed in ack_state.removed {
-            client_versions.subscribed.remove(&removed);
-            client_versions.versions.remove(&removed);
-        }
-
-        for (res_name, version) in ack_state.versions {
-            if let Some(resv) = client_versions.versions.get_mut(&res_name) {
-                *resv = version;
-            } else {
-                client_versions.versions.insert(res_name, version);
-            }
-        }
-
-        Ok(())
-    }
 
     fn on_changed(
         &self,

@@ -17,7 +17,7 @@
 //! Quilkin configuration.
 
 use std::{
-    collections::{BTreeSet, HashMap},
+    collections::HashMap,
     net::IpAddr,
     sync::{
         atomic::{AtomicU64, Ordering::Relaxed},
@@ -33,11 +33,8 @@ use uuid::Uuid;
 
 use crate::{
     filters::prelude::*,
-    generated::envoy::{
-        config::listener::v3::Listener, service::discovery::v3::Resource as XdsResource,
-    },
+    generated::envoy::service::discovery::v3::Resource as XdsResource,
     net::cluster::{self, ClusterMap},
-    net::xds::{Resource, ResourceType},
 };
 
 pub use self::{
@@ -118,24 +115,16 @@ impl xds::config::Configuration for Config {
 
     fn delta_discovery_request(
         &self,
-        client_state: &mut xds::config::ClientState,
+        client_state: &xds::config::ClientState,
     ) -> xds::Result<DeltaDiscoveryRes> {
         self.delta_discovery_request(client_state)
-    }
-
-    fn delta_discovery_ack(
-        &self,
-        ack_state: xds::config::AwaitingAck,
-        client_versions: &mut xds::config::ClientState,
-    ) -> xds::Result<()> {
-        self.delta_discovery_ack(ack_state, client_versions)
     }
 
     fn interested_resources(&self) -> impl Iterator<Item = (&'static str, Vec<String>)> {
         [
             (crate::xds::resources::CLUSTER_TYPE, Vec::new()),
             (crate::xds::resources::DATACENTER_TYPE, Vec::new()),
-        ]
+        ].into_iter()
     }
 
     fn on_changed(
@@ -237,10 +226,10 @@ impl Config {
     /// from those of the client
     pub fn delta_discovery_request(
         &self,
-        client_state: &mut xds::config::ClientState,
+        client_state: &xds::config::ClientState,
     ) -> crate::Result<DeltaDiscoveryRes> {
         let mut resources = Vec::new();
-        let mut removed = Default::default();
+        let mut removed = std::collections::HashSet::new();
 
         let resource_type: crate::xds::resources::ResourceType =
             client_state.resource_type.parse()?;
@@ -256,10 +245,8 @@ impl Config {
 
                     let vstr = version.to_string();
 
-                    if let Some(cv) = client_state.versions.get("filter_chain") {
-                        if cv == vstr {
-                            break 'append;
-                        }
+                    if client_state.version_matches("filter_chain", &vstr) {
+                        break 'append;
                     }
 
                     resources.push(XdsResource {
@@ -280,10 +267,8 @@ impl Config {
                         let qcmp_port = *qcmp_port.load();
                         let port_s = qcmp_port.to_string();
 
-                        if let Some(cv) = client_state.versions.get(&name) {
-                            if cv == port_s {
-                                break 'append;
-                            }
+                        if client_state.version_matches(&name, &port_s) {
+                            break 'append;
                         }
 
                         let resource = crate::xds::resources::Resource::Datacenter(
@@ -309,10 +294,8 @@ impl Config {
                             let qcmp_port = entry.qcmp_port;
                             let version = format!("{}-{qcmp_port}", entry.icao_code);
 
-                            if let Some(cv) = client_state.versions.get(&host) {
-                                if cv == version {
-                                    continue;
-                                }
+                            if client_state.version_matches(&host, &version) {
+                                continue;
                             }
 
                             let resource = crate::xds::resources::Resource::Datacenter(
@@ -339,7 +322,7 @@ impl Config {
                                 let Ok(addr) = key.parse() else {
                                     continue;
                                 };
-                                if !dc.get(&addr) {
+                                if dc.get(&addr).is_none() {
                                     removed.insert(key.clone());
                                 }
                             }
@@ -347,23 +330,19 @@ impl Config {
                     }
                 },
                 crate::xds::resources::ResourceType::Cluster => {
-                    let resource_type = ResourceType::Cluster;
-
                     let mut push = |key: &Option<crate::net::endpoint::Locality>,
                                     value: &crate::net::cluster::EndpointSet|
                      -> crate::Result<()> {
                         let version = value.version().to_string();
-                        let key_s = key.map(|k| k.to_string()).unwrap_or_default();
+                        let key_s = key.as_ref().map(|k| k.to_string()).unwrap_or_default();
 
-                        if let Some(cv) = client_state.versions.get(&key_s) {
-                            if cv == version {
-                                return Ok(());
-                            }
+                        if client_state.version_matches(&key_s, &version) {
+                            return Ok(());
                         }
 
                         let resource = crate::xds::resources::Resource::Cluster(
                             xds::generated::quilkin::config::v1alpha1::Cluster {
-                                locality: key.map(|l| l.into()),
+                                locality: key.clone().map(|l| l.into()),
                                 endpoints: value.endpoints.iter().map(|ep| ep.into()).collect(),
                             },
                         );
@@ -387,7 +366,7 @@ impl Config {
                             if name.is_empty() {
                                 Some(None)
                             } else {
-                                name.parse().ok()
+                                name.parse().ok().map(Some)
                             }
                         }) {
                             if let Some(cluster) = self.clusters.read().get(&locality) {
@@ -399,8 +378,8 @@ impl Config {
                     // Currently, we have exactly _one_ special case for removed resources, which
                     // is when ClusterMap::update_unlocated_endpoints is called to move the None
                     // locality endpoints to another one, so we just detect that case manually
-                    if (client_state.versions.contains_key("")
-                        && self.clusters.read().get(&None).is_none())
+                    if client_state.versions.contains_key("")
+                        && self.clusters.read().get(&None).is_none()
                     {
                         removed.insert("".into());
                     }
@@ -466,6 +445,8 @@ impl Config {
                 };
 
                 datacenters.modify(|wg| {
+                    let remote_addr = remote_addr.map(|ra| ra.ip().to_canonical());
+
                     for res in resources {
                         let Some(resource) = res.resource else {
                             tracing::error!("a datacenter resource could not be applied because it didn't contain an actual payload");
@@ -479,19 +460,23 @@ impl Config {
                                 continue;
                             }
                             Err(error) => {
-                                tracing::error!(error, "a datacenter resource could not be applied because the resource payload could not be decoded");
+                                tracing::error!(%error, "a datacenter resource could not be applied because the resource payload could not be decoded");
                                 continue;
                             }
                         };
                         
-                        let parse_payload = || {
-                            let host: std::net::IpAddr = dc.host.parse()?;
+                        let parse_payload = || -> crate::Result<(std::net::IpAddr, Datacenter)> {
+                            let host: std::net::IpAddr = if let Some(ra) = remote_addr {
+                                ra
+                            }else {
+                                 dc.host.parse()?
+                            };
                             let dc = Datacenter {
                                 qcmp_port: dc.qcmp_port.try_into()?,
                                 icao_code: dc.icao_code.parse()?,
                             };
 
-                            (host, dc)
+                            Ok((host, dc))
                         };
 
                         match parse_payload() {
@@ -504,16 +489,14 @@ impl Config {
                                 local_versions.insert(res.name, res.version);
                             }
                             Err(error) => {
-                                tracing::error!(error, "a datacenter resource could not be applied because the resource payload could not be parsed");
+                                tracing::error!(%error, "a datacenter resource could not be applied because the resource payload could not be parsed");
                                 continue;
                             }
                         }
                     }
-
-                    Ok(())
-                })?;
+                });
             }
-            crate::xds::resources::ResourceType::Cluster => self.clusters.modify(|guard| {
+            crate::xds::resources::ResourceType::Cluster => self.clusters.modify(|guard| -> crate::Result<()> {
                 for removed in removed_resources {
                     let locality = if removed.is_empty() {
                         None
@@ -536,7 +519,7 @@ impl Config {
                             continue;
                         }
                         Err(error) => {
-                            tracing::error!(error, "a cluster resource could not be applied because the resource payload could not be decoded");
+                            tracing::error!(%error, "a cluster resource could not be applied because the resource payload could not be decoded");
                             continue;
                         }
                     };
@@ -550,7 +533,7 @@ impl Config {
                             .collect::<Result<_, _>>() {
                         Ok(eps) => eps,
                         Err(error) => {
-                            tracing::error!(error, "a cluster resource could not be applied because one or more endpoints could not be parsed");
+                            tracing::error!(%error, "a cluster resource could not be applied because one or more endpoints could not be parsed");
                             continue;
                         }
                     };

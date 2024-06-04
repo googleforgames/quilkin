@@ -165,7 +165,7 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
         let responder = move |req: Option<DeltaDiscoveryRequest>,
                               type_url: &str,
                               client_tracker: &mut ClientTracker|
-              -> Result<DeltaDiscoveryResponse, tonic::Status> {
+              -> Result<Option<DeltaDiscoveryResponse>, tonic::Status> {
             let cs = if let Some(req) = req {
                 metrics::delta_discovery_requests(&client, type_url).inc();
 
@@ -185,9 +185,7 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                 cs
             } else {
                 let Some(cs) = client_tracker.get_state(type_url) else {
-                    return Err(tonic::Status::invalid_argument(format!(
-                        "resource type '{type_url}' not tracked by this stream"
-                    )));
+                    return Ok(None);
                 };
 
                 tracing::debug!(kind = type_url, "sending delta for resource update");
@@ -200,7 +198,7 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
 
             let removed_resources = req.removed.iter().cloned().collect();
 
-            let nonce = client_tracker.needs_ack(crate::config::AwaitingAck {
+            match client_tracker.needs_ack(crate::config::AwaitingAck {
                 type_url: type_url.into(),
                 removed: req.removed,
                 versions: req
@@ -208,25 +206,31 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                     .iter()
                     .map(|res| (res.name.clone(), res.version.clone()))
                     .collect(),
-            });
+            }) {
+                Ok(nonce) => {
+                    let response = DeltaDiscoveryResponse {
+                        resources: req.resources,
+                        nonce: nonce.to_string(),
+                        control_plane: Some(control_plane_id.clone()),
+                        type_url: type_url.into(),
+                        removed_resources,
+                        // Only used for debugging, not really useful
+                        system_version_info: String::new(),
+                    };
 
-            let response = DeltaDiscoveryResponse {
-                resources: req.resources,
-                nonce: nonce.to_string(),
-                control_plane: Some(control_plane_id.clone()),
-                type_url: type_url.into(),
-                removed_resources,
-                // Only used for debugging, not really useful
-                system_version_info: String::new(),
-            };
+                    tracing::trace!(
+                        r#type = &*response.type_url,
+                        nonce = &*response.nonce,
+                        "delta discovery response"
+                    );
 
-            tracing::trace!(
-                r#type = &*response.type_url,
-                nonce = &*response.nonce,
-                "delta discovery response"
-            );
-
-            Ok(response)
+                    Ok(Some(response))
+                }
+                Err(error) => {
+                    tracing::error!(%error, "server implementation returned invalid delta response");
+                    Err(tonic::Status::internal(error.to_string()))
+                }
+            }
         };
 
         let nid = node_id.clone();
@@ -247,7 +251,7 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                 tracing::debug!(client = %node_id, resource_type = %message.type_url, "initial delta response");
 
                 let type_url = message.type_url.clone();
-                responder(Some(message), &type_url, &mut client_tracker)?
+                responder(Some(message), &type_url, &mut client_tracker)?.unwrap()
             }
         };
 
@@ -261,13 +265,20 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                     res = rx.recv() => {
                         match res {
                             Ok(rt) => {
-                                yield responder(None, rt, &mut client_tracker)?;
+                                match responder(None, rt, &mut client_tracker) {
+                                    Ok(Some(res)) => yield res,
+                                    Ok(None) => {}
+                                    Err(error) => {
+                                        tracing::error!(%error, "responder failed to generate response");
+                                        continue;
+                                    },
+                                }
                             }
                             Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
                             Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {
                                 let tracked_resources: Vec<_> = client_tracker.tracked_resources().collect();
                                 for rt in tracked_resources {
-                                    yield responder(None, &rt, &mut client_tracker)?;
+                                    yield responder(None, &rt, &mut client_tracker)?.unwrap();
                                 }
                             }
                         }
@@ -294,15 +305,13 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                             metrics::nacks(id, &client_request.type_url).inc();
                             tracing::error!(nonce = %client_request.response_nonce, ?error, "NACK");
                         } else if let Ok(nonce) = uuid::Uuid::parse_str(&client_request.response_nonce) {
-                            if let Some(ack_state) = client_tracker.pop_ack(nonce) {
-                                tracing::trace!(%nonce, "ACK");
-                                if let Some(cs) = client_tracker.get_state(&ack_state.type_url) {
-                                    if let Err(error) = this.config.delta_discovery_ack(ack_state, cs) {
-                                        tracing::error!(%nonce, %error, "failed to process client ack");
-                                    }
+                            match client_tracker.apply_ack(nonce) {
+                                Ok(()) => {
+                                    tracing::trace!(%nonce, "ACK");
                                 }
-                            } else {
-                                tracing::trace!(%nonce, "Unknown nonce: could not be found in cache");
+                                Err(error) => {
+                                    tracing::error!(%nonce, %error, "failed to process client ack");
+                                }
                             }
 
                             metrics::delta_discovery_requests(id, &client_request.type_url).inc();
@@ -311,7 +320,7 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
 
                         let type_url = client_request.type_url.clone();
 
-                        yield responder(Some(client_request), &type_url, &mut client_tracker).unwrap();
+                        yield responder(Some(client_request), &type_url, &mut client_tracker).unwrap().unwrap();
                     }
                 }
             }
