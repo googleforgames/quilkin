@@ -15,7 +15,6 @@
  */
 
 use std::{
-    borrow::Borrow,
     collections::{hash_map::RandomState, BTreeSet},
     fmt,
     sync::atomic::{AtomicU64, AtomicUsize, Ordering::Relaxed},
@@ -26,7 +25,6 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
 use crate::net::endpoint::{Endpoint, EndpointAddress, Locality};
-use xds::EndpointSetVersion;
 
 const SUBSYSTEM: &str = "cluster";
 
@@ -71,6 +69,40 @@ impl Token {
     #[inline]
     pub fn new(token: &[u8]) -> Self {
         Self(seahash::hash(token))
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub struct EndpointSetVersion(u64);
+
+impl EndpointSetVersion {
+    pub fn from_number(version: u64) -> Self {
+        Self(version)
+    }
+
+    pub fn number(&self) -> u64 {
+        self.0
+    }
+}
+
+impl fmt::Display for EndpointSetVersion {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::LowerHex::fmt(&self.0, f)
+    }
+}
+
+impl fmt::Debug for EndpointSetVersion {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::LowerHex::fmt(&self.0, f)
+    }
+}
+
+impl std::str::FromStr for EndpointSetVersion {
+    type Err = eyre::Error;
+
+    #[inline]
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(u64::from_str_radix(s, 16)?))
     }
 }
 
@@ -640,16 +672,6 @@ impl From<&'_ Endpoint> for proto::Endpoint {
             metadata: Some((&endpoint.metadata).into()),
             host2: None,
         }
-    }
-}
-
-pub(crate) fn locality_and_set_to_proto(
-    locality: impl Borrow<Option<Locality>>,
-    endpoints: impl Borrow<BTreeSet<Endpoint>>,
-) -> proto::Cluster {
-    proto::Cluster {
-        locality: locality.borrow().clone().map(From::from),
-        endpoints: endpoints.borrow().iter().map(From::from).collect(),
     }
 }
 

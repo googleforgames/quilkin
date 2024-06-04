@@ -93,35 +93,49 @@ impl xds::config::Configuration for Config {
         (*self.id.load()).clone()
     }
 
-    fn apply(&self, response: xds::Resource) -> crate::Result<()> {
-        self.apply(response)
+    fn allow_request_processing(&self, resource_type: &str) -> bool {
+        resource_type
+            .parse::<crate::xds::resources::ResourceType>()
+            .is_ok()
     }
 
     fn apply_delta(
         &self,
-        resource_type: ResourceType,
-        resources: impl Iterator<Item = crate::Result<(xds::Resource, String)>>,
+        type_url: &str,
+        resources: Vec<XdsResource>,
         removed_resources: Vec<String>,
         local_versions: &mut HashMap<String, String>,
-    ) -> crate::Result<()> {
-        self.apply_delta(resource_type, resources, removed_resources, local_versions)
-    }
-
-    fn discovery_request(
-        &self,
-        _node_id: &str,
-        resource_type: ResourceType,
-        names: &[String],
-    ) -> Result<Vec<prost_types::Any>, eyre::Error> {
-        self.discovery_request(_node_id, resource_type, names)
+        remote_addr: Option<std::net::SocketAddr>,
+    ) -> xds::Result<()> {
+        self.apply_delta(
+            type_url,
+            resources,
+            removed_resources,
+            local_versions,
+            remote_addr,
+        )
     }
 
     fn delta_discovery_request(
         &self,
-        subscribed: &std::collections::BTreeSet<String>,
-        client_versions: &xds::ClientVersions,
-    ) -> crate::Result<DeltaDiscoveryRes> {
-        self.delta_discovery_request(subscribed, client_versions)
+        client_state: &mut xds::config::ClientState,
+    ) -> xds::Result<DeltaDiscoveryRes> {
+        self.delta_discovery_request(client_state)
+    }
+
+    fn delta_discovery_ack(
+        &self,
+        ack_state: xds::config::AwaitingAck,
+        client_versions: &mut xds::config::ClientState,
+    ) -> xds::Result<()> {
+        self.delta_discovery_ack(ack_state, client_versions)
+    }
+
+    fn interested_resources(&self) -> impl Iterator<Item = (&'static str, Vec<String>)> {
+        [
+            (crate::xds::resources::CLUSTER_TYPE, Vec::new()),
+            (crate::xds::resources::DATACENTER_TYPE, Vec::new()),
+        ]
     }
 
     fn on_changed(
@@ -134,7 +148,7 @@ impl xds::config::Configuration for Config {
             self.filters.watch({
                 let this = control_plane.clone();
                 move |_| {
-                    this.push_update(ResourceType::Listener);
+                    this.push_update(crate::xds::resources::FILTER_CHAIN_TYPE);
                 }
             });
         }
@@ -145,7 +159,7 @@ impl xds::config::Configuration for Config {
             match &control_plane.config.datacenter {
                 crate::config::DatacenterConfig::Agent { .. } => loop {
                     match cluster_watcher.changed().await {
-                        Ok(()) => control_plane.push_update(ResourceType::Cluster),
+                        Ok(()) => control_plane.push_update(crate::xds::resources::CLUSTER_TYPE),
                         Err(error) => tracing::error!(%error, "error watching changes"),
                     }
                 },
@@ -155,13 +169,13 @@ impl xds::config::Configuration for Config {
                         tokio::select! {
                             result = cluster_watcher.changed() => {
                                 match result {
-                                    Ok(()) => control_plane.push_update(ResourceType::Cluster),
+                                    Ok(()) => control_plane.push_update(crate::xds::resources::CLUSTER_TYPE),
                                     Err(error) => tracing::error!(%error, "error watching changes"),
                                 }
                             }
                             result = dc_watcher.changed() => {
                                 match result {
-                                    Ok(()) => control_plane.push_update(ResourceType::Datacenter),
+                                    Ok(()) => control_plane.push_update(crate::xds::resources::DATACENTER_TYPE),
                                     Err(error) => tracing::error!(%error, "error watching changes"),
                                 }
                             }
@@ -173,7 +187,7 @@ impl xds::config::Configuration for Config {
     }
 }
 
-use crate::net::xds::{config::DeltaDiscoveryRes, ClientVersions};
+use crate::net::xds::config::DeltaDiscoveryRes;
 
 impl Config {
     /// Attempts to deserialize `input` as a YAML object representing `Self`.
@@ -218,133 +232,72 @@ impl Config {
         Ok(())
     }
 
-    pub fn discovery_request(
-        &self,
-        _node_id: &str,
-        resource_type: ResourceType,
-        names: &[String],
-    ) -> Result<Vec<prost_types::Any>, eyre::Error> {
-        let mut resources = Vec::new();
-
-        match resource_type {
-            ResourceType::Datacenter => match &self.datacenter {
-                DatacenterConfig::Agent {
-                    qcmp_port,
-                    icao_code,
-                } => {
-                    resources.push(resource_type.encode_to_any(
-                        &crate::net::cluster::proto::Datacenter {
-                            qcmp_port: u16::clone(&qcmp_port.load()).into(),
-                            icao_code: icao_code.load().to_string(),
-                            ..Default::default()
-                        },
-                    )?);
-                }
-                DatacenterConfig::NonAgent { datacenters } => {
-                    for entry in datacenters.read().iter() {
-                        resources.push(resource_type.encode_to_any(
-                            &crate::net::cluster::proto::Datacenter {
-                                host: entry.key().to_string(),
-                                qcmp_port: entry.qcmp_port.into(),
-                                icao_code: entry.icao_code.to_string(),
-                            },
-                        )?);
-                    }
-                }
-            },
-            ResourceType::Listener => {
-                resources.push(resource_type.encode_to_any(&Listener {
-                    filter_chains: vec![(&*self.filters.load()).try_into()?],
-                    ..<_>::default()
-                })?);
-            }
-            ResourceType::FilterChain => {
-                resources.push(resource_type.encode_to_any(
-                    &crate::net::cluster::proto::FilterChain::try_from(&*self.filters.load())?,
-                )?);
-            }
-            ResourceType::Cluster => {
-                if names.is_empty() {
-                    for cluster in self.clusters.read().iter() {
-                        resources.push(resource_type.encode_to_any(
-                            &crate::net::cluster::locality_and_set_to_proto(
-                                cluster.key(),
-                                &cluster.value().endpoints,
-                            ),
-                        )?);
-                    }
-                } else {
-                    for locality in names.iter().filter_map(|name| name.parse().ok()) {
-                        if let Some(cluster) = self.clusters.read().get(&Some(locality)) {
-                            resources.push(resource_type.encode_to_any(
-                                &crate::net::cluster::locality_and_set_to_proto(
-                                    cluster.key(),
-                                    &cluster.value().endpoints,
-                                ),
-                            )?);
-                        }
-                    }
-                };
-            }
-        }
-
-        Ok(resources)
-    }
-
     /// Given a list of subscriptions and the current state of the calling client,
     /// construct a response with the current state of our resources that differ
     /// from those of the client
     pub fn delta_discovery_request(
         &self,
-        subscribed: &BTreeSet<String>,
-        client_versions: &ClientVersions,
+        client_state: &mut xds::config::ClientState,
     ) -> crate::Result<DeltaDiscoveryRes> {
         let mut resources = Vec::new();
+        let mut removed = Default::default();
 
-        let (awaiting_ack, removed) = match client_versions {
-            ClientVersions::Listener => {
-                resources.push(XdsResource {
-                    name: "listener".into(),
-                    version: "0".into(),
-                    resource: Some(ResourceType::Listener.encode_to_any(&Listener {
-                        filter_chains: vec![(&*self.filters.load()).try_into()?],
-                        ..<_>::default()
-                    })?),
-                    aliases: Vec::new(),
-                    ttl: None,
-                    cache_control: None,
-                });
-                (crate::net::xds::AwaitingAck::Listener, Vec::new())
-            }
-            ClientVersions::FilterChain => {
-                resources.push(XdsResource {
-                    name: "filter_chain".into(),
-                    version: "0".into(),
-                    resource: Some(ResourceType::FilterChain.encode_to_any(
-                        &crate::net::cluster::proto::FilterChain::try_from(&*self.filters.load())?,
-                    )?),
-                    aliases: Vec::new(),
-                    ttl: None,
-                    cache_control: None,
-                });
-                (crate::net::xds::AwaitingAck::FilterChain, Vec::new())
-            }
-            ClientVersions::Datacenter => {
-                match &self.datacenter {
+        let resource_type: crate::xds::resources::ResourceType =
+            client_state.resource_type.parse()?;
+
+        'append: {
+            match resource_type {
+                crate::xds::resources::ResourceType::FilterChain => {
+                    let resource = crate::xds::resources::Resource::FilterChain(
+                        crate::net::cluster::proto::FilterChain::try_from(&*self.filters.load())?,
+                    );
+                    let any = resource.try_encode()?;
+                    let version = seahash::hash(&any.value);
+
+                    let vstr = version.to_string();
+
+                    if let Some(cv) = client_state.versions.get("filter_chain") {
+                        if cv == vstr {
+                            break 'append;
+                        }
+                    }
+
+                    resources.push(XdsResource {
+                        name: "filter_chain".into(),
+                        version: vstr,
+                        resource: Some(any),
+                        aliases: Vec::new(),
+                        ttl: None,
+                        cache_control: None,
+                    });
+                }
+                crate::xds::resources::ResourceType::Datacenter => match &self.datacenter {
                     DatacenterConfig::Agent {
                         qcmp_port,
                         icao_code,
                     } => {
+                        let name = icao_code.load().to_string();
+                        let qcmp_port = *qcmp_port.load();
+                        let port_s = qcmp_port.to_string();
+
+                        if let Some(cv) = client_state.versions.get(&name) {
+                            if cv == port_s {
+                                break 'append;
+                            }
+                        }
+
+                        let resource = crate::xds::resources::Resource::Datacenter(
+                            crate::net::cluster::proto::Datacenter {
+                                qcmp_port: qcmp_port as _,
+                                icao_code: name.clone(),
+                                ..Default::default()
+                            },
+                        );
+
                         resources.push(XdsResource {
-                            name: "datacenter".into(),
-                            version: "0".into(),
-                            resource: Some(ResourceType::Datacenter.encode_to_any(
-                                &crate::net::cluster::proto::Datacenter {
-                                    qcmp_port: *qcmp_port.load() as _,
-                                    icao_code: icao_code.load().to_string(),
-                                    ..Default::default()
-                                },
-                            )?),
+                            name,
+                            version: port_s,
+                            resource: Some(resource.try_encode()?),
                             aliases: Vec::new(),
                             ttl: None,
                             cache_control: None,
@@ -352,151 +305,123 @@ impl Config {
                     }
                     DatacenterConfig::NonAgent { datacenters } => {
                         for entry in datacenters.read().iter() {
+                            let host = entry.key().to_string();
+                            let qcmp_port = entry.qcmp_port;
+                            let version = format!("{}-{qcmp_port}", entry.icao_code);
+
+                            if let Some(cv) = client_state.versions.get(&host) {
+                                if cv == version {
+                                    continue;
+                                }
+                            }
+
+                            let resource = crate::xds::resources::Resource::Datacenter(
+                                crate::net::cluster::proto::Datacenter {
+                                    qcmp_port: qcmp_port as _,
+                                    icao_code: entry.icao_code.to_string(),
+                                    host: host.clone(),
+                                },
+                            );
+
                             resources.push(XdsResource {
-                                name: "datacenter".into(),
-                                version: "0".into(),
-                                resource: Some(ResourceType::Datacenter.encode_to_any(
-                                    &crate::net::cluster::proto::Datacenter {
-                                        host: entry.key().to_string(),
-                                        qcmp_port: entry.qcmp_port.into(),
-                                        icao_code: entry.icao_code.to_string(),
-                                    },
-                                )?),
+                                name: host,
+                                version,
+                                resource: Some(resource.try_encode()?),
                                 aliases: Vec::new(),
                                 ttl: None,
                                 cache_control: None,
                             });
                         }
-                    }
-                }
-                (crate::net::xds::AwaitingAck::Datacenter, Vec::new())
-            }
-            ClientVersions::Cluster(map) => {
-                let resource_type = ResourceType::Cluster;
-                let mut to_ack = Vec::new();
 
-                let mut push = |key: &Option<crate::net::endpoint::Locality>,
-                                value: &crate::net::cluster::EndpointSet|
-                 -> crate::Result<()> {
-                    let current_version = value.version();
-                    if let Some(client_version) = map.get(key) {
-                        if current_version == *client_version {
-                            return Ok(());
+                        {
+                            let dc = datacenters.read();
+                            for key in client_state.versions.keys() {
+                                let Ok(addr) = key.parse() else {
+                                    continue;
+                                };
+                                if !dc.get(&addr) {
+                                    removed.insert(key.clone());
+                                }
+                            }
                         }
                     }
+                },
+                crate::xds::resources::ResourceType::Cluster => {
+                    let resource_type = ResourceType::Cluster;
 
-                    resources.push(XdsResource {
-                        name: key.as_ref().map(|k| k.to_string()).unwrap_or_default(),
-                        version: current_version.to_string(),
-                        resource: Some(resource_type.encode_to_any(
-                            &crate::net::cluster::locality_and_set_to_proto(key, &value.endpoints),
-                        )?),
-                        ..Default::default()
-                    });
-                    to_ack.push((key.clone(), current_version));
+                    let mut push = |key: &Option<crate::net::endpoint::Locality>,
+                                    value: &crate::net::cluster::EndpointSet|
+                     -> crate::Result<()> {
+                        let version = value.version().to_string();
+                        let key_s = key.map(|k| k.to_string()).unwrap_or_default();
 
-                    Ok(())
-                };
+                        if let Some(cv) = client_state.versions.get(&key_s) {
+                            if cv == version {
+                                return Ok(());
+                            }
+                        }
 
-                if subscribed.is_empty() {
-                    for cluster in self.clusters.read().iter() {
-                        push(cluster.key(), cluster.value())?;
-                    }
-                } else {
-                    for locality in subscribed.iter().filter_map(|name| name.parse().ok()) {
-                        if let Some(cluster) = self.clusters.read().get(&Some(locality)) {
+                        let resource = crate::xds::resources::Resource::Cluster(
+                            xds::generated::quilkin::config::v1alpha1::Cluster {
+                                locality: key.map(|l| l.into()),
+                                endpoints: value.endpoints.iter().map(|ep| ep.into()).collect(),
+                            },
+                        );
+
+                        resources.push(XdsResource {
+                            name: key_s,
+                            version,
+                            resource: Some(resource.try_encode()?),
+                            ..Default::default()
+                        });
+
+                        Ok(())
+                    };
+
+                    if client_state.subscribed.is_empty() {
+                        for cluster in self.clusters.read().iter() {
                             push(cluster.key(), cluster.value())?;
                         }
+                    } else {
+                        for locality in client_state.subscribed.iter().filter_map(|name| {
+                            if name.is_empty() {
+                                Some(None)
+                            } else {
+                                name.parse().ok()
+                            }
+                        }) {
+                            if let Some(cluster) = self.clusters.read().get(&locality) {
+                                push(cluster.key(), cluster.value())?;
+                            }
+                        }
+                    };
+
+                    // Currently, we have exactly _one_ special case for removed resources, which
+                    // is when ClusterMap::update_unlocated_endpoints is called to move the None
+                    // locality endpoints to another one, so we just detect that case manually
+                    if (client_state.versions.contains_key("")
+                        && self.clusters.read().get(&None).is_none())
+                    {
+                        removed.insert("".into());
                     }
-                };
-
-                // Currently, we have exactly _one_ special case for removed resources, which
-                // is when ClusterMap::update_unlocated_endpoints is called to move the None
-                // locality endpoints to another one, so we just detect that case manually
-                let removed: Vec<_> = (map.contains_key(&None)
-                    && self.clusters.read().get(&None).is_none())
-                .then_some(String::new())
-                .into_iter()
-                .collect();
-
-                (
-                    crate::net::xds::AwaitingAck::Cluster {
-                        updated: to_ack,
-                        remove_none: !removed.is_empty(),
-                    },
-                    removed,
-                )
-            }
-        };
-
-        Ok(DeltaDiscoveryRes {
-            resources,
-            awaiting_ack,
-            removed,
-        })
-    }
-
-    #[tracing::instrument(skip_all, fields(response = response.type_url()))]
-    pub fn apply(&self, response: Resource) -> crate::Result<()> {
-        tracing::trace!(resource=?response, "applying resource");
-
-        match response {
-            Resource::Listener(mut listener) => {
-                let chain: crate::filters::FilterChain = if listener.filter_chains.is_empty() {
-                    Default::default()
-                } else {
-                    crate::filters::FilterChain::try_create_fallible(
-                        listener.filter_chains.swap_remove(0).filters.into_iter(),
-                    )?
-                };
-
-                self.filters.store(Arc::new(chain));
-            }
-            Resource::FilterChain(fc) => {
-                self.filters
-                    .store(Arc::new(crate::filters::FilterChain::try_create_fallible(
-                        fc.filters.into_iter(),
-                    )?));
-            }
-            Resource::Datacenter(dc) => {
-                let DatacenterConfig::NonAgent { datacenters } = &self.datacenter else {
-                    eyre::bail!("cannot apply datacenter resource to an agent");
-                };
-
-                let host = dc.host.parse()?;
-                datacenters.write().insert(
-                    host,
-                    Datacenter {
-                        qcmp_port: dc.qcmp_port.try_into()?,
-                        icao_code: dc.icao_code.parse()?,
-                    },
-                );
-            }
-            Resource::Cluster(cluster) => {
-                self.clusters.write().insert(
-                    cluster.locality.map(From::from),
-                    cluster
-                        .endpoints
-                        .into_iter()
-                        .map(crate::net::endpoint::Endpoint::try_from)
-                        .collect::<Result<_, _>>()?,
-                );
+                }
             }
         }
 
-        self.apply_metrics();
-
-        Ok(())
+        Ok(DeltaDiscoveryRes { resources, removed })
     }
 
-    #[tracing::instrument(skip_all, fields(response = resource_type.type_url()))]
+    #[tracing::instrument(skip_all, fields(response = type_url))]
     pub fn apply_delta(
         &self,
-        resource_type: ResourceType,
-        resources: impl Iterator<Item = crate::Result<(Resource, String)>>,
+        type_url: &str,
+        mut resources: Vec<XdsResource>,
         removed_resources: Vec<String>,
         local_versions: &mut HashMap<String, String>,
+        remote_addr: Option<std::net::SocketAddr>,
     ) -> crate::Result<()> {
+        let resource_type: crate::xds::resources::ResourceType = type_url.parse()?;
+
         // Remove any resources the upstream server has removed/doesn't have,
         // we do this before applying any new/updated resources in case a
         // resource is in both lists, though really that would be a bug in
@@ -506,69 +431,89 @@ impl Config {
         }
 
         match resource_type {
-            ResourceType::Listener => {
-                for res in resources {
-                    let (resource, version) = res?;
-                    let Resource::Listener(mut listener) = resource else {
-                        return Err(eyre::eyre!("a non-listener resource was present"));
-                    };
+            crate::xds::resources::ResourceType::FilterChain => {
+                // Server should only ever send exactly one filter chain, more or less indicates a bug
+                let Some(res) = resources.pop() else {
+                    eyre::bail!("no resources in delta response");
+                };
 
-                    let chain: crate::filters::FilterChain = if listener.filter_chains.is_empty() {
-                        Default::default()
-                    } else {
-                        crate::filters::FilterChain::try_create_fallible(
-                            listener.filter_chains.swap_remove(0).filters.into_iter(),
-                        )?
-                    };
+                eyre::ensure!(
+                    resources.is_empty(),
+                    "additional filter chain resources were present in delta response"
+                );
 
-                    self.filters.store(Arc::new(chain));
-                    local_versions.insert(listener.name, version);
-                }
+                let Some(resource) = res.resource else {
+                    eyre::bail!("filter chain response did not contain a resource payload");
+                };
+
+                let crate::xds::resources::Resource::FilterChain(resource) =
+                    crate::xds::resources::Resource::try_decode(resource)?
+                else {
+                    eyre::bail!(
+                        "filter chain response contained a non-FilterChain resource payload"
+                    );
+                };
+
+                let fc =
+                    crate::filters::FilterChain::try_create_fallible(resource.filters.into_iter())?;
+
+                self.filters.store(Arc::new(fc));
+                local_versions.insert(res.name, res.version);
             }
-            ResourceType::FilterChain => {
-                for res in resources {
-                    let (resource, _) = res?;
-                    let Resource::FilterChain(fc) = resource else {
-                        return Err(eyre::eyre!("a non-filterchain resource was present"));
-                    };
-
-                    let fc =
-                        crate::filters::FilterChain::try_create_fallible(fc.filters.into_iter())?;
-
-                    self.filters.store(Arc::new(fc));
-                    local_versions.insert(String::new(), "0".into());
-                }
-            }
-            ResourceType::Datacenter => {
+            crate::xds::resources::ResourceType::Datacenter => {
                 let DatacenterConfig::NonAgent { datacenters } = &self.datacenter else {
                     eyre::bail!("cannot apply delta datacenters resource to agent");
                 };
 
                 datacenters.modify(|wg| {
                     for res in resources {
-                        let (resource, version) = res?;
-
-                        let Resource::Datacenter(dc) = resource else {
-                            return Err(eyre::eyre!("a non-datacenter resource was present"));
+                        let Some(resource) = res.resource else {
+                            tracing::error!("a datacenter resource could not be applied because it didn't contain an actual payload");
+                            continue;
                         };
 
-                        let host = dc.host.parse()?;
-
-                        wg.insert(
-                            host,
-                            Datacenter {
+                        let dc = match crate::xds::resources::Resource::try_decode(resource) {
+                            Ok(crate::xds::resources::Resource::Datacenter(dc)) => dc,
+                            Ok(other) => {
+                                tracing::error!(kind = other.type_url(), "a datacenter resource could not be applied because the resource payload was not a datacenter");
+                                continue;
+                            }
+                            Err(error) => {
+                                tracing::error!(error, "a datacenter resource could not be applied because the resource payload could not be decoded");
+                                continue;
+                            }
+                        };
+                        
+                        let parse_payload = || {
+                            let host: std::net::IpAddr = dc.host.parse()?;
+                            let dc = Datacenter {
                                 qcmp_port: dc.qcmp_port.try_into()?,
                                 icao_code: dc.icao_code.parse()?,
-                            },
-                        );
+                            };
 
-                        local_versions.insert(dc.host, version);
+                            (host, dc)
+                        };
+
+                        match parse_payload() {
+                            Ok((host, datacenter)) => {
+                                wg.insert(
+                                    host,
+                                    datacenter,
+                                );
+        
+                                local_versions.insert(res.name, res.version);
+                            }
+                            Err(error) => {
+                                tracing::error!(error, "a datacenter resource could not be applied because the resource payload could not be parsed");
+                                continue;
+                            }
+                        }
                     }
 
                     Ok(())
                 })?;
             }
-            ResourceType::Cluster => self.clusters.modify(|guard| {
+            crate::xds::resources::ResourceType::Cluster => self.clusters.modify(|guard| {
                 for removed in removed_resources {
                     let locality = if removed.is_empty() {
                         None
@@ -579,28 +524,46 @@ impl Config {
                 }
 
                 for res in resources {
-                    let (resource, version) = res?;
-
-                    let Resource::Cluster(cluster) = resource else {
-                        return Err(eyre::eyre!("a non-cluster resource was present"));
+                    let Some(resource) = res.resource else {
+                        tracing::error!("a cluster resource could not be applied because it didn't contain an actual payload");
+                        continue;
                     };
 
-                    let parsed_version = version.parse()?;
+                    let cluster = match crate::xds::resources::Resource::try_decode(resource) {
+                        Ok(crate::xds::resources::Resource::Cluster(c)) => c,
+                        Ok(other) => {
+                            tracing::error!(kind = other.type_url(), "a cluster resource could not be applied because the resource payload was not a cluster");
+                            continue;
+                        }
+                        Err(error) => {
+                            tracing::error!(error, "a cluster resource could not be applied because the resource payload could not be decoded");
+                            continue;
+                        }
+                    };
 
-                    let endpoints = crate::config::cluster::EndpointSet::with_version(
-                        cluster
+                    let parsed_version = res.version.parse()?;
+
+                    let endpoints = match cluster
                             .endpoints
                             .into_iter()
                             .map(crate::net::endpoint::Endpoint::try_from)
-                            .collect::<Result<_, _>>()?,
+                            .collect::<Result<_, _>>() {
+                        Ok(eps) => eps,
+                        Err(error) => {
+                            tracing::error!(error, "a cluster resource could not be applied because one or more endpoints could not be parsed");
+                            continue;
+                        }
+                    };
+
+                    let endpoints = crate::config::cluster::EndpointSet::with_version(
+                        endpoints,
                         parsed_version,
                     );
 
                     let locality = cluster.locality.map(crate::net::endpoint::Locality::from);
-                    let name = locality.as_ref().map(|l| l.to_string()).unwrap_or_default();
 
                     guard.apply(locality, endpoints);
-                    local_versions.insert(name, version);
+                    local_versions.insert(res.name, res.version);
                 }
 
                 Ok(())

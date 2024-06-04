@@ -16,7 +16,6 @@
 
 use std::{io, sync::Arc, time::Duration};
 
-use cached::Cached;
 use futures::{Stream, TryFutureExt};
 use tokio_stream::StreamExt;
 use tracing_futures::Instrument;
@@ -33,13 +32,12 @@ use crate::{
     },
     metrics,
     net::TcpListener,
-    ResourceType,
 };
 
 pub struct ControlPlane<C> {
     pub config: Arc<C>,
-    idle_request_interval: Duration,
-    tx: tokio::sync::broadcast::Sender<ResourceType>,
+    pub idle_request_interval: Duration,
+    tx: tokio::sync::broadcast::Sender<&'static str>,
     pub is_relay: bool,
 }
 
@@ -105,8 +103,13 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
     }
 
     #[inline]
-    pub fn push_update(&self, resource_type: ResourceType) {
-        tracing::debug!(%resource_type, id=self.config.identifier(), is_relay = self.is_relay, "pushing update");
+    pub fn push_update(&self, resource_type: &'static str) {
+        tracing::debug!(
+            %resource_type,
+            id = self.config.identifier(),
+            is_relay = self.is_relay,
+            "pushing update"
+        );
         if self.tx.send(resource_type).is_err() {
             tracing::debug!("no client connections currently subscribed");
         }
@@ -125,9 +128,6 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
             + std::marker::Unpin
             + 'static,
     {
-        use crate::{AwaitingAck, ClientVersions};
-        use std::collections::BTreeSet;
-
         tracing::debug!("starting delta stream");
         let message = streaming.next().await.ok_or_else(|| {
             tracing::error!("No message found");
@@ -141,7 +141,6 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
             return Err(tonic::Status::invalid_argument("Node identifier required"));
         };
 
-        let mut pending_acks = cached::TimedSizedCache::with_size_and_lifespan(50, 1);
         let this = Self::clone(self);
         let mut rx = this.tx.subscribe();
 
@@ -158,117 +157,77 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
             identifier: id.clone(),
         };
 
-        struct ResourceTypeTracker {
-            client: ClientVersions,
-            subscribed: BTreeSet<String>,
-            kind: ResourceType,
-            subbed: bool,
-        }
-
-        // Keep track of the resource versions that the client has so we can only
-        // send the resources that are actually different in each response
-        let mut trackers = enum_map::enum_map! {
-            ResourceType::Cluster => ResourceTypeTracker {
-                client: ClientVersions::new(ResourceType::Cluster),
-                subscribed: BTreeSet::new(),
-                kind: ResourceType::Cluster,
-                subbed: false,
-            },
-            ResourceType::Listener => {
-                ResourceTypeTracker {
-                    client: ClientVersions::new(ResourceType::Listener),
-                    subscribed: BTreeSet::new(),
-                    kind: ResourceType::Listener,
-                    subbed: false,
-                }
-            },
-            ResourceType::FilterChain => {
-                ResourceTypeTracker {
-                    client: ClientVersions::new(ResourceType::FilterChain),
-                    subscribed: BTreeSet::new(),
-                    kind: ResourceType::FilterChain,
-                    subbed: false,
-                }
-            },
-            ResourceType::Datacenter => {
-                ResourceTypeTracker {
-                    client: ClientVersions::new(ResourceType::Datacenter),
-                    subscribed: BTreeSet::new(),
-                    kind: ResourceType::Datacenter,
-                    subbed: false,
-                }
-            }
-        };
+        use crate::config::ClientTracker;
+        let mut client_tracker = ClientTracker::track_client(node_id.clone());
 
         let client = node_id.clone();
-        let responder =
-            move |req: Option<DeltaDiscoveryRequest>,
-                  tracker: &mut ResourceTypeTracker,
-                  pending_acks: &mut cached::TimedSizedCache<uuid::Uuid, AwaitingAck>|
-                  -> Result<DeltaDiscoveryResponse, tonic::Status> {
-                if let Some(req) = req {
-                    metrics::delta_discovery_requests(&client, tracker.kind.type_url()).inc();
+        let cfg = this.config.clone();
+        let responder = move |req: Option<DeltaDiscoveryRequest>,
+                              type_url: &str,
+                              client_tracker: &mut ClientTracker|
+              -> Result<DeltaDiscoveryResponse, tonic::Status> {
+            let cs = if let Some(req) = req {
+                metrics::delta_discovery_requests(&client, type_url).inc();
 
-                    // If the request has filled out the initial_versions field, it means the connected management servers has
-                    // already had a connection with a control plane, so hard reset our state to what it says it has
-                    if !req.initial_resource_versions.is_empty() {
-                        tracker
-                            .client
-                            .reset(req.initial_resource_versions)
-                            .map_err(|err| tonic::Status::invalid_argument(err.to_string()))?;
-                    }
-
-                    // From the spec:
-                    // A resource_names_subscribe field may contain resource names that
-                    // the server believes the client is already subscribed to, and
-                    // furthermore has the most recent versions of. However, the server
-                    // must still provide those resources in the response; due to
-                    // implementation details hidden from the server, the client may
-                    // have “forgotten” those resources despite apparently remaining subscribed.
-                    if !req.resource_names_subscribe.is_empty() {
-                        for sub in req.resource_names_subscribe {
-                            tracker.subscribed.insert(sub.clone());
-                            tracker.client.remove(sub);
-                        }
-                    }
-
-                    if !req.resource_names_unsubscribe.is_empty() {
-                        for sub in req.resource_names_unsubscribe {
-                            tracker.subscribed.remove(&sub);
-                            tracker.client.remove(sub);
-                        }
-                    }
-                    tracing::debug!(kind = %tracker.kind, "sending delta for resource update");
+                let cs = if let Some(cs) = client_tracker.get_state(type_url) {
+                    cs
+                } else if cfg.allow_request_processing(type_url) {
+                    client_tracker.track_state(type_url.into())
                 } else {
-                    tracing::debug!(kind = %tracker.kind, "sending delta update");
-                }
-
-                let req = this
-                    .config
-                    .delta_discovery_request(&tracker.subscribed, &tracker.client)
-                    .map_err(|error| tonic::Status::internal(error.to_string()))?;
-
-                let nonce = uuid::Uuid::new_v4();
-                pending_acks.cache_set(nonce, req.awaiting_ack);
-
-                let response = DeltaDiscoveryResponse {
-                    resources: req.resources,
-                    nonce: nonce.to_string(),
-                    control_plane: Some(control_plane_id.clone()),
-                    type_url: tracker.kind.type_url().to_owned(),
-                    removed_resources: req.removed,
-                    // Only used for debugging, not really useful
-                    system_version_info: String::new(),
+                    return Err(tonic::Status::invalid_argument(format!(
+                        "resource type '{type_url}' is not allowed by this stream"
+                    )));
                 };
 
-                tracing::trace!(
-                    r#type = &*response.type_url,
-                    nonce = &*response.nonce,
-                    "delta discovery response"
-                );
+                cs.update(req);
+                tracing::debug!(kind = type_url, "sending delta update");
 
-                Ok(response)
+                cs
+            } else {
+                let Some(cs) = client_tracker.get_state(type_url) else {
+                    return Err(tonic::Status::invalid_argument(format!(
+                        "resource type '{type_url}' not tracked by this stream"
+                    )));
+                };
+
+                tracing::debug!(kind = type_url, "sending delta for resource update");
+                cs
             };
+
+            let req = cfg
+                .delta_discovery_request(cs)
+                .map_err(|error| tonic::Status::internal(error.to_string()))?;
+
+            let removed_resources = req.removed.iter().cloned().collect();
+
+            let nonce = client_tracker.needs_ack(crate::config::AwaitingAck {
+                type_url: type_url.into(),
+                removed: req.removed,
+                versions: req
+                    .resources
+                    .iter()
+                    .map(|res| (res.name.clone(), res.version.clone()))
+                    .collect(),
+            });
+
+            let response = DeltaDiscoveryResponse {
+                resources: req.resources,
+                nonce: nonce.to_string(),
+                control_plane: Some(control_plane_id.clone()),
+                type_url: type_url.into(),
+                removed_resources,
+                // Only used for debugging, not really useful
+                system_version_info: String::new(),
+            };
+
+            tracing::trace!(
+                r#type = &*response.type_url,
+                nonce = &*response.nonce,
+                "delta discovery response"
+            );
+
+            Ok(response)
+        };
 
         let nid = node_id.clone();
 
@@ -285,13 +244,10 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                     system_version_info: String::new(),
                 }
             } else {
-                let resource_type: ResourceType = message.type_url.parse()?;
-                tracing::debug!(client = %node_id, %resource_type, "initial delta response");
-                responder(
-                    Some(message),
-                    &mut trackers[resource_type],
-                    &mut pending_acks,
-                )?
+                tracing::debug!(client = %node_id, resource_type = %message.type_url, "initial delta response");
+
+                let type_url = message.type_url.clone();
+                responder(Some(message), &type_url, &mut client_tracker)?
             }
         };
 
@@ -305,17 +261,13 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                     res = rx.recv() => {
                         match res {
                             Ok(rt) => {
-                                let tracker = &mut trackers[rt];
-                                if tracker.subbed {
-                                    yield responder(None, tracker, &mut pending_acks)?;
-                                }
+                                yield responder(None, rt, &mut client_tracker)?;
                             }
                             Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
                             Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {
-                                for (_, tracker) in &mut trackers {
-                                    if tracker.subbed {
-                                        yield responder(None, tracker, &mut pending_acks)?;
-                                    }
+                                let tracked_resources: Vec<_> = client_tracker.tracked_resources().collect();
+                                for rt in tracked_resources {
+                                    yield responder(None, &rt, &mut client_tracker)?;
                                 }
                             }
                         }
@@ -335,35 +287,31 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                         }
 
                         let id = client_request.node.as_ref().map(|node| node.id.as_str()).unwrap_or(node_id.as_str());
-                        let resource_type: ResourceType = match client_request.type_url.parse() {
-                            Ok(value) => value,
-                            Err(error) => {
-                                tracing::error!(%error, url=%client_request.type_url, "unknown resource type");
-                                continue;
-                            }
-                        };
 
-                        tracing::trace!(%resource_type, "new delta message");
-
-                        let tracker = &mut trackers[resource_type];
-                        tracker.subbed = true;
+                        tracing::trace!(resource_type = client_request.type_url, "new delta message");
 
                         if let Some(error) = &client_request.error_detail {
-                            metrics::nacks(id, resource_type.type_url()).inc();
+                            metrics::nacks(id, &client_request.type_url).inc();
                             tracing::error!(nonce = %client_request.response_nonce, ?error, "NACK");
                         } else if let Ok(nonce) = uuid::Uuid::parse_str(&client_request.response_nonce) {
-                            if let Some(to_ack) = pending_acks.cache_remove(&nonce) {
+                            if let Some(ack_state) = client_tracker.pop_ack(nonce) {
                                 tracing::trace!(%nonce, "ACK");
-                                tracker.client.ack(to_ack);
+                                if let Some(cs) = client_tracker.get_state(&ack_state.type_url) {
+                                    if let Err(error) = this.config.delta_discovery_ack(ack_state, cs) {
+                                        tracing::error!(%nonce, %error, "failed to process client ack");
+                                    }
+                                }
                             } else {
                                 tracing::trace!(%nonce, "Unknown nonce: could not be found in cache");
                             }
 
-                            metrics::delta_discovery_requests(id, resource_type.type_url()).inc();
+                            metrics::delta_discovery_requests(id, &client_request.type_url).inc();
                             continue;
                         }
 
-                        yield responder(Some(client_request), tracker, &mut pending_acks).unwrap();
+                        let type_url = client_request.type_url.clone();
+
+                        yield responder(Some(client_request), &type_url, &mut client_tracker).unwrap();
                     }
                 }
             }
@@ -431,8 +379,6 @@ impl<C: crate::config::Configuration> AggregatedControlPlaneDiscoveryService for
         &self,
         responses: tonic::Request<tonic::Streaming<DeltaDiscoveryResponse>>,
     ) -> Result<tonic::Response<Self::DeltaAggregatedResourcesStream>, tonic::Status> {
-        use crate::ResourceType;
-
         let remote_addr = responses
             .remote_addr()
             .ok_or_else(|| tonic::Status::invalid_argument("no remote address available"))?;
@@ -461,18 +407,13 @@ impl<C: crate::config::Configuration> AggregatedControlPlaneDiscoveryService for
             async move {
                 tracing::info!(identifier, "sending initial delta discovery request");
 
-                let local = Arc::new(crate::config::LocalVersions::default());
+                let local = Arc::new(crate::config::LocalVersions::new(
+                    config.interested_resources().map(|(n, _)| n),
+                ));
 
-                ds.refresh(
-                    &identifier,
-                    &[
-                        (ResourceType::Cluster, Vec::new()),
-                        (ResourceType::Datacenter, Vec::new()),
-                    ],
-                    &local,
-                )
-                .await
-                .map_err(|error| tonic::Status::internal(error.to_string()))?;
+                ds.refresh(&identifier, config.interested_resources().collect(), &local)
+                    .await
+                    .map_err(|error| tonic::Status::internal(error.to_string()))?;
 
                 let mut response_stream = crate::config::handle_delta_discovery_responses(
                     identifier.clone(),
@@ -494,16 +435,9 @@ impl<C: crate::config::Configuration> AggregatedControlPlaneDiscoveryService for
                             .map_err(|_| tonic::Status::internal("this should not be reachable"))?;
                     } else {
                         tracing::trace!("exceeded idle interval, sending request");
-                        ds.refresh(
-                            &identifier,
-                            &[
-                                (ResourceType::Cluster, Vec::new()),
-                                (ResourceType::Datacenter, Vec::new()),
-                            ],
-                            &local,
-                        )
-                        .await
-                        .map_err(|error| tonic::Status::internal(error.to_string()))?;
+                        ds.refresh(&identifier, config.interested_resources().collect(), &local)
+                            .await
+                            .map_err(|error| tonic::Status::internal(error.to_string()))?;
                     }
                 }
             }

@@ -14,9 +14,15 @@
  * limitations under the License.
  */
 
+pub use crate::generated::quilkin::config::v1alpha1 as proto;
+use prost_types::Any;
+
 pub type Resource = Box<dyn ResourceType>;
 
-pub trait ResourceType: TryFrom<prost_types::Any> {
+pub trait ResourceType {
     fn name(&self) -> String;
-    fn type_url(&self) -> url::Url;
+    fn type_url(&self) -> &'static str;
+
+    fn decode(&mut self, any: Any) -> Result<(), eyre::Error>;
+    fn encode(&self) -> Result<Any, prost::EncodeError>;
 }

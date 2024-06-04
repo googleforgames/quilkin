@@ -40,7 +40,6 @@ use crate::{
         },
         quilkin::relay::v1alpha1::aggregated_control_plane_discovery_service_client::AggregatedControlPlaneDiscoveryServiceClient,
     },
-    resource::{Resource, ResourceType},
     Result,
 };
 
@@ -330,11 +329,11 @@ impl DeltaClientStream {
     pub(crate) async fn refresh(
         &self,
         identifier: &str,
-        subs: &[(ResourceType, Vec<String>)],
+        subs: Vec<(&'static str, Vec<String>)>,
         local: &crate::config::LocalVersions,
     ) -> Result<()> {
         for (rt, names) in subs {
-            let initial_resource_versions = local.get(*rt).clone();
+            let initial_resource_versions = local.get(rt).clone();
             self.req_tx
                 .send(DeltaDiscoveryRequest {
                     node: Some(Node {
@@ -342,7 +341,7 @@ impl DeltaClientStream {
                         user_agent_name: "quilkin".into(),
                         ..Node::default()
                     }),
-                    type_url: rt.type_url().into(),
+                    type_url: (*rt).to_owned(),
                     resource_names_subscribe: names.clone(),
                     initial_resource_versions,
                     // We (currently) never unsubscribe from resources, since we
@@ -375,7 +374,7 @@ impl DeltaServerStream {
         mut client: MdsGrpcClient,
         identifier: String,
     ) -> Result<(Self, tonic::Streaming<DeltaDiscoveryRequest>)> {
-        let (res_tx, responses_rx) = tokio::sync::mpsc::channel(ResourceType::VARIANTS.len());
+        let (res_tx, responses_rx) = tokio::sync::mpsc::channel(100);
 
         res_tx
             .send(DeltaDiscoveryResponse {
@@ -418,8 +417,8 @@ impl AdsClient {
         self,
         config: Arc<C>,
         is_healthy: Arc<AtomicBool>,
-        notifier: Option<tokio::sync::mpsc::UnboundedSender<ResourceType>>,
-        resources: impl IntoIterator<Item = (ResourceType, Vec<String>)>,
+        notifier: Option<tokio::sync::mpsc::UnboundedSender<String>>,
+        resources: impl IntoIterator<Item = (&'static str, Vec<String>)>,
     ) -> Result<DeltaSubscription, Self> {
         let resource_subscriptions: Vec<_> = resources.into_iter().collect();
 
@@ -443,9 +442,11 @@ impl AdsClient {
         // the future we'll send the resources we already have locally to hopefully
         // reduce the amount of response data if those resources are already up
         // to date with the current state of the management server
-        let local = Arc::new(crate::config::LocalVersions::default());
+        let local = Arc::new(crate::config::LocalVersions::new(
+            resource_subscriptions.iter().map(|(s, _)| *s),
+        ));
         if let Err(err) = ds
-            .refresh(&identifier, &resource_subscriptions, &local)
+            .refresh(&identifier, resource_subscriptions.to_vec(), &local)
             .await
         {
             tracing::error!(error = ?err, "failed to send initial resource requests");
@@ -493,7 +494,7 @@ impl AdsClient {
                                 tracing::debug!(
                                     "exceeded idle request interval sending new requests"
                                 );
-                                ds.refresh(&identifier, &resource_subscriptions, &local)
+                                ds.refresh(&identifier, resource_subscriptions.to_vec(), &local)
                                     .await?;
                             }
                         }
@@ -507,7 +508,7 @@ impl AdsClient {
 
                     (ds, stream) =
                         DeltaClientStream::connect(new_client, identifier.clone()).await?;
-                    ds.refresh(&identifier, &resource_subscriptions, &local)
+                    ds.refresh(&identifier, resource_subscriptions.to_vec(), &local)
                         .await?;
                 }
             }
@@ -528,71 +529,4 @@ enum RpcSessionError {
 
     #[error("Error occurred while receiving data. Status: {0}")]
     Receive(tonic::Status),
-}
-
-pub fn handle_discovery_responses(
-    identifier: String,
-    stream: impl futures::Stream<Item = tonic::Result<DiscoveryResponse>> + 'static + Send,
-    on_new_resource: impl Fn(Resource) -> crate::Result<()> + Send + Sync + 'static,
-) -> std::pin::Pin<Box<dyn futures::Stream<Item = Result<DiscoveryRequest>> + Send>> {
-    Box::pin(async_stream::try_stream! {
-        let _stream_metrics = super::metrics::StreamConnectionMetrics::new(identifier.clone());
-        tracing::debug!("awaiting response");
-        for await response in stream
-        {
-            let response = match response {
-                Ok(response) => response,
-                Err(error) => {
-                    tracing::warn!(%error, "Error from xDS server");
-                    break;
-                }
-            };
-
-            let control_plane_identifier = response.control_plane.as_ref().map(|cp| cp.identifier.clone()).unwrap_or_default();
-
-            super::metrics::discovery_responses(&control_plane_identifier, &response.type_url).inc();
-            tracing::debug!(
-                version = &*response.version_info,
-                r#type = &*response.type_url,
-                nonce = &*response.nonce,
-                "received response"
-            );
-
-            let mut resource_names = Vec::with_capacity(response.resources.len());
-            let result = response
-                .resources
-                .into_iter()
-                .map(Resource::try_from)
-                .try_for_each(|resource| {
-                    let resource = resource?;
-
-                    resource_names.push(resource.name().to_owned());
-
-                    tracing::debug!("applying resource");
-                    (on_new_resource)(resource)
-                });
-
-            let error_detail = if let Err(error) = result {
-                super::metrics::nacks(&control_plane_identifier, &response.type_url).inc();
-                Some(crate::generated::google::rpc::Status {
-                    code: 3,
-                    message: error.to_string(),
-                    ..Default::default()
-                })
-            } else {
-                super::metrics::acks(&control_plane_identifier, &response.type_url).inc();
-                None
-            };
-
-            let request = DiscoveryRequest {
-                resource_names,
-                version_info: response.version_info,
-                type_url: response.type_url,
-                response_nonce: response.nonce,
-                error_detail,
-                ..Default::default()
-            };
-            yield request;
-        }
-    })
 }
