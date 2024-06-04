@@ -91,9 +91,7 @@ impl xds::config::Configuration for Config {
     }
 
     fn allow_request_processing(&self, resource_type: &str) -> bool {
-        resource_type
-            .parse::<crate::xds::ResourceType>()
-            .is_ok()
+        resource_type.parse::<crate::xds::ResourceType>().is_ok()
     }
 
     fn apply_delta(
@@ -124,7 +122,8 @@ impl xds::config::Configuration for Config {
         [
             (crate::xds::CLUSTER_TYPE, Vec::new()),
             (crate::xds::DATACENTER_TYPE, Vec::new()),
-        ].into_iter()
+        ]
+        .into_iter()
     }
 
     fn on_changed(
@@ -231,8 +230,7 @@ impl Config {
         let mut resources = Vec::new();
         let mut removed = std::collections::HashSet::new();
 
-        let resource_type: crate::xds::ResourceType =
-            client_state.resource_type.parse()?;
+        let resource_type: crate::xds::ResourceType = client_state.resource_type.parse()?;
 
         'append: {
             match resource_type {
@@ -464,7 +462,7 @@ impl Config {
                                 continue;
                             }
                         };
-                        
+
                         let parse_payload = || -> crate::Result<(std::net::IpAddr, Datacenter)> {
                             let host: std::net::IpAddr = if let Some(ra) = remote_addr {
                                 ra
@@ -485,7 +483,7 @@ impl Config {
                                     host,
                                     datacenter,
                                 );
-        
+
                                 local_versions.insert(res.name, res.version);
                             }
                             Err(error) => {
