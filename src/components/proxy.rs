@@ -183,9 +183,9 @@ impl Proxy {
                                     xds_is_healthy.clone(),
                                     tx,
                                     [
-                                        (crate::xds::resources::CLUSTER_TYPE, Vec::new()),
-                                        (crate::xds::resources::DATACENTER_TYPE, Vec::new()),
-                                        (crate::xds::resources::FILTER_CHAIN_TYPE, Vec::new()),
+                                        (crate::xds::CLUSTER_TYPE, Vec::new()),
+                                        (crate::xds::DATACENTER_TYPE, Vec::new()),
+                                        (crate::xds::FILTER_CHAIN_TYPE, Vec::new()),
                                     ],
                                 )
                                 .await

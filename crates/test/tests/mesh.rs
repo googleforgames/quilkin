@@ -183,7 +183,7 @@ trace_test!(datacenter_discovery, {
         let rt = sandbox.timeout(10000, proxy_delta_rx.recv()).await.unwrap();
 
         match rt.as_ref() {
-            quilkin::xds::resources::DATACENTER_TYPE => break,
+            quilkin::xds::DATACENTER_TYPE => break,
             _ => {}
         }
     }
@@ -301,8 +301,8 @@ trace_test!(filter_update, {
             let rt = sandbox.timeout(10000, proxy_delta_rx.recv()).await.unwrap();
 
             match rt.as_ref() {
-                quilkin::xds::resources::FILTER_CHAIN_TYPE => updates |= 0x1,
-                quilkin::xds::resources::CLUSTER_TYPE => updates |= 0x10,
+                quilkin::xds::FILTER_CHAIN_TYPE => updates |= 0x1,
+                quilkin::xds::CLUSTER_TYPE => updates |= 0x10,
                 _ => {}
             }
         }

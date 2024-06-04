@@ -92,7 +92,7 @@ impl xds::config::Configuration for Config {
 
     fn allow_request_processing(&self, resource_type: &str) -> bool {
         resource_type
-            .parse::<crate::xds::resources::ResourceType>()
+            .parse::<crate::xds::ResourceType>()
             .is_ok()
     }
 
@@ -122,8 +122,8 @@ impl xds::config::Configuration for Config {
 
     fn interested_resources(&self) -> impl Iterator<Item = (&'static str, Vec<String>)> {
         [
-            (crate::xds::resources::CLUSTER_TYPE, Vec::new()),
-            (crate::xds::resources::DATACENTER_TYPE, Vec::new()),
+            (crate::xds::CLUSTER_TYPE, Vec::new()),
+            (crate::xds::DATACENTER_TYPE, Vec::new()),
         ].into_iter()
     }
 
@@ -137,7 +137,7 @@ impl xds::config::Configuration for Config {
             self.filters.watch({
                 let this = control_plane.clone();
                 move |_| {
-                    this.push_update(crate::xds::resources::FILTER_CHAIN_TYPE);
+                    this.push_update(crate::xds::FILTER_CHAIN_TYPE);
                 }
             });
         }
@@ -148,7 +148,7 @@ impl xds::config::Configuration for Config {
             match &control_plane.config.datacenter {
                 crate::config::DatacenterConfig::Agent { .. } => loop {
                     match cluster_watcher.changed().await {
-                        Ok(()) => control_plane.push_update(crate::xds::resources::CLUSTER_TYPE),
+                        Ok(()) => control_plane.push_update(crate::xds::CLUSTER_TYPE),
                         Err(error) => tracing::error!(%error, "error watching changes"),
                     }
                 },
@@ -158,13 +158,13 @@ impl xds::config::Configuration for Config {
                         tokio::select! {
                             result = cluster_watcher.changed() => {
                                 match result {
-                                    Ok(()) => control_plane.push_update(crate::xds::resources::CLUSTER_TYPE),
+                                    Ok(()) => control_plane.push_update(crate::xds::CLUSTER_TYPE),
                                     Err(error) => tracing::error!(%error, "error watching changes"),
                                 }
                             }
                             result = dc_watcher.changed() => {
                                 match result {
-                                    Ok(()) => control_plane.push_update(crate::xds::resources::DATACENTER_TYPE),
+                                    Ok(()) => control_plane.push_update(crate::xds::DATACENTER_TYPE),
                                     Err(error) => tracing::error!(%error, "error watching changes"),
                                 }
                             }
@@ -231,13 +231,13 @@ impl Config {
         let mut resources = Vec::new();
         let mut removed = std::collections::HashSet::new();
 
-        let resource_type: crate::xds::resources::ResourceType =
+        let resource_type: crate::xds::ResourceType =
             client_state.resource_type.parse()?;
 
         'append: {
             match resource_type {
-                crate::xds::resources::ResourceType::FilterChain => {
-                    let resource = crate::xds::resources::Resource::FilterChain(
+                crate::xds::ResourceType::FilterChain => {
+                    let resource = crate::xds::Resource::FilterChain(
                         crate::net::cluster::proto::FilterChain::try_from(&*self.filters.load())?,
                     );
                     let any = resource.try_encode()?;
@@ -258,7 +258,7 @@ impl Config {
                         cache_control: None,
                     });
                 }
-                crate::xds::resources::ResourceType::Datacenter => match &self.datacenter {
+                crate::xds::ResourceType::Datacenter => match &self.datacenter {
                     DatacenterConfig::Agent {
                         qcmp_port,
                         icao_code,
@@ -271,7 +271,7 @@ impl Config {
                             break 'append;
                         }
 
-                        let resource = crate::xds::resources::Resource::Datacenter(
+                        let resource = crate::xds::Resource::Datacenter(
                             crate::net::cluster::proto::Datacenter {
                                 qcmp_port: qcmp_port as _,
                                 icao_code: name.clone(),
@@ -298,7 +298,7 @@ impl Config {
                                 continue;
                             }
 
-                            let resource = crate::xds::resources::Resource::Datacenter(
+                            let resource = crate::xds::Resource::Datacenter(
                                 crate::net::cluster::proto::Datacenter {
                                     qcmp_port: qcmp_port as _,
                                     icao_code: entry.icao_code.to_string(),
@@ -329,7 +329,7 @@ impl Config {
                         }
                     }
                 },
-                crate::xds::resources::ResourceType::Cluster => {
+                crate::xds::ResourceType::Cluster => {
                     let mut push = |key: &Option<crate::net::endpoint::Locality>,
                                     value: &crate::net::cluster::EndpointSet|
                      -> crate::Result<()> {
@@ -340,7 +340,7 @@ impl Config {
                             return Ok(());
                         }
 
-                        let resource = crate::xds::resources::Resource::Cluster(
+                        let resource = crate::xds::Resource::Cluster(
                             xds::generated::quilkin::config::v1alpha1::Cluster {
                                 locality: key.clone().map(|l| l.into()),
                                 endpoints: value.endpoints.iter().map(|ep| ep.into()).collect(),
@@ -399,7 +399,7 @@ impl Config {
         local_versions: &mut HashMap<String, String>,
         remote_addr: Option<std::net::SocketAddr>,
     ) -> crate::Result<()> {
-        let resource_type: crate::xds::resources::ResourceType = type_url.parse()?;
+        let resource_type: crate::xds::ResourceType = type_url.parse()?;
 
         // Remove any resources the upstream server has removed/doesn't have,
         // we do this before applying any new/updated resources in case a
@@ -410,7 +410,7 @@ impl Config {
         }
 
         match resource_type {
-            crate::xds::resources::ResourceType::FilterChain => {
+            crate::xds::ResourceType::FilterChain => {
                 // Server should only ever send exactly one filter chain, more or less indicates a bug
                 let Some(res) = resources.pop() else {
                     eyre::bail!("no resources in delta response");
@@ -425,8 +425,8 @@ impl Config {
                     eyre::bail!("filter chain response did not contain a resource payload");
                 };
 
-                let crate::xds::resources::Resource::FilterChain(resource) =
-                    crate::xds::resources::Resource::try_decode(resource)?
+                let crate::xds::Resource::FilterChain(resource) =
+                    crate::xds::Resource::try_decode(resource)?
                 else {
                     eyre::bail!(
                         "filter chain response contained a non-FilterChain resource payload"
@@ -439,7 +439,7 @@ impl Config {
                 self.filters.store(Arc::new(fc));
                 local_versions.insert(res.name, res.version);
             }
-            crate::xds::resources::ResourceType::Datacenter => {
+            crate::xds::ResourceType::Datacenter => {
                 let DatacenterConfig::NonAgent { datacenters } = &self.datacenter else {
                     eyre::bail!("cannot apply delta datacenters resource to agent");
                 };
@@ -453,8 +453,8 @@ impl Config {
                             continue;
                         };
 
-                        let dc = match crate::xds::resources::Resource::try_decode(resource) {
-                            Ok(crate::xds::resources::Resource::Datacenter(dc)) => dc,
+                        let dc = match crate::xds::Resource::try_decode(resource) {
+                            Ok(crate::xds::Resource::Datacenter(dc)) => dc,
                             Ok(other) => {
                                 tracing::error!(kind = other.type_url(), "a datacenter resource could not be applied because the resource payload was not a datacenter");
                                 continue;
@@ -496,7 +496,7 @@ impl Config {
                     }
                 });
             }
-            crate::xds::resources::ResourceType::Cluster => self.clusters.modify(|guard| -> crate::Result<()> {
+            crate::xds::ResourceType::Cluster => self.clusters.modify(|guard| -> crate::Result<()> {
                 for removed in removed_resources {
                     let locality = if removed.is_empty() {
                         None
@@ -512,8 +512,8 @@ impl Config {
                         continue;
                     };
 
-                    let cluster = match crate::xds::resources::Resource::try_decode(resource) {
-                        Ok(crate::xds::resources::Resource::Cluster(c)) => c,
+                    let cluster = match crate::xds::Resource::try_decode(resource) {
+                        Ok(crate::xds::Resource::Cluster(c)) => c,
                         Ok(other) => {
                             tracing::error!(kind = other.type_url(), "a cluster resource could not be applied because the resource payload was not a cluster");
                             continue;
