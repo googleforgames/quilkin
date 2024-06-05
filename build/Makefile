@@ -131,6 +131,11 @@ build: binary-archive build-image
 # Build all binaries
 build-all-binaries: ensure-build-image build-linux-binary build-macos-binary build-windows-binary
 
+# Checks for changes to protobuf definitions and generates rust code if there is any.
+gen-protobuf: ensure-build-image
+	docker run --rm $(DOCKER_RUN_ARGS) $(common_rust_args) \
+		--entrypoint=cargo $(BUILD_IMAGE_TAG) run -p proto-gen -- generate
+
 # Build an archive all binaries
 binary-archive: ensure-build-image build-licence-report build-all-binaries
 	docker run --rm $(common_rust_args) -w $(CARGO_TARGET_DIR) \
@@ -138,7 +143,7 @@ binary-archive: ensure-build-image build-licence-report build-all-binaries
 
 # Build binary for x86_64-unknown-linux-gnu.
 # Use BUILD_LOCAL=1 to build through local cargo rather than through the build container.
-build-linux-binary: ensure-build-image
+build-linux-binary: ensure-build-image gen-protobuf
 ifdef BUILD_LOCAL
 	cargo $(cargo_build_x86_64_linux)
 else
@@ -148,7 +153,7 @@ endif
 
 # Build binary for x86_64-pc-windows-gnu
 # Use BUILD_LOCAL=1 to build through local cargo rather than through the build container.
-build-windows-binary: ensure-build-image
+build-windows-binary: ensure-build-image gen-protobuf
 ifdef BUILD_LOCAL
 	cargo $(cargo_build_x86_64_windows)
 else
@@ -158,7 +163,7 @@ endif
 
 # Build binary for x86_64-apple-darwin and aarch64-apple-darwin
 # Use BUILD_LOCAL=1 to build through local cargo rather than through the build container.
-build-macos-binary:
+build-macos-binary: gen-protobuf
 ifdef BUILD_LOCAL
 	cargo $(cargo_build_x86_64_apple)
 	cargo $(cargo_build_aarch64-apple)
@@ -169,7 +174,8 @@ else
 		-e "CC=o64-clang" -e "CXX=o64-clang++" \
 		-e "PROTOC=/opt/protoc/bin/protoc" \
 		joseluisq/rust-linux-darwin-builder:$(rust_toolchain) \
-			sh -c "/workspace/build/darwin-builder/setup.sh && cargo $(cargo_build_x86_64_apple) --no-default-features && \
+			sh -c "rustup target add x86_64-apple-darwin aarch64-apple-darwin && \
+			cargo $(cargo_build_x86_64_apple) --no-default-features && \
 			CC=oa64-clang CXX=oa64-clang++ LIBZ_SYS_STATIC=1 cargo $(cargo_build_aarch64-apple) --no-default-features"
 endif
 
@@ -242,24 +248,23 @@ minikube-test-agones: minikube-push
 	$(MAKE) DOCKER_RUN_ARGS="$(minikube_args)" run-test-agones
 
 # Runs mdbook and cargo doc in the same directory structure as what is hosted on Github pages.
-# Open http://localhost:3000/book/index.html or http://localhost:3000/api/quilkin/index.html after running. Pages will live reload on change.
-# (the .html extension is required for hot reload, but pages will display without it)
+# Open http://localhost:3000/ after running and browse to the docs you are editing. Pages will live reload on change.
 # Use `GITHUB_REF_NAME` (default: `main`) to specify the branch or tag to point Github links to and `QUILKIN_VERSION`
 # (default `$(make version)) to specify which Quilkin version the documentation uses for examples.
 docs: ensure-build-image
 docs: GITHUB_REF_NAME ?= main
 docs: QUILKIN_VERSION ?= $(shell $(MAKE) version)
 docs:
-	@echo "📭 Open browser to http://localhost:3000/book/index.html or http://localhost:3000/api/quilkin/index.html (the .html extension is required for hot reload)"
+	@echo "📭 Open browser to http://localhost:3000/ and browse as needed"
 	docker run -it --rm $(common_rust_args) -p 3000:3000 \
 		-e GITHUB_REF_NAME=$(GITHUB_REF_NAME) -e QUILKIN_VERSION=$(QUILKIN_VERSION) \
 		--entrypoint=bash $(BUILD_IMAGE_TAG) -c \
-			'mkdir /tmp/docs && (live-server -p 3000 /tmp/docs &) && \
+			'mkdir /tmp/docs && (browser-sync start --server "/tmp/docs" --directory --index index.html --port 3000 --no-open --files "/tmp/docs" &) && \
 			mkdir -p "$(CARGO_TARGET_DIR)/doc"; ln -s "$(CARGO_TARGET_DIR)/doc" /tmp/docs/api && \
 			cargo watch -s "cargo doc --workspace --no-deps && cd docs && mdbook build --dest-dir /tmp/docs/book"'
 
 # Start an interactive shell inside the build image
-# Useful for testing, or adhoc cargo, gcloud, kubectl or terraform commands
+# Useful for testing, or adhoc cargo, gcloud, kubectl or other commands
 shell: ensure-gcloud-dirs ensure-kube-dirs ensure-build-image
 	# we --network=host because docker containers are not great at ipv6.
 	docker run --rm -it $(DOCKER_RUN_ARGS) $(common_rust_args) \
