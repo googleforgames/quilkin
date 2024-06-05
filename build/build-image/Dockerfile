@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM debian:bullseye
+FROM debian:bookworm
 
 ARG RUST_TOOLCHAIN
 
@@ -25,9 +25,9 @@ ENV RUSTUP_HOME=/usr/local/rustup \
 # Install packages
 RUN set -eux && \
     apt-get update && \
-    apt-get install -y lsb-release jq curl wget zip git build-essential software-properties-common \
-        libssl-dev pkg-config python3-pip bash-completion g++-x86-64-linux-gnu g++-mingw-w64-x86-64 && \
-    pip3 install live-server && \
+    apt-get install -y lsb-release jq curl wget zip git build-essential software-properties-common protobuf-compiler \
+        libssl-dev pkg-config nodejs npm bash-completion g++-x86-64-linux-gnu g++-mingw-w64-x86-64 && \
+    npm install -g browser-sync && \
     echo "source /etc/bash_completion" >> /root/.bashrc
 
 # install gcloud
@@ -38,7 +38,7 @@ RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.
     echo "source <(kubectl completion bash)" >> /root/.bashrc
 
 # install terraform. There is no apt support for arm64, so direct downloading instead.
-RUN wget --quiet -O terraform.zip "https://releases.hashicorp.com/terraform/1.3.1/terraform_1.3.1_linux_$(dpkg --print-architecture).zip" && \
+RUN wget --quiet -O terraform.zip "https://releases.hashicorp.com/terraform/1.5.4/terraform_1.5.4_linux_$(dpkg --print-architecture).zip" && \
     unzip terraform.zip && rm terraform.zip && mv terraform /usr/local/bin/
 
 # install helm

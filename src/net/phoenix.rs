@@ -570,6 +570,7 @@ mod tests {
     use tokio::sync::Mutex;
 
     #[derive(Clone)]
+    #[allow(dead_code)]
     struct LoggingMockMeasurement {
         latencies: HashMap<SocketAddr, DistanceMeasure>,
         probed_addresses: Arc<Mutex<HashSet<SocketAddr>>>,

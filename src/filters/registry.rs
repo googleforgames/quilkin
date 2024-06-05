@@ -70,6 +70,7 @@ mod tests {
     use crate::filters::{Filter, FilterError, FilterRegistry, ReadContext, WriteContext};
     use crate::net::endpoint::{Endpoint, EndpointAddress};
 
+    #[allow(dead_code)]
     struct TestFilter {}
 
     #[async_trait::async_trait]

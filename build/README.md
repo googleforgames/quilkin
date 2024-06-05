@@ -37,6 +37,17 @@ To build a production release, run:
 
 `cargo build --release`
 
+##### Generating Protobuf Files
+
+If you are adding or editing the `.proto` files in this repository, they will need to be regenerated. To do this,
+you will need [protoc](https://grpc.io/docs/protoc-installation/) installed locally.
+
+Then run:
+
+`cargo run -p proto-gen -- generate`
+
+Which will identify changes in protobuf definitions and regenerate code appropriately. 
+
 #### Testing
 
 To run the unit, integration and docs tests:
@@ -53,7 +64,7 @@ To test dependency licences and security advisories:
 
 `cargo deny check`
 
-See the [agones](../agones) folder for the [Agones](https://agones.dev) integration testing tooling.
+See the [agones](../crates/agones) folder for the [Agones](https://agones.dev) integration testing tooling.
 
 ### Developing with Make + Docker 
 
@@ -69,13 +80,6 @@ To use the tooling for Make + Docker testing and development, you will need:
 * A *nix shell/environment, such as found on Linux, macOS or WSL on Windows.
 * Make installed
 * [Docker installed](https://docs.docker.com/get-docker/)
-
-#### Known issues
-
-* If you are running on an arm64 machine, such as an M1 Mac, `make build-macos-binary` to build an amd64 macOS 
-  binary will fail. Depending on your setup, it may be possible to use `BUILD_LOCAL=1 make build-macos-binary` to 
-  attempt to build the binary with local `cargo` tooling. This is generally only a release time task, so we expect 
-  it to be of minimal impact. See [#608](https://github.com/googleforgames/quilkin/issues/608) for more details.
 
 #### Run tests
 
