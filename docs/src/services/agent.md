@@ -1,4 +1,4 @@
-# Control Plane Agents
+# Quilkin Agent
 
 | services | ports | Protocol          |
 |----------|-------|-------------------|
@@ -6,9 +6,9 @@
 
 For multi-cluster integration, Quilkin provides a `agent` service, that can be
 deployed to a cluster to act as a beacon for QCMP pings and forward cluster
-configuration information to a `relay` service
+configuration information to a `relay` service.
 
-Agent configuration and functionality matches that of Control Plane Providers, such as 
+Agent configuration sources matches that of the [Management Server](./xds.md), such as 
 [Filesystem](./xds/providers/filesystem.md) and [Agones](./xds/providers/agones.md). 
 
 To view all options for the `agent` subcommand, run:
@@ -17,9 +17,6 @@ To view all options for the `agent` subcommand, run:
 $ quilkin agent --help
 {{#include ../../../target/quilkin.agent.commands}}
 ```
-
-> Each sub-control planes (`file`, `agones`, etc) matches the `quilkin manage` providers capabilities.
-> Have a look at each of the [Control Plane > Providers](../services/xds.md) documentation for integration details.
 
 ## Quickstart
 The simplest version of the `agent` service is just running `quilkin agent`,
