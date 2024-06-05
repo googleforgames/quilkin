@@ -17,7 +17,6 @@
 //! Quilkin configuration.
 
 use std::{
-    collections::HashMap,
     net::IpAddr,
     sync::{
         atomic::{AtomicU64, Ordering::Relaxed},
@@ -98,17 +97,10 @@ impl xds::config::Configuration for Config {
         &self,
         type_url: &str,
         resources: Vec<XdsResource>,
-        removed_resources: Vec<String>,
-        local_versions: &mut HashMap<String, String>,
+        removed_resources: &[String],
         remote_addr: Option<std::net::SocketAddr>,
     ) -> xds::Result<()> {
-        self.apply_delta(
-            type_url,
-            resources,
-            removed_resources,
-            local_versions,
-            remote_addr,
-        )
+        self.apply_delta(type_url, resources, removed_resources, remote_addr)
     }
 
     fn delta_discovery_request(
@@ -393,19 +385,10 @@ impl Config {
         &self,
         type_url: &str,
         mut resources: Vec<XdsResource>,
-        removed_resources: Vec<String>,
-        local_versions: &mut HashMap<String, String>,
+        removed_resources: &[String],
         remote_addr: Option<std::net::SocketAddr>,
     ) -> crate::Result<()> {
         let resource_type: crate::xds::ResourceType = type_url.parse()?;
-
-        // Remove any resources the upstream server has removed/doesn't have,
-        // we do this before applying any new/updated resources in case a
-        // resource is in both lists, though really that would be a bug in
-        // the upstream server
-        for removed in &removed_resources {
-            local_versions.remove(removed);
-        }
 
         match resource_type {
             crate::xds::ResourceType::FilterChain => {
@@ -435,7 +418,6 @@ impl Config {
                     crate::filters::FilterChain::try_create_fallible(resource.filters.into_iter())?;
 
                 self.filters.store(Arc::new(fc));
-                local_versions.insert(res.name, res.version);
             }
             crate::xds::ResourceType::Datacenter => {
                 let DatacenterConfig::NonAgent { datacenters } = &self.datacenter else {
@@ -447,19 +429,16 @@ impl Config {
 
                     for res in resources {
                         let Some(resource) = res.resource else {
-                            tracing::error!("a datacenter resource could not be applied because it didn't contain an actual payload");
-                            continue;
+                            eyre::bail!("a datacenter resource could not be applied because it didn't contain an actual payload");
                         };
 
                         let dc = match crate::xds::Resource::try_decode(resource) {
                             Ok(crate::xds::Resource::Datacenter(dc)) => dc,
                             Ok(other) => {
-                                tracing::error!(kind = other.type_url(), "a datacenter resource could not be applied because the resource payload was not a datacenter");
-                                continue;
+                                eyre::bail!("a datacenter resource could not be applied because the resource payload was '{}'", other.type_url());
                             }
                             Err(error) => {
-                                tracing::error!(%error, "a datacenter resource could not be applied because the resource payload could not be decoded");
-                                continue;
+                                return Err(error.wrap_err("a datacenter resource could not be applied because the resource payload could not be decoded"));
                             }
                         };
 
@@ -483,16 +462,15 @@ impl Config {
                                     host,
                                     datacenter,
                                 );
-
-                                local_versions.insert(res.name, res.version);
                             }
                             Err(error) => {
-                                tracing::error!(%error, "a datacenter resource could not be applied because the resource payload could not be parsed");
-                                continue;
+                                return Err(error.wrap_err("a datacenter resource could not be applied because the resource payload could not be parsed"));
                             }
                         }
                     }
-                });
+
+                    Ok(())
+                })?;
             }
             crate::xds::ResourceType::Cluster => self.clusters.modify(|guard| -> crate::Result<()> {
                 for removed in removed_resources {
@@ -506,19 +484,16 @@ impl Config {
 
                 for res in resources {
                     let Some(resource) = res.resource else {
-                        tracing::error!("a cluster resource could not be applied because it didn't contain an actual payload");
-                        continue;
+                        eyre::bail!("a cluster resource could not be applied because it didn't contain an actual payload");
                     };
 
                     let cluster = match crate::xds::Resource::try_decode(resource) {
                         Ok(crate::xds::Resource::Cluster(c)) => c,
                         Ok(other) => {
-                            tracing::error!(kind = other.type_url(), "a cluster resource could not be applied because the resource payload was not a cluster");
-                            continue;
+                            eyre::bail!("a cluster resource could not be applied because the resource payload was '{}'", other.type_url());
                         }
                         Err(error) => {
-                            tracing::error!(%error, "a cluster resource could not be applied because the resource payload could not be decoded");
-                            continue;
+                            return Err(error.wrap_err("a cluster resource could not be applied because the resource payload could not be decoded"));
                         }
                     };
 
@@ -531,8 +506,7 @@ impl Config {
                             .collect::<Result<_, _>>() {
                         Ok(eps) => eps,
                         Err(error) => {
-                            tracing::error!(%error, "a cluster resource could not be applied because one or more endpoints could not be parsed");
-                            continue;
+                            return Err(error.wrap_err("a cluster resource could not be applied because one or more endpoints could not be parsed"));
                         }
                     };
 
@@ -544,7 +518,6 @@ impl Config {
                     let locality = cluster.locality.map(crate::net::endpoint::Locality::from);
 
                     guard.apply(locality, endpoints);
-                    local_versions.insert(res.name, res.version);
                 }
 
                 Ok(())

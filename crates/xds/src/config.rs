@@ -179,8 +179,7 @@ pub trait Configuration: Send + Sync + Sized + 'static {
         &self,
         resource_type: &str,
         resources: Vec<Resource>,
-        removed_resources: Vec<String>,
-        local_versions: &mut HashMap<String, String>,
+        removed_resources: &[String],
         remote_addr: Option<std::net::SocketAddr>,
     ) -> crate::Result<()>;
 
@@ -245,9 +244,28 @@ pub fn handle_delta_discovery_responses<C: Configuration>(
 
             let result = {
                 tracing::trace!(num_resources = response.resources.len(), kind = type_url, "applying delta resources");
-                let mut lock = local.get(&type_url);
 
-                config.apply_delta(&type_url, response.resources, response.removed_resources, &mut lock, remote_addr)
+                let version_map: Vec<_> = response.resources.iter().map(|res| (res.name.clone(), res.version.clone())).collect();
+
+                let res = config.apply_delta(&type_url, response.resources, &response.removed_resources, remote_addr);
+
+                if res.is_ok() {
+                    let mut lock = local.get(&type_url);
+
+                    // Remove any resources the upstream server has removed/doesn't have,
+                    // we do this before applying any new/updated resources in case a
+                    // resource is in both lists, though really that would be a bug in
+                    // the upstream server
+                    for removed in response.removed_resources {
+                        lock.remove(&removed);
+                    }
+
+                    for (k, v) in version_map {
+                        lock.insert(k, v);
+                    }
+                }
+
+                res
             };
 
             if let Some(note) = &notifier {
