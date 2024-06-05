@@ -173,15 +173,15 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="control-plane-agents"><a class="header" href="#control-plane-agents">Control Plane Agents</a></h1>
+                        <h1 id="quilkin-agent"><a class="header" href="#quilkin-agent">Quilkin Agent</a></h1>
 <div class="table-wrapper"><table><thead><tr><th>services</th><th>ports</th><th>Protocol</th></tr></thead><tbody>
 <tr><td>QCMP</td><td>7600</td><td>UDP(IPv4 OR IPv6)</td></tr>
 </tbody></table>
 </div>
 <p>For multi-cluster integration, Quilkin provides a <code>agent</code> service, that can be
 deployed to a cluster to act as a beacon for QCMP pings and forward cluster
-configuration information to a <code>relay</code> service</p>
-<p>Agent configuration and functionality matches that of Control Plane Providers, such as
+configuration information to a <code>relay</code> service.</p>
+<p>Agent configuration sources matches that of the <a href="./xds.html">Management Server</a>, such as
 <a href="./xds/providers/filesystem.html">Filesystem</a> and <a href="./xds/providers/agones.html">Agones</a>.</p>
 <p>To view all options for the <code>agent</code> subcommand, run:</p>
 <pre><code class="language-shell">$ quilkin agent --help
@@ -205,10 +205,6 @@ Options:
   -i, --icao-code &lt;ICAO_CODE&gt;        The ICAO code for the agent [env: ICAO_CODE=] [default: XXXX]
   -h, --help                         Print help
 </code></pre>
-<blockquote>
-<p>Each sub-control planes (<code>file</code>, <code>agones</code>, etc) matches the <code>quilkin manage</code> providers capabilities.
-Have a look at each of the <a href="../services/xds.html">Control Plane &gt; Providers</a> documentation for integration details.</p>
-</blockquote>
 <h2 id="quickstart"><a class="header" href="#quickstart">Quickstart</a></h2>
 <p>The simplest version of the <code>agent</code> service is just running <code>quilkin agent</code>,
 this will setup just the QCMP service allowing the agent to be pinged for
