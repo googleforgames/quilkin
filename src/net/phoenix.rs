@@ -32,8 +32,7 @@ pub fn spawn<M: Clone + Measurement + Sync + Send + 'static>(
     phoenix: Phoenix<M>,
 ) -> crate::Result<()> {
     use eyre::WrapErr as _;
-    use hyper::service::{make_service_fn, service_fn};
-    use hyper::{Body, Response, Server as HyperServer, StatusCode};
+    use hyper::{Response, StatusCode};
 
     phoenix.add_nodes_from_config(&config);
 
@@ -68,40 +67,65 @@ pub fn spawn<M: Clone + Measurement + Sync + Send + 'static>(
                         async move { phoenix.background_update_task().await }
                     });
 
-                    let json2 = json.clone();
-                    let make_svc = make_service_fn(move |_conn| {
-                        let json = json2.clone();
-                        #[allow(clippy::declare_interior_mutable_const)]
-                        const JSON: hyper::header::HeaderValue =
-                            hyper::header::HeaderValue::from_static("application/json");
-
-                        async move {
-                            Ok::<_, std::convert::Infallible>(service_fn(move |_| {
-                                let json = json.clone();
-                                async move {
-                                    tracing::trace!("serving phoenix request");
-                                    Ok::<_, std::convert::Infallible>(
-                                        Response::builder()
-                                            .status(StatusCode::OK)
-                                            .header(hyper::header::CONTENT_TYPE, JSON)
-                                            .body(Body::from(serde_json::to_string(&json).unwrap()))
-                                            .unwrap(),
-                                    )
-                                }
-                            }))
-                        }
-                    });
-
                     tracing::info!(addr=%listener.local_addr(), "starting phoenix HTTP service");
-                    let (stx, srx) = tokio::sync::oneshot::channel::<()>();
+                    let (stx, mut srx) = tokio::sync::oneshot::channel::<()>();
+                    let accept_stream = listener.into_stream()?.into_inner();
+                    let handler_json = json.clone();
 
-                    let http_task = tokio::spawn(
-                        HyperServer::from_tcp(listener.into())?
-                            .serve(make_svc)
-                            .with_graceful_shutdown(async move {
-                                let _ = srx.await;
-                            }),
-                    );
+                    let http_task: tokio::task::JoinHandle<eyre::Result<()>> =
+                        tokio::spawn(async move {
+                            loop {
+                                tokio::select! {
+                                    res = accept_stream.accept() => {
+                                        let (conn, _) = res?;
+                                        let conn = hyper_util::rt::TokioIo::new(conn);
+
+                                        let hj = handler_json.clone();
+                                        tokio::spawn(async move {
+                                            let svc = hyper::service::service_fn(move |_req| {
+                                                let hj = hj.clone();
+                                                async move {
+                                                    #[allow(clippy::declare_interior_mutable_const)]
+                                                    const JSON: hyper::header::HeaderValue =
+                                                        hyper::header::HeaderValue::from_static(
+                                                            "application/json",
+                                                        );
+
+                                                    tracing::trace!("serving phoenix request");
+                                                    Ok::<_, std::convert::Infallible>(
+                                                        Response::builder()
+                                                            .status(StatusCode::OK)
+                                                            .header(hyper::header::CONTENT_TYPE, JSON)
+                                                            .body(http_body_util::Full::new(
+                                                                bytes::Bytes::from(
+                                                                    serde_json::to_string(&hj).unwrap(),
+                                                                ),
+                                                            ))
+                                                            .unwrap(),
+                                                    )
+                                                }
+                                            });
+
+                                            let svc = tower::ServiceBuilder::new().service(svc);
+                                            if let Err(err) = hyper::server::conn::http1::Builder::new()
+                                                .serve_connection(conn, svc)
+                                                .await
+                                            {
+                                                tracing::warn!(
+                                                    "failed to reponse to phoenix request: {err}"
+                                                );
+                                            }
+                                        });
+                                    }
+                                    _ = &mut srx => {
+                                        tracing::info!("shutting down phoenix HTTP service");
+                                        break;
+                                    }
+                                }
+                            }
+
+                            Ok(())
+                        });
 
                     let res = loop {
                         use eyre::WrapErr as _;
@@ -819,21 +843,24 @@ mod tests {
         super::spawn(qcmp_listener, config.clone(), rx, phoenix).unwrap();
         tokio::time::sleep(Duration::from_millis(150)).await;
 
-        let client = hyper::Client::new();
-
+        let client =
+            hyper_util::client::legacy::Client::builder(hyper_util::rt::TokioExecutor::new())
+                .build_http::<http_body_util::Empty<bytes::Bytes>>();
+        use http_body_util::BodyExt;
         for _ in 0..10 {
             let resp = tokio::time::timeout(
                 Duration::from_millis(100),
                 client
                     .get(format!("http://localhost:{qcmp_port}/").parse().unwrap())
                     .await
-                    .map(|resp| resp.into_body())
-                    .map(hyper::body::to_bytes)
-                    .unwrap(),
+                    .unwrap()
+                    .into_body()
+                    .collect(),
             )
             .await
             .unwrap()
-            .unwrap();
+            .unwrap()
+            .to_bytes();
 
             let map = serde_json::from_slice::<serde_json::Map<_, _>>(&resp).unwrap();
 

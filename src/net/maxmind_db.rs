@@ -1,18 +1,19 @@
 use std::sync::Arc;
 
 use bytes::Bytes;
+use hyper_util::client::legacy;
 use maxminddb::Reader;
 use once_cell::sync::Lazy;
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
 static HTTP: Lazy<
-    hyper::Client<
-        hyper_rustls::HttpsConnector<hyper::client::connect::HttpConnector>,
-        hyper::body::Body,
+    legacy::Client<
+        hyper_rustls::HttpsConnector<legacy::connect::HttpConnector>,
+        http_body_util::Empty<Bytes>,
     >,
 > = Lazy::new(|| {
-    hyper::Client::builder().build(
+    legacy::Client::builder(hyper_util::rt::TokioExecutor::new()).build(
         hyper_rustls::HttpsConnectorBuilder::new()
             .with_webpki_roots()
             .https_or_http()
@@ -107,12 +108,15 @@ impl MaxmindDb {
     #[tracing::instrument(skip_all, fields(url = %url))]
     pub async fn open_url(url: &url::Url) -> Result<Self> {
         tracing::info!("requesting maxmind database from network");
-        let data = hyper::body::to_bytes(
-            HTTP.get(url.as_str().try_into().unwrap())
-                .await?
-                .into_body(),
-        )
-        .await?;
+
+        use http_body_util::BodyExt;
+        let data = HTTP
+            .get(url.as_str().try_into().unwrap())
+            .await?
+            .into_body()
+            .collect()
+            .await?
+            .to_bytes();
 
         tracing::debug!("finished download");
         let reader = Reader::from_source(data)?;
@@ -183,6 +187,9 @@ pub enum Error {
     MaxmindDb(#[from] maxminddb::MaxMindDBError),
     #[error(transparent)]
     Http(#[from] hyper::Error),
+    #[error(transparent)]
+    HttpClient(#[from] legacy::Error),
+
     #[error(transparent)]
     Io(#[from] std::io::Error),
 }

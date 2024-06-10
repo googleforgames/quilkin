@@ -16,7 +16,7 @@
 
 use std::sync::atomic::AtomicBool;
 
-use hyper::{Body, Response, StatusCode};
+use hyper::{Response, StatusCode};
 use std::panic;
 use std::sync::atomic::Ordering::Relaxed;
 use std::sync::Arc;
@@ -44,12 +44,12 @@ impl Health {
     }
 
     /// returns a HTTP 200 response if the proxy is healthy.
-    pub fn check_liveness(&self) -> Response<Body> {
+    pub fn check_liveness(&self) -> Response<http_body_util::Full<bytes::Bytes>> {
         if self.healthy.load(Relaxed) {
             return Response::new("ok".into());
         };
 
-        let mut response = Response::new(Body::empty());
+        let mut response = Response::new(http_body_util::Full::new(bytes::Bytes::new()));
         *response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
         response
     }
