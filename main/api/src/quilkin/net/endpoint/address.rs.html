@@ -453,9 +453,9 @@
     str::FromStr,
 };
 
+<span class="kw">use </span>hickory_resolver::TokioAsyncResolver;
 <span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>serde::{Deserialize, Serialize};
-<span class="kw">use </span>trust_dns_resolver::{AsyncResolver, TokioAsyncResolver};
 
 <span class="kw">use </span><span class="kw">crate</span>::generated::envoy::config::core::v3::{
     address::Address <span class="kw">as </span>EnvoyAddress, SocketAddress <span class="kw">as </span>EnvoySocketAddress,
@@ -494,7 +494,7 @@
     /// if present.
     </span><span class="kw">pub async fn </span>to_socket_addr(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; std::io::Result&lt;SocketAddr&gt; {
         <span class="kw">static </span>DNS: Lazy&lt;TokioAsyncResolver&gt; =
-            Lazy::new(|| AsyncResolver::tokio_from_system_conf().unwrap());
+            Lazy::new(|| TokioAsyncResolver::tokio_from_system_conf().unwrap());
 
         <span class="kw">let </span>ip = <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.host {
             AddressKind::Ip(ip) =&gt; <span class="kw-2">*</span>ip,

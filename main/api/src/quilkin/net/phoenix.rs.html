@@ -855,6 +855,33 @@
 <a href="#853" id="853">853</a>
 <a href="#854" id="854">854</a>
 <a href="#855" id="855">855</a>
+<a href="#856" id="856">856</a>
+<a href="#857" id="857">857</a>
+<a href="#858" id="858">858</a>
+<a href="#859" id="859">859</a>
+<a href="#860" id="860">860</a>
+<a href="#861" id="861">861</a>
+<a href="#862" id="862">862</a>
+<a href="#863" id="863">863</a>
+<a href="#864" id="864">864</a>
+<a href="#865" id="865">865</a>
+<a href="#866" id="866">866</a>
+<a href="#867" id="867">867</a>
+<a href="#868" id="868">868</a>
+<a href="#869" id="869">869</a>
+<a href="#870" id="870">870</a>
+<a href="#871" id="871">871</a>
+<a href="#872" id="872">872</a>
+<a href="#873" id="873">873</a>
+<a href="#874" id="874">874</a>
+<a href="#875" id="875">875</a>
+<a href="#876" id="876">876</a>
+<a href="#877" id="877">877</a>
+<a href="#878" id="878">878</a>
+<a href="#879" id="879">879</a>
+<a href="#880" id="880">880</a>
+<a href="#881" id="881">881</a>
+<a href="#882" id="882">882</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! # Phoenix Network Coordinate System
 //!
 //! This module provides a framework for estimating network latencies between
@@ -889,8 +916,7 @@
     phoenix: Phoenix&lt;M&gt;,
 ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
     <span class="kw">use </span>eyre::WrapErr <span class="kw">as _</span>;
-    <span class="kw">use </span>hyper::service::{make_service_fn, service_fn};
-    <span class="kw">use </span>hyper::{Body, Response, Server <span class="kw">as </span>HyperServer, StatusCode};
+    <span class="kw">use </span>hyper::{Response, StatusCode};
 
     phoenix.add_nodes_from_config(<span class="kw-2">&amp;</span>config);
 
@@ -925,40 +951,65 @@
                         <span class="kw">async move </span>{ phoenix.background_update_task().<span class="kw">await </span>}
                     });
 
-                    <span class="kw">let </span>json2 = json.clone();
-                    <span class="kw">let </span>make_svc = make_service_fn(<span class="kw">move </span>|_conn| {
-                        <span class="kw">let </span>json = json2.clone();
-                        <span class="attr">#[allow(clippy::declare_interior_mutable_const)]
-                        </span><span class="kw">const </span>JSON: hyper::header::HeaderValue =
-                            hyper::header::HeaderValue::from_static(<span class="string">"application/json"</span>);
-
-                        <span class="kw">async move </span>{
-                            <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, std::convert::Infallible&gt;(service_fn(<span class="kw">move </span>|<span class="kw">_</span>| {
-                                <span class="kw">let </span>json = json.clone();
-                                <span class="kw">async move </span>{
-                                    <span class="macro">tracing::trace!</span>(<span class="string">"serving phoenix request"</span>);
-                                    <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, std::convert::Infallible&gt;(
-                                        Response::builder()
-                                            .status(StatusCode::OK)
-                                            .header(hyper::header::CONTENT_TYPE, JSON)
-                                            .body(Body::from(serde_json::to_string(<span class="kw-2">&amp;</span>json).unwrap()))
-                                            .unwrap(),
-                                    )
-                                }
-                            }))
-                        }
-                    });
-
                     <span class="macro">tracing::info!</span>(addr=%listener.local_addr(), <span class="string">"starting phoenix HTTP service"</span>);
-                    <span class="kw">let </span>(stx, srx) = tokio::sync::oneshot::channel::&lt;()&gt;();
+                    <span class="kw">let </span>(stx, <span class="kw-2">mut </span>srx) = tokio::sync::oneshot::channel::&lt;()&gt;();
+                    <span class="kw">let </span>accept_stream = listener.into_stream()<span class="question-mark">?</span>.into_inner();
+                    <span class="kw">let </span>handler_json = json.clone();
 
-                    <span class="kw">let </span>http_task = tokio::spawn(
-                        HyperServer::from_tcp(listener.into())<span class="question-mark">?
-                            </span>.serve(make_svc)
-                            .with_graceful_shutdown(<span class="kw">async move </span>{
-                                <span class="kw">let _ </span>= srx.<span class="kw">await</span>;
-                            }),
-                    );
+                    <span class="kw">let </span>http_task: tokio::task::JoinHandle&lt;eyre::Result&lt;()&gt;&gt; =
+                        tokio::spawn(<span class="kw">async move </span>{
+                            <span class="kw">loop </span>{
+                                <span class="macro">tokio::select! </span>{
+                                    res = accept_stream.accept() =&gt; {
+                                        <span class="kw">let </span>(conn, <span class="kw">_</span>) = res<span class="question-mark">?</span>;
+                                        <span class="kw">let </span>conn = hyper_util::rt::TokioIo::new(conn);
+
+                                        <span class="kw">let </span>hj = handler_json.clone();
+                                        tokio::spawn(<span class="kw">async move </span>{
+                                            <span class="kw">let </span>svc = hyper::service::service_fn(<span class="kw">move </span>|_req| {
+                                                <span class="kw">let </span>hj = hj.clone();
+                                                <span class="kw">async move </span>{
+                                                    <span class="attr">#[allow(clippy::declare_interior_mutable_const)]
+                                                    </span><span class="kw">const </span>JSON: hyper::header::HeaderValue =
+                                                        hyper::header::HeaderValue::from_static(
+                                                            <span class="string">"application/json"</span>,
+                                                        );
+
+                                                    <span class="macro">tracing::trace!</span>(<span class="string">"serving phoenix request"</span>);
+                                                    <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, std::convert::Infallible&gt;(
+                                                        Response::builder()
+                                                            .status(StatusCode::OK)
+                                                            .header(hyper::header::CONTENT_TYPE, JSON)
+                                                            .body(http_body_util::Full::new(
+                                                                bytes::Bytes::from(
+                                                                    serde_json::to_string(<span class="kw-2">&amp;</span>hj).unwrap(),
+                                                                ),
+                                                            ))
+                                                            .unwrap(),
+                                                    )
+                                                }
+                                            });
+
+                                            <span class="kw">let </span>svc = tower::ServiceBuilder::new().service(svc);
+                                            <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = hyper::server::conn::http1::Builder::new()
+                                                .serve_connection(conn, svc)
+                                                .<span class="kw">await
+                                            </span>{
+                                                <span class="macro">tracing::warn!</span>(
+                                                    <span class="string">"failed to reponse to phoenix request: {err}"
+                                                </span>);
+                                            }
+                                        });
+                                    }
+                                    <span class="kw">_ </span>= <span class="kw-2">&amp;mut </span>srx =&gt; {
+                                        <span class="macro">tracing::info!</span>(<span class="string">"shutting down phoenix HTTP service"</span>);
+                                        <span class="kw">break</span>;
+                                    }
+                                }
+                            }
+
+                            <span class="prelude-val">Ok</span>(())
+                        });
 
                     <span class="kw">let </span>res = <span class="kw">loop </span>{
                         <span class="kw">use </span>eyre::WrapErr <span class="kw">as _</span>;
@@ -1676,21 +1727,24 @@
         <span class="kw">super</span>::spawn(qcmp_listener, config.clone(), rx, phoenix).unwrap();
         tokio::time::sleep(Duration::from_millis(<span class="number">150</span>)).<span class="kw">await</span>;
 
-        <span class="kw">let </span>client = hyper::Client::new();
-
+        <span class="kw">let </span>client =
+            hyper_util::client::legacy::Client::builder(hyper_util::rt::TokioExecutor::new())
+                .build_http::&lt;http_body_util::Empty&lt;bytes::Bytes&gt;&gt;();
+        <span class="kw">use </span>http_body_util::BodyExt;
         <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">10 </span>{
             <span class="kw">let </span>resp = tokio::time::timeout(
                 Duration::from_millis(<span class="number">100</span>),
                 client
                     .get(<span class="macro">format!</span>(<span class="string">"http://localhost:{qcmp_port}/"</span>).parse().unwrap())
                     .<span class="kw">await
-                    </span>.map(|resp| resp.into_body())
-                    .map(hyper::body::to_bytes)
-                    .unwrap(),
+                    </span>.unwrap()
+                    .into_body()
+                    .collect(),
             )
             .<span class="kw">await
             </span>.unwrap()
-            .unwrap();
+            .unwrap()
+            .to_bytes();
 
             <span class="kw">let </span>map = serde_json::from_slice::&lt;serde_json::Map&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt;&gt;(<span class="kw-2">&amp;</span>resp).unwrap();
 

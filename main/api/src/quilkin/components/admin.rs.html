@@ -269,6 +269,24 @@
 <a href="#267" id="267">267</a>
 <a href="#268" id="268">268</a>
 <a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2023 Google LLC
  *
@@ -287,12 +305,13 @@
 
 </span><span class="kw">mod </span>health;
 
-<span class="kw">use </span>std::convert::Infallible;
 <span class="kw">use </span>std::sync::Arc;
 <span class="kw">use </span>std::time::Duration;
 
-<span class="kw">use </span>hyper::service::{make_service_fn, service_fn};
-<span class="kw">use </span>hyper::{Body, Method, Request, Response, Server <span class="kw">as </span>HyperServer, StatusCode};
+<span class="kw">use </span>bytes::Bytes;
+<span class="kw">use </span>http_body_util::Full;
+<span class="kw">use </span>hyper::{Method, Request, Response, StatusCode};
+<span class="kw">type </span>Body = Full&lt;Bytes&gt;;
 
 <span class="kw">use </span><span class="kw">crate</span>::config::Config;
 <span class="kw">use </span>health::Health;
@@ -326,7 +345,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         config: Arc&lt;Config&gt;,
         address: <span class="prelude-ty">Option</span>&lt;std::net::SocketAddr&gt;,
-    ) -&gt; std::thread::JoinHandle&lt;<span class="prelude-ty">Result</span>&lt;(), hyper::Error&gt;&gt; {
+    ) -&gt; std::thread::JoinHandle&lt;eyre::Result&lt;()&gt;&gt; {
         <span class="kw">let </span>address = address.unwrap_or_else(|| (std::net::Ipv6Addr::UNSPECIFIED, PORT).into());
         <span class="kw">let </span>health = Health::new();
         <span class="macro">tracing::info!</span>(address = %address, <span class="string">"Starting admin endpoint"</span>);
@@ -342,28 +361,43 @@
                     .build()
                     .expect(<span class="string">"couldn't create tokio runtime in thread"</span>);
                 runtime.block_on(<span class="kw">async move </span>{
-                    <span class="kw">let </span>make_svc = make_service_fn(<span class="kw">move </span>|_conn| {
-                        <span class="kw">let </span>config = config.clone();
-                        <span class="kw">let </span>health = health.clone();
-                        <span class="kw">let </span>mode = mode.clone();
-                        <span class="kw">async move </span>{
-                            <span class="kw">let </span>config = config.clone();
-                            <span class="kw">let </span>health = health.clone();
-                            <span class="kw">let </span>mode = mode.clone();
-                            <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, Infallible&gt;(service_fn(<span class="kw">move </span>|req| {
+                    <span class="kw">let </span>accept_stream = tokio::net::TcpListener::bind(address).<span class="kw">await</span><span class="question-mark">?</span>;
+                    <span class="kw">let </span>http_task: tokio::task::JoinHandle&lt;eyre::Result&lt;()&gt;&gt; =
+                        tokio::task::spawn(<span class="kw">async move </span>{
+                            <span class="kw">loop </span>{
+                                <span class="kw">let </span>(stream, <span class="kw">_</span>) = accept_stream.accept().<span class="kw">await</span><span class="question-mark">?</span>;
+                                <span class="kw">let </span>stream = hyper_util::rt::TokioIo::new(stream);
+
                                 <span class="kw">let </span>config = config.clone();
                                 <span class="kw">let </span>health = health.clone();
                                 <span class="kw">let </span>mode = mode.clone();
-                                <span class="kw">async move </span>{
-                                    <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, Infallible&gt;(
-                                        mode.handle_request(req, config, health).<span class="kw">await</span>,
-                                    )
-                                }
-                            }))
-                        }
-                    });
+                                tokio::spawn(<span class="kw">async move </span>{
+                                    <span class="kw">let </span>svc = hyper::service::service_fn(<span class="kw">move </span>|req| {
+                                        <span class="kw">let </span>config = config.clone();
+                                        <span class="kw">let </span>health = health.clone();
+                                        <span class="kw">let </span>mode = mode.clone();
 
-                    HyperServer::bind(<span class="kw-2">&amp;</span>address).serve(make_svc).<span class="kw">await
+                                        <span class="kw">async move </span>{
+                                            <span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, std::convert::Infallible&gt;(
+                                                mode.handle_request(req, config, health).<span class="kw">await</span>,
+                                            )
+                                        }
+                                    });
+
+                                    <span class="kw">let </span>svc = tower::ServiceBuilder::new().service(svc);
+                                    <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = hyper::server::conn::http1::Builder::new()
+                                        .serve_connection(stream, svc)
+                                        .<span class="kw">await
+                                    </span>{
+                                        <span class="macro">tracing::warn!</span>(
+                                            <span class="string">"failed to reponse to phoenix request: {err}"
+                                        </span>);
+                                    }
+                                });
+                            }
+                        });
+
+                    http_task.<span class="kw">await</span><span class="question-mark">?
                 </span>})
             })
             .expect(<span class="string">"failed to spawn admin-http thread"</span>)
@@ -382,7 +416,7 @@
 
     <span class="kw">async fn </span>handle_request(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        request: Request&lt;Body&gt;,
+        request: Request&lt;hyper::body::Incoming&gt;,
         config: Arc&lt;Config&gt;,
         health: Health,
     ) -&gt; Response&lt;Body&gt; {
@@ -404,7 +438,7 @@
                         <span class="macro">tracing::warn!</span>(%error, <span class="string">"admin http server error"</span>);
                         Response::builder()
                             .status(StatusCode::INTERNAL_SERVER_ERROR)
-                            .body(Body::from(<span class="string">"internal error"</span>))
+                            .body(Body::new(Bytes::from(<span class="string">"internal error"</span>)))
                             .unwrap()
                     }
                 }
@@ -417,15 +451,17 @@
                         <span class="string">"Content-Type"</span>,
                         hyper::header::HeaderValue::from_static(<span class="string">"application/json"</span>),
                     )
-                    .body(Body::from(body))
+                    .body(Body::new(Bytes::from(body)))
                     .unwrap(),
                 <span class="prelude-val">Err</span>(err) =&gt; Response::builder()
                     .status(StatusCode::INTERNAL_SERVER_ERROR)
-                    .body(Body::from(<span class="macro">format!</span>(<span class="string">"failed to create config dump: {err}"</span>)))
+                    .body(Body::new(Bytes::from(<span class="macro">format!</span>(
+                        <span class="string">"failed to create config dump: {err}"
+                    </span>))))
                     .unwrap(),
             },
             (<span class="kw">_</span>, <span class="kw">_</span>) =&gt; {
-                <span class="kw">let </span><span class="kw-2">mut </span>response = Response::new(Body::empty());
+                <span class="kw">let </span><span class="kw-2">mut </span>response = Response::new(Body::new(Bytes::new()));
                 <span class="kw-2">*</span>response.status_mut() = StatusCode::NOT_FOUND;
                 response
             }
@@ -438,13 +474,13 @@
         <span class="kw">return </span>Response::new(<span class="string">"ok"</span>.into());
     }
 
-    <span class="kw">let </span><span class="kw-2">mut </span>response = Response::new(Body::empty());
+    <span class="kw">let </span><span class="kw-2">mut </span>response = Response::new(Body::new(Bytes::new()));
     <span class="kw-2">*</span>response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
     response
 }
 
 <span class="kw">fn </span>collect_metrics() -&gt; Response&lt;Body&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>response = Response::new(Body::empty());
+    <span class="kw">let </span><span class="kw-2">mut </span>response = Response::new(Body::new(Bytes::new()));
     <span class="kw">let </span><span class="kw-2">mut </span>buffer = <span class="macro">vec!</span>[];
     <span class="kw">let </span>encoder = prometheus::TextEncoder::new();
     <span class="kw">let </span>body =
@@ -452,13 +488,13 @@
             .map_err(|error| <span class="macro">tracing::warn!</span>(%error, <span class="string">"Failed to encode metrics"</span>))
             .and_then(|<span class="kw">_</span>| {
                 String::from_utf8(buffer)
-                    .map(Body::from)
+                    .map(hyper::body::Bytes::from)
                     .map_err(|error| <span class="macro">tracing::warn!</span>(%error, <span class="string">"Failed to convert metrics to utf8"</span>))
             });
 
     <span class="kw">match </span>body {
         <span class="prelude-val">Ok</span>(body) =&gt; {
-            <span class="kw-2">*</span>response.body_mut() = body;
+            <span class="kw-2">*</span>response.body_mut() = Body::new(body);
         }
         <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
             <span class="kw-2">*</span>response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
@@ -498,7 +534,7 @@
         .header(hyper::header::CONTENT_LENGTH, gzip_body.len() <span class="kw">as </span>u64)
         .header(hyper::header::CONTENT_TYPE, <span class="string">"application/octet-stream"</span>)
         .header(hyper::header::CONTENT_ENCODING, <span class="string">"gzip"</span>)
-        .body(Body::from(gzip_body))
+        .body(Body::new(Bytes::from(gzip_body)))
         .map_err(From::from)
 }
 

@@ -96,7 +96,7 @@
 
 </span><span class="kw">use </span>std::sync::atomic::AtomicBool;
 
-<span class="kw">use </span>hyper::{Body, Response, StatusCode};
+<span class="kw">use </span>hyper::{Response, StatusCode};
 <span class="kw">use </span>std::panic;
 <span class="kw">use </span>std::sync::atomic::Ordering::Relaxed;
 <span class="kw">use </span>std::sync::Arc;
@@ -124,12 +124,12 @@
     }
 
     <span class="doccomment">/// returns a HTTP 200 response if the proxy is healthy.
-    </span><span class="kw">pub fn </span>check_liveness(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Response&lt;Body&gt; {
+    </span><span class="kw">pub fn </span>check_liveness(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Response&lt;http_body_util::Full&lt;bytes::Bytes&gt;&gt; {
         <span class="kw">if </span><span class="self">self</span>.healthy.load(Relaxed) {
             <span class="kw">return </span>Response::new(<span class="string">"ok"</span>.into());
         };
 
-        <span class="kw">let </span><span class="kw-2">mut </span>response = Response::new(Body::empty());
+        <span class="kw">let </span><span class="kw-2">mut </span>response = Response::new(http_body_util::Full::new(bytes::Bytes::new()));
         <span class="kw-2">*</span>response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
         response
     }
