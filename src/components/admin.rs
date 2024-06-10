@@ -108,7 +108,7 @@ impl Admin {
                             }
                         });
 
-                    Ok(http_task.await??)
+                    http_task.await?
                 })
             })
             .expect("failed to spawn admin-http thread")
