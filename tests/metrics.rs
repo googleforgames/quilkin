@@ -69,8 +69,9 @@ async fn metrics_server() {
         .unwrap()
         .unwrap();
 
-    let client = hyper::Client::new();
-
+    let client = hyper_util::client::legacy::Client::builder(hyper_util::rt::TokioExecutor::new())
+        .build_http::<http_body_util::Empty<bytes::Bytes>>();
+    use http_body_util::BodyExt;
     let resp = client
         .get(
             format!("http://localhost:{metrics_port}/metrics")
@@ -78,11 +79,12 @@ async fn metrics_server() {
                 .unwrap(),
         )
         .await
-        .map(|resp| resp.into_body())
-        .map(hyper::body::to_bytes)
         .unwrap()
+        .into_body()
+        .collect()
         .await
-        .unwrap();
+        .unwrap()
+        .to_bytes();
 
     let response = String::from_utf8(resp.to_vec()).unwrap();
     let read_regex = regex::Regex::new(r#"quilkin_packets_total\{.*event="read".*\} 2"#).unwrap();

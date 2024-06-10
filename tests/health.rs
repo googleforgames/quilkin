@@ -15,7 +15,7 @@
  */
 use std::panic;
 
-use hyper::{Client, Uri};
+use hyper::Uri;
 
 use quilkin::{net::endpoint::Endpoint, test::TestHelper};
 
@@ -38,17 +38,21 @@ async fn health_server() {
     .await;
     tokio::time::sleep(std::time::Duration::from_millis(250)).await;
 
-    let client = Client::new();
+    let client = hyper_util::client::legacy::Client::builder(hyper_util::rt::TokioExecutor::new())
+        .build_http::<http_body_util::Empty<bytes::Bytes>>();
+    use http_body_util::BodyExt;
     let resp = client
         .get(Uri::from_static(LIVE_ADDRESS))
         .await
-        .map(|resp| resp.into_body())
-        .map(hyper::body::to_bytes)
         .unwrap()
+        .into_body()
+        .collect()
         .await
-        .unwrap();
+        .unwrap()
+        .to_bytes()
+        .to_vec();
 
-    assert_eq!("ok", String::from_utf8(resp.to_vec()).unwrap());
+    assert_eq!("ok", String::from_utf8(resp).unwrap());
 
     let _ = panic::catch_unwind(|| {
         panic!("oh no!");

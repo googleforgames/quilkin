@@ -21,9 +21,9 @@ use std::{
     str::FromStr,
 };
 
+use hickory_resolver::TokioAsyncResolver;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use trust_dns_resolver::{AsyncResolver, TokioAsyncResolver};
 
 use crate::generated::envoy::config::core::v3::{
     address::Address as EnvoyAddress, SocketAddress as EnvoySocketAddress,
@@ -62,7 +62,7 @@ impl EndpointAddress {
     /// if present.
     pub async fn to_socket_addr(&self) -> std::io::Result<SocketAddr> {
         static DNS: Lazy<TokioAsyncResolver> =
-            Lazy::new(|| AsyncResolver::tokio_from_system_conf().unwrap());
+            Lazy::new(|| TokioAsyncResolver::tokio_from_system_conf().unwrap());
 
         let ip = match &self.host {
             AddressKind::Ip(ip) => *ip,

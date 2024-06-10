@@ -16,12 +16,13 @@
 
 mod health;
 
-use std::convert::Infallible;
 use std::sync::Arc;
 use std::time::Duration;
 
-use hyper::service::{make_service_fn, service_fn};
-use hyper::{Body, Method, Request, Response, Server as HyperServer, StatusCode};
+use bytes::Bytes;
+use http_body_util::Full;
+use hyper::{Method, Request, Response, StatusCode};
+type Body = Full<Bytes>;
 
 use crate::config::Config;
 use health::Health;
@@ -55,7 +56,7 @@ impl Admin {
         &self,
         config: Arc<Config>,
         address: Option<std::net::SocketAddr>,
-    ) -> std::thread::JoinHandle<Result<(), hyper::Error>> {
+    ) -> std::thread::JoinHandle<eyre::Result<()>> {
         let address = address.unwrap_or_else(|| (std::net::Ipv6Addr::UNSPECIFIED, PORT).into());
         let health = Health::new();
         tracing::info!(address = %address, "Starting admin endpoint");
@@ -71,28 +72,43 @@ impl Admin {
                     .build()
                     .expect("couldn't create tokio runtime in thread");
                 runtime.block_on(async move {
-                    let make_svc = make_service_fn(move |_conn| {
-                        let config = config.clone();
-                        let health = health.clone();
-                        let mode = mode.clone();
-                        async move {
-                            let config = config.clone();
-                            let health = health.clone();
-                            let mode = mode.clone();
-                            Ok::<_, Infallible>(service_fn(move |req| {
+                    let accept_stream = tokio::net::TcpListener::bind(address).await?;
+                    let http_task: tokio::task::JoinHandle<eyre::Result<()>> =
+                        tokio::task::spawn(async move {
+                            loop {
+                                let (stream, _) = accept_stream.accept().await?;
+                                let stream = hyper_util::rt::TokioIo::new(stream);
+
                                 let config = config.clone();
                                 let health = health.clone();
                                 let mode = mode.clone();
-                                async move {
-                                    Ok::<_, Infallible>(
-                                        mode.handle_request(req, config, health).await,
-                                    )
-                                }
-                            }))
-                        }
-                    });
+                                tokio::spawn(async move {
+                                    let svc = hyper::service::service_fn(move |req| {
+                                        let config = config.clone();
+                                        let health = health.clone();
+                                        let mode = mode.clone();
 
-                    HyperServer::bind(&address).serve(make_svc).await
+                                        async move {
+                                            Ok::<_, std::convert::Infallible>(
+                                                mode.handle_request(req, config, health).await,
+                                            )
+                                        }
+                                    });
+
+                                    let svc = tower::ServiceBuilder::new().service(svc);
+                                    if let Err(err) = hyper::server::conn::http1::Builder::new()
+                                        .serve_connection(stream, svc)
+                                        .await
+                                    {
+                                        tracing::warn!(
+                                            "failed to reponse to phoenix request: {err}"
+                                        );
+                                    }
+                                });
+                            }
+                        });
+
+                    Ok(http_task.await??)
                 })
             })
             .expect("failed to spawn admin-http thread")
@@ -111,7 +127,7 @@ impl Admin {
 
     async fn handle_request(
         &self,
-        request: Request<Body>,
+        request: Request<hyper::body::Incoming>,
         config: Arc<Config>,
         health: Health,
     ) -> Response<Body> {
@@ -133,7 +149,7 @@ impl Admin {
                         tracing::warn!(%error, "admin http server error");
                         Response::builder()
                             .status(StatusCode::INTERNAL_SERVER_ERROR)
-                            .body(Body::from("internal error"))
+                            .body(Body::new(Bytes::from("internal error")))
                             .unwrap()
                     }
                 }
@@ -146,15 +162,17 @@ impl Admin {
                         "Content-Type",
                         hyper::header::HeaderValue::from_static("application/json"),
                     )
-                    .body(Body::from(body))
+                    .body(Body::new(Bytes::from(body)))
                     .unwrap(),
                 Err(err) => Response::builder()
                     .status(StatusCode::INTERNAL_SERVER_ERROR)
-                    .body(Body::from(format!("failed to create config dump: {err}")))
+                    .body(Body::new(Bytes::from(format!(
+                        "failed to create config dump: {err}"
+                    ))))
                     .unwrap(),
             },
             (_, _) => {
-                let mut response = Response::new(Body::empty());
+                let mut response = Response::new(Body::new(Bytes::new()));
                 *response.status_mut() = StatusCode::NOT_FOUND;
                 response
             }
@@ -167,13 +185,13 @@ fn check_readiness(check: impl Fn() -> bool) -> Response<Body> {
         return Response::new("ok".into());
     }
 
-    let mut response = Response::new(Body::empty());
+    let mut response = Response::new(Body::new(Bytes::new()));
     *response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
     response
 }
 
 fn collect_metrics() -> Response<Body> {
-    let mut response = Response::new(Body::empty());
+    let mut response = Response::new(Body::new(Bytes::new()));
     let mut buffer = vec![];
     let encoder = prometheus::TextEncoder::new();
     let body =
@@ -181,13 +199,13 @@ fn collect_metrics() -> Response<Body> {
             .map_err(|error| tracing::warn!(%error, "Failed to encode metrics"))
             .and_then(|_| {
                 String::from_utf8(buffer)
-                    .map(Body::from)
+                    .map(hyper::body::Bytes::from)
                     .map_err(|error| tracing::warn!(%error, "Failed to convert metrics to utf8"))
             });
 
     match body {
         Ok(body) => {
-            *response.body_mut() = body;
+            *response.body_mut() = Body::new(body);
         }
         Err(_) => {
             *response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
@@ -227,7 +245,7 @@ async fn collect_pprof(
         .header(hyper::header::CONTENT_LENGTH, gzip_body.len() as u64)
         .header(hyper::header::CONTENT_TYPE, "application/octet-stream")
         .header(hyper::header::CONTENT_ENCODING, "gzip")
-        .body(Body::from(gzip_body))
+        .body(Body::new(Bytes::from(gzip_body)))
         .map_err(From::from)
 }
 
