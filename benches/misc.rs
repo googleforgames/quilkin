@@ -1,3 +1,5 @@
+#![cfg(target_pointer_width = "99")]
+
 use divan::Bencher;
 use prost_types::{value::Kind, Value};
 use quilkin::net::cluster::proto::Endpoint as ProtoEndpoint;

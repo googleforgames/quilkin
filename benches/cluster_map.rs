@@ -1,3 +1,5 @@
+#![cfg(target_pointer_width = "99")]
+
 use divan::Bencher;
 use quilkin::net::cluster::ClusterMap;
 

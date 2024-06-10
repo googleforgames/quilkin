@@ -30,6 +30,7 @@ pub mod codec;
 pub mod components;
 pub mod config;
 pub mod filters;
+pub mod xds;
 
 #[doc(hidden)]
 pub mod test;

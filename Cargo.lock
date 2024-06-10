@@ -3704,6 +3704,7 @@ dependencies = [
  "tracing",
  "tracing-futures",
  "tryhard",
+ "url",
  "uuid",
 ]
 

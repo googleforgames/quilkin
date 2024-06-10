@@ -150,8 +150,10 @@ trace_test!(datacenter_discovery, {
     );
     sc.push("proxy", ProxyPailConfig::default(), &["relay"]);
 
-    let sandbox = sc.spinup().await;
+    let mut sandbox = sc.spinup().await;
     sandbox.sleep(150).await;
+
+    let (_, mut proxy_delta_rx) = sandbox.proxy("proxy");
 
     let Pail::Agent(AgentPail { qcmp_port, .. }) = &sandbox.pails["agent"] else {
         unreachable!()
@@ -176,6 +178,15 @@ trace_test!(datacenter_discovery, {
     else {
         unreachable!()
     };
+
+    loop {
+        let rt = sandbox.timeout(10000, proxy_delta_rx.recv()).await.unwrap();
+
+        match rt.as_ref() {
+            quilkin::xds::DATACENTER_TYPE => break,
+            _ => {}
+        }
+    }
 
     #[track_caller]
     fn assert_config(config: &quilkin::Config, datacenter: &quilkin::config::Datacenter) {
@@ -289,9 +300,9 @@ trace_test!(filter_update, {
         while (updates & 0x11) != 0x11 {
             let rt = sandbox.timeout(10000, proxy_delta_rx.recv()).await.unwrap();
 
-            match rt {
-                quilkin::net::xds::ResourceType::Listener => updates |= 0x1,
-                quilkin::net::xds::ResourceType::Cluster => updates |= 0x10,
+            match rt.as_ref() {
+                quilkin::xds::FILTER_CHAIN_TYPE => updates |= 0x1,
+                quilkin::xds::CLUSTER_TYPE => updates |= 0x10,
                 _ => {}
             }
         }

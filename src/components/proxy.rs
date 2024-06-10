@@ -2,10 +2,7 @@ pub mod packet_router;
 mod sessions;
 
 use super::RunArgs;
-use crate::{
-    net::{maxmind_db::IpNetEntry, xds::ResourceType},
-    pool::PoolBuffer,
-};
+use crate::{net::maxmind_db::IpNetEntry, pool::PoolBuffer};
 pub use sessions::SessionPool;
 use std::{
     net::SocketAddr,
@@ -66,7 +63,7 @@ pub struct Proxy {
     pub socket: socket2::Socket,
     pub qcmp: socket2::Socket,
     pub phoenix: crate::net::TcpListener,
-    pub notifier: Option<tokio::sync::mpsc::UnboundedSender<crate::net::xds::ResourceType>>,
+    pub notifier: Option<tokio::sync::mpsc::UnboundedSender<String>>,
 }
 
 impl Default for Proxy {
@@ -186,9 +183,9 @@ impl Proxy {
                                     xds_is_healthy.clone(),
                                     tx,
                                     [
-                                        (ResourceType::Cluster, Vec::new()),
-                                        (ResourceType::Listener, Vec::new()),
-                                        (ResourceType::Datacenter, Vec::new()),
+                                        (crate::xds::CLUSTER_TYPE, Vec::new()),
+                                        (crate::xds::DATACENTER_TYPE, Vec::new()),
+                                        (crate::xds::FILTER_CHAIN_TYPE, Vec::new()),
                                     ],
                                 )
                                 .await

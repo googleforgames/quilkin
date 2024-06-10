@@ -48,15 +48,15 @@ name = "compression"
 harness = false
 test = false
 
-[[bench]]
-name = "cluster_map"
-harness = false
-test = false
+# [[bench]]
+# name = "cluster_map"
+# harness = false
+# test = false
 
-[[bench]]
-name = "misc"
-harness = false
-test = false
+# [[bench]]
+# name = "misc"
+# harness = false
+# test = false
 
 [[bench]]
 name = "token_router"
@@ -118,7 +118,7 @@ tracing.workspace = true
 tracing-futures.workspace = true
 tracing-subscriber = { workspace = true, features = ["json", "env-filter"] }
 tryhard.workspace = true
-url = { version = "2.4.1", features = ["serde"] }
+url.workspace = true
 uuid.workspace = true
 lasso = { version = "0.7.2", features = ["multi-threaded"] }
 kube.workspace = true
@@ -168,7 +168,6 @@ debug = true
 
 [workspace]
 members = [".", "crates/*"]
-
 
 [workspace.package]
 license = "Apache-2.0"
@@ -221,3 +220,4 @@ uuid = { version = "1.4.1", default-features = false, features = ["v4"] }
 fixedstr = { version = "0.5", features = ["flex-str"] }
 parking_lot = "0.12.1"
 schemars = { version = "0.8.15", features = ["bytes", "url"] }
+url = { version = "2.4.1", features = ["serde"] }
