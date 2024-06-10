@@ -143,22 +143,6 @@
 <a href="#141" id="141">141</a>
 <a href="#142" id="142">142</a>
 <a href="#143" id="143">143</a>
-<a href="#144" id="144">144</a>
-<a href="#145" id="145">145</a>
-<a href="#146" id="146">146</a>
-<a href="#147" id="147">147</a>
-<a href="#148" id="148">148</a>
-<a href="#149" id="149">149</a>
-<a href="#150" id="150">150</a>
-<a href="#151" id="151">151</a>
-<a href="#152" id="152">152</a>
-<a href="#153" id="153">153</a>
-<a href="#154" id="154">154</a>
-<a href="#155" id="155">155</a>
-<a href="#156" id="156">156</a>
-<a href="#157" id="157">157</a>
-<a href="#158" id="158">158</a>
-<a href="#159" id="159">159</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -232,22 +216,6 @@
     });
 
     DELTA_DISCOVERY_REQUESTS.with_label_values(<span class="kw-2">&amp;</span>[node, type_url])
-}
-
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>discovery_responses(control_plane: <span class="kw-2">&amp;</span>str, type_url: <span class="kw-2">&amp;</span>str) -&gt; prometheus::IntCounter {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">static </span>DISCOVERY_RESPONSES: Lazy&lt;IntCounterVec&gt; = Lazy::new(|| {
-        <span class="macro">prometheus::register_int_counter_vec_with_registry! </span>{
-            <span class="macro">prometheus::opts! </span>{
-                <span class="string">"discovery_responses"</span>,
-                <span class="string">"Total number of xDS discovery responses"</span>,
-            },
-            <span class="kw-2">&amp;</span>[CONTROL_PLANE_LABEL, TYPE_LABEL],
-            <span class="kw">crate</span>::metrics::registry(),
-        }
-        .unwrap()
-    });
-
-    DISCOVERY_RESPONSES.with_label_values(<span class="kw-2">&amp;</span>[control_plane, type_url])
 }
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>delta_discovery_responses(

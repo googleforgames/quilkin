@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["handle_delta_discovery_responses","max_grpc_message_size"],"struct":["DeltaDiscoveryRes","LocalVersions"],"trait":["Configuration"]};
+window.SIDEBAR_ITEMS = {"fn":["handle_delta_discovery_responses","max_grpc_message_size"],"struct":["AwaitingAck","ClientState","ClientTracker","DeltaDiscoveryRes","LocalVersions"],"trait":["Configuration"],"type":["VersionMap"]};

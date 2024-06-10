@@ -733,10 +733,6 @@
 <a href="#731" id="731">731</a>
 <a href="#732" id="732">732</a>
 <a href="#733" id="733">733</a>
-<a href="#734" id="734">734</a>
-<a href="#735" id="735">735</a>
-<a href="#736" id="736">736</a>
-<a href="#737" id="737">737</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>quilkin::{
     components::{<span class="self">self</span>, RunArgs},
     config::Providers,
@@ -794,7 +790,7 @@
         .with_test_writer()
         .with_filter(tracing_subscriber::filter::LevelFilter::from_level(level))
         .with_filter(tracing_subscriber::EnvFilter::new(<span class="macro">format!</span>(
-            <span class="string">"{test_pkg}=trace,qt=trace,quilkin=trace"
+            <span class="string">"{test_pkg}=trace,qt=trace,quilkin=trace,xds=trace"
         </span>)));
     <span class="kw">let </span>sub = tracing_subscriber::Registry::default().with(layer);
     <span class="kw">let </span>disp = tracing::dispatcher::Dispatch::new(sub);
@@ -966,8 +962,7 @@
     <span class="kw">pub </span>task: JoinHandle,
     <span class="kw">pub </span>shutdown: ShutdownTx,
     <span class="kw">pub </span>config: Arc&lt;Config&gt;,
-    <span class="kw">pub </span>delta_applies:
-        <span class="prelude-ty">Option</span>&lt;tokio::sync::mpsc::UnboundedReceiver&lt;quilkin::net::xds::ResourceType&gt;&gt;,
+    <span class="kw">pub </span>delta_applies: <span class="prelude-ty">Option</span>&lt;tokio::sync::mpsc::UnboundedReceiver&lt;String&gt;&gt;,
 }
 
 <span class="macro">abort_task!</span>(ProxyPail);
@@ -1373,10 +1368,7 @@
     </span><span class="kw">pub fn </span>proxy(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         name: <span class="kw-2">&amp;</span>str,
-    ) -&gt; (
-        SocketAddr,
-        tokio::sync::mpsc::UnboundedReceiver&lt;quilkin::net::xds::ResourceType&gt;,
-    ) {
+    ) -&gt; (SocketAddr, tokio::sync::mpsc::UnboundedReceiver&lt;String&gt;) {
         <span class="kw">let </span><span class="prelude-val">Some</span>(Pail::Proxy(pp)) = <span class="self">self</span>.pails.get_mut(name) <span class="kw">else </span>{
             <span class="macro">unreachable!</span>()
         };

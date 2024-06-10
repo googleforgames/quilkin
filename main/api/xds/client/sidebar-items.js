@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["handle_discovery_responses"],"struct":["Client","DeltaSubscription"],"trait":["ServiceClient"],"type":["AdsClient","MdsClient"]};
+window.SIDEBAR_ITEMS = {"struct":["Client","DeltaSubscription"],"trait":["ServiceClient"],"type":["AdsClient","MdsClient"]};

@@ -700,6 +700,28 @@
 <a href="#698" id="698">698</a>
 <a href="#699" id="699">699</a>
 <a href="#700" id="700">700</a>
+<a href="#701" id="701">701</a>
+<a href="#702" id="702">702</a>
+<a href="#703" id="703">703</a>
+<a href="#704" id="704">704</a>
+<a href="#705" id="705">705</a>
+<a href="#706" id="706">706</a>
+<a href="#707" id="707">707</a>
+<a href="#708" id="708">708</a>
+<a href="#709" id="709">709</a>
+<a href="#710" id="710">710</a>
+<a href="#711" id="711">711</a>
+<a href="#712" id="712">712</a>
+<a href="#713" id="713">713</a>
+<a href="#714" id="714">714</a>
+<a href="#715" id="715">715</a>
+<a href="#716" id="716">716</a>
+<a href="#717" id="717">717</a>
+<a href="#718" id="718">718</a>
+<a href="#719" id="719">719</a>
+<a href="#720" id="720">720</a>
+<a href="#721" id="721">721</a>
+<a href="#722" id="722">722</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -717,7 +739,6 @@
  */
 
 </span><span class="kw">use </span>std::{
-    borrow::Borrow,
     collections::{hash_map::RandomState, BTreeSet},
     fmt,
     sync::atomic::{AtomicU64, AtomicUsize, Ordering::Relaxed},
@@ -728,7 +749,6 @@
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 
 <span class="kw">use </span><span class="kw">crate</span>::net::endpoint::{Endpoint, EndpointAddress, Locality};
-<span class="kw">use </span>xds::EndpointSetVersion;
 
 <span class="kw">const </span>SUBSYSTEM: <span class="kw-2">&amp;</span>str = <span class="string">"cluster"</span>;
 
@@ -773,6 +793,40 @@
     <span class="attr">#[inline]
     </span><span class="kw">pub fn </span>new(token: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>(seahash::hash(token))
+    }
+}
+
+<span class="attr">#[derive(Copy, Clone, PartialEq, Eq)]
+</span><span class="kw">pub struct </span>EndpointSetVersion(u64);
+
+<span class="kw">impl </span>EndpointSetVersion {
+    <span class="kw">pub fn </span>from_number(version: u64) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>(version)
+    }
+
+    <span class="kw">pub fn </span>number(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
+        <span class="self">self</span>.<span class="number">0
+    </span>}
+}
+
+<span class="kw">impl </span>fmt::Display <span class="kw">for </span>EndpointSetVersion {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
+        fmt::LowerHex::fmt(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>, f)
+    }
+}
+
+<span class="kw">impl </span>fmt::Debug <span class="kw">for </span>EndpointSetVersion {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
+        fmt::LowerHex::fmt(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>, f)
+    }
+}
+
+<span class="kw">impl </span>std::str::FromStr <span class="kw">for </span>EndpointSetVersion {
+    <span class="kw">type </span><span class="prelude-val">Err </span>= eyre::Error;
+
+    <span class="attr">#[inline]
+    </span><span class="kw">fn </span>from_str(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Err&gt; {
+        <span class="prelude-val">Ok</span>(<span class="self">Self</span>(u64::from_str_radix(s, <span class="number">16</span>)<span class="question-mark">?</span>))
     }
 }
 
@@ -1342,16 +1396,6 @@
             metadata: <span class="prelude-val">Some</span>((<span class="kw-2">&amp;</span>endpoint.metadata).into()),
             host2: <span class="prelude-val">None</span>,
         }
-    }
-}
-
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>locality_and_set_to_proto(
-    locality: <span class="kw">impl </span>Borrow&lt;<span class="prelude-ty">Option</span>&lt;Locality&gt;&gt;,
-    endpoints: <span class="kw">impl </span>Borrow&lt;BTreeSet&lt;Endpoint&gt;&gt;,
-) -&gt; proto::Cluster {
-    proto::Cluster {
-        locality: locality.borrow().clone().map(From::from),
-        endpoints: endpoints.borrow().iter().map(From::from).collect(),
     }
 }
 
