@@ -351,16 +351,6 @@
 <a href="#349" id="349">349</a>
 <a href="#350" id="350">350</a>
 <a href="#351" id="351">351</a>
-<a href="#352" id="352">352</a>
-<a href="#353" id="353">353</a>
-<a href="#354" id="354">354</a>
-<a href="#355" id="355">355</a>
-<a href="#356" id="356">356</a>
-<a href="#357" id="357">357</a>
-<a href="#358" id="358">358</a>
-<a href="#359" id="359">359</a>
-<a href="#360" id="360">360</a>
-<a href="#361" id="361">361</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -485,19 +475,9 @@
     <span class="kw">fn </span>sync_read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="kw">match </span>ctx.metadata.get(<span class="kw-2">&amp;</span><span class="self">self</span>.config.metadata_key) {
             <span class="prelude-val">Some</span>(metadata::Value::Bytes(token)) =&gt; {
-                <span class="kw">let </span><span class="kw-2">mut </span>destinations = Vec::new();
-
                 <span class="kw">let </span>tok = <span class="kw">crate</span>::net::cluster::Token::new(token);
 
-                <span class="kw">for </span>ep <span class="kw">in </span>ctx.endpoints.iter() {
-                    ep.value().addresses_for_token(tok, <span class="kw-2">&amp;mut </span>destinations);
-
-                    <span class="kw">if </span>!destinations.is_empty() {
-                        <span class="kw">break</span>;
-                    }
-                }
-
-                ctx.destinations = destinations;
+                ctx.destinations = ctx.endpoints.addresses_for_token(tok);
 
                 <span class="kw">if </span>ctx.destinations.is_empty() {
                     <span class="prelude-val">Err</span>(FilterError::new(Error::NoEndpointMatch(

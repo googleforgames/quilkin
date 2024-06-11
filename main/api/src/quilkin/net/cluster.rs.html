@@ -722,6 +722,55 @@
 <a href="#720" id="720">720</a>
 <a href="#721" id="721">721</a>
 <a href="#722" id="722">722</a>
+<a href="#723" id="723">723</a>
+<a href="#724" id="724">724</a>
+<a href="#725" id="725">725</a>
+<a href="#726" id="726">726</a>
+<a href="#727" id="727">727</a>
+<a href="#728" id="728">728</a>
+<a href="#729" id="729">729</a>
+<a href="#730" id="730">730</a>
+<a href="#731" id="731">731</a>
+<a href="#732" id="732">732</a>
+<a href="#733" id="733">733</a>
+<a href="#734" id="734">734</a>
+<a href="#735" id="735">735</a>
+<a href="#736" id="736">736</a>
+<a href="#737" id="737">737</a>
+<a href="#738" id="738">738</a>
+<a href="#739" id="739">739</a>
+<a href="#740" id="740">740</a>
+<a href="#741" id="741">741</a>
+<a href="#742" id="742">742</a>
+<a href="#743" id="743">743</a>
+<a href="#744" id="744">744</a>
+<a href="#745" id="745">745</a>
+<a href="#746" id="746">746</a>
+<a href="#747" id="747">747</a>
+<a href="#748" id="748">748</a>
+<a href="#749" id="749">749</a>
+<a href="#750" id="750">750</a>
+<a href="#751" id="751">751</a>
+<a href="#752" id="752">752</a>
+<a href="#753" id="753">753</a>
+<a href="#754" id="754">754</a>
+<a href="#755" id="755">755</a>
+<a href="#756" id="756">756</a>
+<a href="#757" id="757">757</a>
+<a href="#758" id="758">758</a>
+<a href="#759" id="759">759</a>
+<a href="#760" id="760">760</a>
+<a href="#761" id="761">761</a>
+<a href="#762" id="762">762</a>
+<a href="#763" id="763">763</a>
+<a href="#764" id="764">764</a>
+<a href="#765" id="765">765</a>
+<a href="#766" id="766">766</a>
+<a href="#767" id="767">767</a>
+<a href="#768" id="768">768</a>
+<a href="#769" id="769">769</a>
+<a href="#770" id="770">770</a>
+<a href="#771" id="771">771</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -784,7 +833,7 @@
     <span class="kw-2">&amp;</span>ACTIVE_ENDPOINTS
 }
 
-<span class="kw">pub type </span>TokenAddressMap = std::collections::BTreeMap&lt;u64, Vec&lt;EndpointAddress&gt;&gt;;
+<span class="kw">pub type </span>TokenAddressMap = std::collections::BTreeMap&lt;u64, BTreeSet&lt;EndpointAddress&gt;&gt;;
 
 <span class="attr">#[derive(Copy, Clone)]
 </span><span class="kw">pub struct </span>Token(u64);
@@ -889,13 +938,6 @@
         <span class="self">self</span>.endpoints.contains(ep)
     }
 
-    <span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>addresses_for_token(<span class="kw-2">&amp;</span><span class="self">self</span>, token: Token, addresses: <span class="kw-2">&amp;mut </span>Vec&lt;EndpointAddress&gt;) {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(addrs) = <span class="self">self</span>.token_map.get(<span class="kw-2">&amp;</span>token.<span class="number">0</span>) {
-            addresses.extend_from_slice(addrs);
-        }
-    }
-
     <span class="doccomment">/// Unique version for this endpoint set
     </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>version(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; EndpointSetVersion {
@@ -906,7 +948,7 @@
     ///
     /// This is extremely expensive
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>update(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+    </span><span class="kw">pub fn </span>update(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; TokenAddressMap {
         <span class="kw">use </span>std::hash::{Hash, Hasher};
         <span class="kw">let </span><span class="kw-2">mut </span>hasher = seahash::SeaHasher::with_seeds(<span class="number">0</span>, <span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>token_map = TokenAddressMap::new();
@@ -916,50 +958,81 @@
 
             <span class="kw">for </span>tok <span class="kw">in </span><span class="kw-2">&amp;</span>ep.metadata.known.tokens {
                 <span class="kw">let </span>hash = seahash::hash(tok);
-                token_map.entry(hash).or_default().push(ep.address.clone());
+                token_map
+                    .entry(hash)
+                    .or_default()
+                    .insert(ep.address.clone());
             }
         }
 
         <span class="self">self</span>.hash = hasher.finish();
         <span class="self">self</span>.version += <span class="number">1</span>;
-        <span class="self">self</span>.token_map = token_map;
+        std::mem::replace(<span class="kw-2">&amp;mut </span><span class="self">self</span>.token_map, token_map)
     }
 
     <span class="doccomment">/// Creates a map of tokens -&gt; address for the current set
     </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>build_token_map(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+    </span><span class="kw">pub fn </span>build_token_map(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; TokenAddressMap {
         <span class="kw">let </span><span class="kw-2">mut </span>token_map = TokenAddressMap::new();
 
         <span class="comment">// This is only called on proxies, so calculate a token map
         </span><span class="kw">for </span>ep <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.endpoints {
             <span class="kw">for </span>tok <span class="kw">in </span><span class="kw-2">&amp;</span>ep.metadata.known.tokens {
                 <span class="kw">let </span>hash = seahash::hash(tok);
-                token_map.entry(hash).or_default().push(ep.address.clone());
+                token_map
+                    .entry(hash)
+                    .or_default()
+                    .insert(ep.address.clone());
             }
         }
 
-        <span class="self">self</span>.token_map = token_map;
+        std::mem::replace(<span class="kw-2">&amp;mut </span><span class="self">self</span>.token_map, token_map)
     }
 
     <span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>replace(<span class="kw-2">&amp;mut </span><span class="self">self</span>, replacement: <span class="self">Self</span>) -&gt; BTreeSet&lt;Endpoint&gt; {
-        <span class="kw">let </span>old = std::mem::replace(<span class="kw-2">&amp;mut </span><span class="self">self</span>.endpoints, replacement.endpoints);
+    </span><span class="kw">pub fn </span>replace(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        replacement: <span class="self">Self</span>,
+    ) -&gt; (
+        usize,
+        std::collections::HashMap&lt;u64, <span class="prelude-ty">Option</span>&lt;Vec&lt;EndpointAddress&gt;&gt;&gt;,
+    ) {
+        <span class="kw">let </span>old_len = std::mem::replace(<span class="kw-2">&amp;mut </span><span class="self">self</span>.endpoints, replacement.endpoints).len();
 
-        <span class="kw">if </span>replacement.hash == <span class="number">0 </span>{
-            <span class="self">self</span>.update();
+        <span class="kw">let </span>old_tm = <span class="kw">if </span>replacement.hash == <span class="number">0 </span>{
+            <span class="self">self</span>.update()
         } <span class="kw">else </span>{
             <span class="self">self</span>.hash = replacement.hash;
             <span class="self">self</span>.version += <span class="number">1</span>;
-            <span class="self">self</span>.build_token_map();
+            <span class="self">self</span>.build_token_map()
+        };
+
+        <span class="kw">let </span><span class="kw-2">mut </span>hm = std::collections::HashMap::new();
+
+        <span class="kw">for </span>(token, addrs) <span class="kw">in </span><span class="kw-2">&amp;</span>old_tm {
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(naddrs) = <span class="self">self</span>.token_map.get(token) {
+                <span class="kw">if </span>addrs.symmetric_difference(naddrs).count() &gt; <span class="number">0 </span>{
+                    hm.insert(<span class="kw-2">*</span>token, <span class="prelude-val">Some</span>(naddrs.iter().cloned().collect()));
+                }
+            } <span class="kw">else </span>{
+                hm.insert(<span class="kw-2">*</span>token, <span class="prelude-val">None</span>);
+            }
         }
 
-        old
+        <span class="kw">for </span>(token, addrs) <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.token_map {
+            <span class="kw">if </span>!hm.contains_key(token) {
+                hm.insert(<span class="kw-2">*</span>token, <span class="prelude-val">Some</span>(addrs.iter().cloned().collect()));
+            }
+        }
+
+        (old_len, hm)
     }
 }
 
 <span class="doccomment">/// Represents a full snapshot of all clusters.
 </span><span class="kw">pub struct </span>ClusterMap&lt;S = RandomState&gt; {
     map: DashMap&lt;<span class="prelude-ty">Option</span>&lt;Locality&gt;, EndpointSet, S&gt;,
+    token_map: DashMap&lt;u64, Vec&lt;EndpointAddress&gt;&gt;,
     num_endpoints: AtomicUsize,
     version: AtomicU64,
 }
@@ -999,25 +1072,16 @@
     }
 
     <span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>insert(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        locality: <span class="prelude-ty">Option</span>&lt;Locality&gt;,
-        cluster: BTreeSet&lt;Endpoint&gt;,
-    ) -&gt; <span class="prelude-ty">Option</span>&lt;BTreeSet&lt;Endpoint&gt;&gt; {
+    </span><span class="kw">pub fn </span>insert(<span class="kw-2">&amp;</span><span class="self">self</span>, locality: <span class="prelude-ty">Option</span>&lt;Locality&gt;, cluster: BTreeSet&lt;Endpoint&gt;) {
         <span class="self">self</span>.apply(locality, EndpointSet::new(cluster))
     }
 
-    <span class="kw">pub fn </span>apply(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        locality: <span class="prelude-ty">Option</span>&lt;Locality&gt;,
-        cluster: EndpointSet,
-    ) -&gt; <span class="prelude-ty">Option</span>&lt;BTreeSet&lt;Endpoint&gt;&gt; {
+    <span class="kw">pub fn </span>apply(<span class="kw-2">&amp;</span><span class="self">self</span>, locality: <span class="prelude-ty">Option</span>&lt;Locality&gt;, cluster: EndpointSet) {
         <span class="kw">let </span>new_len = cluster.len();
         <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>current) = <span class="self">self</span>.map.get_mut(<span class="kw-2">&amp;</span>locality) {
             <span class="kw">let </span>current = current.value_mut();
 
-            <span class="kw">let </span>old = current.replace(cluster);
-            <span class="kw">let </span>old_len = old.len();
+            <span class="kw">let </span>(old_len, token_map_diff) = current.replace(cluster);
 
             <span class="kw">if </span>new_len &gt;= old_len {
                 <span class="self">self</span>.num_endpoints.fetch_add(new_len - old_len, Relaxed);
@@ -1026,13 +1090,24 @@
             }
 
             <span class="self">self</span>.version.fetch_add(<span class="number">1</span>, Relaxed);
-            <span class="prelude-val">Some</span>(old)
+
+            <span class="kw">for </span>(token_hash, addrs) <span class="kw">in </span>token_map_diff {
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(addrs) = addrs {
+                    <span class="self">self</span>.token_map.insert(token_hash, addrs);
+                } <span class="kw">else </span>{
+                    <span class="self">self</span>.token_map.remove(<span class="kw-2">&amp;</span>token_hash);
+                }
+            }
         } <span class="kw">else </span>{
+            <span class="kw">for </span>(token_hash, addrs) <span class="kw">in </span><span class="kw-2">&amp;</span>cluster.token_map {
+                <span class="self">self</span>.token_map
+                    .insert(<span class="kw-2">*</span>token_hash, addrs.iter().cloned().collect());
+            }
+
             <span class="self">self</span>.map.insert(locality, cluster);
             <span class="self">self</span>.num_endpoints.fetch_add(new_len, Relaxed);
             <span class="self">self</span>.version.fetch_add(<span class="number">1</span>, Relaxed);
-            <span class="prelude-val">None
-        </span>}
+        }
     }
 
     <span class="attr">#[inline]
@@ -1206,9 +1281,22 @@
     <span class="doccomment">/// Builds token maps for every locality. Only used by testing/benching
     </span><span class="attr">#[doc(hidden)]
     </span><span class="kw">pub fn </span>build_token_maps(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+        <span class="self">self</span>.token_map.clear();
+
         <span class="kw">for </span><span class="kw-2">mut </span>eps <span class="kw">in </span><span class="self">self</span>.map.iter_mut() {
             eps.build_token_map();
+
+            <span class="kw">for </span>(token_hash, addrs) <span class="kw">in </span><span class="kw-2">&amp;</span>eps.token_map {
+                <span class="self">self</span>.token_map
+                    .insert(<span class="kw-2">*</span>token_hash, addrs.iter().cloned().collect());
+            }
         }
+    }
+
+    <span class="kw">pub fn </span>addresses_for_token(<span class="kw-2">&amp;</span><span class="self">self</span>, token: Token) -&gt; Vec&lt;EndpointAddress&gt; {
+        <span class="self">self</span>.token_map
+            .get(<span class="kw-2">&amp;</span>token.<span class="number">0</span>)
+            .map_or(Vec::new(), |addrs| addrs.value().to_vec())
     }
 }
 
@@ -1247,6 +1335,7 @@
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             map: &lt;DashMap&lt;<span class="prelude-ty">Option</span>&lt;Locality&gt;, EndpointSet, S&gt;&gt;::default(),
+            token_map: Default::default(),
             version: &lt;<span class="kw">_</span>&gt;::default(),
             num_endpoints: &lt;<span class="kw">_</span>&gt;::default(),
         }
@@ -1380,8 +1469,17 @@
 {
     <span class="kw">fn </span>from(map: DashMap&lt;<span class="prelude-ty">Option</span>&lt;Locality&gt;, EndpointSet, S&gt;) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>num_endpoints = AtomicUsize::new(map.iter().map(|kv| kv.value().len()).sum());
+
+        <span class="kw">let </span>token_map = DashMap::&lt;u64, Vec&lt;EndpointAddress&gt;&gt;::default();
+        <span class="kw">for </span>es <span class="kw">in </span><span class="kw-2">&amp;</span>map {
+            <span class="kw">for </span>(token_hash, addrs) <span class="kw">in </span><span class="kw-2">&amp;</span>es.value().token_map {
+                token_map.insert(<span class="kw-2">*</span>token_hash, addrs.iter().cloned().collect());
+            }
+        }
+
         <span class="self">Self </span>{
             map,
+            token_map,
             num_endpoints,
             version: AtomicU64::new(<span class="number">1</span>),
         }
