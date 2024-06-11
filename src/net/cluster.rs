@@ -523,7 +523,7 @@ where
     pub fn addresses_for_token(&self, token: Token) -> Vec<EndpointAddress> {
         self.token_map
             .get(&token.0)
-            .map_or(Vec::new(), |addrs| addrs.value().iter().cloned().collect())
+            .map_or(Vec::new(), |addrs| addrs.value().to_vec())
     }
 }
 
