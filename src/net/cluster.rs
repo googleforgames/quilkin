@@ -60,7 +60,7 @@ pub(crate) fn active_endpoints() -> &'static prometheus::IntGauge {
     &ACTIVE_ENDPOINTS
 }
 
-pub type TokenAddressMap = std::collections::BTreeMap<u64, Vec<EndpointAddress>>;
+pub type TokenAddressMap = std::collections::BTreeMap<u64, BTreeSet<EndpointAddress>>;
 
 #[derive(Copy, Clone)]
 pub struct Token(u64);
@@ -165,13 +165,6 @@ impl EndpointSet {
         self.endpoints.contains(ep)
     }
 
-    #[inline]
-    pub fn addresses_for_token(&self, token: Token, addresses: &mut Vec<EndpointAddress>) {
-        if let Some(addrs) = self.token_map.get(&token.0) {
-            addresses.extend_from_slice(addrs);
-        }
-    }
-
     /// Unique version for this endpoint set
     #[inline]
     pub fn version(&self) -> EndpointSetVersion {
@@ -182,7 +175,7 @@ impl EndpointSet {
     ///
     /// This is extremely expensive
     #[inline]
-    pub fn update(&mut self) {
+    pub fn update(&mut self) -> TokenAddressMap {
         use std::hash::{Hash, Hasher};
         let mut hasher = seahash::SeaHasher::with_seeds(0, 1, 2, 3);
         let mut token_map = TokenAddressMap::new();
@@ -192,50 +185,81 @@ impl EndpointSet {
 
             for tok in &ep.metadata.known.tokens {
                 let hash = seahash::hash(tok);
-                token_map.entry(hash).or_default().push(ep.address.clone());
+                token_map
+                    .entry(hash)
+                    .or_default()
+                    .insert(ep.address.clone());
             }
         }
 
         self.hash = hasher.finish();
         self.version += 1;
-        self.token_map = token_map;
+        std::mem::replace(&mut self.token_map, token_map)
     }
 
     /// Creates a map of tokens -> address for the current set
     #[inline]
-    pub fn build_token_map(&mut self) {
+    pub fn build_token_map(&mut self) -> TokenAddressMap {
         let mut token_map = TokenAddressMap::new();
 
         // This is only called on proxies, so calculate a token map
         for ep in &self.endpoints {
             for tok in &ep.metadata.known.tokens {
                 let hash = seahash::hash(tok);
-                token_map.entry(hash).or_default().push(ep.address.clone());
+                token_map
+                    .entry(hash)
+                    .or_default()
+                    .insert(ep.address.clone());
             }
         }
 
-        self.token_map = token_map;
+        std::mem::replace(&mut self.token_map, token_map)
     }
 
     #[inline]
-    pub fn replace(&mut self, replacement: Self) -> BTreeSet<Endpoint> {
-        let old = std::mem::replace(&mut self.endpoints, replacement.endpoints);
+    pub fn replace(
+        &mut self,
+        replacement: Self,
+    ) -> (
+        usize,
+        std::collections::HashMap<u64, Option<Vec<EndpointAddress>>>,
+    ) {
+        let old_len = std::mem::replace(&mut self.endpoints, replacement.endpoints).len();
 
-        if replacement.hash == 0 {
-            self.update();
+        let old_tm = if replacement.hash == 0 {
+            self.update()
         } else {
             self.hash = replacement.hash;
             self.version += 1;
-            self.build_token_map();
+            self.build_token_map()
+        };
+
+        let mut hm = std::collections::HashMap::new();
+
+        for (token, addrs) in &old_tm {
+            if let Some(naddrs) = self.token_map.get(token) {
+                if addrs.symmetric_difference(naddrs).count() > 0 {
+                    hm.insert(*token, Some(naddrs.iter().cloned().collect()));
+                }
+            } else {
+                hm.insert(*token, None);
+            }
         }
 
-        old
+        for (token, addrs) in &self.token_map {
+            if !hm.contains_key(token) {
+                hm.insert(*token, Some(addrs.iter().cloned().collect()));
+            }
+        }
+
+        (old_len, hm)
     }
 }
 
 /// Represents a full snapshot of all clusters.
 pub struct ClusterMap<S = RandomState> {
     map: DashMap<Option<Locality>, EndpointSet, S>,
+    token_map: DashMap<u64, Vec<EndpointAddress>>,
     num_endpoints: AtomicUsize,
     version: AtomicU64,
 }
@@ -275,25 +299,16 @@ where
     }
 
     #[inline]
-    pub fn insert(
-        &self,
-        locality: Option<Locality>,
-        cluster: BTreeSet<Endpoint>,
-    ) -> Option<BTreeSet<Endpoint>> {
+    pub fn insert(&self, locality: Option<Locality>, cluster: BTreeSet<Endpoint>) {
         self.apply(locality, EndpointSet::new(cluster))
     }
 
-    pub fn apply(
-        &self,
-        locality: Option<Locality>,
-        cluster: EndpointSet,
-    ) -> Option<BTreeSet<Endpoint>> {
+    pub fn apply(&self, locality: Option<Locality>, cluster: EndpointSet) {
         let new_len = cluster.len();
         if let Some(mut current) = self.map.get_mut(&locality) {
             let current = current.value_mut();
 
-            let old = current.replace(cluster);
-            let old_len = old.len();
+            let (old_len, token_map_diff) = current.replace(cluster);
 
             if new_len >= old_len {
                 self.num_endpoints.fetch_add(new_len - old_len, Relaxed);
@@ -302,12 +317,23 @@ where
             }
 
             self.version.fetch_add(1, Relaxed);
-            Some(old)
+
+            for (token_hash, addrs) in token_map_diff {
+                if let Some(addrs) = addrs {
+                    self.token_map.insert(token_hash, addrs);
+                } else {
+                    self.token_map.remove(&token_hash);
+                }
+            }
         } else {
+            for (token_hash, addrs) in &cluster.token_map {
+                self.token_map
+                    .insert(*token_hash, addrs.iter().cloned().collect());
+            }
+
             self.map.insert(locality, cluster);
             self.num_endpoints.fetch_add(new_len, Relaxed);
             self.version.fetch_add(1, Relaxed);
-            None
         }
     }
 
@@ -482,9 +508,22 @@ where
     /// Builds token maps for every locality. Only used by testing/benching
     #[doc(hidden)]
     pub fn build_token_maps(&self) {
+        self.token_map.clear();
+
         for mut eps in self.map.iter_mut() {
             eps.build_token_map();
+
+            for (token_hash, addrs) in &eps.token_map {
+                self.token_map
+                    .insert(*token_hash, addrs.iter().cloned().collect());
+            }
         }
+    }
+
+    pub fn addresses_for_token(&self, token: Token) -> Vec<EndpointAddress> {
+        self.token_map
+            .get(&token.0)
+            .map_or(Vec::new(), |addrs| addrs.value().iter().cloned().collect())
     }
 }
 
@@ -523,6 +562,7 @@ where
     fn default() -> Self {
         Self {
             map: <DashMap<Option<Locality>, EndpointSet, S>>::default(),
+            token_map: Default::default(),
             version: <_>::default(),
             num_endpoints: <_>::default(),
         }
@@ -656,8 +696,17 @@ where
 {
     fn from(map: DashMap<Option<Locality>, EndpointSet, S>) -> Self {
         let num_endpoints = AtomicUsize::new(map.iter().map(|kv| kv.value().len()).sum());
+
+        let token_map = DashMap::<u64, Vec<EndpointAddress>>::default();
+        for es in &map {
+            for (token_hash, addrs) in &es.value().token_map {
+                token_map.insert(*token_hash, addrs.iter().cloned().collect());
+            }
+        }
+
         Self {
             map,
+            token_map,
             num_endpoints,
             version: AtomicU64::new(1),
         }

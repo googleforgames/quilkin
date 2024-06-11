@@ -122,19 +122,9 @@ impl Router for HashedTokenRouter {
     fn sync_read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         match ctx.metadata.get(&self.config.metadata_key) {
             Some(metadata::Value::Bytes(token)) => {
-                let mut destinations = Vec::new();
-
                 let tok = crate::net::cluster::Token::new(token);
 
-                for ep in ctx.endpoints.iter() {
-                    ep.value().addresses_for_token(tok, &mut destinations);
-
-                    if !destinations.is_empty() {
-                        break;
-                    }
-                }
-
-                ctx.destinations = destinations;
+                ctx.destinations = ctx.endpoints.addresses_for_token(tok);
 
                 if ctx.destinations.is_empty() {
                     Err(FilterError::new(Error::NoEndpointMatch(
