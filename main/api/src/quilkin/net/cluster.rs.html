@@ -756,21 +756,6 @@
 <a href="#754" id="754">754</a>
 <a href="#755" id="755">755</a>
 <a href="#756" id="756">756</a>
-<a href="#757" id="757">757</a>
-<a href="#758" id="758">758</a>
-<a href="#759" id="759">759</a>
-<a href="#760" id="760">760</a>
-<a href="#761" id="761">761</a>
-<a href="#762" id="762">762</a>
-<a href="#763" id="763">763</a>
-<a href="#764" id="764">764</a>
-<a href="#765" id="765">765</a>
-<a href="#766" id="766">766</a>
-<a href="#767" id="767">767</a>
-<a href="#768" id="768">768</a>
-<a href="#769" id="769">769</a>
-<a href="#770" id="770">770</a>
-<a href="#771" id="771">771</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -1276,21 +1261,6 @@
         }
 
         ret
-    }
-
-    <span class="doccomment">/// Builds token maps for every locality. Only used by testing/benching
-    </span><span class="attr">#[doc(hidden)]
-    </span><span class="kw">pub fn </span>build_token_maps(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-        <span class="self">self</span>.token_map.clear();
-
-        <span class="kw">for </span><span class="kw-2">mut </span>eps <span class="kw">in </span><span class="self">self</span>.map.iter_mut() {
-            eps.build_token_map();
-
-            <span class="kw">for </span>(token_hash, addrs) <span class="kw">in </span><span class="kw-2">&amp;</span>eps.token_map {
-                <span class="self">self</span>.token_map
-                    .insert(<span class="kw-2">*</span>token_hash, addrs.iter().cloned().collect());
-            }
-        }
     }
 
     <span class="kw">pub fn </span>addresses_for_token(<span class="kw-2">&amp;</span><span class="self">self</span>, token: Token) -&gt; Vec&lt;EndpointAddress&gt; {

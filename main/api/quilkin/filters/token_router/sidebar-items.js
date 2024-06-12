@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["Error"],"struct":["Config","HashedTokenRouter","TokenRouter"],"trait":["Router"]};
+window.SIDEBAR_ITEMS = {"enum":["Error"],"struct":["Config","TokenRouter"]};
