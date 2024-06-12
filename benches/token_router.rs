@@ -1,21 +1,17 @@
 use divan::Bencher;
-use quilkin::filters::token_router::{HashedTokenRouter, Router, TokenRouter};
+use quilkin::filters::token_router::TokenRouter;
 use rand::SeedableRng;
 
 mod shared;
 
-#[divan::bench(types = [TokenRouter, HashedTokenRouter], args = ["single:duplicates", "single:unique", "multi:2..128:duplicates", "multi:2..128:unique"])]
-fn token_router<T>(b: Bencher, token_kind: &str)
-where
-    T: Router + Sync,
-{
-    let filter = <T as Router>::new();
+#[divan::bench(args = ["single:duplicates", "single:unique", "multi:2..128:duplicates", "multi:2..128:unique"])]
+fn token_router(b: Bencher, token_kind: &str) {
+    let filter = TokenRouter::new();
     let gc = shared::gen_cluster_map::<42>(token_kind.parse().unwrap());
 
     let mut tokens = Vec::new();
 
     let cm = std::sync::Arc::new(gc.cm);
-    cm.build_token_maps();
 
     // Calculate the amount of bytes for all the tokens
     for eps in cm.iter() {

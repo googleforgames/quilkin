@@ -52,7 +52,7 @@ trace_test!(relay_routing, {
                         }),
                     })
                     .unwrap(),
-                    HashedTokenRouter::as_filter_config(None).unwrap(),
+                    TokenRouter::as_filter_config(None).unwrap(),
                 ])
                 .unwrap(),
                 ..Default::default()
@@ -226,7 +226,7 @@ trace_test!(filter_update, {
                         }),
                     })
                     .unwrap(),
-                    HashedTokenRouter::as_filter_config(None).unwrap(),
+                    TokenRouter::as_filter_config(None).unwrap(),
                 ])
                 .unwrap(),
                 ..Default::default()
@@ -279,7 +279,7 @@ trace_test!(filter_update, {
                     token.len().to_string(),
                 )
                 .unwrap(),
-                HashedTokenRouter::as_filter_config(None).unwrap(),
+                TokenRouter::as_filter_config(None).unwrap(),
             ])
             .unwrap();
         });
