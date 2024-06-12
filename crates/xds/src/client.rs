@@ -30,16 +30,12 @@ use tryhard::{
 };
 
 use crate::{
-    generated::{
-        envoy::{
-            config::core::v3::Node,
-            service::discovery::v3::{
-                aggregated_discovery_service_client::AggregatedDiscoveryServiceClient,
-                DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
-            },
-        },
-        quilkin::relay::v1alpha1::aggregated_control_plane_discovery_service_client::AggregatedControlPlaneDiscoveryServiceClient,
+    core::Node,
+    discovery::{
+        aggregated_discovery_service_client::AggregatedDiscoveryServiceClient,
+        DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
     },
+    generated::quilkin::relay::v1alpha1::aggregated_control_plane_discovery_service_client::AggregatedControlPlaneDiscoveryServiceClient,
     Result,
 };
 
