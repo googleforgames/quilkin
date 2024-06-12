@@ -135,14 +135,14 @@ impl std::str::FromStr for Locality {
     }
 }
 
-impl From<crate::resource::proto::Locality> for Locality {
+impl From<crate::proto::Locality> for Locality {
     #[inline]
-    fn from(value: crate::resource::proto::Locality) -> Self {
+    fn from(value: crate::proto::Locality) -> Self {
         Self::new(value.region, value.zone, value.sub_zone)
     }
 }
 
-impl From<Locality> for crate::resource::proto::Locality {
+impl From<Locality> for crate::proto::Locality {
     #[inline]
     fn from(value: Locality) -> Self {
         Self {

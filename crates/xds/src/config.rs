@@ -199,7 +199,7 @@ pub trait Configuration: Send + Sync + Sized + 'static {
 }
 
 pub struct DeltaDiscoveryRes {
-    pub resources: Vec<crate::generated::envoy::service::discovery::v3::Resource>,
+    pub resources: Vec<crate::discovery::Resource>,
     pub removed: std::collections::HashSet<String>,
 }
 
@@ -276,7 +276,7 @@ pub fn handle_delta_discovery_responses<C: Configuration>(
 
             let error_detail = if let Err(error) = result {
                 crate::metrics::nacks(control_plane_identifier, &type_url).inc();
-                Some(crate::generated::google::rpc::Status {
+                Some(quilkin_proto::generated::google::rpc::Status {
                     code: 3,
                     message: error.to_string(),
                     ..Default::default()

@@ -68,8 +68,8 @@ jobs:
       - name: Install nextest
         run: curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ${CARGO_HOME:-~/.cargo}/bin
       - name: Build
-        run: cargo build -p qt -p quilkin --tests
-      - run: cargo nextest run -p qt -p quilkin
+        run: cargo build -p qt -p quilkin -p xds --tests
+      - run: cargo nextest run -p qt -p quilkin -p xds quilkin
 
   build:
     name: Build
