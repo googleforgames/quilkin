@@ -66,7 +66,7 @@ pub use self::{
     registry::FilterRegistry,
     set::{FilterMap, FilterSet},
     timestamp::Timestamp,
-    token_router::{HashedTokenRouter, TokenRouter},
+    token_router::TokenRouter,
     write::WriteContext,
 };
 

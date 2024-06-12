@@ -505,21 +505,6 @@ where
         ret
     }
 
-    /// Builds token maps for every locality. Only used by testing/benching
-    #[doc(hidden)]
-    pub fn build_token_maps(&self) {
-        self.token_map.clear();
-
-        for mut eps in self.map.iter_mut() {
-            eps.build_token_map();
-
-            for (token_hash, addrs) in &eps.token_map {
-                self.token_map
-                    .insert(*token_hash, addrs.iter().cloned().collect());
-            }
-        }
-    }
-
     pub fn addresses_for_token(&self, token: Token) -> Vec<EndpointAddress> {
         self.token_map
             .get(&token.0)

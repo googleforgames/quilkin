@@ -21,105 +21,19 @@ use crate::{
     net::endpoint::metadata,
 };
 
-use crate::generated::quilkin::filters::token_router::v1alpha1 as proto;
+use xds::generated::quilkin::filters::token_router::v1alpha1 as proto;
 
 /// Filter that only allows packets to be passed to Endpoints that have a matching
 /// connection_id to the token stored in the Filter's dynamic metadata.
+#[derive(Default)]
 pub struct TokenRouter {
     config: Config,
 }
 
 impl TokenRouter {
-    fn new(config: Config) -> Self {
-        Self { config }
-    }
-}
-
-impl StaticFilter for TokenRouter {
-    const NAME: &'static str = "quilkin.filters.token_router.v1alpha1.TokenRouter";
-    type Configuration = Config;
-    type BinaryConfiguration = proto::TokenRouter;
-
-    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, CreationError> {
-        Ok(TokenRouter::new(config.unwrap_or_default()))
-    }
-}
-
-#[async_trait::async_trait]
-impl Filter for TokenRouter {
-    async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
-        self.sync_read(ctx)
-    }
-}
-
-impl Router for TokenRouter {
-    fn sync_read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
-        match ctx.metadata.get(&self.config.metadata_key) {
-            Some(metadata::Value::Bytes(token)) => {
-                let destinations = ctx.endpoints.filter_endpoints(|endpoint| {
-                    if endpoint.metadata.known.tokens.contains(&**token) {
-                        tracing::trace!(%endpoint.address, token = &*crate::codec::base64::encode(token), "Endpoint matched");
-                        true
-                    } else {
-                        false
-                    }
-                });
-
-                ctx.destinations = destinations.into_iter().map(|ep| ep.address).collect();
-
-                if ctx.destinations.is_empty() {
-                    Err(FilterError::new(Error::NoEndpointMatch(
-                        self.config.metadata_key,
-                        crate::codec::base64::encode(token),
-                    )))
-                } else {
-                    Ok(())
-                }
-            }
-            Some(value) => Err(FilterError::new(Error::InvalidType(
-                self.config.metadata_key,
-                value.clone(),
-            ))),
-            None => Err(FilterError::new(Error::NoTokenFound(
-                self.config.metadata_key,
-            ))),
-        }
-    }
-
-    fn new() -> Self {
-        Self::from_config(None)
-    }
-}
-
-pub struct HashedTokenRouter {
-    config: Config,
-}
-
-impl HashedTokenRouter {
-    fn new(config: Config) -> Self {
-        Self { config }
-    }
-}
-
-impl StaticFilter for HashedTokenRouter {
-    const NAME: &'static str = "quilkin.filters.token_router.v1alpha1.HashedTokenRouter";
-    type Configuration = Config;
-    type BinaryConfiguration = proto::TokenRouter;
-
-    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, CreationError> {
-        Ok(Self::new(config.unwrap_or_default()))
-    }
-}
-
-#[async_trait::async_trait]
-impl Filter for HashedTokenRouter {
-    async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
-        self.sync_read(ctx)
-    }
-}
-
-impl Router for HashedTokenRouter {
-    fn sync_read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    /// Non-async version of [`Filter::read`], as this filter does no actual async
+    /// operations. Used in benchmarking.
+    pub fn sync_read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         match ctx.metadata.get(&self.config.metadata_key) {
             Some(metadata::Value::Bytes(token)) => {
                 let tok = crate::net::cluster::Token::new(token);
@@ -144,15 +58,25 @@ impl Router for HashedTokenRouter {
             ))),
         }
     }
+}
 
-    fn new() -> Self {
-        Self::from_config(None)
+impl StaticFilter for TokenRouter {
+    const NAME: &'static str = "quilkin.filters.token_router.v1alpha1.TokenRouter";
+    type Configuration = Config;
+    type BinaryConfiguration = proto::TokenRouter;
+
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, CreationError> {
+        Ok(Self {
+            config: config.unwrap_or_default(),
+        })
     }
 }
 
-pub trait Router {
-    fn sync_read(&self, ctx: &mut ReadContext) -> Result<(), FilterError>;
-    fn new() -> Self;
+#[async_trait::async_trait]
+impl Filter for TokenRouter {
+    async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+        self.sync_read(ctx)
+    }
 }
 
 #[derive(Debug, thiserror::Error)]

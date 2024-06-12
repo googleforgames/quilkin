@@ -51,7 +51,6 @@ impl FilterSet {
                 filters::Debug::factory(),
                 filters::Drop::factory(),
                 filters::Firewall::factory(),
-                filters::HashedTokenRouter::factory(),
                 filters::LoadBalancer::factory(),
                 filters::LocalRateLimit::factory(),
                 filters::Match::factory(),
