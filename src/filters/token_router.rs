@@ -25,17 +25,12 @@ use xds::generated::quilkin::filters::token_router::v1alpha1 as proto;
 
 /// Filter that only allows packets to be passed to Endpoints that have a matching
 /// connection_id to the token stored in the Filter's dynamic metadata.
+#[derive(Default)]
 pub struct TokenRouter {
     config: Config,
 }
 
 impl TokenRouter {
-    pub fn new() -> Self {
-        Self {
-            config: Config::default(),
-        }
-    }
-
     /// Non-async version of [`Filter::read`], as this filter does no actual async
     /// operations. Used in benchmarking.
     pub fn sync_read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
