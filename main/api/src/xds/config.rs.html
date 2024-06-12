@@ -498,7 +498,7 @@
 }
 
 <span class="kw">pub struct </span>DeltaDiscoveryRes {
-    <span class="kw">pub </span>resources: Vec&lt;<span class="kw">crate</span>::generated::envoy::service::discovery::v3::Resource&gt;,
+    <span class="kw">pub </span>resources: Vec&lt;<span class="kw">crate</span>::discovery::Resource&gt;,
     <span class="kw">pub </span>removed: std::collections::HashSet&lt;String&gt;,
 }
 
@@ -575,7 +575,7 @@
 
             <span class="kw">let </span>error_detail = <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = result {
                 <span class="kw">crate</span>::metrics::nacks(control_plane_identifier, <span class="kw-2">&amp;</span>type_url).inc();
-                <span class="prelude-val">Some</span>(<span class="kw">crate</span>::generated::google::rpc::Status {
+                <span class="prelude-val">Some</span>(quilkin_proto::generated::google::rpc::Status {
                     code: <span class="number">3</span>,
                     message: error.to_string(),
                     ..Default::default()
