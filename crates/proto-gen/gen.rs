@@ -252,8 +252,8 @@ fn docs(files: &[(&str, &[&str])]) {
         }
     }
 
-    cmd.args(["--doc_out", "./docs/src/services/xds"]);
-    cmd.args(["--doc_opt", "markdown,protos.md"]);
+    cmd.args(["--doc_out", "./docs/src/services/xds/proto"]);
+    cmd.args(["--doc_opt", "markdown,index.md"]);
 
     for (dir, files) in quilkin_protos {
         for file in *files {
