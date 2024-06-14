@@ -91,15 +91,13 @@ fn install() {
         if !child.wait().expect("tar is not installed").success() {
             panic!("failed to extract proto-gen binary from tarball");
         }
-    } else {
-        if !Command::new("cargo")
-            .args(["install", "--locked", "-f", "proto-gen"])
-            .status()
-            .expect("cargo not installed")
-            .success()
-        {
-            panic!("failed to install proto-gen via cargo");
-        }
+    } else if !Command::new("cargo")
+        .args(["install", "--locked", "-f", "proto-gen"])
+        .status()
+        .expect("cargo not installed")
+        .success()
+    {
+        panic!("failed to install proto-gen via cargo");
     }
 }
 
@@ -226,6 +224,50 @@ fn execute(which: &str) {
     if !cmd.status().expect("proto-gen was not installed").success() {
         panic!("proto-gen {which} failed");
     }
+
+    if which == "generate" {
+        docs(files);
+    }
+}
+
+fn docs(files: &[(&str, &[&str])]) {
+    let mut cmd = Command::new("protoc");
+
+    let quilkin_protos: Vec<&(&str, &[&str])> = files
+        .iter()
+        .filter(|item| item.0 == "proto/quilkin")
+        .collect();
+    let includes: Vec<&(&str, &[&str])> = files
+        .iter()
+        .filter(|item| item.0 != "proto/quilkin")
+        .collect();
+
+    for (dir, files) in includes {
+        if files.is_empty() {
+            cmd.args(["-I", dir]);
+        } else {
+            for file in *files {
+                cmd.args(["-I".into(), format!("{dir}/{file}.proto")]);
+            }
+        }
+    }
+
+    cmd.args(["--doc_out", "./docs/src/services/xds/proto"]);
+    cmd.args(["--doc_opt", "markdown,index.md"]);
+
+    for (dir, files) in quilkin_protos {
+        for file in *files {
+            cmd.arg(format!("{dir}/{file}.proto"));
+        }
+    }
+
+    if !cmd
+        .status()
+        .expect("protoc-gen-doc was not installed")
+        .success()
+    {
+        panic!("protoc-gen-doc failed");
+    }
 }
 
 fn copy() {
@@ -294,7 +336,7 @@ fn copy() {
     ];
 
     let args: Vec<_> = std::env::args().skip(2).collect();
-    let name = args.get(0).expect("must provide source name");
+    let name = args.first().expect("must provide source name");
     let path = args.get(1).expect("must provide path");
 
     let Some(ri) = REPOS.iter().find(|r| r.name == name) else {

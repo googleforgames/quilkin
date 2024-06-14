@@ -37,7 +37,7 @@
     - [Providers]()
         - [Agones](./services/xds/providers/agones.md)
         - [Filesystem](./services/xds/providers/filesystem.md)
-
+    - [Protobuf Reference](./services/xds/proto/index.md)
 ---
 
 - [Relay](./services/relay.md)

@@ -131,7 +131,7 @@ build: binary-archive build-image
 # Build all binaries
 build-all-binaries: ensure-build-image build-linux-binary build-macos-binary build-windows-binary
 
-# Checks for changes to protobuf definitions and generates rust code if there is any.
+# Checks for changes to protobuf definitions and generates rust code and reference documentation if there is any.
 gen-protobuf: ensure-build-image
 	docker run --rm $(DOCKER_RUN_ARGS) $(common_rust_args) \
 		--entrypoint=cargo $(BUILD_IMAGE_TAG) run -p proto-gen -- generate
