@@ -19,12 +19,19 @@ $ quilkin manage --help
 
 ## Overview
 
-In addition to static configuration provided upon startup, a Quiklin proxy's configuration can also be updated at runtime. The proxy can be configured on startup to talk to a set of management servers which provide it with updates throughout its lifecycle.
+In addition to static configuration provided upon startup, a Quiklin proxy's configuration can also be updated at
+runtime. The proxy can be configured on startup to talk to a set of management servers which provide it with updates
+throughout its lifecycle.
 
-Communication between the proxy and management server uses the [xDS gRPC protocol][xDS], similar to an [envoy proxy]. xDS is one of the standard configuration mechanisms for software proxies and as a result, Quilkin can be setup to discover configuration resources from any API compatible server. Also, given that the protocol is [well specified][xDS-protocol], it is similarly straight-forward to implement a custom server to suit any deployment's needs.
+Communication between the proxy and management server uses the [xDS gRPC protocol][xDS], similar to an [envoy proxy].
+xDS is one of the standard configuration mechanisms for software proxies and as a result, Quilkin can be setup to
+discover configuration resources from any API compatible server. Also, given that the protocol
+is [well specified][xDS-protocol], it is similarly straight-forward to implement a custom server to suit any
+deployment's needs.
 
-As described within the [xDS-api] documentation, the xDS API comprises a set of resource discovery APIs, each serving a specific set of configuration resource types, while the protocol itself comes in several [variants][xds-variants].
-Quilkin implements the **Aggregated Discovery Service (ADS)** _State of the World (SotW)_ variant with gRPC.
+As described within the [xDS-api] documentation, the xDS API comprises a set of resource discovery APIs, each serving a
+specific set of configuration resource types, while the protocol itself comes in several [variants][xds-variants].
+Quilkin implements the **Aggregated Discovery Service (ADS)** _[Incremental xDS][incremental-xds]_ variant with gRPC.
 
 ## Supported APIs
 
@@ -55,6 +62,7 @@ the `management_servers` [command line](../../api/quilkin/struct.Proxy.html#stru
 
 
 [xDS]: https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol#xds-rest-and-grpc-protocol
+[incremental-xds]: https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol#incremental-xds
 [envoy proxy]: https://www.envoyproxy.io/docs/envoy/latest/
 [xDS-protocol]: https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol#the-xds-transport-protocol
 [xDS-api]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/dynamic_configuration

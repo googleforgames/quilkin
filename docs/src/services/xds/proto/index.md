@@ -106,8 +106,8 @@ of xDS servers to connect to in the relay itself.
 
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
-| StreamAggregatedResources | [.envoy.service.discovery.v3.DiscoveryResponse](#envoy-service-discovery-v3-DiscoveryResponse) stream | [.envoy.service.discovery.v3.DiscoveryRequest](#envoy-service-discovery-v3-DiscoveryRequest) stream | The RPC protocol begins with a single empty DiscoveryResponse initiated by the management server, after that this behaves the same as the management server xDS protocol, except with DiscoveryRequests initiated by the server rather than the client. |
-| DeltaAggregatedResources | [.envoy.service.discovery.v3.DeltaDiscoveryResponse](#envoy-service-discovery-v3-DeltaDiscoveryResponse) stream | [.envoy.service.discovery.v3.DeltaDiscoveryRequest](#envoy-service-discovery-v3-DeltaDiscoveryRequest) stream |  |
+| StreamAggregatedResources | [.envoy.service.discovery.v3.DiscoveryResponse](#envoy-service-discovery-v3-DiscoveryResponse) stream | [.envoy.service.discovery.v3.DiscoveryRequest](#envoy-service-discovery-v3-DiscoveryRequest) stream | This RPC is not supported but remains here as part of the xDS standard, as Quilkin only uses a delta configuration transport for performance reasons. |
+| DeltaAggregatedResources | [.envoy.service.discovery.v3.DeltaDiscoveryResponse](#envoy-service-discovery-v3-DeltaDiscoveryResponse) stream | [.envoy.service.discovery.v3.DeltaDiscoveryRequest](#envoy-service-discovery-v3-DeltaDiscoveryRequest) stream | Delta (Incremental) xDS implementation |
 
  
 
