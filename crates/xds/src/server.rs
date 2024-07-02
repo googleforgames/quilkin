@@ -196,6 +196,10 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                 .delta_discovery_request(cs)
                 .map_err(|error| tonic::Status::internal(error.to_string()))?;
 
+            if req.resources.is_empty() && req.removed.is_empty() {
+                return Ok(None);
+            }
+
             let removed_resources = req.removed.iter().cloned().collect();
 
             match client_tracker.needs_ack(crate::config::AwaitingAck {
@@ -320,7 +324,8 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
 
                         let type_url = client_request.type_url.clone();
 
-                        yield responder(Some(client_request), &type_url, &mut client_tracker).unwrap().unwrap();
+                        let Some(response) = responder(Some(client_request), &type_url, &mut client_tracker).unwrap() else { continue; };
+                        yield response;
                     }
                 }
             }
