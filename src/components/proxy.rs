@@ -55,11 +55,19 @@ impl Ready {
     }
 }
 
+pub struct ToTokens {
+    /// The number of tokens to assign to each `to` address
+    pub count: usize,
+    /// The size of each token
+    pub length: usize,
+}
+
 pub struct Proxy {
     pub num_workers: std::num::NonZeroUsize,
     pub mmdb: Option<crate::net::maxmind_db::Source>,
     pub management_servers: Vec<tonic::transport::Endpoint>,
     pub to: Vec<SocketAddr>,
+    pub to_tokens: Option<ToTokens>,
     pub socket: socket2::Socket,
     pub qcmp: socket2::Socket,
     pub phoenix: crate::net::TcpListener,
@@ -76,6 +84,7 @@ impl Default for Proxy {
             mmdb: None,
             management_servers: Vec::new(),
             to: Vec::new(),
+            to_tokens: None,
             socket: crate::net::raw_socket_with_reuse(0).unwrap(),
             qcmp,
             phoenix,
@@ -108,15 +117,74 @@ impl Proxy {
         });
 
         if !self.to.is_empty() {
+            let endpoints = if let Some(tt) = self.to_tokens {
+                let (unique, overflow) = 256u64.overflowing_pow(tt.length as _);
+                if overflow {
+                    panic!(
+                        "can't generate {} tokens of length {} maximum is {}",
+                        self.to.len() * tt.count,
+                        tt.length,
+                        u64::MAX,
+                    );
+                }
+
+                if unique < (self.to.len() * tt.count) as u64 {
+                    panic!(
+                        "we require {} unique tokens but only {unique} can be generated",
+                        self.to.len() * tt.count,
+                    );
+                }
+
+                {
+                    use crate::filters::StaticFilter as _;
+                    config.filters.store(Arc::new(
+                        crate::filters::FilterChain::try_create([
+                            crate::filters::Capture::as_filter_config(
+                                crate::filters::capture::Config {
+                                    metadata_key: crate::filters::capture::CAPTURED_BYTES.into(),
+                                    strategy: crate::filters::capture::Strategy::Suffix(
+                                        crate::filters::capture::Suffix {
+                                            size: tt.length as _,
+                                            remove: true,
+                                        },
+                                    ),
+                                },
+                            )
+                            .unwrap(),
+                            crate::filters::TokenRouter::as_filter_config(None).unwrap(),
+                        ])
+                        .unwrap(),
+                    ));
+                }
+
+                let count = tt.count as u64;
+
+                self.to
+                    .iter()
+                    .enumerate()
+                    .map(|(ind, sa)| {
+                        let mut tokens = std::collections::BTreeSet::new();
+                        let start = ind as u64 * count;
+                        for i in start..(start + count) {
+                            tokens.insert(i.to_le_bytes()[..tt.length].to_vec());
+                        }
+
+                        crate::net::endpoint::Endpoint::with_metadata(
+                            sa.clone().into(),
+                            crate::net::endpoint::Metadata { tokens },
+                        )
+                    })
+                    .collect()
+            } else {
+                self.to
+                    .iter()
+                    .cloned()
+                    .map(crate::net::endpoint::Endpoint::from)
+                    .collect()
+            };
+
             config.clusters.modify(|clusters| {
-                clusters.insert(
-                    None,
-                    self.to
-                        .iter()
-                        .cloned()
-                        .map(crate::net::endpoint::Endpoint::from)
-                        .collect(),
-                );
+                clusters.insert(None, endpoints);
             });
         }
 

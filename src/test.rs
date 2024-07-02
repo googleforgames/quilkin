@@ -305,6 +305,7 @@ impl TestHelper {
                 mmdb: None,
                 management_servers: Vec::new(),
                 to: Vec::new(),
+                to_tokens: None,
                 socket: crate::net::raw_socket_with_reuse(0).unwrap(),
                 qcmp,
                 phoenix,
