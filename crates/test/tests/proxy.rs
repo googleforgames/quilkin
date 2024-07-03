@@ -88,12 +88,16 @@ trace_test!(uring_receiver, {
 
     let (mut packet_rx, endpoint) = sb.server("server");
 
-    let (error_sender, mut error_receiver) = tokio::sync::mpsc::unbounded_channel();
+    let (error_sender, mut error_receiver) =
+        tokio::sync::mpsc::unbounded_channel::<quilkin::components::proxy::PipelineError>();
 
     tokio::task::spawn(
         async move {
             while let Some(error) = error_receiver.recv().await {
-                tracing::error!(%error, "error sent from DownstreamReceiverWorker");
+                tracing::error!(
+                    error = error.as_str(),
+                    "error sent from DownstreamReceiverWorker"
+                );
             }
         }
         .instrument(tracing::debug_span!("error rx")),

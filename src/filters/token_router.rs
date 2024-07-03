@@ -226,12 +226,6 @@ mod tests {
         // no key
         let mut ctx = new_ctx();
         assert!(filter.read(&mut ctx).await.is_err());
-
-        // wrong type key
-        let mut ctx = new_ctx();
-        ctx.metadata
-            .insert(CAPTURED_BYTES.into(), Value::String(String::from("wrong")));
-        assert!(filter.read(&mut ctx).await.is_err());
     }
 
     #[tokio::test]

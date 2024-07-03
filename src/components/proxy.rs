@@ -25,7 +25,7 @@ pub enum PipelineError {
 }
 
 impl PipelineError {
-    fn as_str(&self) -> &'static str {
+    pub fn as_str(&self) -> &'static str {
         match self {
             Self::NoUpstreamEndpoints => "no upstream endpoints",
             Self::Filter(fe) => fe.as_str(),
