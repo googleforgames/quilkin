@@ -83,12 +83,14 @@ impl LocalRateLimit {
     }
 
     /// acquire_token is called on behalf of every packet that is eligible
-    /// for rate limiting. It returns whether there exists a token for the corresponding
-    /// address in the current period - determining whether or not the packet
-    /// should be forwarded or dropped.
-    fn acquire_token(&self, address: &EndpointAddress) -> Option<()> {
+    /// for rate limiting.
+    ///
+    /// It returns whether there exists a token for the corresponding address in
+    /// the current period - determining whether or not the packet should be
+    /// forwarded or dropped.
+    fn acquire_token(&self, address: &EndpointAddress) -> bool {
         if self.config.max_packets == 0 {
-            return None;
+            return false;
         }
 
         if let Some(bucket) = self.state.get(address) {
@@ -105,7 +107,7 @@ impl LocalRateLimit {
                 // If so, then we can only allow the packet if the current time
                 // window has ended.
                 if !start_new_window {
-                    return None;
+                    return false;
                 }
             }
 
@@ -119,7 +121,7 @@ impl LocalRateLimit {
                     .store(now_secs, Ordering::Relaxed);
             }
 
-            return Some(());
+            return true;
         }
 
         match self.state.entry(address.clone()) {
@@ -140,15 +142,18 @@ impl LocalRateLimit {
             }
         };
 
-        Some(())
+        true
     }
 }
 
 #[async_trait::async_trait]
 impl Filter for LocalRateLimit {
     async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
-        self.acquire_token(&ctx.source)
-            .ok_or_else(|| FilterError::new("rate limit exceeded"))
+        if self.acquire_token(&ctx.source) {
+            Ok(())
+        } else {
+            Err(FilterError::RateLimitExceeded)
+        }
     }
 }
 

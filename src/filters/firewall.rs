@@ -65,7 +65,7 @@ impl Filter for Firewall {
                     }
                     Action::Deny => {
                         debug!(action = "Deny", event = "read", source = ?ctx.source);
-                        Err(FilterError::new(PacketDenied))
+                        Err(FilterError::Firewall(PacketDenied))
                     }
                 };
             }
@@ -75,7 +75,7 @@ impl Filter for Firewall {
             event = "read",
             source = ?ctx.source.to_string()
         );
-        Err(FilterError::new(PacketDenied))
+        Err(FilterError::Firewall(PacketDenied))
     }
 
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
@@ -93,7 +93,7 @@ impl Filter for Firewall {
                     }
                     Action::Deny => {
                         debug!(action = "Deny", event = "write", source = ?ctx.source);
-                        Err(FilterError::new(PacketDenied))
+                        Err(FilterError::Firewall(PacketDenied))
                     }
                 };
             }
@@ -104,13 +104,26 @@ impl Filter for Firewall {
             event = "write",
             source = ?ctx.source.to_string()
         );
-        Err(FilterError::new(PacketDenied))
+        Err(FilterError::Firewall(PacketDenied))
     }
 }
 
-#[derive(thiserror::Error, Debug)]
-#[error("packet denied")]
 pub struct PacketDenied;
+
+impl PacketDenied {
+    #[inline]
+    pub fn as_str(&self) -> &'static str {
+        "packet denied"
+    }
+}
+
+use std::fmt;
+
+impl fmt::Debug for PacketDenied {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
 
 #[cfg(test)]
 mod tests {

@@ -41,21 +41,15 @@ impl TokenRouter {
                 ctx.destinations = ctx.endpoints.addresses_for_token(tok);
 
                 if ctx.destinations.is_empty() {
-                    Err(FilterError::new(Error::NoEndpointMatch(
-                        self.config.metadata_key,
-                        crate::codec::base64::encode(token),
-                    )))
+                    Err(FilterError::TokenRouter(Error::NoEndpointMatch))
                 } else {
                     Ok(())
                 }
             }
-            Some(value) => Err(FilterError::new(Error::InvalidType(
-                self.config.metadata_key,
-                value.clone(),
-            ))),
-            None => Err(FilterError::new(Error::NoTokenFound(
-                self.config.metadata_key,
-            ))),
+            Some(_value) => unreachable!(
+                "this means the capture filter has regressed, it only ever captures byte slices"
+            ),
+            None => Err(FilterError::TokenRouter(Error::NoTokenFound)),
         }
     }
 }
@@ -79,14 +73,24 @@ impl Filter for TokenRouter {
     }
 }
 
-#[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("no routing token found for `{0}`")]
-    NoTokenFound(metadata::Key),
-    #[error("key `{0}` was found but wasn't bytes, found {1:?}")]
-    InvalidType(metadata::Key, metadata::Value),
-    #[error("no endpoint matched token `{1}` from `{0}`")]
-    NoEndpointMatch(metadata::Key, String),
+    NoTokenFound,
+    NoEndpointMatch,
+}
+
+impl Error {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::NoEndpointMatch => "no endpoint matched routing token",
+            Self::NoTokenFound => "routing token not captured",
+        }
+    }
+}
+
+impl std::fmt::Debug for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, schemars::JsonSchema)]

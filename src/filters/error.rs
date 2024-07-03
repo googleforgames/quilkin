@@ -16,40 +16,106 @@
 
 use prometheus::Error as MetricsError;
 
-#[cfg(doc)]
-use crate::filters::{Filter, FilterFactory};
+use crate::filters;
+use std::{fmt, io::ErrorKind};
 
-#[derive(thiserror::Error)]
-#[error("{}{} error: {source}", .label.as_deref().map(|label| format!("{}:", label)).unwrap_or_default(), .name.as_deref().unwrap_or_default())]
-pub struct FilterError {
-    name: Option<String>,
-    label: Option<String>,
-    source: Box<dyn std::error::Error + Send + Sync + 'static>,
+#[cfg(doc)]
+use filters::{Filter, FilterFactory};
+
+/// All possible errors that can be returned from [`Filter`] implementations
+#[derive(Debug)]
+pub enum FilterError {
+    Capture(filters::capture::NoValueCaptured),
+    TokenRouter(filters::token_router::Error),
+    Compression(filters::compress::Error),
+    /// An [`ErrorKind`] and optional string context
+    Io(ErrorKind, Option<&'static str>),
+    /// Packet was denied by a `Firewall`
+    Firewall(filters::firewall::PacketDenied),
+    Match(filters::r#match::Error),
+    /// Packet was dropped by `Drop`
+    Dropped,
+    /// Packet exceeded the rate limit for the sending endpoint
+    RateLimitExceeded,
+    /// An error from a custom filter
+    Custom(&'static str),
 }
 
 impl FilterError {
-    pub fn new<D: std::fmt::Display>(error: D) -> Self {
-        Self {
-            name: None,
-            label: None,
-            source: Box::from(error.to_string()),
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Capture(cap) => cap.as_str(),
+            Self::TokenRouter(tr) => tr.as_str(),
+            Self::Compression(comp) => comp.as_str(),
+            Self::Io(kind, _ctx) => io_kind_as_str(*kind),
+            Self::Firewall(fw) => fw.as_str(),
+            Self::Match(m) => m.as_str(),
+            Self::Dropped => "dropped",
+            Self::RateLimitExceeded => "rate limit exceeded",
+            Self::Custom(custom) => custom,
         }
+    }
+}
+
+impl std::error::Error for FilterError {}
+
+impl fmt::Display for FilterError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Capture(cap) => f.write_str(cap.as_str()),
+            Self::TokenRouter(tr) => f.write_str(tr.as_str()),
+            Self::Compression(comp) => write!(f, "{comp}"),
+            Self::Io(kind, ctx) => {
+                if let Some(ctx) = ctx {
+                    write!(f, "io error - {kind}: {ctx}")
+                } else {
+                    write!(f, "io error - {kind}")
+                }
+            }
+            Self::Firewall(fw) => f.write_str(fw.as_str()),
+            Self::Match(m) => f.write_str(m.as_str()),
+            Self::Dropped => f.write_str("dropped"),
+            Self::RateLimitExceeded => f.write_str("rate limit exceeded"),
+            Self::Custom(custom) => f.write_str(custom),
+        }
+    }
+}
+
+impl From<(std::io::Error, &'static str)> for FilterError {
+    fn from((error, s): (std::io::Error, &'static str)) -> Self {
+        Self::Io(error.kind(), Some(s))
     }
 }
 
 impl From<std::io::Error> for FilterError {
     fn from(error: std::io::Error) -> Self {
-        Self::new(error)
+        Self::Io(error.kind(), None)
     }
 }
 
-impl std::fmt::Debug for FilterError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("FilterError")
-            .field("name", &self.name)
-            .field("label", &self.label)
-            .field("source", &self.source.to_string())
-            .finish()
+pub fn io_kind_as_str(kind: ErrorKind) -> &'static str {
+    match kind {
+        ErrorKind::AddrInUse => "address in use",
+        ErrorKind::AddrNotAvailable => "address not available",
+        ErrorKind::AlreadyExists => "already exists",
+        ErrorKind::BrokenPipe => "broken pipe",
+        ErrorKind::ConnectionAborted => "connection aborted",
+        ErrorKind::ConnectionRefused => "connection refused",
+        ErrorKind::ConnectionReset => "connection reset",
+        ErrorKind::Interrupted => "interrupted",
+        ErrorKind::InvalidData => "invalid data",
+        ErrorKind::InvalidInput => "invalid input",
+        ErrorKind::NotConnected => "not connected",
+        ErrorKind::NotFound => "not found",
+        ErrorKind::Other => "other",
+        ErrorKind::OutOfMemory => "out of memory",
+        ErrorKind::PermissionDenied => "permission denied",
+        ErrorKind::TimedOut => "timed out",
+        ErrorKind::UnexpectedEof => "unexpected eof",
+        ErrorKind::Unsupported => "unsupported",
+        ErrorKind::WouldBlock => "would block",
+        ErrorKind::WriteZero => "write zero",
+        _ => "unknown",
     }
 }
 

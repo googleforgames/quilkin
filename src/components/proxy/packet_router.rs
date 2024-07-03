@@ -1,6 +1,6 @@
 use super::{
     sessions::{DownstreamReceiver, SessionKey},
-    PipelineError, PipelineErrorDiscriminants, SessionPool,
+    PipelineError, SessionPool,
 };
 use crate::{
     filters::{Filter as _, ReadContext},
@@ -182,9 +182,9 @@ impl DownstreamReceiveWorkerConfig {
         match Self::process_downstream_received_packet(packet, config, sessions).await {
             Ok(()) => {}
             Err(error) => {
-                let discriminant = PipelineErrorDiscriminants::from(&error).to_string();
-                crate::metrics::errors_total(crate::metrics::READ, &discriminant, None).inc();
-                crate::metrics::packets_dropped_total(crate::metrics::READ, &discriminant, None)
+                let discriminant = error.as_str();
+                crate::metrics::errors_total(crate::metrics::READ, discriminant, None).inc();
+                crate::metrics::packets_dropped_total(crate::metrics::READ, discriminant, None)
                     .inc();
                 let _ = error_sender.send(error);
             }
@@ -272,7 +272,7 @@ pub async fn spawn_receivers(
     tokio::spawn(async move {
         let mut log_task = tokio::time::interval(std::time::Duration::from_secs(5));
 
-        let mut pipeline_errors = std::collections::HashMap::<String, u64>::new();
+        let mut pipeline_errors = std::collections::HashMap::<&'static str, u64>::new();
         loop {
             tokio::select! {
                 _ = log_task.tick() => {
@@ -287,7 +287,7 @@ pub async fn spawn_receivers(
                         return;
                     };
 
-                    let entry = pipeline_errors.entry(error.to_string()).or_default();
+                    let entry = pipeline_errors.entry(error.as_str()).or_default();
                     *entry += 1;
                 }
             }

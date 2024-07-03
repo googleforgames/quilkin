@@ -55,7 +55,7 @@ pub use self::{
     concatenate::Concatenate,
     debug::Debug,
     drop::Drop,
-    error::{ConvertProtoConfigError, CreationError, FilterError},
+    error::{io_kind_as_str, ConvertProtoConfigError, CreationError, FilterError},
     factory::{CreateFilterArgs, DynFilterFactory, FilterFactory, FilterInstance},
     firewall::Firewall,
     load_balancer::LoadBalancer,

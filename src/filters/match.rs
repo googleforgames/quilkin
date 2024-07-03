@@ -96,9 +96,8 @@ where
 {
     match config {
         Some(config) => {
-            let value = (get_metadata)(ctx, &config.metadata_key).ok_or_else(|| {
-                FilterError::new(format!("no metadata found for {}", config.metadata_key))
-            })?;
+            let value = (get_metadata)(ctx, &config.metadata_key)
+                .ok_or(FilterError::Match(Error::NoMetadataKey))?;
 
             match config.branches.iter().find(|(key, _)| key == value) {
                 Some((value, instance)) => {
@@ -156,6 +155,24 @@ impl StaticFilter for Match {
 
     fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, CreationError> {
         Self::new(Self::ensure_config_exists(config)?, Metrics::new())
+    }
+}
+
+pub enum Error {
+    /// The metadata key expected by the match filter was not present
+    NoMetadataKey,
+}
+
+impl Error {
+    #[inline]
+    pub fn as_str(&self) -> &'static str {
+        "expected metadata key not present"
+    }
+}
+
+impl std::fmt::Debug for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
     }
 }
 

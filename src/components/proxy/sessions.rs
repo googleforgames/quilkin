@@ -106,8 +106,9 @@ impl SessionPool {
         let port = raw_socket
             .local_addr()?
             .as_socket()
-            .ok_or_else(|| eyre::eyre!("couldn't get socket address from raw socket"))
-            .map_err(super::PipelineError::Session)?
+            .ok_or_else(|| {
+                super::PipelineError::Session("couldn't get socket address from raw socket")
+            })?
             .port();
         let (tx, mut downstream_receiver) = mpsc::channel::<UpstreamChannelData>(15);
 
@@ -205,7 +206,7 @@ impl SessionPool {
             }
         );
 
-        initialised.await.map_err(|error| eyre::eyre!(error))??;
+        initialised.await.unwrap()?;
 
         self.ports_to_sockets.write().await.insert(port, tx.clone());
         self.create_session_from_existing_socket(key, tx, port)
@@ -295,9 +296,10 @@ impl SessionPool {
                     .next()
                     .map(|(port, socket)| (*port, socket.clone()))
                     .ok_or_else(|| {
-                        eyre::eyre!("couldn't obtain any allocated socket, should be unreachable")
-                    })
-                    .map_err(super::PipelineError::Session)?;
+                        super::PipelineError::Session(
+                            "couldn't obtain any allocated socket, should be unreachable",
+                        )
+                    })?;
 
                 self.create_session_from_existing_socket(key, sender, port)
                     .await
@@ -320,9 +322,10 @@ impl SessionPool {
                 .destination_to_sockets
                 .get_mut(&dest)
                 .ok_or_else(|| {
-                    eyre::eyre!("couldn't obtain any socket for destination, should be unreachable")
-                })
-                .map_err(super::PipelineError::Session)?
+                    super::PipelineError::Session(
+                        "couldn't obtain any socket for destination, should be unreachable",
+                    )
+                })?
                 .insert(port);
             self.create_session_from_existing_socket(key, socket, port)
                 .await
@@ -583,8 +586,9 @@ pub enum Error {
 }
 
 impl Loggable for Error {
+    #[inline]
     fn log(&self) {
-        tracing::error!("{}", self);
+        tracing::error!("{self}");
     }
 }
 

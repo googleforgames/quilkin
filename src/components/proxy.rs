@@ -12,21 +12,41 @@ use std::{
     },
 };
 
-#[derive(thiserror::Error, Debug, strum_macros::EnumDiscriminants)]
-#[strum_discriminants(derive(strum_macros::Display))]
+#[derive(Debug)]
 pub enum PipelineError {
-    #[error("No upstream endpoints available")]
     NoUpstreamEndpoints,
-    #[error("filter {0}")]
-    Filter(#[from] crate::filters::FilterError),
-    #[error("session error: {0}")]
-    Session(#[from] eyre::Error),
-    #[error("OS level error: {0}")]
-    Io(#[from] std::io::Error),
-    #[error("Channel closed")]
+    Filter(crate::filters::FilterError),
+    Session(&'static str),
+    Io(std::io::Error),
+    //#[error("Channel closed")]
     ChannelClosed,
-    #[error("Under pressure")]
+    //#[error("Under pressure")]
     ChannelFull,
+}
+
+impl PipelineError {
+    fn as_str(&self) -> &'static str {
+        match self {
+            Self::NoUpstreamEndpoints => "no upstream endpoints",
+            Self::Filter(fe) => fe.as_str(),
+            Self::Io(io) => crate::filters::io_kind_as_str(io.kind()),
+            Self::Session(session) => session,
+            Self::ChannelClosed => "channel closed",
+            Self::ChannelFull => "channel full",
+        }
+    }
+}
+
+impl From<crate::filters::FilterError> for PipelineError {
+    fn from(fe: crate::filters::FilterError) -> Self {
+        Self::Filter(fe)
+    }
+}
+
+impl From<std::io::Error> for PipelineError {
+    fn from(io: std::io::Error) -> Self {
+        Self::Io(io)
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -170,7 +190,7 @@ impl Proxy {
                         }
 
                         crate::net::endpoint::Endpoint::with_metadata(
-                            sa.clone().into(),
+                            (*sa).into(),
                             crate::net::endpoint::Metadata { tokens },
                         )
                     })

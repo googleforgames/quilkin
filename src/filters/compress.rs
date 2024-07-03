@@ -72,7 +72,7 @@ impl Filter for Compress {
                             .inc_by(ctx.contents.len() as u64);
                         Ok(())
                     }
-                    Err(err) => Err(FilterError::new(err)),
+                    Err(err) => Err(Error::new(err, Direction::Read, Action::Compress)),
                 }
             }
             Action::Decompress => {
@@ -86,7 +86,7 @@ impl Filter for Compress {
                             .inc_by(ctx.contents.len() as u64);
                         Ok(())
                     }
-                    Err(err) => Err(FilterError::new(err)),
+                    Err(err) => Err(Error::new(err, Direction::Read, Action::Decompress)),
                 }
             }
             Action::DoNothing => Ok(()),
@@ -108,7 +108,7 @@ impl Filter for Compress {
                             .inc_by(ctx.contents.len() as u64);
                         Ok(())
                     }
-                    Err(err) => Err(FilterError::new(err)),
+                    Err(err) => Err(Error::new(err, Direction::Write, Action::Compress)),
                 }
             }
             Action::Decompress => {
@@ -123,7 +123,7 @@ impl Filter for Compress {
                         Ok(())
                     }
 
-                    Err(err) => Err(FilterError::new(err)),
+                    Err(err) => Err(Error::new(err, Direction::Write, Action::Decompress)),
                 }
             }
             Action::DoNothing => Ok(()),
@@ -141,6 +141,67 @@ impl StaticFilter for Compress {
             Self::ensure_config_exists(config)?,
             Metrics::new(),
         ))
+    }
+}
+
+use std::fmt;
+
+#[derive(Copy, Clone)]
+pub enum Direction {
+    Read,
+    Write,
+}
+
+impl fmt::Debug for Direction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Read => f.write_str("read"),
+            Self::Write => f.write_str("write"),
+        }
+    }
+}
+
+pub struct Error {
+    kind: std::io::ErrorKind,
+    direction: Direction,
+    action: Action,
+}
+
+impl Error {
+    #[allow(clippy::new_ret_no_self)]
+    #[inline]
+    fn new(err: std::io::Error, dir: Direction, action: Action) -> FilterError {
+        FilterError::Compression(Self {
+            kind: err.kind(),
+            direction: dir,
+            action,
+        })
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        super::io_kind_as_str(self.kind)
+    }
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}: {:?} {:?}",
+            super::io_kind_as_str(self.kind),
+            self.direction,
+            self.action
+        )
+    }
+}
+
+impl fmt::Debug for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_map()
+            .entry(&"kind", &self.kind)
+            .entry(&"direction", &self.direction)
+            .entry(&"action", &self.action)
+            .finish()
     }
 }
 

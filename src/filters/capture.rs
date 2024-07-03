@@ -72,7 +72,7 @@ impl Filter for Capture {
             Ok(())
         } else {
             tracing::trace!(key = %self.metadata_key, "No value captured");
-            Err(FilterError::new(NoValueCaptured))
+            Err(FilterError::Capture(NoValueCaptured))
         }
     }
 }
@@ -87,9 +87,19 @@ impl StaticFilter for Capture {
     }
 }
 
-#[derive(thiserror::Error, Debug)]
-#[error("no value captured")]
-struct NoValueCaptured;
+pub struct NoValueCaptured;
+
+impl NoValueCaptured {
+    pub fn as_str(&self) -> &'static str {
+        "no value captured"
+    }
+}
+
+impl std::fmt::Debug for NoValueCaptured {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
 
 #[cfg(test)]
 mod tests {
