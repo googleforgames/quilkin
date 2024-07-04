@@ -72,7 +72,11 @@ impl Filter for Compress {
                             .inc_by(ctx.contents.len() as u64);
                         Ok(())
                     }
-                    Err(err) => Err(FilterError::new(err)),
+                    Err(err) => Err(CompressionError::new(
+                        err,
+                        Direction::Read,
+                        Action::Compress,
+                    )),
                 }
             }
             Action::Decompress => {
@@ -86,7 +90,11 @@ impl Filter for Compress {
                             .inc_by(ctx.contents.len() as u64);
                         Ok(())
                     }
-                    Err(err) => Err(FilterError::new(err)),
+                    Err(err) => Err(CompressionError::new(
+                        err,
+                        Direction::Read,
+                        Action::Decompress,
+                    )),
                 }
             }
             Action::DoNothing => Ok(()),
@@ -108,7 +116,11 @@ impl Filter for Compress {
                             .inc_by(ctx.contents.len() as u64);
                         Ok(())
                     }
-                    Err(err) => Err(FilterError::new(err)),
+                    Err(err) => Err(CompressionError::new(
+                        err,
+                        Direction::Write,
+                        Action::Compress,
+                    )),
                 }
             }
             Action::Decompress => {
@@ -123,7 +135,11 @@ impl Filter for Compress {
                         Ok(())
                     }
 
-                    Err(err) => Err(FilterError::new(err)),
+                    Err(err) => Err(CompressionError::new(
+                        err,
+                        Direction::Write,
+                        Action::Decompress,
+                    )),
                 }
             }
             Action::DoNothing => Ok(()),
@@ -141,6 +157,83 @@ impl StaticFilter for Compress {
             Self::ensure_config_exists(config)?,
             Metrics::new(),
         ))
+    }
+}
+
+use std::fmt;
+
+#[derive(Copy, Clone)]
+pub enum Direction {
+    Read,
+    Write,
+}
+
+impl PartialEq for Direction {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Read, Self::Read) => true,
+            (Self::Write, Self::Write) => true,
+            _ => false,
+        }
+    }
+}
+
+impl fmt::Debug for Direction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Read => f.write_str("read"),
+            Self::Write => f.write_str("write"),
+        }
+    }
+}
+
+pub struct CompressionError {
+    io: std::io::Error,
+    direction: Direction,
+    action: Action,
+}
+
+impl CompressionError {
+    #[allow(clippy::new_ret_no_self)]
+    #[inline]
+    fn new(io: std::io::Error, dir: Direction, action: Action) -> FilterError {
+        FilterError::Compression(Self {
+            io,
+            direction: dir,
+            action,
+        })
+    }
+}
+
+impl fmt::Display for CompressionError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}: {:?} {:?}", self.io, self.direction, self.action)
+    }
+}
+
+impl fmt::Debug for CompressionError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_map()
+            .entry(&"io", &self.io)
+            .entry(&"direction", &self.direction)
+            .entry(&"action", &self.action)
+            .finish()
+    }
+}
+
+impl PartialEq for CompressionError {
+    fn eq(&self, other: &Self) -> bool {
+        self.direction == other.direction
+            && self.action == other.action
+            && self.io.kind() == other.io.kind()
+    }
+}
+
+impl std::hash::Hash for CompressionError {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        std::hash::Hash::hash(&self.io.kind(), state);
+        std::hash::Hash::hash(&std::mem::discriminant(&self.direction), state);
+        std::hash::Hash::hash(&std::mem::discriminant(&self.action), state);
     }
 }
 

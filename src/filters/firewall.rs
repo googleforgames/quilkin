@@ -65,7 +65,7 @@ impl Filter for Firewall {
                     }
                     Action::Deny => {
                         debug!(action = "Deny", event = "read", source = ?ctx.source);
-                        Err(FilterError::new(PacketDenied))
+                        Err(FilterError::FirewallDenied)
                     }
                 };
             }
@@ -75,7 +75,7 @@ impl Filter for Firewall {
             event = "read",
             source = ?ctx.source.to_string()
         );
-        Err(FilterError::new(PacketDenied))
+        Err(FilterError::FirewallDenied)
     }
 
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
@@ -93,7 +93,7 @@ impl Filter for Firewall {
                     }
                     Action::Deny => {
                         debug!(action = "Deny", event = "write", source = ?ctx.source);
-                        Err(FilterError::new(PacketDenied))
+                        Err(FilterError::FirewallDenied)
                     }
                 };
             }
@@ -104,13 +104,9 @@ impl Filter for Firewall {
             event = "write",
             source = ?ctx.source.to_string()
         );
-        Err(FilterError::new(PacketDenied))
+        Err(FilterError::FirewallDenied)
     }
 }
-
-#[derive(thiserror::Error, Debug)]
-#[error("packet denied")]
-pub struct PacketDenied;
 
 #[cfg(test)]
 mod tests {

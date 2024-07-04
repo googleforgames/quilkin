@@ -502,6 +502,7 @@ impl Pail {
                         num_workers: NonZeroUsize::new(1).unwrap(),
                         mmdb: None,
                         to: Vec::new(),
+                        to_tokens: None,
                         management_servers,
                         socket,
                         qcmp,

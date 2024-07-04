@@ -16,6 +16,7 @@
 
 use std::{
     collections::{HashMap, HashSet},
+    fmt,
     net::SocketAddr,
     sync::Arc,
     time::Duration,
@@ -47,6 +48,37 @@ type UpstreamChannelData = (FrozenPoolBuffer, Option<MetricsIpNetEntry>, SocketA
 type UpstreamSender = mpsc::Sender<UpstreamChannelData>;
 type DownstreamSender = async_channel::Sender<ChannelData>;
 pub type DownstreamReceiver = async_channel::Receiver<ChannelData>;
+
+#[derive(PartialEq, Eq, Hash)]
+pub enum SessionError {
+    SocketAddressUnavailable,
+    MissingAllocatedSocket,
+    MissingDestinationSocket,
+}
+
+impl std::error::Error for SessionError {}
+
+impl fmt::Display for SessionError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::SocketAddressUnavailable => {
+                f.write_str("couldn't get socket address from raw socket")
+            }
+            Self::MissingAllocatedSocket => {
+                f.write_str("couldn't obtain any allocated socket, should be unreachable")
+            }
+            Self::MissingDestinationSocket => {
+                f.write_str("couldn't obtain any socket for destination, should be unreachable")
+            }
+        }
+    }
+}
+
+impl fmt::Debug for SessionError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self}")
+    }
+}
 
 /// A data structure that is responsible for holding sessions, and pooling
 /// sockets between them. This means that we only provide new unique sockets
@@ -108,8 +140,7 @@ impl SessionPool {
         let port = raw_socket
             .local_addr()?
             .as_socket()
-            .ok_or_else(|| eyre::eyre!("couldn't get socket address from raw socket"))
-            .map_err(super::PipelineError::Session)?
+            .ok_or(SessionError::SocketAddressUnavailable)?
             .port();
         let (tx, mut downstream_receiver) = mpsc::channel::<UpstreamChannelData>(15);
 
@@ -199,7 +230,7 @@ impl SessionPool {
             }
         );
 
-        initialised.await.map_err(|error| eyre::eyre!(error))??;
+        initialised.await.unwrap()?;
 
         self.ports_to_sockets.write().await.insert(port, tx.clone());
         self.create_session_from_existing_socket(key, tx, port)
@@ -295,10 +326,7 @@ impl SessionPool {
                     .iter()
                     .next()
                     .map(|(port, socket)| (*port, socket.clone()))
-                    .ok_or_else(|| {
-                        eyre::eyre!("couldn't obtain any allocated socket, should be unreachable")
-                    })
-                    .map_err(super::PipelineError::Session)?;
+                    .ok_or(SessionError::MissingAllocatedSocket)?;
 
                 self.create_session_from_existing_socket(key, sender, port)
                     .await
@@ -320,10 +348,7 @@ impl SessionPool {
                 .await
                 .destination_to_sockets
                 .get_mut(&dest)
-                .ok_or_else(|| {
-                    eyre::eyre!("couldn't obtain any socket for destination, should be unreachable")
-                })
-                .map_err(super::PipelineError::Session)?
+                .ok_or(SessionError::MissingDestinationSocket)?
                 .insert(port);
             self.create_session_from_existing_socket(key, socket, port)
                 .await
@@ -594,8 +619,9 @@ pub enum Error {
 }
 
 impl Loggable for Error {
+    #[inline]
     fn log(&self) {
-        tracing::error!("{}", self);
+        tracing::error!("{self}");
     }
 }
 

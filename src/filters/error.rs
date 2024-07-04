@@ -16,40 +16,103 @@
 
 use prometheus::Error as MetricsError;
 
-#[cfg(doc)]
-use crate::filters::{Filter, FilterFactory};
+use crate::filters;
+use std::fmt;
 
-#[derive(thiserror::Error)]
-#[error("{}{} error: {source}", .label.as_deref().map(|label| format!("{}:", label)).unwrap_or_default(), .name.as_deref().unwrap_or_default())]
-pub struct FilterError {
-    name: Option<String>,
-    label: Option<String>,
-    source: Box<dyn std::error::Error + Send + Sync + 'static>,
+#[cfg(doc)]
+use filters::{Filter, FilterFactory};
+
+/// All possible errors that can be returned from [`Filter`] implementations
+#[derive(Debug)]
+pub enum FilterError {
+    NoValueCaptured,
+    TokenRouter(filters::token_router::RouterError),
+    Compression(filters::compress::CompressionError),
+    Io(std::io::Error),
+    FirewallDenied,
+    MatchNoMetadata,
+    Dropped,
+    RateLimitExceeded,
+    Custom(&'static str),
 }
 
 impl FilterError {
-    pub fn new<D: std::fmt::Display>(error: D) -> Self {
-        Self {
-            name: None,
-            label: None,
-            source: Box::from(error.to_string()),
+    pub fn discriminant(&self) -> &'static str {
+        match self {
+            Self::NoValueCaptured => "filter::capture::no value captured",
+            Self::TokenRouter(tr) => tr.discriminant(),
+            Self::Compression(_) => "filter::compression::io",
+            Self::Io(..) => "filter::io",
+            Self::FirewallDenied => "filter::firewall::denied",
+            Self::MatchNoMetadata => "filter::match::no metadata",
+            Self::Dropped => "filter::drop::dropped",
+            Self::RateLimitExceeded => "filter::rate_limit::dropped",
+            Self::Custom(custom) => custom,
+        }
+    }
+}
+
+impl std::error::Error for FilterError {}
+
+impl fmt::Display for FilterError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::NoValueCaptured => f.write_str("no value captured"),
+            Self::TokenRouter(tr) => write!(f, "{tr}"),
+            Self::Compression(comp) => write!(f, "{comp}"),
+            Self::Io(io) => write!(f, "{io}"),
+            Self::FirewallDenied => f.write_str("packet denied by firewall"),
+            Self::MatchNoMetadata => f.write_str("expected metadata key for match not present"),
+            Self::Dropped => f.write_str("dropped"),
+            Self::RateLimitExceeded => f.write_str("rate limit exceeded"),
+            Self::Custom(custom) => f.write_str(custom),
         }
     }
 }
 
 impl From<std::io::Error> for FilterError {
     fn from(error: std::io::Error) -> Self {
-        Self::new(error)
+        Self::Io(error)
     }
 }
 
-impl std::fmt::Debug for FilterError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("FilterError")
-            .field("name", &self.name)
-            .field("label", &self.label)
-            .field("source", &self.source.to_string())
-            .finish()
+impl Eq for FilterError {}
+
+impl PartialEq for FilterError {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::NoValueCaptured, Self::NoValueCaptured) => true,
+            (Self::TokenRouter(tra), Self::TokenRouter(trb)) => tra.eq(trb),
+            (Self::Compression(ca), Self::Compression(cb)) => ca.eq(cb),
+            (Self::Io(ia), Self::Io(ib)) => ia.kind().eq(&ib.kind()),
+            (Self::FirewallDenied, Self::FirewallDenied) => true,
+            (Self::MatchNoMetadata, Self::MatchNoMetadata) => true,
+            (Self::Dropped, Self::Dropped) => true,
+            (Self::RateLimitExceeded, Self::RateLimitExceeded) => true,
+            (Self::Custom(a), Self::Custom(b)) => a == b,
+            _ => false,
+        }
+    }
+}
+
+use std::hash::Hash;
+
+impl Hash for FilterError {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        let disc = std::mem::discriminant(self);
+        Hash::hash(&disc, state);
+
+        match self {
+            Self::TokenRouter(re) => Hash::hash(&re, state),
+            Self::Compression(ce) => Hash::hash(&ce, state),
+            Self::Io(io) => Hash::hash(&io.kind(), state),
+            Self::Custom(ce) => state.write(ce.as_bytes()),
+            Self::NoValueCaptured
+            | Self::FirewallDenied
+            | Self::MatchNoMetadata
+            | Self::Dropped
+            | Self::RateLimitExceeded => {}
+        }
     }
 }
 

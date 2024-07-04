@@ -1,8 +1,10 @@
+mod error;
 pub mod packet_router;
 mod sessions;
 
 use super::RunArgs;
 use crate::pool::PoolBuffer;
+pub use error::PipelineError;
 pub use sessions::SessionPool;
 use std::{
     net::SocketAddr,
@@ -11,23 +13,6 @@ use std::{
         Arc,
     },
 };
-
-#[derive(thiserror::Error, Debug, strum_macros::EnumDiscriminants)]
-#[strum_discriminants(derive(strum_macros::Display))]
-pub enum PipelineError {
-    #[error("No upstream endpoints available")]
-    NoUpstreamEndpoints,
-    #[error("filter {0}")]
-    Filter(#[from] crate::filters::FilterError),
-    #[error("session error: {0}")]
-    Session(#[from] eyre::Error),
-    #[error("OS level error: {0}")]
-    Io(#[from] std::io::Error),
-    #[error("Channel closed")]
-    ChannelClosed,
-    #[error("Under pressure")]
-    ChannelFull,
-}
 
 #[derive(Clone, Debug)]
 pub struct Ready {
