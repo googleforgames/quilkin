@@ -86,7 +86,6 @@ trace_test!(relay_routing, {
         let mut token = Token { inner: [0; 3] };
 
         let tokens = (0..2000)
-            .into_iter()
             .map(|i| {
                 let tok = Token::new(&mut rng);
                 if i == 1337 {
@@ -182,9 +181,8 @@ trace_test!(datacenter_discovery, {
     loop {
         let rt = sandbox.timeout(10000, proxy_delta_rx.recv()).await.unwrap();
 
-        match rt.as_ref() {
-            quilkin::xds::DATACENTER_TYPE => break,
-            _ => {}
+        if matches!(rt.as_ref(), quilkin::xds::DATACENTER_TYPE) {
+            break;
         }
     }
 
@@ -205,8 +203,8 @@ trace_test!(datacenter_discovery, {
         };
     }
 
-    assert_config(&relay_config, &datacenter);
-    assert_config(&proxy_config, &datacenter);
+    assert_config(relay_config, &datacenter);
+    assert_config(proxy_config, &datacenter);
 });
 
 trace_test!(filter_update, {
@@ -322,7 +320,7 @@ trace_test!(filter_update, {
         tracing::info!(len = token.len(), "sending bad packet");
         // send an invalid packet
         msg.truncate(5);
-        msg.extend((0..token.len()).into_iter().map(|_| b'b'));
+        msg.extend((0..token.len()).map(|_| b'b'));
         client.send_to(&msg, &proxy_address).await.unwrap();
 
         sandbox.expect_timeout(50, server_rx.recv()).await;

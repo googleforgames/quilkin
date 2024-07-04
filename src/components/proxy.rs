@@ -4,7 +4,7 @@ mod sessions;
 
 use super::RunArgs;
 use crate::pool::PoolBuffer;
-pub use error::PipelineError;
+pub use error::{ErrorMap, PipelineError};
 pub use sessions::SessionPool;
 use std::{
     net::SocketAddr,
@@ -155,7 +155,7 @@ impl Proxy {
                         }
 
                         crate::net::endpoint::Endpoint::with_metadata(
-                            sa.clone().into(),
+                            (*sa).into(),
                             crate::net::endpoint::Metadata { tokens },
                         )
                     })

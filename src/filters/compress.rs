@@ -170,11 +170,10 @@ pub enum Direction {
 
 impl PartialEq for Direction {
     fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::Read, Self::Read) => true,
-            (Self::Write, Self::Write) => true,
-            _ => false,
-        }
+        matches!(
+            (self, other),
+            (Self::Read, Self::Read) | (Self::Write, Self::Write)
+        )
     }
 }
 

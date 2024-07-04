@@ -143,6 +143,7 @@ impl ErrorAccumulator {
             return false;
         };
 
+        #[allow(clippy::mutable_key_type)]
         let map = std::mem::replace(&mut self.map, ErrorMap::with_hasher(SeahashBuilder));
         permit.send(map);
         true

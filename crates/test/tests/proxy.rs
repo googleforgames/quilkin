@@ -62,7 +62,6 @@ trace_test!(with_filter, {
         "proxy",
         ProxyPailConfig {
             config: Some(TestConfig::new()),
-            ..Default::default()
         },
         &["server"],
     );
@@ -88,12 +87,15 @@ trace_test!(uring_receiver, {
 
     let (mut packet_rx, endpoint) = sb.server("server");
 
-    let (error_sender, mut error_receiver) = tokio::sync::mpsc::unbounded_channel();
+    let (error_sender, mut error_receiver) =
+        tokio::sync::mpsc::channel::<quilkin::components::proxy::ErrorMap>(20);
 
     tokio::task::spawn(
         async move {
-            while let Some(error) = error_receiver.recv().await {
-                tracing::error!(%error, "error sent from DownstreamReceiverWorker");
+            while let Some(errors) = error_receiver.recv().await {
+                for error in errors.keys() {
+                    tracing::error!(%error, "error sent from DownstreamReceiverWorker");
+                }
             }
         }
         .instrument(tracing::debug_span!("error rx")),

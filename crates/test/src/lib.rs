@@ -59,9 +59,7 @@ pub fn init_logging(level: Level, test_pkg: &'static str) -> DefaultGuard {
         )));
     let sub = tracing_subscriber::Registry::default().with(layer);
     let disp = tracing::dispatcher::Dispatch::new(sub);
-    let guard = tracing::dispatcher::set_default(&disp);
-
-    guard
+    tracing::dispatcher::set_default(&disp)
 }
 
 #[macro_export]
@@ -363,7 +361,7 @@ impl Pail {
                     endpoints.insert(quilkin::net::Endpoint::with_metadata(
                         (std::net::Ipv4Addr::UNSPECIFIED, server.port).into(),
                         quilkin::net::endpoint::Metadata {
-                            tokens: tokens.into_iter().map(|t| Vec::from(*t)).collect(),
+                            tokens: tokens.iter().map(|t| Vec::from(*t)).collect(),
                         },
                     ));
                 }
@@ -377,7 +375,7 @@ impl Pail {
 
                 let relay_servers = spc
                     .dependencies
-                    .into_iter()
+                    .iter()
                     .filter_map(|dname| {
                         let Pail::Relay(RelayPail { mds_port, .. }) = &pails[dname] else {
                             return None;
@@ -442,7 +440,7 @@ impl Pail {
 
                 let management_servers = spc
                     .dependencies
-                    .into_iter()
+                    .iter()
                     .filter_map(|dname| {
                         let Pail::Relay(RelayPail { xds_port, .. }) = &pails[dname] else {
                             return None;
@@ -474,7 +472,7 @@ impl Pail {
 
                 let endpoints: std::collections::BTreeSet<_> = spc
                     .dependencies
-                    .into_iter()
+                    .iter()
                     .filter_map(|dname| {
                         let Pail::Server(ServerPail { port, .. }) = &pails[dname] else {
                             return None;
