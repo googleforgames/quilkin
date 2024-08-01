@@ -304,6 +304,7 @@
 };
 <span class="kw">use crate</span>::{
     filters::{Filter <span class="kw">as _</span>, ReadContext},
+    metrics,
     pool::PoolBuffer,
     time::UtcTimestamp,
     Config,
@@ -369,35 +370,35 @@
                             <span class="kw">match </span>result {
                                 <span class="prelude-val">Err</span>(error) =&gt; {
                                     <span class="macro">tracing::trace!</span>(%error, <span class="string">"error receiving packet"</span>);
-                                    <span class="kw">crate</span>::metrics::errors_total(
-                                        <span class="kw">crate</span>::metrics::WRITE,
+                                    metrics::errors_total(
+                                        metrics::WRITE,
                                         <span class="kw-2">&amp;</span>error.to_string(),
-                                        <span class="prelude-val">None</span>,
+                                        <span class="kw-2">&amp;</span>metrics::EMPTY,
                                         )
                                         .inc();
                                 }
                                 <span class="prelude-val">Ok</span>((data, asn_info, send_addr)) =&gt; {
                                     <span class="kw">let </span>(result, <span class="kw">_</span>) = send_socket.send_to(data, send_addr).<span class="kw">await</span>;
-                                    <span class="kw">let </span>asn_info = asn_info.as_ref();
+                                    <span class="kw">let </span>asn_info = asn_info.as_ref().into();
                                     <span class="kw">match </span>result {
                                         <span class="prelude-val">Ok</span>(size) =&gt; {
-                                            <span class="kw">crate</span>::metrics::packets_total(<span class="kw">crate</span>::metrics::WRITE, asn_info)
+                                            metrics::packets_total(metrics::WRITE, <span class="kw-2">&amp;</span>asn_info)
                                                 .inc();
-                                            <span class="kw">crate</span>::metrics::bytes_total(<span class="kw">crate</span>::metrics::WRITE, asn_info)
+                                            metrics::bytes_total(metrics::WRITE, <span class="kw-2">&amp;</span>asn_info)
                                                 .inc_by(size <span class="kw">as </span>u64);
                                         }
                                         <span class="prelude-val">Err</span>(error) =&gt; {
                                             <span class="kw">let </span>source = error.to_string();
-                                            <span class="kw">crate</span>::metrics::errors_total(
-                                                <span class="kw">crate</span>::metrics::WRITE,
+                                            metrics::errors_total(
+                                                metrics::WRITE,
                                                 <span class="kw-2">&amp;</span>source,
-                                                asn_info,
+                                                <span class="kw-2">&amp;</span>asn_info,
                                                 )
                                                 .inc();
-                                            <span class="kw">crate</span>::metrics::packets_dropped_total(
-                                                <span class="kw">crate</span>::metrics::WRITE,
+                                            metrics::packets_dropped_total(
+                                                metrics::WRITE,
                                                 <span class="kw-2">&amp;</span>source,
-                                                asn_info,
+                                                <span class="kw-2">&amp;</span>asn_info,
                                                 )
                                                 .inc();
                                         }
@@ -434,7 +435,7 @@
                         };
 
                         <span class="kw">if let </span><span class="prelude-val">Some</span>(last_received_at) = last_received_at {
-                            <span class="kw">crate</span>::metrics::packet_jitter(<span class="kw">crate</span>::metrics::READ, <span class="prelude-val">None</span>)
+                            metrics::packet_jitter(metrics::READ, <span class="kw-2">&amp;</span>metrics::EMPTY)
                                 .set((packet.received_at - last_received_at).nanos());
                         }
                         last_received_at = <span class="prelude-val">Some</span>(packet.received_at);
@@ -478,14 +479,13 @@
             <span class="string">"received packet from downstream"
         </span>);
 
-        <span class="kw">let </span>timer = <span class="kw">crate</span>::metrics::processing_time(<span class="kw">crate</span>::metrics::READ).start_timer();
+        <span class="kw">let </span>timer = metrics::processing_time(metrics::READ).start_timer();
         <span class="kw">match </span><span class="self">Self</span>::process_downstream_received_packet(packet, config, sessions).<span class="kw">await </span>{
             <span class="prelude-val">Ok</span>(()) =&gt; {}
             <span class="prelude-val">Err</span>(error) =&gt; {
                 <span class="kw">let </span>discriminant = PipelineErrorDiscriminants::from(<span class="kw-2">&amp;</span>error).to_string();
-                <span class="kw">crate</span>::metrics::errors_total(<span class="kw">crate</span>::metrics::READ, <span class="kw-2">&amp;</span>discriminant, <span class="prelude-val">None</span>).inc();
-                <span class="kw">crate</span>::metrics::packets_dropped_total(<span class="kw">crate</span>::metrics::READ, <span class="kw-2">&amp;</span>discriminant, <span class="prelude-val">None</span>)
-                    .inc();
+                metrics::errors_total(metrics::READ, <span class="kw-2">&amp;</span>discriminant, <span class="kw-2">&amp;</span>metrics::EMPTY).inc();
+                metrics::packets_dropped_total(metrics::READ, <span class="kw-2">&amp;</span>discriminant, <span class="kw-2">&amp;</span>metrics::EMPTY).inc();
                 <span class="kw">let _ </span>= error_sender.send(error);
             }
         }

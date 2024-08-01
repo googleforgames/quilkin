@@ -250,6 +250,60 @@
 <a href="#248" id="248">248</a>
 <a href="#249" id="249">249</a>
 <a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -266,13 +320,12 @@
  * limitations under the License.
  */
 
-</span><span class="kw">use </span>once_cell::sync::Lazy;
+</span><span class="kw">use </span><span class="kw">crate</span>::net::maxmind_db::MetricsIpNetEntry;
+<span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>prometheus::{
     core::Collector, Histogram, HistogramOpts, HistogramVec, IntCounter, IntCounterVec, IntGauge,
     IntGaugeVec, Opts, Registry, DEFAULT_BUCKETS,
 };
-
-<span class="kw">use </span><span class="kw">crate</span>::net::maxmind_db::IpNetEntry;
 
 <span class="kw">pub use </span>prometheus::Result;
 
@@ -320,10 +373,69 @@
 <span class="kw">impl </span>Direction {
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>LABEL: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str = DIRECTION_LABEL;
 
-    <span class="kw">pub fn </span>label(<span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
+    <span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>label(<span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
         <span class="kw">match </span><span class="self">self </span>{
             <span class="self">Self</span>::Read =&gt; READ_DIRECTION_LABEL,
             <span class="self">Self</span>::Write =&gt; WRITE_DIRECTION_LABEL,
+        }
+    }
+}
+
+<span class="kw">pub struct </span>AsnInfo&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="doccomment">/// This is a 32-bit number, but there are only ~90000 asn's worldwide
+    </span>asn: [u8; <span class="number">10</span>],
+    asn_len: u8,
+    prefix: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>str,
+}
+
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; AsnInfo&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="attr">#[inline]
+    </span><span class="kw">fn </span>asn_str(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>str {
+        <span class="kw">unsafe </span>{ std::str::from_utf8_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>.asn[..<span class="self">self</span>.asn_len <span class="kw">as _</span>]) }
+    }
+}
+
+<span class="kw">pub const </span>EMPTY: AsnInfo&lt;<span class="lifetime">'static</span>&gt; = AsnInfo {
+    asn: [<span class="number">0u8</span>; <span class="number">10</span>],
+    asn_len: <span class="number">0</span>,
+    prefix: <span class="string">""</span>,
+};
+
+<span class="attr">#[inline]
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>itoa(<span class="kw-2">mut </span>num: u64, asn: <span class="kw-2">&amp;mut </span>[u8]) -&gt; u8 {
+    <span class="kw">let </span><span class="kw-2">mut </span>index = <span class="number">0</span>;
+
+    <span class="kw">loop </span>{
+        <span class="kw">let </span>rem = (num % <span class="number">10</span>) <span class="kw">as </span>u8;
+        asn[index] = rem + <span class="string">b'0'</span>;
+        index += <span class="number">1</span>;
+        num /= <span class="number">10</span>;
+
+        <span class="kw">if </span>num == <span class="number">0 </span>{
+            <span class="kw">break</span>;
+        }
+    }
+
+    asn[..index].reverse();
+
+    index <span class="kw">as </span>u8
+}
+
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>MetricsIpNetEntry&gt;&gt; <span class="kw">for </span>AsnInfo&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="attr">#[inline]
+    </span><span class="kw">fn </span>from(value: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>MetricsIpNetEntry&gt;) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span><span class="prelude-val">Some</span>(val) = value <span class="kw">else </span>{
+            <span class="kw">return </span>EMPTY;
+        };
+
+        <span class="kw">let </span><span class="kw-2">mut </span>asn = [<span class="number">0u8</span>; <span class="number">10</span>];
+        <span class="kw">let </span>asn_len = itoa(val.id, <span class="kw-2">&amp;mut </span>asn);
+
+        <span class="self">Self </span>{
+            asn,
+            asn_len,
+            prefix: val.prefix.as_str(),
         }
     }
 }
@@ -345,7 +457,7 @@
     PROCESSING_TIME.with_label_values(<span class="kw-2">&amp;</span>[direction.label()])
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>bytes_total(direction: Direction, asn: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>IpNetEntry&gt;) -&gt; IntCounter {
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>bytes_total(direction: Direction, asn: <span class="kw-2">&amp;</span>AsnInfo) -&gt; IntCounter {
     <span class="kw">static </span>BYTES_TOTAL: Lazy&lt;IntCounterVec&gt; = Lazy::new(|| {
         <span class="macro">prometheus::register_int_counter_vec_with_registry! </span>{
             <span class="macro">prometheus::opts! </span>{
@@ -358,18 +470,10 @@
         .unwrap()
     });
 
-    BYTES_TOTAL.with_label_values(<span class="kw-2">&amp;</span>[
-        direction.label(),
-        <span class="kw-2">&amp;</span>asn.map(|asn| asn.r#as.to_string()).unwrap_or_default(),
-        asn.map(|asn| <span class="kw-2">&amp;*</span>asn.prefix).unwrap_or_default(),
-    ])
+    BYTES_TOTAL.with_label_values(<span class="kw-2">&amp;</span>[direction.label(), asn.asn_str(), <span class="kw-2">&amp;</span>asn.prefix])
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>errors_total(
-    direction: Direction,
-    display: <span class="kw-2">&amp;</span>str,
-    asn: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>IpNetEntry&gt;,
-) -&gt; IntCounter {
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>errors_total(direction: Direction, display: <span class="kw-2">&amp;</span>str, asn: <span class="kw-2">&amp;</span>AsnInfo) -&gt; IntCounter {
     <span class="kw">static </span>ERRORS_TOTAL: Lazy&lt;IntCounterVec&gt; = Lazy::new(|| {
         <span class="macro">prometheus::register_int_counter_vec_with_registry! </span>{
             <span class="macro">prometheus::opts! </span>{
@@ -382,15 +486,10 @@
         .unwrap()
     });
 
-    ERRORS_TOTAL.with_label_values(<span class="kw-2">&amp;</span>[
-        direction.label(),
-        display,
-        <span class="kw-2">&amp;</span>asn.map(|asn| asn.r#as.to_string()).unwrap_or_default(),
-        asn.map(|asn| <span class="kw-2">&amp;*</span>asn.prefix).unwrap_or_default(),
-    ])
+    ERRORS_TOTAL.with_label_values(<span class="kw-2">&amp;</span>[direction.label(), display, asn.asn_str(), <span class="kw-2">&amp;</span>asn.prefix])
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>packet_jitter(direction: Direction, asn: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>IpNetEntry&gt;) -&gt; IntGauge {
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>packet_jitter(direction: Direction, asn: <span class="kw-2">&amp;</span>AsnInfo) -&gt; IntGauge {
     <span class="kw">static </span>PACKET_JITTER: Lazy&lt;IntGaugeVec&gt; = Lazy::new(|| {
         <span class="macro">prometheus::register_int_gauge_vec_with_registry! </span>{
             <span class="macro">prometheus::opts! </span>{
@@ -403,14 +502,10 @@
         .unwrap()
     });
 
-    PACKET_JITTER.with_label_values(<span class="kw-2">&amp;</span>[
-        direction.label(),
-        <span class="kw-2">&amp;</span>asn.map(|asn| asn.r#as.to_string()).unwrap_or_default(),
-        asn.map(|asn| <span class="kw-2">&amp;*</span>asn.prefix).unwrap_or_default(),
-    ])
+    PACKET_JITTER.with_label_values(<span class="kw-2">&amp;</span>[direction.label(), asn.asn_str(), <span class="kw-2">&amp;</span>asn.prefix])
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>packets_total(direction: Direction, asn: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>IpNetEntry&gt;) -&gt; IntCounter {
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>packets_total(direction: Direction, asn: <span class="kw-2">&amp;</span>AsnInfo) -&gt; IntCounter {
     <span class="kw">static </span>PACKETS_TOTAL: Lazy&lt;IntCounterVec&gt; = Lazy::new(|| {
         <span class="macro">prometheus::register_int_counter_vec_with_registry! </span>{
             <span class="macro">prometheus::opts! </span>{
@@ -423,17 +518,13 @@
         .unwrap()
     });
 
-    PACKETS_TOTAL.with_label_values(<span class="kw-2">&amp;</span>[
-        direction.label(),
-        <span class="kw-2">&amp;</span>asn.map(|asn| asn.r#as.to_string()).unwrap_or_default(),
-        asn.map(|asn| <span class="kw-2">&amp;*</span>asn.prefix).unwrap_or_default(),
-    ])
+    PACKETS_TOTAL.with_label_values(<span class="kw-2">&amp;</span>[direction.label(), asn.asn_str(), <span class="kw-2">&amp;</span>asn.prefix])
 }
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>packets_dropped_total(
     direction: Direction,
     source: <span class="kw-2">&amp;</span>str,
-    asn: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>IpNetEntry&gt;,
+    asn: <span class="kw-2">&amp;</span>AsnInfo,
 ) -&gt; IntCounter {
     <span class="kw">static </span>PACKETS_DROPPED: Lazy&lt;IntCounterVec&gt; = Lazy::new(|| {
         <span class="macro">prometheus::register_int_counter_vec_with_registry! </span>{
@@ -447,12 +538,7 @@
         .unwrap()
     });
 
-    PACKETS_DROPPED.with_label_values(<span class="kw-2">&amp;</span>[
-        direction.label(),
-        source,
-        <span class="kw-2">&amp;</span>asn.map(|asn| asn.r#as.to_string()).unwrap_or_default(),
-        asn.map(|asn| <span class="kw-2">&amp;*</span>asn.prefix).unwrap_or_default(),
-    ])
+    PACKETS_DROPPED.with_label_values(<span class="kw-2">&amp;</span>[direction.label(), source, asn.asn_str(), <span class="kw-2">&amp;</span>asn.prefix])
 }
 
 <span class="doccomment">/// Create a generic metrics options.
@@ -500,4 +586,26 @@
 }
 
 <span class="kw">impl</span>&lt;C: Collector + Clone + <span class="lifetime">'static</span>&gt; CollectorExt <span class="kw">for </span>C {}
+
+<span class="attr">#[cfg(test)]
+</span><span class="kw">mod </span>test {
+    <span class="kw">fn </span>check(num: u64, exp: <span class="kw-2">&amp;</span>str) {
+        <span class="kw">let </span><span class="kw-2">mut </span>asn = [<span class="number">0u8</span>; <span class="number">10</span>];
+        <span class="kw">let </span>len = <span class="kw">super</span>::itoa(num, <span class="kw-2">&amp;mut </span>asn);
+
+        <span class="kw">let </span>asn_str = <span class="kw">unsafe </span>{ std::str::from_utf8_unchecked(<span class="kw-2">&amp;</span>asn[..len <span class="kw">as _</span>]) };
+
+        <span class="macro">assert_eq!</span>(asn_str, exp);
+    }
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>itoa() {
+        check(<span class="number">0</span>, <span class="string">"0"</span>);
+        check(<span class="number">1</span>, <span class="string">"1"</span>);
+        check(<span class="number">10</span>, <span class="string">"10"</span>);
+        check((u32::MAX &gt;&gt; <span class="number">1</span>) <span class="kw">as _</span>, <span class="kw-2">&amp;</span>(u32::MAX &gt;&gt; <span class="number">1</span>).to_string());
+        check((u32::MAX - <span class="number">1</span>) <span class="kw">as _</span>, <span class="kw-2">&amp;</span>(u32::MAX - <span class="number">1</span>).to_string());
+        check(u32::MAX <span class="kw">as _</span>, <span class="kw-2">&amp;</span>u32::MAX.to_string());
+    }
+}
 </code></pre></div></section></main></body></html>

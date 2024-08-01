@@ -248,11 +248,14 @@
 <a href="#246" id="246">246</a>
 <a href="#247" id="247">247</a>
 <a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
 </pre></div><pre class="rust"><code><span class="kw">pub mod </span>packet_router;
 <span class="kw">mod </span>sessions;
 
 <span class="kw">use </span><span class="kw">super</span>::RunArgs;
-<span class="kw">use crate</span>::{net::maxmind_db::IpNetEntry, pool::PoolBuffer};
+<span class="kw">use </span><span class="kw">crate</span>::pool::PoolBuffer;
 <span class="kw">pub use </span>sessions::SessionPool;
 <span class="kw">use </span>std::{
     net::SocketAddr,
@@ -379,8 +382,11 @@
         <span class="kw">let </span>id = config.id.load();
         <span class="kw">let </span>num_workers = <span class="self">self</span>.num_workers.get();
 
-        <span class="kw">let </span>(upstream_sender, upstream_receiver) =
-            async_channel::bounded::&lt;(PoolBuffer, <span class="prelude-ty">Option</span>&lt;IpNetEntry&gt;, SocketAddr)&gt;(<span class="number">250</span>);
+        <span class="kw">let </span>(upstream_sender, upstream_receiver) = async_channel::bounded::&lt;(
+            PoolBuffer,
+            <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::net::maxmind_db::MetricsIpNetEntry&gt;,
+            SocketAddr,
+        )&gt;(<span class="number">250</span>);
         <span class="kw">let </span>buffer_pool = Arc::new(<span class="kw">crate</span>::pool::BufferPool::new(num_workers, <span class="number">64 </span>* <span class="number">1024</span>));
         <span class="kw">let </span>sessions = SessionPool::new(
             config.clone(),
