@@ -36,14 +36,21 @@ pub(crate) fn active_sessions(asn: Option<&crate::net::maxmind_db::IpNetEntry>) 
         .unwrap()
     });
 
-    ACTIVE_SESSIONS.with_label_values(&[
-        &*asn.map(|asn| asn.r#as).unwrap_or_default().to_string(),
-        asn.map(|asn| &*asn.as_name).unwrap_or_default(),
-        asn.map(|asn| &*asn.as_cc).unwrap_or_default(),
-        asn.map(|asn| &*asn.prefix).unwrap_or_default(),
-        asn.map(|asn| &*asn.prefix_entity).unwrap_or_default(),
-        asn.map(|asn| &*asn.prefix_name).unwrap_or_default(),
-    ])
+    if let Some(asnfo) = asn {
+        let mut asn = [0u8; 10];
+        let len = crate::metrics::itoa(asnfo.id, &mut asn);
+
+        ACTIVE_SESSIONS.with_label_values(&[
+            unsafe { std::str::from_utf8_unchecked(&asn[..len as _]) },
+            &asnfo.as_name,
+            &asnfo.as_cc,
+            &asnfo.prefix,
+            &asnfo.prefix_entity,
+            &asnfo.prefix_name,
+        ])
+    } else {
+        ACTIVE_SESSIONS.with_label_values(&["", "", "", "", "", ""])
+    }
 }
 
 pub(crate) fn total_sessions() -> &'static IntCounter {

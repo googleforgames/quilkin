@@ -139,46 +139,35 @@ impl std::ops::DerefMut for MaxmindDb {
     }
 }
 
-#[derive(Clone, Debug, serde::Deserialize)]
+#[derive(Clone, serde::Deserialize)]
 pub struct IpNetEntry {
-    #[serde(default)]
-    pub allocation: String,
-    #[serde(default)]
-    pub allocation_cc: String,
-    #[serde(default)]
-    pub allocation_registry: String,
-    #[serde(default)]
-    pub allocation_status: String,
-    #[serde(default)]
-    pub r#as: u64,
+    #[serde(default, rename = "as")]
+    pub id: u64,
     #[serde(default)]
     pub as_cc: String,
     #[serde(default)]
-    pub as_entity: String,
-    #[serde(default)]
     pub as_name: String,
-    #[serde(default)]
-    pub as_private: bool,
-    #[serde(default)]
-    pub as_registry: String,
-    #[serde(default)]
-    pub prefix: String,
-    #[serde(default)]
-    pub prefix_asset: Vec<String>,
-    #[serde(default)]
-    pub prefix_assignment: String,
-    #[serde(default)]
-    pub prefix_bogon: bool,
     #[serde(default)]
     pub prefix_entity: String,
     #[serde(default)]
     pub prefix_name: String,
     #[serde(default)]
-    pub prefix_origins: Vec<u64>,
-    #[serde(default)]
-    pub prefix_registry: String,
-    #[serde(default)]
-    pub rpki_status: String,
+    pub prefix: String,
+}
+
+#[derive(Clone)]
+pub struct MetricsIpNetEntry {
+    pub prefix: String,
+    pub id: u64,
+}
+
+impl<'a> From<&'a IpNetEntry> for MetricsIpNetEntry {
+    fn from(value: &'a IpNetEntry) -> Self {
+        Self {
+            prefix: value.prefix.clone(),
+            id: value.id,
+        }
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
