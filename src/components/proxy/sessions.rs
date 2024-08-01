@@ -29,18 +29,21 @@ use tokio::{
 use crate::{
     config::Config,
     filters::Filter,
-    net::maxmind_db::IpNetEntry,
-    net::DualStackLocalSocket,
+    metrics,
+    net::{
+        maxmind_db::{IpNetEntry, MetricsIpNetEntry},
+        DualStackLocalSocket,
+    },
     pool::{BufferPool, FrozenPoolBuffer, PoolBuffer},
     time::UtcTimestamp,
     Loggable, ShutdownRx,
 };
 
-pub(crate) mod metrics;
+pub(crate) mod inner_metrics;
 
 pub type SessionMap = crate::collections::ttl::TtlMap<SessionKey, Session>;
-type ChannelData = (PoolBuffer, Option<IpNetEntry>, SocketAddr);
-type UpstreamChannelData = (FrozenPoolBuffer, Option<IpNetEntry>, SocketAddr);
+type ChannelData = (PoolBuffer, Option<MetricsIpNetEntry>, SocketAddr);
+type UpstreamChannelData = (FrozenPoolBuffer, Option<MetricsIpNetEntry>, SocketAddr);
 type UpstreamSender = mpsc::Sender<UpstreamChannelData>;
 type DownstreamSender = async_channel::Sender<ChannelData>;
 pub type DownstreamReceiver = async_channel::Receiver<ChannelData>;
@@ -52,7 +55,6 @@ pub type DownstreamReceiver = async_channel::Receiver<ChannelData>;
 ///
 /// Traffic from different gameservers is then demuxed using their address to
 /// send back to the original client.
-#[derive(Debug)]
 pub struct SessionPool {
     ports_to_sockets: RwLock<HashMap<u16, UpstreamSender>>,
     storage: Arc<RwLock<SocketStorage>>,
@@ -64,7 +66,7 @@ pub struct SessionPool {
 }
 
 /// The wrapper struct responsible for holding all of the socket related mappings.
-#[derive(Default, Debug)]
+#[derive(Default)]
 struct SocketStorage {
     destination_to_sockets: HashMap<SocketAddr, HashSet<u16>>,
     destination_to_sources: HashMap<(SocketAddr, u16), SocketAddr>,
@@ -100,7 +102,7 @@ impl SessionPool {
     async fn create_new_session_from_new_socket<'pool>(
         self: &'pool Arc<Self>,
         key: SessionKey,
-    ) -> Result<(Option<IpNetEntry>, UpstreamSender), super::PipelineError> {
+    ) -> Result<(Option<MetricsIpNetEntry>, UpstreamSender), super::PipelineError> {
         tracing::trace!(source=%key.source, dest=%key.dest, "creating new socket for session");
         let raw_socket = crate::net::raw_socket_with_reuse(0)?;
         let port = raw_socket
@@ -133,10 +135,10 @@ impl SessionPool {
                     loop {
                         match downstream_receiver.recv().await {
                             None => {
-                                crate::metrics::errors_total(
-                                    crate::metrics::WRITE,
+                                metrics::errors_total(
+                                    metrics::WRITE,
                                     "downstream channel closed",
-                                    None,
+                                    &metrics::EMPTY,
                                 )
                                 .inc();
                                 break;
@@ -144,30 +146,22 @@ impl SessionPool {
                             Some((data, asn_info, send_addr)) => {
                                 tracing::trace!(%send_addr, length = data.len(), "sending packet upstream");
                                 let (result, _) = socket2.send_to(data, send_addr).await;
-                                let asn_info = asn_info.as_ref();
+                                let asn_info = asn_info.as_ref().into();
                                 match result {
                                     Ok(size) => {
-                                        crate::metrics::packets_total(
-                                            crate::metrics::READ,
-                                            asn_info,
-                                        )
-                                        .inc();
-                                        crate::metrics::bytes_total(crate::metrics::READ, asn_info)
+                                        metrics::packets_total(metrics::READ, &asn_info).inc();
+                                        metrics::bytes_total(metrics::READ, &asn_info)
                                             .inc_by(size as u64);
                                     }
                                     Err(error) => {
                                         tracing::trace!(%error, "sending packet upstream failed");
                                         let source = error.to_string();
-                                        crate::metrics::errors_total(
-                                            crate::metrics::READ,
+                                        metrics::errors_total(metrics::READ, &source, &asn_info)
+                                            .inc();
+                                        metrics::packets_dropped_total(
+                                            metrics::READ,
                                             &source,
-                                            asn_info,
-                                        )
-                                        .inc();
-                                        crate::metrics::packets_dropped_total(
-                                            crate::metrics::READ,
-                                            &source,
-                                            asn_info,
+                                            &asn_info,
                                         )
                                         .inc();
                                     }
@@ -187,7 +181,7 @@ impl SessionPool {
                             match result {
                                 Err(error) => {
                                     tracing::trace!(%error, "error receiving packet");
-                                    crate::metrics::errors_total(crate::metrics::WRITE, &error.to_string(), None).inc();
+                                    metrics::errors_total(metrics::WRITE, &error.to_string(), &metrics::EMPTY).inc();
                                 },
                                 Ok((_size, recv_addr)) => pool.process_received_upstream_packet(buf, recv_addr, port, &mut last_received_at).await,
                             }
@@ -221,7 +215,7 @@ impl SessionPool {
     ) {
         let received_at = UtcTimestamp::now();
         recv_addr.set_ip(recv_addr.ip().to_canonical());
-        let (downstream_addr, asn_info): (SocketAddr, Option<IpNetEntry>) = {
+        let (downstream_addr, asn_info): (SocketAddr, Option<MetricsIpNetEntry>) = {
             let storage = self.storage.read().await;
             let Some(downstream_addr) = storage.destination_to_sources.get(&(recv_addr, port))
             else {
@@ -230,33 +224,37 @@ impl SessionPool {
             };
             let asn_info = storage.sources_to_asn_info.get(downstream_addr);
 
-            (*downstream_addr, asn_info.cloned())
+            (*downstream_addr, asn_info.map(MetricsIpNetEntry::from))
         };
 
-        let asn_info = asn_info.as_ref();
+        let asn_metric_info = asn_info.as_ref().into();
 
         if let Some(last_received_at) = last_received_at {
-            crate::metrics::packet_jitter(crate::metrics::WRITE, asn_info)
+            metrics::packet_jitter(metrics::WRITE, &asn_metric_info)
                 .set((received_at - *last_received_at).nanos());
         }
         *last_received_at = Some(received_at);
 
-        let timer = crate::metrics::processing_time(crate::metrics::WRITE).start_timer();
-        let result = Self::process_recv_packet(
-            self.config.clone(),
-            &self.downstream_sender,
-            recv_addr,
-            downstream_addr,
-            asn_info,
-            packet,
-        )
-        .await;
-        timer.stop_and_record();
-        if let Err(error) = result {
+        let result = {
+            let _timer = metrics::processing_time(metrics::WRITE).start_timer();
+            Self::process_recv_packet(
+                self.config.clone(),
+                &self.downstream_sender,
+                recv_addr,
+                downstream_addr,
+                asn_info,
+                packet,
+            )
+            .await
+        };
+
+        if let Err((asn_info, error)) = result {
             error.log();
             let label = format!("proxy::Session::process_recv_packet: {error}");
-            crate::metrics::packets_dropped_total(crate::metrics::WRITE, &label, asn_info).inc();
-            crate::metrics::errors_total(crate::metrics::WRITE, &label, asn_info).inc();
+            let asn_metric_info = asn_info.as_ref().into();
+
+            metrics::packets_dropped_total(metrics::WRITE, &label, &asn_metric_info).inc();
+            metrics::errors_total(metrics::WRITE, &label, &asn_metric_info).inc();
         }
     }
 
@@ -267,12 +265,15 @@ impl SessionPool {
     pub async fn get<'pool>(
         self: &'pool Arc<Self>,
         key @ SessionKey { dest, .. }: SessionKey,
-    ) -> Result<(Option<IpNetEntry>, UpstreamSender), super::PipelineError> {
+    ) -> Result<(Option<MetricsIpNetEntry>, UpstreamSender), super::PipelineError> {
         tracing::trace!(source=%key.source, dest=%key.dest, "SessionPool::get");
         // If we already have a session for the key pairing, return that session.
         if let Some(entry) = self.session_map.get(&key) {
             tracing::trace!("returning existing session");
-            return Ok((entry.asn_info.clone(), entry.upstream_sender.clone()));
+            return Ok((
+                entry.asn_info.as_ref().map(MetricsIpNetEntry::from),
+                entry.upstream_sender.clone(),
+            ));
         }
 
         // If there's a socket_set available, it means there are sockets
@@ -338,43 +339,48 @@ impl SessionPool {
         key: SessionKey,
         upstream_sender: UpstreamSender,
         socket_port: u16,
-    ) -> Result<(Option<IpNetEntry>, UpstreamSender), super::PipelineError> {
+    ) -> Result<(Option<MetricsIpNetEntry>, UpstreamSender), super::PipelineError> {
         tracing::trace!(source=%key.source, dest=%key.dest, "reusing socket for session");
-        let mut storage = self.storage.write().await;
-        storage
-            .destination_to_sockets
-            .entry(key.dest)
-            .or_default()
-            .insert(socket_port);
-        storage
-            .sockets_to_destination
-            .entry(socket_port)
-            .or_default()
-            .insert(key.dest);
-        storage
-            .destination_to_sources
-            .insert((key.dest, socket_port), key.source);
-
-        let asn_info = crate::net::maxmind_db::MaxmindDb::lookup(key.source.ip());
-
-        if let Some(asn_info) = &asn_info {
+        let asn_info = {
+            let mut storage = self.storage.write().await;
             storage
-                .sources_to_asn_info
-                .insert(key.source, asn_info.clone());
-        }
+                .destination_to_sockets
+                .entry(key.dest)
+                .or_default()
+                .insert(socket_port);
+            storage
+                .sockets_to_destination
+                .entry(socket_port)
+                .or_default()
+                .insert(key.dest);
+            storage
+                .destination_to_sources
+                .insert((key.dest, socket_port), key.source);
 
-        drop(storage);
+            let asn_info = crate::net::maxmind_db::MaxmindDb::lookup(key.source.ip());
+
+            if let Some(asn_info) = &asn_info {
+                storage
+                    .sources_to_asn_info
+                    .insert(key.source, asn_info.clone());
+            }
+
+            asn_info
+        };
+
+        let asn_metrics_info = asn_info.as_ref().map(MetricsIpNetEntry::from);
+
         let session = Session::new(
             key,
             upstream_sender.clone(),
             socket_port,
             self.clone(),
-            asn_info.clone(),
-        )?;
+            asn_info,
+        );
         tracing::trace!("inserting session into map");
         self.session_map.insert(key, session);
         tracing::trace!("session inserted");
-        Ok((asn_info, upstream_sender))
+        Ok((asn_metrics_info, upstream_sender))
     }
 
     /// process_recv_packet processes a packet that is received by this session.
@@ -383,22 +389,28 @@ impl SessionPool {
         downstream_sender: &DownstreamSender,
         source: SocketAddr,
         dest: SocketAddr,
-        asn_info: Option<&IpNetEntry>,
+        asn_info: Option<MetricsIpNetEntry>,
         packet: PoolBuffer,
-    ) -> Result<(), Error> {
+    ) -> Result<(), (Option<MetricsIpNetEntry>, Error)> {
         tracing::trace!(%source, %dest, length = packet.len(), "received packet from upstream");
 
         let mut context = crate::filters::WriteContext::new(source.into(), dest.into(), packet);
 
-        config.filters.load().write(&mut context).await?;
+        if let Err(err) = config.filters.load().write(&mut context).await {
+            return Err((asn_info, err.into()));
+        }
 
         let packet = context.contents;
         tracing::trace!(%source, %dest, length = packet.len(), "sending packet downstream");
         downstream_sender
-            .try_send((packet, asn_info.cloned(), dest))
+            .try_send((packet, asn_info, dest))
             .map_err(|error| match error {
-                async_channel::TrySendError::Closed(_) => Error::ChannelClosed,
-                async_channel::TrySendError::Full(_) => Error::ChannelFull,
+                async_channel::TrySendError::Closed((_, asn_info, _)) => {
+                    (asn_info, Error::ChannelClosed)
+                }
+                async_channel::TrySendError::Full((_, asn_info, _)) => {
+                    (asn_info, Error::ChannelFull)
+                }
             })?;
         Ok(())
     }
@@ -490,7 +502,6 @@ impl Drop for SessionPool {
 }
 
 /// Session encapsulates a UDP stream session
-#[derive(Debug)]
 pub struct Session {
     /// created_at is time at which the session was created
     created_at: Instant,
@@ -513,7 +524,7 @@ impl Session {
         socket_port: u16,
         pool: Arc<SessionPool>,
         asn_info: Option<IpNetEntry>,
-    ) -> Result<Self, super::PipelineError> {
+    ) -> Self {
         let s = Self {
             key,
             upstream_sender,
@@ -525,7 +536,7 @@ impl Session {
 
         if let Some(asn) = &s.asn_info {
             tracing::debug!(
-                number = asn.r#as,
+                number = asn.id,
                 organization = asn.as_name,
                 country_code = asn.as_cc,
                 prefix = asn.prefix,
@@ -535,19 +546,19 @@ impl Session {
             );
         }
 
-        self::metrics::total_sessions().inc();
+        inner_metrics::total_sessions().inc();
         s.active_session_metric().inc();
         tracing::debug!(source = %key.source, dest = %key.dest, "Session created");
-        Ok(s)
+        s
     }
 
     fn active_session_metric(&self) -> prometheus::IntGauge {
-        metrics::active_sessions(self.asn_info.as_ref())
+        inner_metrics::active_sessions(self.asn_info.as_ref())
     }
 
     fn async_drop(&mut self) -> impl std::future::Future<Output = ()> {
         self.active_session_metric().dec();
-        metrics::duration_secs().observe(self.created_at.elapsed().as_secs() as f64);
+        inner_metrics::duration_secs().observe(self.created_at.elapsed().as_secs() as f64);
         tracing::debug!(source = %self.key.source, dest_address = %self.key.dest, "Session closed");
         SessionPool::release_socket(self.pool.clone(), self.key, self.socket_port)
     }

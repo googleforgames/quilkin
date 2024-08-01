@@ -2,7 +2,7 @@ pub mod packet_router;
 mod sessions;
 
 use super::RunArgs;
-use crate::{net::maxmind_db::IpNetEntry, pool::PoolBuffer};
+use crate::pool::PoolBuffer;
 pub use sessions::SessionPool;
 use std::{
     net::SocketAddr,
@@ -129,8 +129,11 @@ impl Proxy {
         let id = config.id.load();
         let num_workers = self.num_workers.get();
 
-        let (upstream_sender, upstream_receiver) =
-            async_channel::bounded::<(PoolBuffer, Option<IpNetEntry>, SocketAddr)>(250);
+        let (upstream_sender, upstream_receiver) = async_channel::bounded::<(
+            PoolBuffer,
+            Option<crate::net::maxmind_db::MetricsIpNetEntry>,
+            SocketAddr,
+        )>(250);
         let buffer_pool = Arc::new(crate::pool::BufferPool::new(num_workers, 64 * 1024));
         let sessions = SessionPool::new(
             config.clone(),
