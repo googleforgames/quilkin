@@ -95,10 +95,8 @@ pub mod aggregated_control_plane_discovery_service_client {
             self.inner = self.inner.max_encoding_message_size(limit);
             self
         }
-        /// The RPC protocol begins with a single empty DiscoveryResponse
-        /// initiated by the management server, after that this behaves
-        /// the same as the management server xDS protocol, except with
-        /// DiscoveryRequests initiated by the server rather than the client.
+        /// This RPC is not supported but remains here as part of the xDS standard,
+        /// as Quilkin only uses a delta configuration transport for performance reasons.
         pub async fn stream_aggregated_resources(
             &mut self,
             request: impl tonic::IntoStreamingRequest<
@@ -129,6 +127,7 @@ pub mod aggregated_control_plane_discovery_service_client {
             ));
             self.inner.streaming(req, path, codec).await
         }
+        /// Delta (Incremental) xDS implementation
         pub async fn delta_aggregated_resources(
             &mut self,
             request: impl tonic::IntoStreamingRequest<
@@ -176,10 +175,8 @@ pub mod aggregated_control_plane_discovery_service_server {
                 >,
             > + Send
             + 'static;
-        /// The RPC protocol begins with a single empty DiscoveryResponse
-        /// initiated by the management server, after that this behaves
-        /// the same as the management server xDS protocol, except with
-        /// DiscoveryRequests initiated by the server rather than the client.
+        /// This RPC is not supported but remains here as part of the xDS standard,
+        /// as Quilkin only uses a delta configuration transport for performance reasons.
         async fn stream_aggregated_resources(
             &self,
             request: tonic::Request<
@@ -200,6 +197,7 @@ pub mod aggregated_control_plane_discovery_service_server {
             >
             + Send
             + 'static;
+        /// Delta (Incremental) xDS implementation
         async fn delta_aggregated_resources(
             &self,
             request: tonic::Request<

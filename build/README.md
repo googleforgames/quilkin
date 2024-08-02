@@ -39,14 +39,16 @@ To build a production release, run:
 
 ##### Generating Protobuf Files
 
-If you are adding or editing the `.proto` files in this repository, they will need to be regenerated. To do this,
-you will need [protoc](https://grpc.io/docs/protoc-installation/) installed locally.
+If you are adding or editing the `.proto` files in this repository, they will need to be regenerated along with the 
+reference documentation. To do this,
+you will need [protoc](https://grpc.io/docs/protoc-installation/) and 
+[protoc-gen-doc](https://github.com/pseudomuto/protoc-gen-doc) installed locally.
 
 Then run:
 
 `cargo run -p proto-gen -- generate`
 
-Which will identify changes in protobuf definitions and regenerate code appropriately. 
+Which will identify changes in protobuf definitions and regenerate code and documentation appropriately. 
 
 #### Testing
 

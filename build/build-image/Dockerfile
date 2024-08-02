@@ -30,6 +30,13 @@ RUN set -eux && \
     npm install -g browser-sync && \
     echo "source /etc/bash_completion" >> /root/.bashrc
 
+# install protoc-gen-doc
+RUN cd /tmp && \
+    wget --quiet -O protoc-gen-doc.tar.gz https://github.com/pseudomuto/protoc-gen-doc/releases/download/v1.5.1/protoc-gen-doc_1.5.1_linux_amd64.tar.gz && \
+    tar -xf protoc-gen-doc.tar.gz && \
+    mv ./protoc-gen-doc /usr/local/bin/ && \
+    rm protoc-gen-doc.tar.gz
+
 # install gcloud
 # Credit: https://cloud.google.com/sdk/docs/install#deb
 RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyring /usr/share/keyrings/cloud.google.gpg  add - && apt-get update -y && \
@@ -75,6 +82,7 @@ RUN set -eux; \
     cargo install --locked cargo-about && \
     cargo install --locked mdbook-variables && \
     cargo install --locked cargo-deny && \
+    cargo install --locked proto-gen && \
     rustup --version && \
     cargo --version && \
     rustc --version
