@@ -150,7 +150,7 @@ pub fn update_endpoints_from_gameservers(
                         "Restarting with endpoints"
                     );
 
-                    config.clusters.write().insert(locality.clone(), std::mem::replace(&mut servers, BTreeSet::new()));
+                    config.clusters.write().insert(locality.clone(), std::mem::take(&mut servers));
                 }
                 Event::Delete(server) => {
                     tracing::debug!("received delete event from k8s");
