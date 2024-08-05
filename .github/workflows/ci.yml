@@ -91,4 +91,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: deny check
-        uses: EmbarkStudios/cargo-deny-action@v1
+        uses: EmbarkStudios/cargo-deny-action@v2
