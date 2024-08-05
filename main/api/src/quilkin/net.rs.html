@@ -445,7 +445,7 @@
 </span><span class="doccomment">/// On linux spawns a io-uring runtime + thread, everywhere else spawns a regular tokio task.
 </span><span class="macro">macro_rules! </span>uring_spawn {
     (<span class="macro-nonterminal">$span</span>:expr, <span class="macro-nonterminal">$future</span>:expr) =&gt; {{
-        <span class="kw">let </span>(tx, rx) = tokio::sync::oneshot::channel::&lt;<span class="kw">crate</span>::Result&lt;()&gt;&gt;();
+        <span class="kw">let </span>(tx, rx) = tokio::sync::oneshot::channel::&lt;<span class="prelude-ty">Result</span>&lt;(), std::io::Error&gt;&gt;();
         <span class="kw">use </span>tracing::Instrument <span class="kw">as _</span>;
 
         <span class="macro">cfg_if::cfg_if! </span>{
@@ -465,7 +465,7 @@
                             }
                         }
                         <span class="prelude-val">Err</span>(error) =&gt; {
-                            <span class="kw">let _ </span>= tx.send(<span class="prelude-val">Err</span>(error.into()));
+                            <span class="kw">let _ </span>= tx.send(<span class="prelude-val">Err</span>(error));
                         }
                     };
                 }).expect(<span class="string">"failed to spawn io-uring thread"</span>);

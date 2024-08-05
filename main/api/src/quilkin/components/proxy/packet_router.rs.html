@@ -298,9 +298,27 @@
 <a href="#296" id="296">296</a>
 <a href="#297" id="297">297</a>
 <a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
 </pre></div><pre class="rust"><code><span class="kw">use super</span>::{
     sessions::{DownstreamReceiver, SessionKey},
-    PipelineError, PipelineErrorDiscriminants, SessionPool,
+    PipelineError, SessionPool,
 };
 <span class="kw">use crate</span>::{
     filters::{Filter <span class="kw">as _</span>, ReadContext},
@@ -330,7 +348,7 @@
     <span class="kw">pub </span>port: u16,
     <span class="kw">pub </span>config: Arc&lt;Config&gt;,
     <span class="kw">pub </span>sessions: Arc&lt;SessionPool&gt;,
-    <span class="kw">pub </span>error_sender: mpsc::UnboundedSender&lt;PipelineError&gt;,
+    <span class="kw">pub </span>error_sender: <span class="kw">super</span>::error::ErrorSender,
     <span class="kw">pub </span>buffer_pool: Arc&lt;<span class="kw">crate</span>::pool::BufferPool&gt;,
 }
 
@@ -418,6 +436,8 @@
                 }
             }
 
+            <span class="kw">let </span><span class="kw-2">mut </span>error_acc = <span class="kw">super</span>::error::ErrorAccumulator::new(error_sender);
+
             <span class="kw">loop </span>{
                 <span class="comment">// Initialize a buffer for the UDP packet. We use the maximum size of a UDP
                 // packet, which is the maximum value of 16 a bit integer.
@@ -446,7 +466,7 @@
                             worker_id,
                             <span class="kw-2">&amp;</span>config,
                             <span class="kw-2">&amp;</span>sessions,
-                            <span class="kw-2">&amp;</span>error_sender,
+                            <span class="kw-2">&amp;mut </span>error_acc,
                         )
                         .<span class="kw">await</span>;
                     }
@@ -470,7 +490,7 @@
         worker_id: usize,
         config: <span class="kw-2">&amp;</span>Arc&lt;Config&gt;,
         sessions: <span class="kw-2">&amp;</span>Arc&lt;SessionPool&gt;,
-        error_sender: <span class="kw-2">&amp;</span>mpsc::UnboundedSender&lt;PipelineError&gt;,
+        error_acc: <span class="kw-2">&amp;mut </span><span class="kw">super</span>::error::ErrorAccumulator,
     ) {
         <span class="macro">tracing::trace!</span>(
             id = worker_id,
@@ -481,12 +501,15 @@
 
         <span class="kw">let </span>timer = metrics::processing_time(metrics::READ).start_timer();
         <span class="kw">match </span><span class="self">Self</span>::process_downstream_received_packet(packet, config, sessions).<span class="kw">await </span>{
-            <span class="prelude-val">Ok</span>(()) =&gt; {}
+            <span class="prelude-val">Ok</span>(()) =&gt; {
+                error_acc.maybe_send();
+            }
             <span class="prelude-val">Err</span>(error) =&gt; {
-                <span class="kw">let </span>discriminant = PipelineErrorDiscriminants::from(<span class="kw-2">&amp;</span>error).to_string();
-                metrics::errors_total(metrics::READ, <span class="kw-2">&amp;</span>discriminant, <span class="kw-2">&amp;</span>metrics::EMPTY).inc();
-                metrics::packets_dropped_total(metrics::READ, <span class="kw-2">&amp;</span>discriminant, <span class="kw-2">&amp;</span>metrics::EMPTY).inc();
-                <span class="kw">let _ </span>= error_sender.send(error);
+                <span class="kw">let </span>discriminant = error.discriminant();
+                metrics::errors_total(metrics::READ, discriminant, <span class="kw-2">&amp;</span>metrics::EMPTY).inc();
+                metrics::packets_dropped_total(metrics::READ, discriminant, <span class="kw-2">&amp;</span>metrics::EMPTY).inc();
+
+                error_acc.push_error(error);
             }
         }
 
@@ -511,7 +534,10 @@
             packet.source.into(),
             packet.contents,
         );
-        filters.read(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span><span class="question-mark">?</span>;
+        filters
+            .read(<span class="kw-2">&amp;mut </span>context)
+            .<span class="kw">await
+            </span>.map_err(PipelineError::Filter)<span class="question-mark">?</span>;
 
         <span class="kw">let </span>ReadContext {
             destinations,
@@ -550,7 +576,7 @@
     upstream_receiver: DownstreamReceiver,
     buffer_pool: Arc&lt;<span class="kw">crate</span>::pool::BufferPool&gt;,
 ) -&gt; <span class="kw">crate</span>::Result&lt;Vec&lt;Arc&lt;tokio::sync::Notify&gt;&gt;&gt; {
-    <span class="kw">let </span>(error_sender, <span class="kw-2">mut </span>error_receiver) = mpsc::unbounded_channel();
+    <span class="kw">let </span>(error_sender, <span class="kw-2">mut </span>error_receiver) = mpsc::channel(<span class="number">128</span>);
 
     <span class="kw">let </span>port = <span class="kw">crate</span>::net::socket_port(<span class="kw-2">&amp;</span>socket);
 
@@ -569,26 +595,36 @@
         worker_notifications.push(worker.spawn().<span class="kw">await</span><span class="question-mark">?</span>);
     }
 
+    drop(error_sender);
+
     tokio::spawn(<span class="kw">async move </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>log_task = tokio::time::interval(std::time::Duration::from_secs(<span class="number">5</span>));
 
-        <span class="kw">let </span><span class="kw-2">mut </span>pipeline_errors = std::collections::HashMap::&lt;String, u64&gt;::new();
+        <span class="attr">#[allow(clippy::mutable_key_type)]
+        </span><span class="kw">let </span><span class="kw-2">mut </span>pipeline_errors = <span class="kw">super</span>::error::ErrorMap::with_hasher(<span class="kw">super</span>::error::SeahashBuilder);
+
+        <span class="attr">#[allow(clippy::mutable_key_type)]
+        </span><span class="kw">fn </span>report(errors: <span class="kw-2">&amp;mut </span><span class="kw">super</span>::error::ErrorMap) {
+            <span class="kw">for </span>(error, instances) <span class="kw">in </span>errors.drain() {
+                <span class="macro">tracing::warn!</span>(%error, %instances, <span class="string">"pipeline report"</span>);
+            }
+        }
+
         <span class="kw">loop </span>{
             <span class="macro">tokio::select! </span>{
                 <span class="kw">_ </span>= log_task.tick() =&gt; {
-                    <span class="kw">for </span>(error, instances) <span class="kw">in </span><span class="kw-2">&amp;</span>pipeline_errors {
-                        <span class="macro">tracing::warn!</span>(%error, %instances, <span class="string">"pipeline report"</span>);
-                    }
-                    pipeline_errors.clear();
+                    report(<span class="kw-2">&amp;mut </span>pipeline_errors);
                 }
                 received = error_receiver.recv() =&gt; {
-                    <span class="kw">let </span><span class="prelude-val">Some</span>(error) = received <span class="kw">else </span>{
+                    <span class="kw">let </span><span class="prelude-val">Some</span>(errors) = received <span class="kw">else </span>{
+                        report(<span class="kw-2">&amp;mut </span>pipeline_errors);
                         <span class="macro">tracing::info!</span>(<span class="string">"pipeline reporting task closed"</span>);
                         <span class="kw">return</span>;
                     };
 
-                    <span class="kw">let </span>entry = pipeline_errors.entry(error.to_string()).or_default();
-                    <span class="kw-2">*</span>entry += <span class="number">1</span>;
+                    <span class="kw">for </span>(k, v) <span class="kw">in </span>errors {
+                        <span class="kw-2">*</span>pipeline_errors.entry(k).or_default() += v;
+                    }
                 }
             }
         }

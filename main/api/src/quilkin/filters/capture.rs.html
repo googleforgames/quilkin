@@ -259,10 +259,6 @@
 <a href="#257" id="257">257</a>
 <a href="#258" id="258">258</a>
 <a href="#259" id="259">259</a>
-<a href="#260" id="260">260</a>
-<a href="#261" id="261">261</a>
-<a href="#262" id="262">262</a>
-<a href="#263" id="263">263</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -337,7 +333,7 @@
             <span class="prelude-val">Ok</span>(())
         } <span class="kw">else </span>{
             <span class="macro">tracing::trace!</span>(key = %<span class="self">self</span>.metadata_key, <span class="string">"No value captured"</span>);
-            <span class="prelude-val">Err</span>(FilterError::new(NoValueCaptured))
+            <span class="prelude-val">Err</span>(FilterError::NoValueCaptured)
         }
     }
 }
@@ -351,10 +347,6 @@
         <span class="prelude-val">Ok</span>(Capture::new(<span class="self">Self</span>::ensure_config_exists(config)<span class="question-mark">?</span>))
     }
 }
-
-<span class="attr">#[derive(thiserror::Error, Debug)]
-#[error(<span class="string">"no value captured"</span>)]
-</span><span class="kw">struct </span>NoValueCaptured;
 
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {

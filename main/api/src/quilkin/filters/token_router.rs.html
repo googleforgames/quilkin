@@ -275,6 +275,53 @@
 <a href="#273" id="273">273</a>
 <a href="#274" id="274">274</a>
 <a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -318,21 +365,17 @@
                 ctx.destinations = ctx.endpoints.addresses_for_token(tok);
 
                 <span class="kw">if </span>ctx.destinations.is_empty() {
-                    <span class="prelude-val">Err</span>(FilterError::new(Error::NoEndpointMatch(
-                        <span class="self">self</span>.config.metadata_key,
-                        <span class="kw">crate</span>::codec::base64::encode(token),
-                    )))
+                    <span class="prelude-val">Err</span>(FilterError::TokenRouter(RouterError::NoEndpointMatch {
+                        token: token.clone(),
+                    }))
                 } <span class="kw">else </span>{
                     <span class="prelude-val">Ok</span>(())
                 }
             }
-            <span class="prelude-val">Some</span>(value) =&gt; <span class="prelude-val">Err</span>(FilterError::new(Error::InvalidType(
-                <span class="self">self</span>.config.metadata_key,
-                value.clone(),
-            ))),
-            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(FilterError::new(Error::NoTokenFound(
-                <span class="self">self</span>.config.metadata_key,
-            ))),
+            <span class="prelude-val">Some</span>(_value) =&gt; <span class="macro">unreachable!</span>(
+                <span class="string">"this means the capture filter has regressed, it only ever captures byte slices"
+            </span>),
+            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(FilterError::TokenRouter(RouterError::NoTokenFound)),
         }
     }
 }
@@ -356,14 +399,71 @@
     }
 }
 
-<span class="attr">#[derive(Debug, thiserror::Error)]
-</span><span class="kw">pub enum </span>Error {
-    <span class="attr">#[error(<span class="string">"no routing token found for `{0}`"</span>)]
-    </span>NoTokenFound(metadata::Key),
-    <span class="attr">#[error(<span class="string">"key `{0}` was found but wasn't bytes, found {1:?}"</span>)]
-    </span>InvalidType(metadata::Key, metadata::Value),
-    <span class="attr">#[error(<span class="string">"no endpoint matched token `{1}` from `{0}`"</span>)]
-    </span>NoEndpointMatch(metadata::Key, String),
+<span class="kw">pub enum </span>RouterError {
+    NoTokenFound,
+    NoEndpointMatch { token: bytes::Bytes },
+}
+
+<span class="kw">impl </span>RouterError {
+    <span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>discriminant(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
+        <span class="kw">match </span><span class="self">self </span>{
+            <span class="self">Self</span>::NoEndpointMatch { .. } =&gt; <span class="string">"filter::token_router::no endpoint match"</span>,
+            <span class="self">Self</span>::NoTokenFound =&gt; <span class="string">"filter::token_router::no token found"</span>,
+        }
+    }
+}
+
+<span class="kw">use </span>std::fmt;
+
+<span class="kw">impl </span>fmt::Display <span class="kw">for </span>RouterError {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
+        <span class="kw">match </span><span class="self">self </span>{
+            <span class="self">Self</span>::NoEndpointMatch { token } =&gt; {
+                <span class="macro">write!</span>(
+                    f,
+                    <span class="string">"no endpoint matched token `{}`"</span>,
+                    base64::display::Base64Display::new(
+                        token,
+                        <span class="kw-2">&amp;</span>base64::engine::general_purpose::STANDARD
+                    )
+                )
+            }
+            <span class="self">Self</span>::NoTokenFound =&gt; f.write_str(<span class="string">"routing token not captured"</span>),
+        }
+    }
+}
+
+<span class="kw">impl </span>fmt::Debug <span class="kw">for </span>RouterError {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
+        <span class="kw">match </span><span class="self">self </span>{
+            <span class="self">Self</span>::NoEndpointMatch { .. } =&gt; f.write_str(<span class="string">"no endpoint matched routing token"</span>),
+            <span class="self">Self</span>::NoTokenFound =&gt; f.write_str(<span class="string">"routing token not captured"</span>),
+        }
+    }
+}
+
+<span class="kw">impl </span>Eq <span class="kw">for </span>RouterError {}
+
+<span class="kw">impl </span>PartialEq <span class="kw">for </span>RouterError {
+    <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
+        <span class="kw">match </span>(<span class="self">self</span>, other) {
+            (<span class="self">Self</span>::NoTokenFound, <span class="self">Self</span>::NoTokenFound) =&gt; <span class="bool-val">true</span>,
+            (<span class="self">Self</span>::NoEndpointMatch { token: a }, <span class="self">Self</span>::NoEndpointMatch { token: b }) =&gt; a == b,
+            <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
+        }
+    }
+}
+
+<span class="kw">impl </span>std::hash::Hash <span class="kw">for </span>RouterError {
+    <span class="kw">fn </span>hash&lt;H: std::hash::Hasher&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>H) {
+        std::hash::Hash::hash(<span class="kw-2">&amp;</span>std::mem::discriminant(<span class="self">self</span>), state);
+
+        <span class="kw">match </span><span class="self">self </span>{
+            <span class="self">Self</span>::NoEndpointMatch { token } =&gt; state.write(token),
+            <span class="self">Self</span>::NoTokenFound =&gt; {}
+        }
+    }
 }
 
 <span class="attr">#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, schemars::JsonSchema)]
@@ -498,12 +598,6 @@
 
         <span class="comment">// no key
         </span><span class="kw">let </span><span class="kw-2">mut </span>ctx = new_ctx();
-        <span class="macro">assert!</span>(filter.read(<span class="kw-2">&amp;mut </span>ctx).<span class="kw">await</span>.is_err());
-
-        <span class="comment">// wrong type key
-        </span><span class="kw">let </span><span class="kw-2">mut </span>ctx = new_ctx();
-        ctx.metadata
-            .insert(CAPTURED_BYTES.into(), Value::String(String::from(<span class="string">"wrong"</span>)));
         <span class="macro">assert!</span>(filter.read(<span class="kw-2">&amp;mut </span>ctx).<span class="kw">await</span>.is_err());
     }
 

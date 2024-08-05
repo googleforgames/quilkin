@@ -108,12 +108,12 @@
 </span><span class="kw">impl </span>Filter <span class="kw">for </span>Drop {
     <span class="attr">#[cfg_attr(feature = <span class="string">"instrument"</span>, tracing::instrument(skip_all))]
     </span><span class="kw">async fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
-        <span class="prelude-val">Err</span>(FilterError::new(<span class="string">"intentionally dropped"</span>))
+        <span class="prelude-val">Err</span>(FilterError::Dropped)
     }
 
     <span class="attr">#[cfg_attr(feature = <span class="string">"instrument"</span>, tracing::instrument(skip_all))]
     </span><span class="kw">async fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
-        <span class="prelude-val">Err</span>(FilterError::new(<span class="string">"intentionally dropped"</span>))
+        <span class="prelude-val">Err</span>(FilterError::Dropped)
     }
 }
 

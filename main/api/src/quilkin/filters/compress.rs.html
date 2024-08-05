@@ -408,6 +408,98 @@
 <a href="#406" id="406">406</a>
 <a href="#407" id="407">407</a>
 <a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
+<a href="#467" id="467">467</a>
+<a href="#468" id="468">468</a>
+<a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
+<a href="#475" id="475">475</a>
+<a href="#476" id="476">476</a>
+<a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
+<a href="#479" id="479">479</a>
+<a href="#480" id="480">480</a>
+<a href="#481" id="481">481</a>
+<a href="#482" id="482">482</a>
+<a href="#483" id="483">483</a>
+<a href="#484" id="484">484</a>
+<a href="#485" id="485">485</a>
+<a href="#486" id="486">486</a>
+<a href="#487" id="487">487</a>
+<a href="#488" id="488">488</a>
+<a href="#489" id="489">489</a>
+<a href="#490" id="490">490</a>
+<a href="#491" id="491">491</a>
+<a href="#492" id="492">492</a>
+<a href="#493" id="493">493</a>
+<a href="#494" id="494">494</a>
+<a href="#495" id="495">495</a>
+<a href="#496" id="496">496</a>
+<a href="#497" id="497">497</a>
+<a href="#498" id="498">498</a>
+<a href="#499" id="499">499</a>
+<a href="#500" id="500">500</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -482,7 +574,11 @@
                             .inc_by(ctx.contents.len() <span class="kw">as </span>u64);
                         <span class="prelude-val">Ok</span>(())
                     }
-                    <span class="prelude-val">Err</span>(err) =&gt; <span class="prelude-val">Err</span>(FilterError::new(err)),
+                    <span class="prelude-val">Err</span>(err) =&gt; <span class="prelude-val">Err</span>(CompressionError::new(
+                        err,
+                        Direction::Read,
+                        Action::Compress,
+                    )),
                 }
             }
             Action::Decompress =&gt; {
@@ -496,7 +592,11 @@
                             .inc_by(ctx.contents.len() <span class="kw">as </span>u64);
                         <span class="prelude-val">Ok</span>(())
                     }
-                    <span class="prelude-val">Err</span>(err) =&gt; <span class="prelude-val">Err</span>(FilterError::new(err)),
+                    <span class="prelude-val">Err</span>(err) =&gt; <span class="prelude-val">Err</span>(CompressionError::new(
+                        err,
+                        Direction::Read,
+                        Action::Decompress,
+                    )),
                 }
             }
             Action::DoNothing =&gt; <span class="prelude-val">Ok</span>(()),
@@ -518,7 +618,11 @@
                             .inc_by(ctx.contents.len() <span class="kw">as </span>u64);
                         <span class="prelude-val">Ok</span>(())
                     }
-                    <span class="prelude-val">Err</span>(err) =&gt; <span class="prelude-val">Err</span>(FilterError::new(err)),
+                    <span class="prelude-val">Err</span>(err) =&gt; <span class="prelude-val">Err</span>(CompressionError::new(
+                        err,
+                        Direction::Write,
+                        Action::Compress,
+                    )),
                 }
             }
             Action::Decompress =&gt; {
@@ -533,7 +637,11 @@
                         <span class="prelude-val">Ok</span>(())
                     }
 
-                    <span class="prelude-val">Err</span>(err) =&gt; <span class="prelude-val">Err</span>(FilterError::new(err)),
+                    <span class="prelude-val">Err</span>(err) =&gt; <span class="prelude-val">Err</span>(CompressionError::new(
+                        err,
+                        Direction::Write,
+                        Action::Decompress,
+                    )),
                 }
             }
             Action::DoNothing =&gt; <span class="prelude-val">Ok</span>(()),
@@ -551,6 +659,82 @@
             <span class="self">Self</span>::ensure_config_exists(config)<span class="question-mark">?</span>,
             Metrics::new(),
         ))
+    }
+}
+
+<span class="kw">use </span>std::fmt;
+
+<span class="attr">#[derive(Copy, Clone)]
+</span><span class="kw">pub enum </span>Direction {
+    Read,
+    Write,
+}
+
+<span class="kw">impl </span>PartialEq <span class="kw">for </span>Direction {
+    <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
+        <span class="macro">matches!</span>(
+            (<span class="self">self</span>, other),
+            (<span class="self">Self</span>::Read, <span class="self">Self</span>::Read) | (<span class="self">Self</span>::Write, <span class="self">Self</span>::Write)
+        )
+    }
+}
+
+<span class="kw">impl </span>fmt::Debug <span class="kw">for </span>Direction {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
+        <span class="kw">match </span><span class="self">self </span>{
+            <span class="self">Self</span>::Read =&gt; f.write_str(<span class="string">"read"</span>),
+            <span class="self">Self</span>::Write =&gt; f.write_str(<span class="string">"write"</span>),
+        }
+    }
+}
+
+<span class="kw">pub struct </span>CompressionError {
+    io: std::io::Error,
+    direction: Direction,
+    action: Action,
+}
+
+<span class="kw">impl </span>CompressionError {
+    <span class="attr">#[allow(clippy::new_ret_no_self)]
+    #[inline]
+    </span><span class="kw">fn </span>new(io: std::io::Error, dir: Direction, action: Action) -&gt; FilterError {
+        FilterError::Compression(<span class="self">Self </span>{
+            io,
+            direction: dir,
+            action,
+        })
+    }
+}
+
+<span class="kw">impl </span>fmt::Display <span class="kw">for </span>CompressionError {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
+        <span class="macro">write!</span>(f, <span class="string">"{}: {:?} {:?}"</span>, <span class="self">self</span>.io, <span class="self">self</span>.direction, <span class="self">self</span>.action)
+    }
+}
+
+<span class="kw">impl </span>fmt::Debug <span class="kw">for </span>CompressionError {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
+        f.debug_map()
+            .entry(<span class="kw-2">&amp;</span><span class="string">"io"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.io)
+            .entry(<span class="kw-2">&amp;</span><span class="string">"direction"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.direction)
+            .entry(<span class="kw-2">&amp;</span><span class="string">"action"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.action)
+            .finish()
+    }
+}
+
+<span class="kw">impl </span>PartialEq <span class="kw">for </span>CompressionError {
+    <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
+        <span class="self">self</span>.direction == other.direction
+            &amp;&amp; <span class="self">self</span>.action == other.action
+            &amp;&amp; <span class="self">self</span>.io.kind() == other.io.kind()
+    }
+}
+
+<span class="kw">impl </span>std::hash::Hash <span class="kw">for </span>CompressionError {
+    <span class="kw">fn </span>hash&lt;H: std::hash::Hasher&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>H) {
+        std::hash::Hash::hash(<span class="kw-2">&amp;</span><span class="self">self</span>.io.kind(), state);
+        std::hash::Hash::hash(<span class="kw-2">&amp;</span>std::mem::discriminant(<span class="kw-2">&amp;</span><span class="self">self</span>.direction), state);
+        std::hash::Hash::hash(<span class="kw-2">&amp;</span>std::mem::discriminant(<span class="kw-2">&amp;</span><span class="self">self</span>.action), state);
     }
 }
 

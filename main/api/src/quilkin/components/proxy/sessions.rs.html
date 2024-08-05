@@ -789,6 +789,32 @@
 <a href="#787" id="787">787</a>
 <a href="#788" id="788">788</a>
 <a href="#789" id="789">789</a>
+<a href="#790" id="790">790</a>
+<a href="#791" id="791">791</a>
+<a href="#792" id="792">792</a>
+<a href="#793" id="793">793</a>
+<a href="#794" id="794">794</a>
+<a href="#795" id="795">795</a>
+<a href="#796" id="796">796</a>
+<a href="#797" id="797">797</a>
+<a href="#798" id="798">798</a>
+<a href="#799" id="799">799</a>
+<a href="#800" id="800">800</a>
+<a href="#801" id="801">801</a>
+<a href="#802" id="802">802</a>
+<a href="#803" id="803">803</a>
+<a href="#804" id="804">804</a>
+<a href="#805" id="805">805</a>
+<a href="#806" id="806">806</a>
+<a href="#807" id="807">807</a>
+<a href="#808" id="808">808</a>
+<a href="#809" id="809">809</a>
+<a href="#810" id="810">810</a>
+<a href="#811" id="811">811</a>
+<a href="#812" id="812">812</a>
+<a href="#813" id="813">813</a>
+<a href="#814" id="814">814</a>
+<a href="#815" id="815">815</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -807,6 +833,7 @@
 
 </span><span class="kw">use </span>std::{
     collections::{HashMap, HashSet},
+    fmt,
     net::SocketAddr,
     sync::Arc,
     time::Duration,
@@ -838,6 +865,37 @@
 <span class="kw">type </span>UpstreamSender = mpsc::Sender&lt;UpstreamChannelData&gt;;
 <span class="kw">type </span>DownstreamSender = async_channel::Sender&lt;ChannelData&gt;;
 <span class="kw">pub type </span>DownstreamReceiver = async_channel::Receiver&lt;ChannelData&gt;;
+
+<span class="attr">#[derive(PartialEq, Eq, Hash)]
+</span><span class="kw">pub enum </span>SessionError {
+    SocketAddressUnavailable,
+    MissingAllocatedSocket,
+    MissingDestinationSocket,
+}
+
+<span class="kw">impl </span>std::error::Error <span class="kw">for </span>SessionError {}
+
+<span class="kw">impl </span>fmt::Display <span class="kw">for </span>SessionError {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
+        <span class="kw">match </span><span class="self">self </span>{
+            <span class="self">Self</span>::SocketAddressUnavailable =&gt; {
+                f.write_str(<span class="string">"couldn't get socket address from raw socket"</span>)
+            }
+            <span class="self">Self</span>::MissingAllocatedSocket =&gt; {
+                f.write_str(<span class="string">"couldn't obtain any allocated socket, should be unreachable"</span>)
+            }
+            <span class="self">Self</span>::MissingDestinationSocket =&gt; {
+                f.write_str(<span class="string">"couldn't obtain any socket for destination, should be unreachable"</span>)
+            }
+        }
+    }
+}
+
+<span class="kw">impl </span>fmt::Debug <span class="kw">for </span>SessionError {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
+        <span class="macro">write!</span>(f, <span class="string">"{self}"</span>)
+    }
+}
 
 <span class="doccomment">/// A data structure that is responsible for holding sessions, and pooling
 /// sockets between them. This means that we only provide new unique sockets
@@ -899,8 +957,7 @@
         <span class="kw">let </span>port = raw_socket
             .local_addr()<span class="question-mark">?
             </span>.as_socket()
-            .ok_or_else(|| <span class="macro">eyre::eyre!</span>(<span class="string">"couldn't get socket address from raw socket"</span>))
-            .map_err(<span class="kw">super</span>::PipelineError::Session)<span class="question-mark">?
+            .ok_or(SessionError::SocketAddressUnavailable)<span class="question-mark">?
             </span>.port();
         <span class="kw">let </span>(tx, <span class="kw-2">mut </span>downstream_receiver) = mpsc::channel::&lt;UpstreamChannelData&gt;(<span class="number">15</span>);
 
@@ -990,7 +1047,7 @@
             }
         );
 
-        initialised.<span class="kw">await</span>.map_err(|error| <span class="macro">eyre::eyre!</span>(error))<span class="question-mark">??</span>;
+        initialised.<span class="kw">await</span>.unwrap()<span class="question-mark">?</span>;
 
         <span class="self">self</span>.ports_to_sockets.write().<span class="kw">await</span>.insert(port, tx.clone());
         <span class="self">self</span>.create_session_from_existing_socket(key, tx, port)
@@ -1086,10 +1143,7 @@
                     </span>.iter()
                     .next()
                     .map(|(port, socket)| (<span class="kw-2">*</span>port, socket.clone()))
-                    .ok_or_else(|| {
-                        <span class="macro">eyre::eyre!</span>(<span class="string">"couldn't obtain any allocated socket, should be unreachable"</span>)
-                    })
-                    .map_err(<span class="kw">super</span>::PipelineError::Session)<span class="question-mark">?</span>;
+                    .ok_or(SessionError::MissingAllocatedSocket)<span class="question-mark">?</span>;
 
                 <span class="self">self</span>.create_session_from_existing_socket(key, sender, port)
                     .<span class="kw">await
@@ -1111,10 +1165,7 @@
                 .<span class="kw">await
                 </span>.destination_to_sockets
                 .get_mut(<span class="kw-2">&amp;</span>dest)
-                .ok_or_else(|| {
-                    <span class="macro">eyre::eyre!</span>(<span class="string">"couldn't obtain any socket for destination, should be unreachable"</span>)
-                })
-                .map_err(<span class="kw">super</span>::PipelineError::Session)<span class="question-mark">?
+                .ok_or(SessionError::MissingDestinationSocket)<span class="question-mark">?
                 </span>.insert(port);
             <span class="self">self</span>.create_session_from_existing_socket(key, socket, port)
                 .<span class="kw">await
@@ -1385,8 +1436,9 @@
 }
 
 <span class="kw">impl </span>Loggable <span class="kw">for </span>Error {
-    <span class="kw">fn </span>log(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-        <span class="macro">tracing::error!</span>(<span class="string">"{}"</span>, <span class="self">self</span>);
+    <span class="attr">#[inline]
+    </span><span class="kw">fn </span>log(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+        <span class="macro">tracing::error!</span>(<span class="string">"{self}"</span>);
     }
 }
 

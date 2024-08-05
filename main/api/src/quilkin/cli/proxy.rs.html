@@ -120,6 +120,27 @@
 <a href="#118" id="118">118</a>
 <a href="#119" id="119">119</a>
 <a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -168,6 +189,11 @@
     <span class="doccomment">/// One or more socket addresses to forward packets to.
     </span><span class="attr">#[clap(short, long, env = <span class="string">"QUILKIN_DEST"</span>)]
     </span><span class="kw">pub </span>to: Vec&lt;SocketAddr&gt;,
+    <span class="doccomment">/// Assigns dynamic tokens to each address in the `--to` argument
+    ///
+    /// Format is `&lt;number of unique tokens&gt;:&lt;length of token suffix for each packet&gt;`
+    </span><span class="attr">#[clap(short, long, env = <span class="string">"QUILKIN_DEST_TOKENS"</span>, requires(<span class="string">"to"</span>))]
+    </span><span class="kw">pub </span>to_tokens: <span class="prelude-ty">Option</span>&lt;String&gt;,
     <span class="doccomment">/// The interval in seconds at which the relay will send a discovery request
     /// to an management server after receiving no updates.
     </span><span class="attr">#[clap(long, env = <span class="string">"QUILKIN_IDLE_REQUEST_INTERVAL_SECS"</span>)]
@@ -186,6 +212,7 @@
             port: PORT,
             qcmp_port: QCMP_PORT,
             to: &lt;<span class="kw">_</span>&gt;::default(),
+            to_tokens: <span class="prelude-val">None</span>,
             idle_request_interval_secs: <span class="prelude-val">None</span>,
             workers: <span class="prelude-val">None</span>,
         }
@@ -219,10 +246,25 @@
         <span class="kw">let </span>qcmp = <span class="kw">crate</span>::net::raw_socket_with_reuse(<span class="self">self</span>.qcmp_port)<span class="question-mark">?</span>;
         <span class="kw">let </span>phoenix = <span class="kw">crate</span>::net::TcpListener::bind(<span class="prelude-val">Some</span>(<span class="self">self</span>.qcmp_port))<span class="question-mark">?</span>;
 
+        <span class="kw">let </span>to_tokens = <span class="self">self
+            </span>.to_tokens
+            .map(|tt| {
+                <span class="kw">let </span><span class="prelude-val">Some</span>((count, length)) = tt.split_once(<span class="string">':'</span>) <span class="kw">else </span>{
+                    <span class="macro">eyre::bail!</span>(<span class="string">"--to-tokens `{tt}` is invalid, it must have a `:` separator"</span>)
+                };
+
+                <span class="kw">let </span>count = count.parse()<span class="question-mark">?</span>;
+                <span class="kw">let </span>length = length.parse()<span class="question-mark">?</span>;
+
+                <span class="prelude-val">Ok</span>(<span class="kw">crate</span>::components::proxy::ToTokens { count, length })
+            })
+            .transpose()<span class="question-mark">?</span>;
+
         <span class="kw">crate</span>::components::proxy::Proxy {
             management_servers: <span class="self">self</span>.management_server,
             mmdb: <span class="self">self</span>.mmdb,
             to: <span class="self">self</span>.to,
+            to_tokens,
             num_workers,
             socket,
             qcmp,

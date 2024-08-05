@@ -183,27 +183,9 @@
 proxy.</p>
 <p>To view all the options for the <code>proxy</code> subcommand, run:</p>
 <pre><code class="language-shell">$ quilkin proxy --help
-Run Quilkin as a UDP reverse proxy
-
-Usage: quilkin proxy [OPTIONS]
-
-Options:
-  -m, --management-server &lt;MANAGEMENT_SERVER&gt;
-          One or more `quilkin manage` endpoints to listen to for config changes [env: QUILKIN_MANAGEMENT_SERVER=]
-      --mmdb &lt;MMDB&gt;
-          The remote URL or local file path to retrieve the Maxmind database [env: MMDB=]
-  -p, --port &lt;PORT&gt;
-          The port to listen on [env: QUILKIN_PORT=] [default: 7777]
-  -q, --qcmp-port &lt;QCMP_PORT&gt;
-          The port to listen on [env: QUILKIN_QCMP_PORT=] [default: 7600]
-  -t, --to &lt;TO&gt;
-          One or more socket addresses to forward packets to [env: QUILKIN_DEST=]
-      --idle-request-interval-secs &lt;IDLE_REQUEST_INTERVAL_SECS&gt;
-          The interval in seconds at which the relay will send a discovery request to an management server after receiving no updates [env: QUILKIN_IDLE_REQUEST_INTERVAL_SECS=]
-  -w, --workers &lt;WORKERS&gt;
-          Number of worker threads used to process packets. If not specified defaults to number of cpus [env: QUILKIN_WORKERS=]
-  -h, --help
-          Print help
+thread 'main' panicked at /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/clap_builder-4.5.13/src/builder/debug_asserts.rs:112:17:
+Command proxy: Short option names must be unique for each argument, but '-t' is in use by both 'to' and 'to_tokens'
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 </code></pre>
 <h2 id="endpoints"><a class="header" href="#endpoints">Endpoints</a></h2>
 <p>An Endpoint represents an address that Quilkin forwards packets to that it has received from the

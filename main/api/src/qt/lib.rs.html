@@ -732,7 +732,6 @@
 <a href="#730" id="730">730</a>
 <a href="#731" id="731">731</a>
 <a href="#732" id="732">732</a>
-<a href="#733" id="733">733</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>quilkin::{
     components::{<span class="self">self</span>, RunArgs},
     config::Providers,
@@ -794,9 +793,7 @@
         </span>)));
     <span class="kw">let </span>sub = tracing_subscriber::Registry::default().with(layer);
     <span class="kw">let </span>disp = tracing::dispatcher::Dispatch::new(sub);
-    <span class="kw">let </span>guard = tracing::dispatcher::set_default(<span class="kw-2">&amp;</span>disp);
-
-    guard
+    tracing::dispatcher::set_default(<span class="kw-2">&amp;</span>disp)
 }
 
 <span class="attr">#[macro_export]
@@ -1098,7 +1095,7 @@
                     endpoints.insert(quilkin::net::Endpoint::with_metadata(
                         (std::net::Ipv4Addr::UNSPECIFIED, server.port).into(),
                         quilkin::net::endpoint::Metadata {
-                            tokens: tokens.into_iter().map(|t| Vec::from(<span class="kw-2">*</span>t)).collect(),
+                            tokens: tokens.iter().map(|t| Vec::from(<span class="kw-2">*</span>t)).collect(),
                         },
                     ));
                 }
@@ -1112,7 +1109,7 @@
 
                 <span class="kw">let </span>relay_servers = spc
                     .dependencies
-                    .into_iter()
+                    .iter()
                     .filter_map(|dname| {
                         <span class="kw">let </span>Pail::Relay(RelayPail { mds_port, .. }) = <span class="kw-2">&amp;</span>pails[dname] <span class="kw">else </span>{
                             <span class="kw">return </span><span class="prelude-val">None</span>;
@@ -1177,7 +1174,7 @@
 
                 <span class="kw">let </span>management_servers = spc
                     .dependencies
-                    .into_iter()
+                    .iter()
                     .filter_map(|dname| {
                         <span class="kw">let </span>Pail::Relay(RelayPail { xds_port, .. }) = <span class="kw-2">&amp;</span>pails[dname] <span class="kw">else </span>{
                             <span class="kw">return </span><span class="prelude-val">None</span>;
@@ -1209,7 +1206,7 @@
 
                 <span class="kw">let </span>endpoints: std::collections::BTreeSet&lt;<span class="kw">_</span>&gt; = spc
                     .dependencies
-                    .into_iter()
+                    .iter()
                     .filter_map(|dname| {
                         <span class="kw">let </span>Pail::Server(ServerPail { port, .. }) = <span class="kw-2">&amp;</span>pails[dname] <span class="kw">else </span>{
                             <span class="kw">return </span><span class="prelude-val">None</span>;
@@ -1237,6 +1234,7 @@
                         num_workers: NonZeroUsize::new(<span class="number">1</span>).unwrap(),
                         mmdb: <span class="prelude-val">None</span>,
                         to: Vec::new(),
+                        to_tokens: <span class="prelude-val">None</span>,
                         management_servers,
                         socket,
                         qcmp,

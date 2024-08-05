@@ -251,11 +251,66 @@
 <a href="#249" id="249">249</a>
 <a href="#250" id="250">250</a>
 <a href="#251" id="251">251</a>
-</pre></div><pre class="rust"><code><span class="kw">pub mod </span>packet_router;
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+</pre></div><pre class="rust"><code><span class="kw">mod </span>error;
+<span class="kw">pub mod </span>packet_router;
 <span class="kw">mod </span>sessions;
 
 <span class="kw">use </span><span class="kw">super</span>::RunArgs;
 <span class="kw">use </span><span class="kw">crate</span>::pool::PoolBuffer;
+<span class="kw">pub use </span>error::{ErrorMap, PipelineError};
 <span class="kw">pub use </span>sessions::SessionPool;
 <span class="kw">use </span>std::{
     net::SocketAddr,
@@ -264,23 +319,6 @@
         Arc,
     },
 };
-
-<span class="attr">#[derive(thiserror::Error, Debug, strum_macros::EnumDiscriminants)]
-#[strum_discriminants(derive(strum_macros::Display))]
-</span><span class="kw">pub enum </span>PipelineError {
-    <span class="attr">#[error(<span class="string">"No upstream endpoints available"</span>)]
-    </span>NoUpstreamEndpoints,
-    <span class="attr">#[error(<span class="string">"filter {0}"</span>)]
-    </span>Filter(<span class="attr">#[from] </span><span class="kw">crate</span>::filters::FilterError),
-    <span class="attr">#[error(<span class="string">"session error: {0}"</span>)]
-    </span>Session(<span class="attr">#[from] </span>eyre::Error),
-    <span class="attr">#[error(<span class="string">"OS level error: {0}"</span>)]
-    </span>Io(<span class="attr">#[from] </span>std::io::Error),
-    <span class="attr">#[error(<span class="string">"Channel closed"</span>)]
-    </span>ChannelClosed,
-    <span class="attr">#[error(<span class="string">"Under pressure"</span>)]
-    </span>ChannelFull,
-}
 
 <span class="attr">#[derive(Clone, Debug)]
 </span><span class="kw">pub struct </span>Ready {
@@ -308,11 +346,19 @@
     }
 }
 
+<span class="kw">pub struct </span>ToTokens {
+    <span class="doccomment">/// The number of tokens to assign to each `to` address
+    </span><span class="kw">pub </span>count: usize,
+    <span class="doccomment">/// The size of each token
+    </span><span class="kw">pub </span>length: usize,
+}
+
 <span class="kw">pub struct </span>Proxy {
     <span class="kw">pub </span>num_workers: std::num::NonZeroUsize,
     <span class="kw">pub </span>mmdb: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::net::maxmind_db::Source&gt;,
     <span class="kw">pub </span>management_servers: Vec&lt;tonic::transport::Endpoint&gt;,
     <span class="kw">pub </span>to: Vec&lt;SocketAddr&gt;,
+    <span class="kw">pub </span>to_tokens: <span class="prelude-ty">Option</span>&lt;ToTokens&gt;,
     <span class="kw">pub </span>socket: socket2::Socket,
     <span class="kw">pub </span>qcmp: socket2::Socket,
     <span class="kw">pub </span>phoenix: <span class="kw">crate</span>::net::TcpListener,
@@ -329,6 +375,7 @@
             mmdb: <span class="prelude-val">None</span>,
             management_servers: Vec::new(),
             to: Vec::new(),
+            to_tokens: <span class="prelude-val">None</span>,
             socket: <span class="kw">crate</span>::net::raw_socket_with_reuse(<span class="number">0</span>).unwrap(),
             qcmp,
             phoenix,
@@ -361,15 +408,74 @@
         });
 
         <span class="kw">if </span>!<span class="self">self</span>.to.is_empty() {
+            <span class="kw">let </span>endpoints = <span class="kw">if let </span><span class="prelude-val">Some</span>(tt) = <span class="self">self</span>.to_tokens {
+                <span class="kw">let </span>(unique, overflow) = <span class="number">256u64</span>.overflowing_pow(tt.length <span class="kw">as _</span>);
+                <span class="kw">if </span>overflow {
+                    <span class="macro">panic!</span>(
+                        <span class="string">"can't generate {} tokens of length {} maximum is {}"</span>,
+                        <span class="self">self</span>.to.len() * tt.count,
+                        tt.length,
+                        u64::MAX,
+                    );
+                }
+
+                <span class="kw">if </span>unique &lt; (<span class="self">self</span>.to.len() * tt.count) <span class="kw">as </span>u64 {
+                    <span class="macro">panic!</span>(
+                        <span class="string">"we require {} unique tokens but only {unique} can be generated"</span>,
+                        <span class="self">self</span>.to.len() * tt.count,
+                    );
+                }
+
+                {
+                    <span class="kw">use </span><span class="kw">crate</span>::filters::StaticFilter <span class="kw">as _</span>;
+                    config.filters.store(Arc::new(
+                        <span class="kw">crate</span>::filters::FilterChain::try_create([
+                            <span class="kw">crate</span>::filters::Capture::as_filter_config(
+                                <span class="kw">crate</span>::filters::capture::Config {
+                                    metadata_key: <span class="kw">crate</span>::filters::capture::CAPTURED_BYTES.into(),
+                                    strategy: <span class="kw">crate</span>::filters::capture::Strategy::Suffix(
+                                        <span class="kw">crate</span>::filters::capture::Suffix {
+                                            size: tt.length <span class="kw">as _</span>,
+                                            remove: <span class="bool-val">true</span>,
+                                        },
+                                    ),
+                                },
+                            )
+                            .unwrap(),
+                            <span class="kw">crate</span>::filters::TokenRouter::as_filter_config(<span class="prelude-val">None</span>).unwrap(),
+                        ])
+                        .unwrap(),
+                    ));
+                }
+
+                <span class="kw">let </span>count = tt.count <span class="kw">as </span>u64;
+
+                <span class="self">self</span>.to
+                    .iter()
+                    .enumerate()
+                    .map(|(ind, sa)| {
+                        <span class="kw">let </span><span class="kw-2">mut </span>tokens = std::collections::BTreeSet::new();
+                        <span class="kw">let </span>start = ind <span class="kw">as </span>u64 * count;
+                        <span class="kw">for </span>i <span class="kw">in </span>start..(start + count) {
+                            tokens.insert(i.to_le_bytes()[..tt.length].to_vec());
+                        }
+
+                        <span class="kw">crate</span>::net::endpoint::Endpoint::with_metadata(
+                            (<span class="kw-2">*</span>sa).into(),
+                            <span class="kw">crate</span>::net::endpoint::Metadata { tokens },
+                        )
+                    })
+                    .collect()
+            } <span class="kw">else </span>{
+                <span class="self">self</span>.to
+                    .iter()
+                    .cloned()
+                    .map(<span class="kw">crate</span>::net::endpoint::Endpoint::from)
+                    .collect()
+            };
+
             config.clusters.modify(|clusters| {
-                clusters.insert(
-                    <span class="prelude-val">None</span>,
-                    <span class="self">self</span>.to
-                        .iter()
-                        .cloned()
-                        .map(<span class="kw">crate</span>::net::endpoint::Endpoint::from)
-                        .collect(),
-                );
+                clusters.insert(<span class="prelude-val">None</span>, endpoints);
             });
         }
 

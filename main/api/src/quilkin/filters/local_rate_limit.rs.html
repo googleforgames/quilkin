@@ -401,6 +401,11 @@
 <a href="#399" id="399">399</a>
 <a href="#400" id="400">400</a>
 <a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -486,12 +491,14 @@
     }
 
     <span class="doccomment">/// acquire_token is called on behalf of every packet that is eligible
-    /// for rate limiting. It returns whether there exists a token for the corresponding
-    /// address in the current period - determining whether or not the packet
-    /// should be forwarded or dropped.
-    </span><span class="kw">fn </span>acquire_token(<span class="kw-2">&amp;</span><span class="self">self</span>, address: <span class="kw-2">&amp;</span>EndpointAddress) -&gt; <span class="prelude-ty">Option</span>&lt;()&gt; {
+    /// for rate limiting.
+    ///
+    /// It returns whether there exists a token for the corresponding address in
+    /// the current period - determining whether or not the packet should be
+    /// forwarded or dropped.
+    </span><span class="kw">fn </span>acquire_token(<span class="kw-2">&amp;</span><span class="self">self</span>, address: <span class="kw-2">&amp;</span>EndpointAddress) -&gt; bool {
         <span class="kw">if </span><span class="self">self</span>.config.max_packets == <span class="number">0 </span>{
-            <span class="kw">return </span><span class="prelude-val">None</span>;
+            <span class="kw">return </span><span class="bool-val">false</span>;
         }
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(bucket) = <span class="self">self</span>.state.get(address) {
@@ -508,7 +515,7 @@
                 <span class="comment">// If so, then we can only allow the packet if the current time
                 // window has ended.
                 </span><span class="kw">if </span>!start_new_window {
-                    <span class="kw">return </span><span class="prelude-val">None</span>;
+                    <span class="kw">return </span><span class="bool-val">false</span>;
                 }
             }
 
@@ -522,7 +529,7 @@
                     .store(now_secs, Ordering::Relaxed);
             }
 
-            <span class="kw">return </span><span class="prelude-val">Some</span>(());
+            <span class="kw">return </span><span class="bool-val">true</span>;
         }
 
         <span class="kw">match </span><span class="self">self</span>.state.entry(address.clone()) {
@@ -543,15 +550,18 @@
             }
         };
 
-        <span class="prelude-val">Some</span>(())
-    }
+        <span class="bool-val">true
+    </span>}
 }
 
 <span class="attr">#[async_trait::async_trait]
 </span><span class="kw">impl </span>Filter <span class="kw">for </span>LocalRateLimit {
     <span class="kw">async fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
-        <span class="self">self</span>.acquire_token(<span class="kw-2">&amp;</span>ctx.source)
-            .ok_or_else(|| FilterError::new(<span class="string">"rate limit exceeded"</span>))
+        <span class="kw">if </span><span class="self">self</span>.acquire_token(<span class="kw-2">&amp;</span>ctx.source) {
+            <span class="prelude-val">Ok</span>(())
+        } <span class="kw">else </span>{
+            <span class="prelude-val">Err</span>(FilterError::RateLimitExceeded)
+        }
     }
 }
 
