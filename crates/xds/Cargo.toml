@@ -8,7 +8,7 @@ license.workspace = true
 test = true
 
 [dependencies]
-quilkin-proto = { path = "../quilkin-proto" }
+quilkin-proto.workspace = true
 
 arc-swap.workspace = true
 async-stream.workspace = true

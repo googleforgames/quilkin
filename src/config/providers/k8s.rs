@@ -16,6 +16,7 @@ pub fn update_filters_from_configmap(
     config: Arc<crate::Config>,
 ) -> impl Stream<Item = crate::Result<(), eyre::Error>> {
     async_stream::stream! {
+        let mut cmap = None;
         for await event in configmap_events(client, namespace) {
             tracing::trace!("new configmap event");
 
@@ -28,15 +29,24 @@ pub fn update_filters_from_configmap(
             };
 
             let configmap = match event {
-                Event::Applied(configmap) => configmap,
-                Event::Restarted(configmaps) => match configmaps.first() {
-                    Some(configmap) => configmap.clone(),
-                    None => {
+                Event::Apply(configmap) => configmap,
+                Event::Init => { yield Ok(()); continue; }
+                Event::InitApply(configmap) => {
+                    if cmap.is_none() {
+                        cmap = Some(configmap);
+                    }
+                    yield Ok(());
+                    continue;
+                }
+                Event::InitDone => {
+                    if let Some(cmap) = cmap.take() {
+                        cmap
+                    } else {
                         yield Ok(());
                         continue;
-                    },
-                },
-                Event::Deleted(_) => {
+                    }
+                }
+                Event::Delete(_) => {
                     config.filters.remove();
                     yield Ok(());
                     continue;
@@ -103,10 +113,12 @@ pub fn update_endpoints_from_gameservers(
     address_selector: Option<crate::config::AddressSelector>,
 ) -> impl Stream<Item = crate::Result<(), eyre::Error>> {
     async_stream::stream! {
+        let mut servers = BTreeSet::new();
+
         for await event in gameserver_events(client, namespace) {
             let ads = address_selector.as_ref();
             match event? {
-                Event::Applied(server) => {
+                Event::Apply(server) => {
                     tracing::debug!("received applied event from k8s");
                     if !server.is_allocated() {
                         yield Ok(());
@@ -122,29 +134,25 @@ pub fn update_endpoints_from_gameservers(
                     config.clusters.write()
                         .replace(locality.clone(), endpoint);
                 }
-
-                Event::Restarted(servers) => {
+                Event::Init => {},
+                Event::InitApply(server) => {
+                    if server.is_allocated() {
+                        if let Some(ep) = server.endpoint(ads) {
+                            servers.insert(ep);
+                        }
+                    }
+                }
+                Event::InitDone => {
                     tracing::debug!("received restart event from k8s");
-                    let servers: BTreeSet<_> = servers
-                        .into_iter()
-                        .filter_map(|server| {
-                            if !server.is_allocated() {
-                                return None;
-                            }
-
-                            server.endpoint(ads)
-                        })
-                        .collect();
 
                     tracing::trace!(
                         endpoints=%serde_json::to_value(servers.clone()).unwrap(),
                         "Restarting with endpoints"
                     );
 
-                    config.clusters.write().insert(locality.clone(), servers);
+                    config.clusters.write().insert(locality.clone(), std::mem::take(&mut servers));
                 }
-
-                Event::Deleted(server) => {
+                Event::Delete(server) => {
                     tracing::debug!("received delete event from k8s");
                     let found = if let Some(endpoint) = server.endpoint(ads) {
                         config.clusters.write().remove_endpoint(&endpoint)

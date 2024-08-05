@@ -47,6 +47,8 @@ skip-tree = [
     { crate = "hickory-resolver@0.24.1", reason = "Uses _many_ outdated crates" },
 ]
 
+[bans.workspace-dependencies]
+
 # This section is considered when running `cargo deny check licenses`
 # More documentation for the licenses section can be found here:
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
