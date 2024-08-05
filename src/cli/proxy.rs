@@ -47,6 +47,8 @@ pub struct Proxy {
     #[clap(short, long, env = "QUILKIN_DEST")]
     pub to: Vec<SocketAddr>,
     /// Assigns dynamic tokens to each address in the `--to` argument
+    ///
+    /// Format is `<number of unique tokens>:<length of token suffix for each packet>`
     #[clap(short, long, env = "QUILKIN_DEST_TOKENS", requires("to"))]
     pub to_tokens: Option<String>,
     /// The interval in seconds at which the relay will send a discovery request
