@@ -1197,7 +1197,7 @@ dependencies = [
  "httpdate",
  "itoa",
  "pin-project-lite",
- "socket2 0.5.7",
+ "socket2",
  "tokio",
  "tower-service",
  "tracing",
@@ -1322,7 +1322,7 @@ dependencies = [
  "http-body 1.0.1",
  "hyper 1.4.1",
  "pin-project-lite",
- "socket2 0.5.7",
+ "socket2",
  "tokio",
  "tower",
  "tower-service",
@@ -1426,7 +1426,7 @@ version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b58db92f96b720de98181bbbe63c831e87005ab460c1bf306eb2622b4707997f"
 dependencies = [
- "socket2 0.5.7",
+ "socket2",
  "widestring",
  "windows-sys 0.48.0",
  "winreg",
@@ -2285,7 +2285,7 @@ dependencies = [
  "quilkin",
  "rand",
  "serde_json",
- "socket2 0.5.7",
+ "socket2",
  "tempfile",
  "tokio",
  "tracing",
@@ -2325,11 +2325,13 @@ dependencies = [
  "hyper 1.4.1",
  "hyper-rustls",
  "hyper-util",
+ "io-uring",
  "ipnetwork",
  "k8s-openapi",
  "kube",
  "kube-core",
  "lasso",
+ "libc",
  "libflate",
  "lz4_flex",
  "maxminddb",
@@ -2353,8 +2355,9 @@ dependencies = [
  "serde_regex",
  "serde_stacker",
  "serde_yaml",
+ "slab",
  "snap",
- "socket2 0.5.7",
+ "socket2",
  "stable-eyre",
  "strum",
  "strum_macros",
@@ -2364,7 +2367,6 @@ dependencies = [
  "time",
  "tokio",
  "tokio-stream",
- "tokio-uring",
  "tonic",
  "tower",
  "tracing",
@@ -2924,17 +2926,7 @@ checksum = "1b6b67fb9a61334225b5b790716f609cd58395f895b3fe8b328786812a40bc3b"
 
 [[package]]
 name = "socket2"
-version = "0.4.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f7916fc008ca5542385b89a3d3ce689953c143e9304a9bf8beec1de48994c0d"
-dependencies = [
- "libc",
- "winapi",
-]
-
-[[package]]
-name = "socket2"
-version = "0.5.7"
+version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ce305eb0b4296696835b71df73eb912e0f1ffd2556a501fcede6e0c50349191c"
 dependencies = [
@@ -3170,7 +3162,7 @@ dependencies = [
  "parking_lot",
  "pin-project-lite",
  "signal-hook-registry",
- "socket2 0.5.7",
+ "socket2",
  "tokio-macros",
  "tracing",
  "windows-sys 0.52.0",
@@ -3228,21 +3220,6 @@ dependencies = [
  "pin-project-lite",
  "tokio",
  "tokio-util",
-]
-
-[[package]]
-name = "tokio-uring"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "748482e3e13584a34664a710168ad5068e8cb1d968aa4ffa887e83ca6dd27967"
-dependencies = [
- "bytes",
- "futures-util",
- "io-uring",
- "libc",
- "slab",
- "socket2 0.4.10",
- "tokio",
 ]
 
 [[package]]

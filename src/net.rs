@@ -105,7 +105,7 @@ use socket2::{Protocol, Socket, Type};
 
 cfg_if::cfg_if! {
     if #[cfg(target_os = "linux")] {
-        use tokio_uring::net::UdpSocket;
+        use std::net::UdpSocket;
     } else {
         use tokio::net::UdpSocket;
     }
@@ -196,7 +196,7 @@ impl DualStackLocalSocket {
         let local_addr = socket.local_addr().unwrap();
         cfg_if::cfg_if! {
             if #[cfg(target_os = "linux")] {
-                let socket = UdpSocket::from_std(socket);
+                let socket = socket;
             } else {
                 // This is only for macOS and Windows (non-production platforms),
                 // and should never happen anyway, so unwrap here is fine.
@@ -234,15 +234,7 @@ impl DualStackLocalSocket {
     }
 
     cfg_if::cfg_if! {
-        if #[cfg(target_os = "linux")] {
-            pub async fn recv_from<B: tokio_uring::buf::IoBufMut>(&self, buf: B) -> (io::Result<(usize, SocketAddr)>, B) {
-                self.socket.recv_from(buf).await
-            }
-
-            pub async fn send_to<B: tokio_uring::buf::IoBuf>(&self, buf: B, target: SocketAddr) -> (io::Result<usize>, B) {
-                self.socket.send_to(buf, target).await
-            }
-        } else {
+        if #[cfg(not(target_os = "linux"))] {
             pub async fn recv_from<B: std::ops::DerefMut<Target = [u8]>>(&self, mut buf: B) -> (io::Result<(usize, SocketAddr)>, B) {
                 let result = self.socket.recv_from(&mut buf).await;
                 (result, buf)
@@ -251,6 +243,12 @@ impl DualStackLocalSocket {
             pub async fn send_to<B: std::ops::Deref<Target = [u8]>>(&self, buf: B, target: SocketAddr) -> (io::Result<usize>, B) {
                 let result = self.socket.send_to(&buf, target).await;
                 (result, buf)
+            }
+        } else {
+            #[inline]
+            pub fn raw_fd(&self) -> io_uring::types::Fd {
+                use std::os::fd::AsRawFd;
+                io_uring::types::Fd(self.socket.as_raw_fd())
             }
         }
     }

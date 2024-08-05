@@ -2,6 +2,9 @@ mod error;
 pub mod packet_router;
 mod sessions;
 
+#[cfg(target_os = "linux")]
+mod io_uring_util;
+
 use super::RunArgs;
 use crate::pool::PoolBuffer;
 pub use error::{ErrorMap, PipelineError};
@@ -182,11 +185,7 @@ impl Proxy {
         let id = config.id.load();
         let num_workers = self.num_workers.get();
 
-        let (upstream_sender, upstream_receiver) = async_channel::bounded::<(
-            PoolBuffer,
-            Option<crate::net::maxmind_db::MetricsIpNetEntry>,
-            SocketAddr,
-        )>(250);
+        let (upstream_sender, upstream_receiver) = async_channel::bounded(250);
         let buffer_pool = Arc::new(crate::pool::BufferPool::new(num_workers, 64 * 1024));
         let sessions = SessionPool::new(
             config.clone(),
