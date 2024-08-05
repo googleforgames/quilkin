@@ -72,7 +72,7 @@ impl Filter for Capture {
             Ok(())
         } else {
             tracing::trace!(key = %self.metadata_key, "No value captured");
-            Err(FilterError::new(NoValueCaptured))
+            Err(FilterError::NoValueCaptured)
         }
     }
 }
@@ -86,10 +86,6 @@ impl StaticFilter for Capture {
         Ok(Capture::new(Self::ensure_config_exists(config)?))
     }
 }
-
-#[derive(thiserror::Error, Debug)]
-#[error("no value captured")]
-struct NoValueCaptured;
 
 #[cfg(test)]
 mod tests {

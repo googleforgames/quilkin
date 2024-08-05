@@ -76,11 +76,11 @@ mod tests {
     #[async_trait::async_trait]
     impl Filter for TestFilter {
         async fn read(&self, _: &mut ReadContext) -> Result<(), FilterError> {
-            Err(FilterError::new("test error"))
+            Err(FilterError::Custom("test error"))
         }
 
         async fn write(&self, _: &mut WriteContext) -> Result<(), FilterError> {
-            Err(FilterError::new("test error"))
+            Err(FilterError::Custom("test error"))
         }
     }
 

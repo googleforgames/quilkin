@@ -46,6 +46,11 @@ pub struct Proxy {
     /// One or more socket addresses to forward packets to.
     #[clap(short, long, env = "QUILKIN_DEST")]
     pub to: Vec<SocketAddr>,
+    /// Assigns dynamic tokens to each address in the `--to` argument
+    ///
+    /// Format is `<number of unique tokens>:<length of token suffix for each packet>`
+    #[clap(short, long, env = "QUILKIN_DEST_TOKENS", requires("to"))]
+    pub to_tokens: Option<String>,
     /// The interval in seconds at which the relay will send a discovery request
     /// to an management server after receiving no updates.
     #[clap(long, env = "QUILKIN_IDLE_REQUEST_INTERVAL_SECS")]
@@ -64,6 +69,7 @@ impl Default for Proxy {
             port: PORT,
             qcmp_port: QCMP_PORT,
             to: <_>::default(),
+            to_tokens: None,
             idle_request_interval_secs: None,
             workers: None,
         }
@@ -97,10 +103,25 @@ impl Proxy {
         let qcmp = crate::net::raw_socket_with_reuse(self.qcmp_port)?;
         let phoenix = crate::net::TcpListener::bind(Some(self.qcmp_port))?;
 
+        let to_tokens = self
+            .to_tokens
+            .map(|tt| {
+                let Some((count, length)) = tt.split_once(':') else {
+                    eyre::bail!("--to-tokens `{tt}` is invalid, it must have a `:` separator")
+                };
+
+                let count = count.parse()?;
+                let length = length.parse()?;
+
+                Ok(crate::components::proxy::ToTokens { count, length })
+            })
+            .transpose()?;
+
         crate::components::proxy::Proxy {
             management_servers: self.management_server,
             mmdb: self.mmdb,
             to: self.to,
+            to_tokens,
             num_workers,
             socket,
             qcmp,

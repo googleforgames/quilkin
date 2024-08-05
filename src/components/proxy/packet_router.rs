@@ -1,6 +1,6 @@
 use super::{
     sessions::{DownstreamReceiver, SessionKey},
-    PipelineError, PipelineErrorDiscriminants, SessionPool,
+    PipelineError, SessionPool,
 };
 use crate::{
     filters::{Filter as _, ReadContext},
@@ -30,7 +30,7 @@ pub struct DownstreamReceiveWorkerConfig {
     pub port: u16,
     pub config: Arc<Config>,
     pub sessions: Arc<SessionPool>,
-    pub error_sender: mpsc::UnboundedSender<PipelineError>,
+    pub error_sender: super::error::ErrorSender,
     pub buffer_pool: Arc<crate::pool::BufferPool>,
 }
 
@@ -118,6 +118,8 @@ impl DownstreamReceiveWorkerConfig {
                 }
             }
 
+            let mut error_acc = super::error::ErrorAccumulator::new(error_sender);
+
             loop {
                 // Initialize a buffer for the UDP packet. We use the maximum size of a UDP
                 // packet, which is the maximum value of 16 a bit integer.
@@ -146,7 +148,7 @@ impl DownstreamReceiveWorkerConfig {
                             worker_id,
                             &config,
                             &sessions,
-                            &error_sender,
+                            &mut error_acc,
                         )
                         .await;
                     }
@@ -170,7 +172,7 @@ impl DownstreamReceiveWorkerConfig {
         worker_id: usize,
         config: &Arc<Config>,
         sessions: &Arc<SessionPool>,
-        error_sender: &mpsc::UnboundedSender<PipelineError>,
+        error_acc: &mut super::error::ErrorAccumulator,
     ) {
         tracing::trace!(
             id = worker_id,
@@ -181,12 +183,15 @@ impl DownstreamReceiveWorkerConfig {
 
         let timer = metrics::processing_time(metrics::READ).start_timer();
         match Self::process_downstream_received_packet(packet, config, sessions).await {
-            Ok(()) => {}
+            Ok(()) => {
+                error_acc.maybe_send();
+            }
             Err(error) => {
-                let discriminant = PipelineErrorDiscriminants::from(&error).to_string();
-                metrics::errors_total(metrics::READ, &discriminant, &metrics::EMPTY).inc();
-                metrics::packets_dropped_total(metrics::READ, &discriminant, &metrics::EMPTY).inc();
-                let _ = error_sender.send(error);
+                let discriminant = error.discriminant();
+                metrics::errors_total(metrics::READ, discriminant, &metrics::EMPTY).inc();
+                metrics::packets_dropped_total(metrics::READ, discriminant, &metrics::EMPTY).inc();
+
+                error_acc.push_error(error);
             }
         }
 
@@ -211,7 +216,10 @@ impl DownstreamReceiveWorkerConfig {
             packet.source.into(),
             packet.contents,
         );
-        filters.read(&mut context).await?;
+        filters
+            .read(&mut context)
+            .await
+            .map_err(PipelineError::Filter)?;
 
         let ReadContext {
             destinations,
@@ -250,7 +258,7 @@ pub async fn spawn_receivers(
     upstream_receiver: DownstreamReceiver,
     buffer_pool: Arc<crate::pool::BufferPool>,
 ) -> crate::Result<Vec<Arc<tokio::sync::Notify>>> {
-    let (error_sender, mut error_receiver) = mpsc::unbounded_channel();
+    let (error_sender, mut error_receiver) = mpsc::channel(128);
 
     let port = crate::net::socket_port(&socket);
 
@@ -269,26 +277,36 @@ pub async fn spawn_receivers(
         worker_notifications.push(worker.spawn().await?);
     }
 
+    drop(error_sender);
+
     tokio::spawn(async move {
         let mut log_task = tokio::time::interval(std::time::Duration::from_secs(5));
 
-        let mut pipeline_errors = std::collections::HashMap::<String, u64>::new();
+        #[allow(clippy::mutable_key_type)]
+        let mut pipeline_errors = super::error::ErrorMap::with_hasher(super::error::SeahashBuilder);
+
+        #[allow(clippy::mutable_key_type)]
+        fn report(errors: &mut super::error::ErrorMap) {
+            for (error, instances) in errors.drain() {
+                tracing::warn!(%error, %instances, "pipeline report");
+            }
+        }
+
         loop {
             tokio::select! {
                 _ = log_task.tick() => {
-                    for (error, instances) in &pipeline_errors {
-                        tracing::warn!(%error, %instances, "pipeline report");
-                    }
-                    pipeline_errors.clear();
+                    report(&mut pipeline_errors);
                 }
                 received = error_receiver.recv() => {
-                    let Some(error) = received else {
+                    let Some(errors) = received else {
+                        report(&mut pipeline_errors);
                         tracing::info!("pipeline reporting task closed");
                         return;
                     };
 
-                    let entry = pipeline_errors.entry(error.to_string()).or_default();
-                    *entry += 1;
+                    for (k, v) in errors {
+                        *pipeline_errors.entry(k).or_default() += v;
+                    }
                 }
             }
         }

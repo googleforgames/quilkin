@@ -17,7 +17,7 @@
 /// On linux spawns a io-uring runtime + thread, everywhere else spawns a regular tokio task.
 macro_rules! uring_spawn {
     ($span:expr, $future:expr) => {{
-        let (tx, rx) = tokio::sync::oneshot::channel::<crate::Result<()>>();
+        let (tx, rx) = tokio::sync::oneshot::channel::<Result<(), std::io::Error>>();
         use tracing::Instrument as _;
 
         cfg_if::cfg_if! {
@@ -37,7 +37,7 @@ macro_rules! uring_spawn {
                             }
                         }
                         Err(error) => {
-                            let _ = tx.send(Err(error.into()));
+                            let _ = tx.send(Err(error));
                         }
                     };
                 }).expect("failed to spawn io-uring thread");

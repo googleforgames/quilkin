@@ -34,12 +34,12 @@ impl Drop {
 impl Filter for Drop {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip_all))]
     async fn read(&self, _: &mut ReadContext) -> Result<(), FilterError> {
-        Err(FilterError::new("intentionally dropped"))
+        Err(FilterError::Dropped)
     }
 
     #[cfg_attr(feature = "instrument", tracing::instrument(skip_all))]
     async fn write(&self, _: &mut WriteContext) -> Result<(), FilterError> {
-        Err(FilterError::new("intentionally dropped"))
+        Err(FilterError::Dropped)
     }
 }
 

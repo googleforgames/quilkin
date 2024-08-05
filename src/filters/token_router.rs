@@ -41,21 +41,17 @@ impl TokenRouter {
                 ctx.destinations = ctx.endpoints.addresses_for_token(tok);
 
                 if ctx.destinations.is_empty() {
-                    Err(FilterError::new(Error::NoEndpointMatch(
-                        self.config.metadata_key,
-                        crate::codec::base64::encode(token),
-                    )))
+                    Err(FilterError::TokenRouter(RouterError::NoEndpointMatch {
+                        token: token.clone(),
+                    }))
                 } else {
                     Ok(())
                 }
             }
-            Some(value) => Err(FilterError::new(Error::InvalidType(
-                self.config.metadata_key,
-                value.clone(),
-            ))),
-            None => Err(FilterError::new(Error::NoTokenFound(
-                self.config.metadata_key,
-            ))),
+            Some(_value) => unreachable!(
+                "this means the capture filter has regressed, it only ever captures byte slices"
+            ),
+            None => Err(FilterError::TokenRouter(RouterError::NoTokenFound)),
         }
     }
 }
@@ -79,14 +75,71 @@ impl Filter for TokenRouter {
     }
 }
 
-#[derive(Debug, thiserror::Error)]
-pub enum Error {
-    #[error("no routing token found for `{0}`")]
-    NoTokenFound(metadata::Key),
-    #[error("key `{0}` was found but wasn't bytes, found {1:?}")]
-    InvalidType(metadata::Key, metadata::Value),
-    #[error("no endpoint matched token `{1}` from `{0}`")]
-    NoEndpointMatch(metadata::Key, String),
+pub enum RouterError {
+    NoTokenFound,
+    NoEndpointMatch { token: bytes::Bytes },
+}
+
+impl RouterError {
+    #[inline]
+    pub fn discriminant(&self) -> &'static str {
+        match self {
+            Self::NoEndpointMatch { .. } => "filter::token_router::no endpoint match",
+            Self::NoTokenFound => "filter::token_router::no token found",
+        }
+    }
+}
+
+use std::fmt;
+
+impl fmt::Display for RouterError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::NoEndpointMatch { token } => {
+                write!(
+                    f,
+                    "no endpoint matched token `{}`",
+                    base64::display::Base64Display::new(
+                        token,
+                        &base64::engine::general_purpose::STANDARD
+                    )
+                )
+            }
+            Self::NoTokenFound => f.write_str("routing token not captured"),
+        }
+    }
+}
+
+impl fmt::Debug for RouterError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::NoEndpointMatch { .. } => f.write_str("no endpoint matched routing token"),
+            Self::NoTokenFound => f.write_str("routing token not captured"),
+        }
+    }
+}
+
+impl Eq for RouterError {}
+
+impl PartialEq for RouterError {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::NoTokenFound, Self::NoTokenFound) => true,
+            (Self::NoEndpointMatch { token: a }, Self::NoEndpointMatch { token: b }) => a == b,
+            _ => false,
+        }
+    }
+}
+
+impl std::hash::Hash for RouterError {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        std::hash::Hash::hash(&std::mem::discriminant(self), state);
+
+        match self {
+            Self::NoEndpointMatch { token } => state.write(token),
+            Self::NoTokenFound => {}
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, schemars::JsonSchema)]
@@ -221,12 +274,6 @@ mod tests {
 
         // no key
         let mut ctx = new_ctx();
-        assert!(filter.read(&mut ctx).await.is_err());
-
-        // wrong type key
-        let mut ctx = new_ctx();
-        ctx.metadata
-            .insert(CAPTURED_BYTES.into(), Value::String(String::from("wrong")));
         assert!(filter.read(&mut ctx).await.is_err());
     }
 

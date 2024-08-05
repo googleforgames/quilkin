@@ -96,9 +96,8 @@ where
 {
     match config {
         Some(config) => {
-            let value = (get_metadata)(ctx, &config.metadata_key).ok_or_else(|| {
-                FilterError::new(format!("no metadata found for {}", config.metadata_key))
-            })?;
+            let value =
+                (get_metadata)(ctx, &config.metadata_key).ok_or(FilterError::MatchNoMetadata)?;
 
             match config.branches.iter().find(|(key, _)| key == value) {
                 Some((value, instance)) => {
