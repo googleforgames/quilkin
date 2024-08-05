@@ -5,6 +5,7 @@
 //! enough that it doesn't make sense to share the same code
 
 use crate::{net::maxmind_db::MetricsIpNetEntry, pool::PoolBuffer};
+use eyre::Context as _;
 use io_uring::types::Fd;
 use std::sync::Arc;
 
@@ -137,7 +138,20 @@ pub struct IoUringLoop {
 }
 
 impl IoUringLoop {
-    pub fn new(concurrent_sends: u16) -> crate::Result<Self> {}
+    pub fn new(concurrent_sends: u16) -> crate::Result<Self> {
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .max_blocking_threads(1)
+            .worker_threads(2)
+            .build()
+            .context("failed to spawn io-uring tokio runtime")?;
+
+        Ok(Self {
+            runtime,
+            tokens: slab::Slab::with_capacity(concurrent_sends as usize + 1 + 1 + 1),
+            pending_packets: slab::Slab::with_capacity(concurrent_sends as usize + 1),
+        })
+    }
 
     pub fn spawn(
         self,
