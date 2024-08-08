@@ -665,3 +665,87 @@ impl IoUringLoop {
         Ok(rx)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    /// This is just a sanity check that eventfd, which we use to notify the io-uring
+    /// loop of events from async tasks, functions as we need to, namely that
+    /// an event posted before the I/O request is submitted to the I/O loop still
+    /// triggers the completion of the I/O request
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn eventfd_works_as_expected() {
+        let event = unsafe { std::os::fd::OwnedFd::from_raw_fd(libc::eventfd(0, 0)) };
+        let event_fd = Fd(event.as_raw_fd());
+
+        // Write even before we create the loop
+        unsafe {
+            libc::eventfd_write(event_fd.0, 1);
+        }
+
+        let mut ring = io_uring::IoUring::new(2).unwrap();
+        let (submitter, mut sq, mut cq) = ring.split();
+
+        let mut buf = 0u64;
+
+        unsafe {
+            sq.push(
+                &io_uring::opcode::Read::new(event_fd, &mut buf as *mut u64 as *mut _, 8)
+                    .build()
+                    .user_data(1),
+            )
+            .unwrap();
+        }
+
+        sq.sync();
+
+        loop {
+            match submitter.submit_and_wait(1) {
+                Ok(_) => {}
+                Err(ref err) if err.raw_os_error() == Some(libc::EBUSY) => {}
+                Err(error) => {
+                    panic!("oh no {error}");
+                }
+            }
+            cq.sync();
+
+            for cqe in &mut cq {
+                assert_eq!(cqe.result(), 8);
+
+                match cqe.user_data() {
+                    // This was written before the loop started, but now write to the event
+                    // before queuing up the next read
+                    1 => {
+                        assert_eq!(buf, 1);
+
+                        unsafe {
+                            libc::eventfd_write(event_fd.0, 9999);
+                        }
+
+                        unsafe {
+                            sq.push(
+                                &io_uring::opcode::Read::new(
+                                    event_fd,
+                                    &mut buf as *mut u64 as *mut _,
+                                    8,
+                                )
+                                .build()
+                                .user_data(2),
+                            )
+                            .unwrap();
+                        }
+                    }
+                    2 => {
+                        assert_eq!(buf, 9999);
+                        return;
+                    }
+                    _ => unreachable!(),
+                }
+            }
+
+            sq.sync();
+        }
+    }
+}

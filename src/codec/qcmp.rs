@@ -369,7 +369,7 @@ pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) -> cra
                                 continue;
                             }
 
-                            buf.len = dbg!(ret as _);
+                            buf.len = ret as _;
                             let received_at = UtcTimestamp::now();
                             let command = match Protocol::parse(&buf) {
                                 Ok(Some(command)) => command,
@@ -398,7 +398,7 @@ pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) -> cra
                             tracing::debug!("sending QCMP ping reply");
 
                             // Update the iovec with the actual length of the pong
-                            iov.iov_len = dbg!(buf.buf.len());
+                            iov.iov_len = buf.buf.len();
 
                             // Note we don't have to do anything else with the msghdr
                             // as the recv has already filled in the socket address
