@@ -18,44 +18,20 @@
 #[cfg(not(target_os = "linux"))]
 macro_rules! uring_spawn {
     ($span:expr, $future:expr) => {{
-        let (tx, rx) = tokio::sync::oneshot::channel::<Result<(), std::io::Error>>();
+        let (tx, rx) = tokio::sync::oneshot::channel::<()>();
         use tracing::Instrument as _;
 
-        cfg_if::cfg_if! {
-            if #[cfg(target_os = "linux")] {
-                let dispatcher = tracing::dispatcher::get_default(|d| d.clone());
-                std::thread::Builder::new().name("io-uring".into()).spawn(move || {
-                    let _guard = tracing::dispatcher::set_default(&dispatcher);
+        use tracing::instrument::WithSubscriber as _;
 
-                    match tokio_uring::Runtime::new(&tokio_uring::builder().entries(2048)) {
-                        Ok(runtime) => {
-                            let _ = tx.send(Ok(()));
+        let fut = async move {
+            let _ = tx.send(());
+            $future.await
+        };
 
-                            if let Some(span) = $span {
-                                runtime.block_on($future.instrument(span));
-                            } else {
-                                runtime.block_on($future);
-                            }
-                        }
-                        Err(error) => {
-                            let _ = tx.send(Err(error));
-                        }
-                    };
-                }).expect("failed to spawn io-uring thread");
-            } else {
-                use tracing::instrument::WithSubscriber as _;
-
-                let fut = async move {
-                    let _ = tx.send(Ok(()));
-                    $future.await
-                };
-
-                if let Some(span) = $span {
-                    tokio::spawn(fut.instrument(span).with_current_subscriber());
-                } else {
-                    tokio::spawn(fut.with_current_subscriber());
-                }
-            }
+        if let Some(span) = $span {
+            tokio::spawn(fut.instrument(span).with_current_subscriber());
+        } else {
+            tokio::spawn(fut.with_current_subscriber());
         }
         rx
     }};
@@ -65,13 +41,7 @@ macro_rules! uring_spawn {
 #[cfg(not(target_os = "linux"))]
 macro_rules! uring_inner_spawn {
     ($future:expr) => {
-        cfg_if::cfg_if! {
-            if #[cfg(target_os = "linux")] {
-                tokio_uring::spawn($future);
-            } else {
-                tokio::spawn($future);
-            }
-        }
+        tokio::spawn($future);
     };
 }
 

@@ -1,7 +1,10 @@
 //! The reference implementation is used for non-Linux targets
 
 impl super::DownstreamReceiveWorkerConfig {
-    pub async fn spawn(self) -> eyre::Result<tokio::sync::oneshot::Receiver<crate::Result<()>>> {
+    pub async fn spawn(
+        self,
+        _shutdown: crate::ShutdownRx,
+    ) -> eyre::Result<tokio::sync::oneshot::Receiver<()>> {
         let Self {
             worker_id,
             upstream_receiver,
@@ -27,7 +30,7 @@ impl super::DownstreamReceiveWorkerConfig {
             let send_socket = socket.clone();
 
             let inner_task = async move {
-                tx.send(Ok(()));
+                let _ = tx.send(());
 
                 loop {
                     tokio::select! {
@@ -38,18 +41,22 @@ impl super::DownstreamReceiveWorkerConfig {
                                     crate::metrics::errors_total(
                                         crate::metrics::WRITE,
                                         &error.to_string(),
-                                        None,
+                                        &crate::metrics::EMPTY,
                                         )
                                         .inc();
                                 }
-                                Ok((data, asn_info, send_addr)) => {
-                                    let (result, _) = send_socket.send_to(data, send_addr).await;
-                                    let asn_info = asn_info.as_ref();
+                                Ok(crate::components::proxy::SendPacket {
+                                    destination,
+                                    asn_info,
+                                    data,
+                                }) => {
+                                    let (result, _) = send_socket.send_to(data, destination).await;
+                                    let asn_info = asn_info.as_ref().into();
                                     match result {
                                         Ok(size) => {
-                                            crate::metrics::packets_total(crate::metrics::WRITE, asn_info)
+                                            crate::metrics::packets_total(crate::metrics::WRITE, &asn_info)
                                                 .inc();
-                                            crate::metrics::bytes_total(crate::metrics::WRITE, asn_info)
+                                            crate::metrics::bytes_total(crate::metrics::WRITE, &asn_info)
                                                 .inc_by(size as u64);
                                         }
                                         Err(error) => {
@@ -57,13 +64,13 @@ impl super::DownstreamReceiveWorkerConfig {
                                             crate::metrics::errors_total(
                                                 crate::metrics::WRITE,
                                                 &source,
-                                                asn_info,
+                                                &asn_info,
                                                 )
                                                 .inc();
                                             crate::metrics::packets_dropped_total(
                                                 crate::metrics::WRITE,
                                                 &source,
-                                                asn_info,
+                                                &asn_info,
                                                 )
                                                 .inc();
                                         }
@@ -83,29 +90,32 @@ impl super::DownstreamReceiveWorkerConfig {
                 }
             }
 
+            let mut error_acc =
+                crate::components::proxy::error::ErrorAccumulator::new(error_sender);
+
             loop {
                 // Initialize a buffer for the UDP packet. We use the maximum size of a UDP
                 // packet, which is the maximum value of 16 a bit integer.
                 let buffer = buffer_pool.clone().alloc();
 
                 let (result, contents) = socket.recv_from(buffer).await;
+                let received_at = crate::time::UtcTimestamp::now();
 
                 match result {
                     Ok((_size, mut source)) => {
                         source.set_ip(source.ip().to_canonical());
-                        let packet = super::DownstreamPacket {
-                            received_at: crate::time::UtcTimestamp::now(),
-                            contents,
-                            source,
-                        };
+                        let packet = super::DownstreamPacket { contents, source };
 
                         if let Some(last_received_at) = last_received_at {
-                            crate::metrics::packet_jitter(crate::metrics::READ, None)
-                                .set((packet.received_at - last_received_at).nanos());
+                            crate::metrics::packet_jitter(
+                                crate::metrics::READ,
+                                &crate::metrics::EMPTY,
+                            )
+                            .set((received_at - last_received_at).nanos());
                         }
-                        last_received_at = Some(packet.received_at);
+                        last_received_at = Some(received_at);
 
-                        Self::process_task(packet, worker_id, &config, &sessions, &error_sender)
+                        Self::process_task(packet, worker_id, &config, &sessions, &mut error_acc)
                             .await;
                     }
                     Err(error) => {
@@ -117,7 +127,7 @@ impl super::DownstreamReceiveWorkerConfig {
         });
 
         use eyre::WrapErr as _;
-        worker.await.context("failed to spawn receiver task")??;
+        worker.await.context("failed to spawn receiver task")?;
         Ok(rx)
     }
 }

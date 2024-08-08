@@ -3,7 +3,7 @@ impl super::SessionPool {
         self: std::sync::Arc<Self>,
         raw_socket: socket2::Socket,
         port: u16,
-        downstream_receiver: tokio::sync::mpsc::Receiver<crate::components::proxy::SendPacket>,
+        mut downstream_receiver: tokio::sync::mpsc::Receiver<crate::components::proxy::SendPacket>,
     ) -> Result<tokio::sync::oneshot::Receiver<()>, crate::components::proxy::PipelineError> {
         let pool = self;
 
@@ -25,7 +25,7 @@ impl super::SessionPool {
                                 crate::metrics::errors_total(
                                     crate::metrics::WRITE,
                                     "downstream channel closed",
-                                    None,
+                                    &crate::metrics::EMPTY,
                                 )
                                 .inc();
                                 break;
@@ -35,18 +35,21 @@ impl super::SessionPool {
                                 data,
                                 asn_info,
                             }) => {
-                                tracing::trace!(%dest, length = data.len(), "sending packet upstream");
+                                tracing::trace!(%destination, length = data.len(), "sending packet upstream");
                                 let (result, _) = socket2.send_to(data, destination).await;
-                                let asn_info = asn_info.as_ref();
+                                let asn_info = asn_info.as_ref().into();
                                 match result {
                                     Ok(size) => {
                                         crate::metrics::packets_total(
                                             crate::metrics::READ,
-                                            asn_info,
+                                            &asn_info,
                                         )
                                         .inc();
-                                        crate::metrics::bytes_total(crate::metrics::READ, asn_info)
-                                            .inc_by(size as u64);
+                                        crate::metrics::bytes_total(
+                                            crate::metrics::READ,
+                                            &asn_info,
+                                        )
+                                        .inc_by(size as u64);
                                     }
                                     Err(error) => {
                                         tracing::trace!(%error, "sending packet upstream failed");
@@ -54,13 +57,13 @@ impl super::SessionPool {
                                         crate::metrics::errors_total(
                                             crate::metrics::READ,
                                             &source,
-                                            asn_info,
+                                            &asn_info,
                                         )
                                         .inc();
                                         crate::metrics::packets_dropped_total(
                                             crate::metrics::READ,
                                             &source,
-                                            asn_info,
+                                            &asn_info,
                                         )
                                         .inc();
                                     }
@@ -80,7 +83,7 @@ impl super::SessionPool {
                             match result {
                                 Err(error) => {
                                     tracing::trace!(%error, "error receiving packet");
-                                    crate::metrics::errors_total(crate::metrics::WRITE, &error.to_string(), None).inc();
+                                    crate::metrics::errors_total(crate::metrics::WRITE, &error.to_string(), &crate::metrics::EMPTY).inc();
                                 },
                                 Ok((_size, recv_addr)) => pool.process_received_upstream_packet(buf, recv_addr, port, &mut last_received_at).await,
                             }

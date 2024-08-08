@@ -23,7 +23,6 @@ use crate::{
     },
     time::{DurationNanos, UtcTimestamp},
 };
-use eyre::Context as _;
 use std::sync::Arc;
 #[cfg(test)]
 use std::time::Duration;
@@ -258,6 +257,7 @@ pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) -> cra
 
 #[cfg(target_os = "linux")]
 pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) -> crate::Result<()> {
+    use eyre::Context as _;
     use std::os::fd::{AsRawFd, FromRawFd};
 
     let port = crate::net::socket_port(&socket);
@@ -400,7 +400,7 @@ pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) -> cra
                             tracing::debug!("sending QCMP ping reply");
 
                             // Update the iovec with the actual length of the pong
-                            iov.iov_len = buf.buf.len();
+                            iov.iov_len = buf.len;
 
                             // Note we don't have to do anything else with the msghdr
                             // as the recv has already filled in the socket address

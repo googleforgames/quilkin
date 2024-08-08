@@ -195,6 +195,7 @@ impl PoolBuffer {
 
     /// Sets the length (number of initialized bytes) for the buffer
     #[inline]
+    #[cfg(target_os = "linux")]
     pub(crate) fn set_len(&mut self, len: usize) {
         unsafe { self.inner.set_len(len) }
     }
