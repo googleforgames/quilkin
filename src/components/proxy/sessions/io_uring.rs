@@ -8,7 +8,7 @@ impl super::SessionPool {
         raw_socket: socket2::Socket,
         port: u16,
         downstream_receiver: tokio::sync::mpsc::Receiver<crate::components::proxy::SendPacket>,
-    ) -> crate::Result<tokio::sync::oneshot::Receiver<()>> {
+    ) -> Result<tokio::sync::oneshot::Receiver<()>, crate::components::proxy::PipelineError> {
         use crate::components::proxy::io_uring_shared;
 
         let pool = self;

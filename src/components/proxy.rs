@@ -6,7 +6,6 @@ mod sessions;
 mod io_uring_shared;
 
 use super::RunArgs;
-use crate::pool::PoolBuffer;
 pub use error::{ErrorMap, PipelineError};
 pub use sessions::SessionPool;
 use std::{
@@ -20,7 +19,7 @@ use std::{
 pub struct SendPacket {
     pub destination: SocketAddr,
     pub data: crate::pool::FrozenPoolBuffer,
-    pub asn_info: Option<MetricsIpNetEntry>,
+    pub asn_info: Option<crate::net::maxmind_db::MetricsIpNetEntry>,
 }
 
 pub struct RecvPacket {

@@ -21,17 +21,19 @@ impl super::DownstreamReceiveWorkerConfig {
             crate::net::DualStackLocalSocket::new(port).context("failed to bind socket")?;
 
         let io_loop = io_uring_shared::IoUringLoop::new(2000, socket)?;
-        io_loop.spawn(
-            format!("packet-router-{worker_id}"),
-            io_uring_shared::PacketProcessorCtx::Router {
-                config,
-                sessions,
-                error_sender,
-                upstream_receiver,
-                worker_id,
-            },
-            buffer_pool,
-            shutdown,
-        )
+        io_loop
+            .spawn(
+                format!("packet-router-{worker_id}"),
+                io_uring_shared::PacketProcessorCtx::Router {
+                    config,
+                    sessions,
+                    error_sender,
+                    upstream_receiver,
+                    worker_id,
+                },
+                buffer_pool,
+                shutdown,
+            )
+            .context("failed to spawn io-uring loop")
     }
 }

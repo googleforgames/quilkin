@@ -5,13 +5,12 @@
 //! enough that it doesn't make sense to share the same code
 
 use crate::{
-    components::proxy,
+    components::proxy::{self, PipelineError},
     metrics,
     net::maxmind_db::MetricsIpNetEntry,
     pool::{FrozenPoolBuffer, PoolBuffer},
     time::UtcTimestamp,
 };
-use eyre::Context as _;
 use io_uring::{squeue::Entry, types::Fd};
 use socket2::SockAddr;
 use std::{
@@ -166,7 +165,7 @@ pub enum PacketProcessorCtx {
     Router {
         config: Arc<crate::config::Config>,
         sessions: Arc<crate::components::proxy::SessionPool>,
-        error_sender: tokio::sync::mpsc::UnboundedSender<crate::components::proxy::PipelineError>,
+        error_sender: super::error::ErrorSender,
         /// Receiver for upstream packets being sent to this downstream
         upstream_receiver: crate::components::proxy::sessions::DownstreamReceiver,
         worker_id: usize,
@@ -214,6 +213,8 @@ fn spawn_workers(
             rt.spawn(async move {
                 let mut last_received_at = None;
 
+                let mut error_acc = super::error::ErrorAccumulator::new(error_sender);
+
                 while let Some(packet) = rx.recv().await {
                     let received_at = UtcTimestamp::now();
                     if let Some(last_received_at) = last_received_at {
@@ -232,7 +233,7 @@ fn spawn_workers(
                         worker_id,
                         &config,
                         &sessions,
-                        &error_sender,
+                        &mut error_acc,
                     )
                     .await;
 
@@ -457,13 +458,12 @@ impl IoUringLoop {
     pub fn new(
         concurrent_sends: u16,
         socket: crate::net::DualStackLocalSocket,
-    ) -> crate::Result<Self> {
+    ) -> Result<Self, PipelineError> {
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .enable_all()
             .max_blocking_threads(1)
             .worker_threads(3)
-            .build()
-            .context("failed to spawn io-uring tokio runtime")?;
+            .build()?;
 
         Ok(Self {
             runtime,
@@ -478,7 +478,7 @@ impl IoUringLoop {
         ctx: PacketProcessorCtx,
         buffer_pool: Arc<crate::pool::BufferPool>,
         shutdown: crate::ShutdownRx,
-    ) -> crate::Result<tokio::sync::oneshot::Receiver<()>> {
+    ) -> Result<tokio::sync::oneshot::Receiver<()>, PipelineError> {
         let dispatcher = tracing::dispatcher::get_default(|d| d.clone());
         let (tx, rx) = tokio::sync::oneshot::channel();
 
@@ -486,8 +486,7 @@ impl IoUringLoop {
         let socket = self.socket;
         let concurrent_sends = self.concurrent_sends;
 
-        let mut ring = io_uring::IoUring::new((concurrent_sends + 3) as _)
-            .context("unable to create io uring")?;
+        let mut ring = io_uring::IoUring::new((concurrent_sends + 3) as _)?;
 
         std::thread::Builder::new()
             .name(thread_name)
