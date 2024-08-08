@@ -194,7 +194,7 @@ impl Measurement for QcmpMeasurement {
 }
 
 #[cfg(not(target_os = "linux"))]
-pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) {
+pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) -> crate::Result<()> {
     let port = crate::net::socket_port(&socket);
 
     uring_spawn!(uring_span!(tracing::debug_span!("qcmp")), async move {
@@ -252,6 +252,8 @@ pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) {
             };
         }
     });
+
+    Ok(())
 }
 
 #[cfg(target_os = "linux")]

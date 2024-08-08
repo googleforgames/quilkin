@@ -93,8 +93,8 @@ impl super::DownstreamReceiveWorkerConfig {
                 match result {
                     Ok((_size, mut source)) => {
                         source.set_ip(source.ip().to_canonical());
-                        let packet = DownstreamPacket {
-                            received_at: UtcTimestamp::now(),
+                        let packet = super::DownstreamPacket {
+                            received_at: crate::time::UtcTimestamp::now(),
                             contents,
                             source,
                         };

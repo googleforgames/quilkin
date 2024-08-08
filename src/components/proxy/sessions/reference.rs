@@ -3,8 +3,8 @@ impl super::SessionPool {
         self: std::sync::Arc<Self>,
         raw_socket: socket2::Socket,
         port: u16,
-        downstream_receiver: tokio::sync::mpsc::Receiver<super::UpstreamPacket>,
-    ) -> crate::Result<tokio::sync::oneshot::Receiver<crate::Result<()>>> {
+        downstream_receiver: tokio::sync::mpsc::Receiver<crate::components::proxy::SendPacket>,
+    ) -> Result<tokio::sync::oneshot::Receiver<()>, crate::components::proxy::PipelineError> {
         let pool = self;
 
         let rx = uring_spawn!(
@@ -13,8 +13,10 @@ impl super::SessionPool {
                 let mut last_received_at = None;
                 let mut shutdown_rx = pool.shutdown_rx.clone();
 
-                let socket = std::sync::Arc::new(DualStackLocalSocket::from_raw(raw_socket));
+                let socket =
+                    std::sync::Arc::new(crate::net::DualStackLocalSocket::from_raw(raw_socket));
                 let socket2 = socket.clone();
+                let (tx, mut rx) = tokio::sync::oneshot::channel();
 
                 uring_inner_spawn!(async move {
                     loop {
@@ -28,13 +30,13 @@ impl super::SessionPool {
                                 .inc();
                                 break;
                             }
-                            Some(UpstreamPacket {
-                                dest,
+                            Some(crate::components::proxy::SendPacket {
+                                destination,
                                 data,
                                 asn_info,
                             }) => {
                                 tracing::trace!(%dest, length = data.len(), "sending packet upstream");
-                                let (result, _) = socket2.send_to(data, dest).await;
+                                let (result, _) = socket2.send_to(data, destination).await;
                                 let asn_info = asn_info.as_ref();
                                 match result {
                                     Ok(size) => {
@@ -67,7 +69,7 @@ impl super::SessionPool {
                         }
                     }
 
-                    let _ = initialised.send(());
+                    let _ = tx.send(());
                 });
 
                 loop {
