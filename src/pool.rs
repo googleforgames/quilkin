@@ -233,37 +233,6 @@ impl std::ops::DerefMut for PoolBuffer {
     }
 }
 
-// #[cfg(target_os = "linux")]
-// unsafe impl tokio_uring::buf::IoBufMut for PoolBuffer {
-//     #[inline]
-//     fn stable_mut_ptr(&mut self) -> *mut u8 {
-//         self.inner.stable_mut_ptr()
-//     }
-
-//     #[inline]
-//     unsafe fn set_init(&mut self, pos: usize) {
-//         self.inner.set_init(pos)
-//     }
-// }
-
-// #[cfg(target_os = "linux")]
-// unsafe impl tokio_uring::buf::IoBuf for PoolBuffer {
-//     #[inline]
-//     fn stable_ptr(&self) -> *const u8 {
-//         self.inner.stable_ptr()
-//     }
-
-//     #[inline]
-//     fn bytes_init(&self) -> usize {
-//         self.inner.bytes_init()
-//     }
-
-//     #[inline]
-//     fn bytes_total(&self) -> usize {
-//         self.inner.bytes_total()
-//     }
-// }
-
 impl Drop for PoolBuffer {
     #[inline]
     fn drop(&mut self) {
@@ -298,24 +267,6 @@ impl FrozenPoolBuffer {
         self.inner.is_empty()
     }
 }
-
-// #[cfg(target_os = "linux")]
-// unsafe impl tokio_uring::buf::IoBuf for FrozenPoolBuffer {
-//     #[inline]
-//     fn stable_ptr(&self) -> *const u8 {
-//         self.inner.stable_ptr()
-//     }
-
-//     #[inline]
-//     fn bytes_init(&self) -> usize {
-//         self.inner.bytes_init()
-//     }
-
-//     #[inline]
-//     fn bytes_total(&self) -> usize {
-//         self.inner.bytes_total()
-//     }
-// }
 
 impl std::ops::Deref for FrozenPoolBuffer {
     type Target = [u8];
