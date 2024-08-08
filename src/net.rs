@@ -54,7 +54,7 @@ macro_rules! uring_span {
             if #[cfg(debug_assertions)] {
                 Some($span)
             } else {
-                None
+                Option::<tracing::Span>::None
             }
         }
     }};
