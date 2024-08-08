@@ -1,7 +1,7 @@
 //! The reference implementation is used for non-Linux targets
 
 impl super::DownstreamReceiveWorkerConfig {
-    pub async fn spawn(self) -> eyre::Result<Arc<tokio::sync::Notify>> {
+    pub async fn spawn(self) -> eyre::Result<tokio::sync::oneshot::Receiver<crate::Result<()>>> {
         let Self {
             worker_id,
             upstream_receiver,
@@ -12,8 +12,7 @@ impl super::DownstreamReceiveWorkerConfig {
             buffer_pool,
         } = self;
 
-        let notify = Arc::new(tokio::sync::Notify::new());
-        let is_ready = notify.clone();
+        let (tx, rx) = tokio::sync::oneshot::channel();
 
         let thread_span =
             uring_span!(tracing::debug_span!("receiver", id = worker_id).or_current());
@@ -28,7 +27,7 @@ impl super::DownstreamReceiveWorkerConfig {
             let send_socket = socket.clone();
 
             let inner_task = async move {
-                is_ready.notify_one();
+                tx.send(Ok(()));
 
                 loop {
                     tokio::select! {
@@ -106,15 +105,8 @@ impl super::DownstreamReceiveWorkerConfig {
                         }
                         last_received_at = Some(packet.received_at);
 
-                        Self::process_task(
-                            packet,
-                            source,
-                            worker_id,
-                            &config,
-                            &sessions,
-                            &error_sender,
-                        )
-                        .await;
+                        Self::process_task(packet, worker_id, &config, &sessions, &error_sender)
+                            .await;
                     }
                     Err(error) => {
                         tracing::error!(%error, "error receiving packet");
@@ -126,6 +118,6 @@ impl super::DownstreamReceiveWorkerConfig {
 
         use eyre::WrapErr as _;
         worker.await.context("failed to spawn receiver task")??;
-        Ok(notify)
+        Ok(rx)
     }
 }

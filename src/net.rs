@@ -15,6 +15,7 @@
  */
 
 /// On linux spawns a io-uring runtime + thread, everywhere else spawns a regular tokio task.
+#[cfg(not(target_os = "linux"))]
 macro_rules! uring_spawn {
     ($span:expr, $future:expr) => {{
         let (tx, rx) = tokio::sync::oneshot::channel::<Result<(), std::io::Error>>();
@@ -61,6 +62,7 @@ macro_rules! uring_spawn {
 }
 
 /// On linux spawns a io-uring task, everywhere else spawns a regular tokio task.
+#[cfg(not(target_os = "linux"))]
 macro_rules! uring_inner_spawn {
     ($future:expr) => {
         cfg_if::cfg_if! {
@@ -121,7 +123,6 @@ fn socket_with_reuse_and_address(addr: SocketAddr) -> std::io::Result<UdpSocket>
         if #[cfg(target_os = "linux")] {
             raw_socket_with_reuse_and_address(addr)
                 .map(From::from)
-                .map(UdpSocket::from_std)
         } else {
             epoll_socket_with_reuse_and_address(addr)
         }

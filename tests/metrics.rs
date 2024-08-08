@@ -87,6 +87,7 @@ async fn metrics_server() {
         .to_bytes();
 
     let response = String::from_utf8(resp.to_vec()).unwrap();
+    std::fs::write("wtf.txt", &response).unwrap();
     let read_regex = regex::Regex::new(r#"quilkin_packets_total\{.*event="read".*\} 2"#).unwrap();
     let write_regex = regex::Regex::new(r#"quilkin_packets_total\{.*event="write".*\} 2"#).unwrap();
     assert!(read_regex.is_match(&response));

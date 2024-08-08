@@ -17,6 +17,17 @@ use std::{
     },
 };
 
+pub struct SendPacket {
+    pub destination: SocketAddr,
+    pub data: crate::pool::FrozenPoolBuffer,
+    pub asn_info: Option<MetricsIpNetEntry>,
+}
+
+pub struct RecvPacket {
+    pub source: SocketAddr,
+    pub data: crate::pool::PoolBuffer,
+}
+
 #[derive(Clone, Debug)]
 pub struct Ready {
     pub idle_request_interval: std::time::Duration,
@@ -261,10 +272,11 @@ impl Proxy {
             &sessions,
             upstream_receiver,
             buffer_pool,
+            shutdown_rx.clone(),
         )
         .await?;
 
-        crate::codec::qcmp::spawn(self.qcmp, shutdown_rx.clone());
+        crate::codec::qcmp::spawn(self.qcmp, shutdown_rx.clone())?;
         crate::net::phoenix::spawn(
             self.phoenix,
             config.clone(),
@@ -273,7 +285,7 @@ impl Proxy {
         )?;
 
         for notification in worker_notifications {
-            notification.notified().await;
+            let _ = notification.await;
         }
 
         tracing::info!("Quilkin is ready");

@@ -1,7 +1,7 @@
 impl super::SessionPool {
     pub(super) fn spawn_session(
         self: std::sync::Arc<Self>,
-        socket: socket2::Socket,
+        raw_socket: socket2::Socket,
         port: u16,
         downstream_receiver: tokio::sync::mpsc::Receiver<super::UpstreamPacket>,
     ) -> crate::Result<tokio::sync::oneshot::Receiver<crate::Result<()>>> {

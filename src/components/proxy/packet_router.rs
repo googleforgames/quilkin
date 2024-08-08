@@ -6,7 +6,6 @@ use crate::{
     filters::{Filter as _, ReadContext},
     metrics,
     pool::PoolBuffer,
-    time::UtcTimestamp,
     Config,
 };
 use std::{net::SocketAddr, sync::Arc};
@@ -18,11 +17,10 @@ mod io_uring;
 mod reference;
 
 /// Packet received from local port
-#[derive(Debug)]
-struct DownstreamPacket {
-    contents: PoolBuffer,
-    received_at: UtcTimestamp,
-    source: SocketAddr,
+pub(crate) struct DownstreamPacket {
+    pub(crate) contents: PoolBuffer,
+    //received_at: UtcTimestamp,
+    pub(crate) source: SocketAddr,
 }
 
 /// Represents the required arguments to run a worker task that
@@ -41,9 +39,8 @@ pub struct DownstreamReceiveWorkerConfig {
 
 impl DownstreamReceiveWorkerConfig {
     #[inline]
-    async fn process_task(
+    pub(crate) async fn process_task(
         packet: DownstreamPacket,
-        source: std::net::SocketAddr,
         worker_id: usize,
         config: &Arc<Config>,
         sessions: &Arc<SessionPool>,
@@ -52,7 +49,7 @@ impl DownstreamReceiveWorkerConfig {
         tracing::trace!(
             id = worker_id,
             size = packet.contents.len(),
-            source = %source,
+            source = %packet.source,
             "received packet from downstream"
         );
 
@@ -132,7 +129,8 @@ pub async fn spawn_receivers(
     sessions: &Arc<SessionPool>,
     upstream_receiver: DownstreamReceiver,
     buffer_pool: Arc<crate::pool::BufferPool>,
-) -> crate::Result<Vec<Arc<tokio::sync::Notify>>> {
+    shutdown: crate::ShutdownRx,
+) -> crate::Result<Vec<tokio::sync::oneshot::Receiver<()>>> {
     let (error_sender, mut error_receiver) = mpsc::channel(128);
 
     let port = crate::net::socket_port(&socket);
@@ -149,7 +147,7 @@ pub async fn spawn_receivers(
             buffer_pool: buffer_pool.clone(),
         };
 
-        worker_notifications.push(worker.spawn().await?);
+        worker_notifications.push(worker.spawn(shutdown.clone()).await?);
     }
 
     drop(error_sender);

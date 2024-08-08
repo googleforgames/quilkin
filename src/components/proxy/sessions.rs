@@ -28,6 +28,7 @@ use tokio::{
 };
 
 use crate::{
+    components::proxy::{PipelineError, SendPacket},
     config::Config,
     filters::Filter,
     metrics,
@@ -46,22 +47,10 @@ mod io_uring;
 #[cfg(not(target_os = "linux"))]
 mod reference;
 
-pub struct UpstreamPacket {
-    pub dest: SocketAddr,
-    pub data: FrozenPoolBuffer,
-    pub asn_info: Option<MetricsIpNetEntry>,
-}
+type UpstreamSender = mpsc::Sender<super::SendPacket>;
 
-type UpstreamSender = mpsc::Sender<UpstreamPacket>;
-
-pub struct DownstreamPacket {
-    pub destination: SocketAddr,
-    pub data: PoolBuffer,
-    pub asn_info: Option<MetricsIpNetEntry>,
-}
-
-type DownstreamSender = async_channel::Sender<DownstreamPacket>;
-pub type DownstreamReceiver = async_channel::Receiver<DownstreamPacket>;
+type DownstreamSender = async_channel::Sender<super::SendPacket>;
+pub type DownstreamReceiver = async_channel::Receiver<super::SendPacket>;
 
 #[derive(PartialEq, Eq, Hash)]
 pub enum SessionError {
@@ -156,12 +145,14 @@ impl SessionPool {
             .as_socket()
             .ok_or(SessionError::SocketAddressUnavailable)?
             .port();
-        let (downstream_sender, downstream_receiver) = mpsc::channel::<UpstreamPacket>(15);
+        let (downstream_sender, downstream_receiver) = mpsc::channel::<super::SendPacket>(15);
 
         let initialised = self
             .clone()
             .spawn_session(raw_socket, port, downstream_receiver)?;
-        initialised.await.map_err(|error| eyre::eyre!(error))??;
+        initialised
+            .await
+            .map_err(|_err| PipelineError::ChannelClosed)?;
 
         self.ports_to_sockets
             .write()
@@ -171,7 +162,7 @@ impl SessionPool {
             .await
     }
 
-    async fn process_received_upstream_packet(
+    pub(crate) async fn process_received_upstream_packet(
         self: &Arc<Self>,
         packet: PoolBuffer,
         mut recv_addr: SocketAddr,
@@ -359,10 +350,10 @@ impl SessionPool {
             return Err((asn_info, err.into()));
         }
 
-        let packet = context.contents;
+        let packet = context.contents.freeze();
         tracing::trace!(%source, %dest, length = packet.len(), "sending packet downstream");
         downstream_sender
-            .try_send(DownstreamPacket {
+            .try_send(SendPacket {
                 data: packet,
                 destination: dest,
                 asn_info,
@@ -392,10 +383,10 @@ impl SessionPool {
         let (asn_info, sender) = self.get(key).await?;
 
         sender
-            .try_send(UpstreamPacket {
+            .try_send(crate::components::proxy::SendPacket {
                 data: packet,
                 asn_info,
-                dest: key.dest,
+                destination: key.dest,
             })
             .map_err(|error| match error {
                 TrySendError::Closed(_) => super::PipelineError::ChannelClosed,

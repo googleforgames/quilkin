@@ -255,7 +255,7 @@ pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) {
 }
 
 #[cfg(target_os = "linux")]
-pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) {
+pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) -> crate::Result<()> {
     use std::os::fd::{AsRawFd, FromRawFd};
 
     let port = crate::net::socket_port(&socket);
@@ -263,6 +263,7 @@ pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) {
     // Create an eventfd so we can signal to the qcmp loop when we want to exit
     // SAFETY: syscall
     let shutdown_event = unsafe { std::os::fd::OwnedFd::from_raw_fd(libc::eventfd(0, 0)) };
+    let shutdown_event_fd = shutdown_event.as_raw_fd();
 
     // Spawn a task on the main loop whose sole purpose is to signal the eventfd
     tokio::task::spawn(async move {
@@ -274,7 +275,7 @@ pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) {
         }
     });
 
-    let thread_span = uring_span!(tracing::debug_span!("qcmp").or_current());
+    let _thread_span = uring_span!(tracing::debug_span!("qcmp").or_current());
     let dispatcher = tracing::dispatcher::get_default(|d| d.clone());
 
     std::thread::Builder::new()
@@ -282,8 +283,8 @@ pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) {
         .spawn(move || -> eyre::Result<()> {
             let _guard = tracing::dispatcher::set_default(&dispatcher);
 
-            let mut ring = io_uring::IoUring::new(2).context("unable to create io uring")?;
-            let (submitter, mut sq, cq) = ring.split();
+            let mut ring = io_uring::IoUring::new(3).context("unable to create io uring")?;
+            let (submitter, mut sq, mut cq) = ring.split();
 
             const RECV: u64 = 0;
             const SEND: u64 = 1;
@@ -294,7 +295,7 @@ pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) {
             let mut shutdown_buf = 0u64;
             {
                 let entry = io_uring::opcode::Read::new(
-                    io_uring::types::Fd(shutdown_event.as_raw_fd()),
+                    io_uring::types::Fd(shutdown_event_fd),
                     (&mut shutdown_buf as *mut u64).cast(),
                     8,
                 )
@@ -308,7 +309,7 @@ pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) {
             // so we just reuse the same buffer for both receives and sends
             let mut buf = QcmpPacket::default();
             let mut msghdr: libc::msghdr = unsafe { std::mem::zeroed() };
-            let mut addr = unsafe {
+            let addr = unsafe {
                 socket2::SockAddr::new(
                     std::mem::zeroed(),
                     std::mem::size_of::<libc::sockaddr_storage>() as _,
@@ -317,7 +318,7 @@ pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) {
 
             let mut iov = libc::iovec {
                 iov_base: buf.buf.as_mut_ptr() as *mut _,
-                iov_len: buf.buf.len(),
+                iov_len: 0,
             };
 
             msghdr.msg_iov = std::ptr::addr_of_mut!(iov);
@@ -325,21 +326,24 @@ pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) {
             msghdr.msg_name = addr.as_ptr() as *mut libc::sockaddr_storage as *mut _;
             msghdr.msg_namelen = addr.len();
 
+            let msghdr_mut = std::ptr::addr_of_mut!(msghdr);
+
             let socket = DualStackLocalSocket::new(port)
                 .context("failed to create already bound qcmp socket")?;
             let socket_fd = socket.raw_fd();
 
-            let mut enqueue_recv = || -> eyre::Result<()> {
-                let entry =
-                    io_uring::opcode::RecvMsg::new(socket_fd, std::ptr::addr_of_mut!(msghdr))
+            let enqueue_recv =
+                |sq: &mut io_uring::SubmissionQueue, iov: &mut libc::iovec| -> eyre::Result<()> {
+                    iov.iov_len = MAX_QCMP_PACKET_LEN;
+                    let entry = io_uring::opcode::RecvMsg::new(socket_fd, msghdr_mut)
                         .build()
                         .user_data(RECV);
-                // SAFETY: syscall
-                unsafe { sq.push(&entry) }.context("unable to insert io-uring entry")?;
-                Ok(())
-            };
+                    // SAFETY: syscall
+                    unsafe { sq.push(&entry) }.context("unable to insert io-uring entry")?;
+                    Ok(())
+                };
 
-            enqueue_recv()?;
+            enqueue_recv(&mut sq, &mut iov)?;
 
             sq.sync();
 
@@ -365,7 +369,7 @@ pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) {
                                 continue;
                             }
 
-                            buf.len = ret as _;
+                            buf.len = dbg!(ret as _);
                             let received_at = UtcTimestamp::now();
                             let command = match Protocol::parse(&buf) {
                                 Ok(Some(command)) => command,
@@ -394,7 +398,7 @@ pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) {
                             tracing::debug!("sending QCMP ping reply");
 
                             // Update the iovec with the actual length of the pong
-                            iov.iov_len = buf.buf.len();
+                            iov.iov_len = dbg!(buf.buf.len());
 
                             // Note we don't have to do anything else with the msghdr
                             // as the recv has already filled in the socket address
@@ -431,12 +435,14 @@ pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) {
                 }
 
                 if !has_pending_send {
-                    enqueue_recv()?;
+                    enqueue_recv(&mut sq, &mut iov)?;
                 }
 
                 sq.sync();
             }
-        });
+        })?;
+
+    Ok(())
 }
 
 /// The set of possible QCMP commands.
@@ -851,7 +857,7 @@ mod tests {
         let addr = socket.local_addr().unwrap().as_socket().unwrap();
 
         let (_tx, rx) = crate::make_shutdown_channel(Default::default());
-        spawn(socket, rx);
+        spawn(socket, rx).unwrap();
 
         let delay = Duration::from_millis(50);
         let node = QcmpMeasurement::with_artificial_delay(delay).unwrap();
