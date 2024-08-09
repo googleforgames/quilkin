@@ -38,6 +38,9 @@ categories = ["game-development", "network-programming"]
 edition.workspace = true
 exclude = ["docs", "build", "examples", "image"]
 
+[lints]
+workspace = true
+
 [[bench]]
 name = "read_write"
 harness = false
@@ -227,3 +230,6 @@ fixedstr = { version = "0.5", features = ["flex-str"] }
 parking_lot = "0.12.1"
 schemars = { version = "0.8.15", features = ["bytes", "url"] }
 url = { version = "2.4.1", features = ["serde"] }
+
+[workspace.lints.clippy]
+undocumented_unsafe_blocks = "deny"

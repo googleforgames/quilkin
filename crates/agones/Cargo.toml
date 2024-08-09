@@ -23,6 +23,9 @@ license = "Apache-2.0"
 description = "End to end integration tests to be run against a Kubernetes cluster with Agones installed"
 readme = "README.md"
 
+[lints]
+workspace = true
+
 [dependencies]
 base64.workspace = true
 futures.workspace = true

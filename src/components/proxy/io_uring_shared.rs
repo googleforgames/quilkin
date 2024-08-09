@@ -715,6 +715,7 @@ mod test {
     /// triggers the completion of the I/O request
     #[test]
     #[cfg(target_os = "linux")]
+    #[allow(clippy::undocumented_unsafe_blocks)]
     fn eventfd_works_as_expected() {
         let mut event = EventFd::new().unwrap();
         let event_writer = event.writer();
