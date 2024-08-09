@@ -2,8 +2,10 @@ mod error;
 pub mod packet_router;
 mod sessions;
 
+#[cfg(target_os = "linux")]
+pub(crate) mod io_uring_shared;
+
 use super::RunArgs;
-use crate::pool::PoolBuffer;
 pub use error::{ErrorMap, PipelineError};
 pub use sessions::SessionPool;
 use std::{
@@ -13,6 +15,17 @@ use std::{
         Arc,
     },
 };
+
+pub struct SendPacket {
+    pub destination: SocketAddr,
+    pub data: crate::pool::FrozenPoolBuffer,
+    pub asn_info: Option<crate::net::maxmind_db::MetricsIpNetEntry>,
+}
+
+pub struct RecvPacket {
+    pub source: SocketAddr,
+    pub data: crate::pool::PoolBuffer,
+}
 
 #[derive(Clone, Debug)]
 pub struct Ready {
@@ -182,11 +195,7 @@ impl Proxy {
         let id = config.id.load();
         let num_workers = self.num_workers.get();
 
-        let (upstream_sender, upstream_receiver) = async_channel::bounded::<(
-            PoolBuffer,
-            Option<crate::net::maxmind_db::MetricsIpNetEntry>,
-            SocketAddr,
-        )>(250);
+        let (upstream_sender, upstream_receiver) = async_channel::bounded(250);
         let buffer_pool = Arc::new(crate::pool::BufferPool::new(num_workers, 64 * 1024));
         let sessions = SessionPool::new(
             config.clone(),
@@ -262,10 +271,11 @@ impl Proxy {
             &sessions,
             upstream_receiver,
             buffer_pool,
+            shutdown_rx.clone(),
         )
         .await?;
 
-        crate::codec::qcmp::spawn(self.qcmp, shutdown_rx.clone());
+        crate::codec::qcmp::spawn(self.qcmp, shutdown_rx.clone())?;
         crate::net::phoenix::spawn(
             self.phoenix,
             config.clone(),
@@ -274,7 +284,7 @@ impl Proxy {
         )?;
 
         for notification in worker_notifications {
-            notification.notified().await;
+            let _ = notification.await;
         }
 
         tracing::info!("Quilkin is ready");

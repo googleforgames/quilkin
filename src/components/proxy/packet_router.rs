@@ -6,18 +6,21 @@ use crate::{
     filters::{Filter as _, ReadContext},
     metrics,
     pool::PoolBuffer,
-    time::UtcTimestamp,
     Config,
 };
 use std::{net::SocketAddr, sync::Arc};
 use tokio::sync::mpsc;
 
+#[cfg(target_os = "linux")]
+mod io_uring;
+#[cfg(not(target_os = "linux"))]
+mod reference;
+
 /// Packet received from local port
-#[derive(Debug)]
-struct DownstreamPacket {
-    contents: PoolBuffer,
-    received_at: UtcTimestamp,
-    source: SocketAddr,
+pub(crate) struct DownstreamPacket {
+    pub(crate) contents: PoolBuffer,
+    //received_at: UtcTimestamp,
+    pub(crate) source: SocketAddr,
 }
 
 /// Represents the required arguments to run a worker task that
@@ -35,140 +38,9 @@ pub struct DownstreamReceiveWorkerConfig {
 }
 
 impl DownstreamReceiveWorkerConfig {
-    pub async fn spawn(self) -> eyre::Result<Arc<tokio::sync::Notify>> {
-        let Self {
-            worker_id,
-            upstream_receiver,
-            port,
-            config,
-            sessions,
-            error_sender,
-            buffer_pool,
-        } = self;
-
-        let notify = Arc::new(tokio::sync::Notify::new());
-        let is_ready = notify.clone();
-
-        let thread_span =
-            uring_span!(tracing::debug_span!("receiver", id = worker_id).or_current());
-
-        let worker = uring_spawn!(thread_span, async move {
-            let mut last_received_at = None;
-            let socket = crate::net::DualStackLocalSocket::new(port)
-                .unwrap()
-                .make_refcnt();
-
-            tracing::trace!(port, "bound worker");
-            let send_socket = socket.clone();
-
-            let inner_task = async move {
-                is_ready.notify_one();
-
-                loop {
-                    tokio::select! {
-                        result = upstream_receiver.recv() => {
-                            match result {
-                                Err(error) => {
-                                    tracing::trace!(%error, "error receiving packet");
-                                    metrics::errors_total(
-                                        metrics::WRITE,
-                                        &error.to_string(),
-                                        &metrics::EMPTY,
-                                        )
-                                        .inc();
-                                }
-                                Ok((data, asn_info, send_addr)) => {
-                                    let (result, _) = send_socket.send_to(data, send_addr).await;
-                                    let asn_info = asn_info.as_ref().into();
-                                    match result {
-                                        Ok(size) => {
-                                            metrics::packets_total(metrics::WRITE, &asn_info)
-                                                .inc();
-                                            metrics::bytes_total(metrics::WRITE, &asn_info)
-                                                .inc_by(size as u64);
-                                        }
-                                        Err(error) => {
-                                            let source = error.to_string();
-                                            metrics::errors_total(
-                                                metrics::WRITE,
-                                                &source,
-                                                &asn_info,
-                                                )
-                                                .inc();
-                                            metrics::packets_dropped_total(
-                                                metrics::WRITE,
-                                                &source,
-                                                &asn_info,
-                                                )
-                                                .inc();
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            };
-
-            cfg_if::cfg_if! {
-                if #[cfg(debug_assertions)] {
-                    uring_inner_spawn!(inner_task.instrument(tracing::debug_span!("upstream").or_current()));
-                } else {
-                    uring_inner_spawn!(inner_task);
-                }
-            }
-
-            let mut error_acc = super::error::ErrorAccumulator::new(error_sender);
-
-            loop {
-                // Initialize a buffer for the UDP packet. We use the maximum size of a UDP
-                // packet, which is the maximum value of 16 a bit integer.
-                let buffer = buffer_pool.clone().alloc();
-
-                let (result, contents) = socket.recv_from(buffer).await;
-
-                match result {
-                    Ok((_size, mut source)) => {
-                        source.set_ip(source.ip().to_canonical());
-                        let packet = DownstreamPacket {
-                            received_at: UtcTimestamp::now(),
-                            contents,
-                            source,
-                        };
-
-                        if let Some(last_received_at) = last_received_at {
-                            metrics::packet_jitter(metrics::READ, &metrics::EMPTY)
-                                .set((packet.received_at - last_received_at).nanos());
-                        }
-                        last_received_at = Some(packet.received_at);
-
-                        Self::process_task(
-                            packet,
-                            source,
-                            worker_id,
-                            &config,
-                            &sessions,
-                            &mut error_acc,
-                        )
-                        .await;
-                    }
-                    Err(error) => {
-                        tracing::error!(%error, "error receiving packet");
-                        return;
-                    }
-                }
-            }
-        });
-
-        use eyre::WrapErr as _;
-        worker.await.context("failed to spawn receiver task")??;
-        Ok(notify)
-    }
-
     #[inline]
-    async fn process_task(
+    pub(crate) async fn process_task(
         packet: DownstreamPacket,
-        source: std::net::SocketAddr,
         worker_id: usize,
         config: &Arc<Config>,
         sessions: &Arc<SessionPool>,
@@ -177,7 +49,7 @@ impl DownstreamReceiveWorkerConfig {
         tracing::trace!(
             id = worker_id,
             size = packet.contents.len(),
-            source = %source,
+            source = %packet.source,
             "received packet from downstream"
         );
 
@@ -257,7 +129,8 @@ pub async fn spawn_receivers(
     sessions: &Arc<SessionPool>,
     upstream_receiver: DownstreamReceiver,
     buffer_pool: Arc<crate::pool::BufferPool>,
-) -> crate::Result<Vec<Arc<tokio::sync::Notify>>> {
+    shutdown: crate::ShutdownRx,
+) -> crate::Result<Vec<tokio::sync::oneshot::Receiver<()>>> {
     let (error_sender, mut error_receiver) = mpsc::channel(128);
 
     let port = crate::net::socket_port(&socket);
@@ -274,7 +147,7 @@ pub async fn spawn_receivers(
             buffer_pool: buffer_pool.clone(),
         };
 
-        worker_notifications.push(worker.spawn().await?);
+        worker_notifications.push(worker.spawn(shutdown.clone()).await?);
     }
 
     drop(error_sender);

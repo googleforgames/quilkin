@@ -15,61 +15,33 @@
  */
 
 /// On linux spawns a io-uring runtime + thread, everywhere else spawns a regular tokio task.
+#[cfg(not(target_os = "linux"))]
 macro_rules! uring_spawn {
     ($span:expr, $future:expr) => {{
-        let (tx, rx) = tokio::sync::oneshot::channel::<Result<(), std::io::Error>>();
+        let (tx, rx) = tokio::sync::oneshot::channel::<()>();
         use tracing::Instrument as _;
 
-        cfg_if::cfg_if! {
-            if #[cfg(target_os = "linux")] {
-                let dispatcher = tracing::dispatcher::get_default(|d| d.clone());
-                std::thread::Builder::new().name("io-uring".into()).spawn(move || {
-                    let _guard = tracing::dispatcher::set_default(&dispatcher);
+        use tracing::instrument::WithSubscriber as _;
 
-                    match tokio_uring::Runtime::new(&tokio_uring::builder().entries(2048)) {
-                        Ok(runtime) => {
-                            let _ = tx.send(Ok(()));
+        let fut = async move {
+            let _ = tx.send(());
+            $future.await
+        };
 
-                            if let Some(span) = $span {
-                                runtime.block_on($future.instrument(span));
-                            } else {
-                                runtime.block_on($future);
-                            }
-                        }
-                        Err(error) => {
-                            let _ = tx.send(Err(error));
-                        }
-                    };
-                }).expect("failed to spawn io-uring thread");
-            } else {
-                use tracing::instrument::WithSubscriber as _;
-
-                let fut = async move {
-                    let _ = tx.send(Ok(()));
-                    $future.await
-                };
-
-                if let Some(span) = $span {
-                    tokio::spawn(fut.instrument(span).with_current_subscriber());
-                } else {
-                    tokio::spawn(fut.with_current_subscriber());
-                }
-            }
+        if let Some(span) = $span {
+            tokio::spawn(fut.instrument(span).with_current_subscriber());
+        } else {
+            tokio::spawn(fut.with_current_subscriber());
         }
         rx
     }};
 }
 
 /// On linux spawns a io-uring task, everywhere else spawns a regular tokio task.
+#[cfg(not(target_os = "linux"))]
 macro_rules! uring_inner_spawn {
     ($future:expr) => {
-        cfg_if::cfg_if! {
-            if #[cfg(target_os = "linux")] {
-                tokio_uring::spawn($future);
-            } else {
-                tokio::spawn($future);
-            }
-        }
+        tokio::spawn($future);
     };
 }
 
@@ -82,7 +54,7 @@ macro_rules! uring_span {
             if #[cfg(debug_assertions)] {
                 Some($span)
             } else {
-                None
+                Option::<tracing::Span>::None
             }
         }
     }};
@@ -105,7 +77,7 @@ use socket2::{Protocol, Socket, Type};
 
 cfg_if::cfg_if! {
     if #[cfg(target_os = "linux")] {
-        use tokio_uring::net::UdpSocket;
+        use std::net::UdpSocket;
     } else {
         use tokio::net::UdpSocket;
     }
@@ -121,7 +93,6 @@ fn socket_with_reuse_and_address(addr: SocketAddr) -> std::io::Result<UdpSocket>
         if #[cfg(target_os = "linux")] {
             raw_socket_with_reuse_and_address(addr)
                 .map(From::from)
-                .map(UdpSocket::from_std)
         } else {
             epoll_socket_with_reuse_and_address(addr)
         }
@@ -196,7 +167,7 @@ impl DualStackLocalSocket {
         let local_addr = socket.local_addr().unwrap();
         cfg_if::cfg_if! {
             if #[cfg(target_os = "linux")] {
-                let socket = UdpSocket::from_std(socket);
+                let socket = socket;
             } else {
                 // This is only for macOS and Windows (non-production platforms),
                 // and should never happen anyway, so unwrap here is fine.
@@ -234,15 +205,7 @@ impl DualStackLocalSocket {
     }
 
     cfg_if::cfg_if! {
-        if #[cfg(target_os = "linux")] {
-            pub async fn recv_from<B: tokio_uring::buf::IoBufMut>(&self, buf: B) -> (io::Result<(usize, SocketAddr)>, B) {
-                self.socket.recv_from(buf).await
-            }
-
-            pub async fn send_to<B: tokio_uring::buf::IoBuf>(&self, buf: B, target: SocketAddr) -> (io::Result<usize>, B) {
-                self.socket.send_to(buf, target).await
-            }
-        } else {
+        if #[cfg(not(target_os = "linux"))] {
             pub async fn recv_from<B: std::ops::DerefMut<Target = [u8]>>(&self, mut buf: B) -> (io::Result<(usize, SocketAddr)>, B) {
                 let result = self.socket.recv_from(&mut buf).await;
                 (result, buf)
@@ -251,6 +214,12 @@ impl DualStackLocalSocket {
             pub async fn send_to<B: std::ops::Deref<Target = [u8]>>(&self, buf: B, target: SocketAddr) -> (io::Result<usize>, B) {
                 let result = self.socket.send_to(&buf, target).await;
                 (result, buf)
+            }
+        } else {
+            #[inline]
+            pub fn raw_fd(&self) -> io_uring::types::Fd {
+                use std::os::fd::AsRawFd;
+                io_uring::types::Fd(self.socket.as_raw_fd())
             }
         }
     }

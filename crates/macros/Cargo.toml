@@ -30,7 +30,8 @@ edition = "2018"
 [lib]
 proc-macro = true
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lints]
+workspace = true
 
 [dependencies]
 proc-macro2 = "1.0.58"

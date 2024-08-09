@@ -28,13 +28,11 @@ use tokio::{
 };
 
 use crate::{
+    components::proxy::{PipelineError, SendPacket},
     config::Config,
     filters::Filter,
     metrics,
-    net::{
-        maxmind_db::{IpNetEntry, MetricsIpNetEntry},
-        DualStackLocalSocket,
-    },
+    net::maxmind_db::{IpNetEntry, MetricsIpNetEntry},
     pool::{BufferPool, FrozenPoolBuffer, PoolBuffer},
     time::UtcTimestamp,
     Loggable, ShutdownRx,
@@ -43,11 +41,16 @@ use crate::{
 pub(crate) mod inner_metrics;
 
 pub type SessionMap = crate::collections::ttl::TtlMap<SessionKey, Session>;
-type ChannelData = (PoolBuffer, Option<MetricsIpNetEntry>, SocketAddr);
-type UpstreamChannelData = (FrozenPoolBuffer, Option<MetricsIpNetEntry>, SocketAddr);
-type UpstreamSender = mpsc::Sender<UpstreamChannelData>;
-type DownstreamSender = async_channel::Sender<ChannelData>;
-pub type DownstreamReceiver = async_channel::Receiver<ChannelData>;
+
+#[cfg(target_os = "linux")]
+mod io_uring;
+#[cfg(not(target_os = "linux"))]
+mod reference;
+
+type UpstreamSender = mpsc::Sender<super::SendPacket>;
+
+type DownstreamSender = async_channel::Sender<super::SendPacket>;
+pub type DownstreamReceiver = async_channel::Receiver<super::SendPacket>;
 
 #[derive(PartialEq, Eq, Hash)]
 pub enum SessionError {
@@ -142,102 +145,24 @@ impl SessionPool {
             .as_socket()
             .ok_or(SessionError::SocketAddressUnavailable)?
             .port();
-        let (tx, mut downstream_receiver) = mpsc::channel::<UpstreamChannelData>(15);
+        let (downstream_sender, downstream_receiver) = mpsc::channel::<super::SendPacket>(15);
 
-        let pool = self.clone();
+        let initialised = self
+            .clone()
+            .spawn_session(raw_socket, port, downstream_receiver)?;
+        initialised
+            .await
+            .map_err(|_err| PipelineError::ChannelClosed)?;
 
-        let initialised = uring_spawn!(
-            uring_span!(tracing::debug_span!("session pool")),
-            async move {
-                let mut last_received_at = None;
-                let mut shutdown_rx = pool.shutdown_rx.clone();
-                let (tx, mut rx) = tokio::sync::oneshot::channel();
-
-                cfg_if::cfg_if! {
-                    if #[cfg(target_os = "linux")] {
-                        let socket = std::rc::Rc::new(DualStackLocalSocket::from_raw(raw_socket));
-                    } else {
-                        let socket = std::sync::Arc::new(DualStackLocalSocket::from_raw(raw_socket));
-                    }
-                };
-                let socket2 = socket.clone();
-
-                uring_inner_spawn!(async move {
-                    loop {
-                        match downstream_receiver.recv().await {
-                            None => {
-                                metrics::errors_total(
-                                    metrics::WRITE,
-                                    "downstream channel closed",
-                                    &metrics::EMPTY,
-                                )
-                                .inc();
-                                break;
-                            }
-                            Some((data, asn_info, send_addr)) => {
-                                tracing::trace!(%send_addr, length = data.len(), "sending packet upstream");
-                                let (result, _) = socket2.send_to(data, send_addr).await;
-                                let asn_info = asn_info.as_ref().into();
-                                match result {
-                                    Ok(size) => {
-                                        metrics::packets_total(metrics::READ, &asn_info).inc();
-                                        metrics::bytes_total(metrics::READ, &asn_info)
-                                            .inc_by(size as u64);
-                                    }
-                                    Err(error) => {
-                                        tracing::trace!(%error, "sending packet upstream failed");
-                                        let source = error.to_string();
-                                        metrics::errors_total(metrics::READ, &source, &asn_info)
-                                            .inc();
-                                        metrics::packets_dropped_total(
-                                            metrics::READ,
-                                            &source,
-                                            &asn_info,
-                                        )
-                                        .inc();
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    let _ = tx.send(());
-                });
-
-                loop {
-                    let buf = pool.buffer_pool.clone().alloc();
-                    tokio::select! {
-                        received = socket.recv_from(buf) => {
-                            let (result, buf) = received;
-                            match result {
-                                Err(error) => {
-                                    tracing::trace!(%error, "error receiving packet");
-                                    metrics::errors_total(metrics::WRITE, &error.to_string(), &metrics::EMPTY).inc();
-                                },
-                                Ok((_size, recv_addr)) => pool.process_received_upstream_packet(buf, recv_addr, port, &mut last_received_at).await,
-                            }
-                        }
-                        _ = shutdown_rx.changed() => {
-                            tracing::debug!("Closing upstream socket loop");
-                            return;
-                        }
-                        _ = &mut rx => {
-                            tracing::debug!("Closing upstream socket loop, downstream closed");
-                            return;
-                        }
-                    }
-                }
-            }
-        );
-
-        initialised.await.unwrap()?;
-
-        self.ports_to_sockets.write().await.insert(port, tx.clone());
-        self.create_session_from_existing_socket(key, tx, port)
+        self.ports_to_sockets
+            .write()
+            .await
+            .insert(port, downstream_sender.clone());
+        self.create_session_from_existing_socket(key, downstream_sender, port)
             .await
     }
 
-    async fn process_received_upstream_packet(
+    pub(crate) async fn process_received_upstream_packet(
         self: &Arc<Self>,
         packet: PoolBuffer,
         mut recv_addr: SocketAddr,
@@ -425,17 +350,19 @@ impl SessionPool {
             return Err((asn_info, err.into()));
         }
 
-        let packet = context.contents;
+        let packet = context.contents.freeze();
         tracing::trace!(%source, %dest, length = packet.len(), "sending packet downstream");
         downstream_sender
-            .try_send((packet, asn_info, dest))
+            .try_send(SendPacket {
+                data: packet,
+                destination: dest,
+                asn_info,
+            })
             .map_err(|error| match error {
-                async_channel::TrySendError::Closed((_, asn_info, _)) => {
-                    (asn_info, Error::ChannelClosed)
+                async_channel::TrySendError::Closed(packet) => {
+                    (packet.asn_info, Error::ChannelClosed)
                 }
-                async_channel::TrySendError::Full((_, asn_info, _)) => {
-                    (asn_info, Error::ChannelFull)
-                }
+                async_channel::TrySendError::Full(packet) => (packet.asn_info, Error::ChannelFull),
             })?;
         Ok(())
     }
@@ -456,7 +383,11 @@ impl SessionPool {
         let (asn_info, sender) = self.get(key).await?;
 
         sender
-            .try_send((packet, asn_info, key.dest))
+            .try_send(crate::components::proxy::SendPacket {
+                data: packet,
+                asn_info,
+                destination: key.dest,
+            })
             .map_err(|error| match error {
                 TrySendError::Closed(_) => super::PipelineError::ChannelClosed,
                 TrySendError::Full(_) => super::PipelineError::ChannelFull,
@@ -805,11 +736,11 @@ mod tests {
 
         pool.send(key, alloc_buffer(msg).freeze()).await.unwrap();
 
-        let (data, _, _) = tokio::time::timeout(std::time::Duration::from_secs(1), receiver.recv())
+        let packet = tokio::time::timeout(std::time::Duration::from_secs(1), receiver.recv())
             .await
             .unwrap()
             .unwrap();
 
-        assert_eq!(msg, &*data);
+        assert_eq!(msg, &*packet.data);
     }
 }
