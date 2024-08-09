@@ -197,6 +197,8 @@ impl PoolBuffer {
     #[inline]
     #[cfg(target_os = "linux")]
     pub(crate) fn set_len(&mut self, len: usize) {
+        // SAFETY: len is the length as returned from the kernel on a successful
+        // recv_from call
         unsafe { self.inner.set_len(len) }
     }
 }

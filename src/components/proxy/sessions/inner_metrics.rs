@@ -41,6 +41,7 @@ pub(crate) fn active_sessions(asn: Option<&crate::net::maxmind_db::IpNetEntry>) 
         let len = crate::metrics::itoa(asnfo.id, &mut asn);
 
         ACTIVE_SESSIONS.with_label_values(&[
+            // SAFETY: itoa only writes ASCII
             unsafe { std::str::from_utf8_unchecked(&asn[..len as _]) },
             &asnfo.as_name,
             &asnfo.as_cc,

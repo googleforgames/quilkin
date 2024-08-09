@@ -465,6 +465,8 @@ impl<'uring> LoopCtx<'uring> {
             self.sq.sync();
 
             match self.backlog.pop_front() {
+                // SAFETY: Same as Self::push, all memory pointed to in our ops are pinned at
+                // stable locations in memory
                 Some(sqe) => unsafe {
                     let _ = self.sq.push(&sqe);
                 },

@@ -86,6 +86,7 @@ pub struct AsnInfo<'a> {
 impl<'a> AsnInfo<'a> {
     #[inline]
     fn asn_str(&self) -> &str {
+        // SAFETY: we only write ASCII in itoa
         unsafe { std::str::from_utf8_unchecked(&self.asn[..self.asn_len as _]) }
     }
 }
