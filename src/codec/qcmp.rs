@@ -257,24 +257,19 @@ pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) -> cra
 
 #[cfg(target_os = "linux")]
 pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) -> crate::Result<()> {
+    use crate::components::proxy::io_uring_shared::EventFd;
     use eyre::Context as _;
-    use std::os::fd::{AsRawFd, FromRawFd};
 
     let port = crate::net::socket_port(&socket);
 
     // Create an eventfd so we can signal to the qcmp loop when we want to exit
-    // SAFETY: syscall
-    let shutdown_event = unsafe { std::os::fd::OwnedFd::from_raw_fd(libc::eventfd(0, 0)) };
-    let shutdown_event_fd = shutdown_event.as_raw_fd();
+    let mut shutdown_event = EventFd::new()?;
+    let shutdown = shutdown_event.writer();
 
     // Spawn a task on the main loop whose sole purpose is to signal the eventfd
     tokio::task::spawn(async move {
         let _ = shutdown_rx.changed().await;
-
-        // SAFETY: syscall
-        unsafe {
-            libc::eventfd_write(shutdown_event.as_raw_fd(), 1);
-        }
+        shutdown.write(1);
     });
 
     let _thread_span = uring_span!(tracing::debug_span!("qcmp").or_current());
@@ -294,23 +289,19 @@ pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) -> cra
 
             // Queue the read from the shutdown eventfd used to signal when the loop
             // should exit
-            let mut shutdown_buf = 0u64;
-            {
-                let entry = io_uring::opcode::Read::new(
-                    io_uring::types::Fd(shutdown_event_fd),
-                    (&mut shutdown_buf as *mut u64).cast(),
-                    8,
-                )
-                .build()
-                .user_data(SHUTDOWN);
-                // SAFETY: syscall
-                unsafe { sq.push(&entry) }.context("unable to insert io-uring entry")?;
+            let entry = shutdown_event.io_uring_entry().user_data(SHUTDOWN);
+            // SAFETY: the memory being written to is located on the stack inside the shutdown event, and is alive
+            // at least as long as the uring loop
+            unsafe {
+                sq.push(&entry).context("unable to insert io-uring entry")?;
             }
 
             // Our loop is simple and only ever processes one ping/pong pair at a time
             // so we just reuse the same buffer for both receives and sends
             let mut buf = QcmpPacket::default();
+            // SAFETY: msghdr is POD
             let mut msghdr: libc::msghdr = unsafe { std::mem::zeroed() };
+            // SAFETY: msghdr is POD
             let addr = unsafe {
                 socket2::SockAddr::new(
                     std::mem::zeroed(),
@@ -340,7 +331,7 @@ pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) -> cra
                     let entry = io_uring::opcode::RecvMsg::new(socket_fd, msghdr_mut)
                         .build()
                         .user_data(RECV);
-                    // SAFETY: syscall
+                    // SAFETY: the memory being written to is located on the stack and outlives the uring loop
                     unsafe { sq.push(&entry) }.context("unable to insert io-uring entry")?;
                     Ok(())
                 };
@@ -413,7 +404,7 @@ pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) -> cra
                                 )
                                 .build()
                                 .user_data(SEND);
-                                // SAFETY: syscall
+                                // SAFETY: the memory being read from is located on the stack and outlives the uring loop
                                 if unsafe { sq.push(&entry) }.is_err() {
                                     tracing::error!("failed to enqueue QCMP pong response");
                                     continue;

@@ -3,7 +3,7 @@ pub mod packet_router;
 mod sessions;
 
 #[cfg(target_os = "linux")]
-mod io_uring_shared;
+pub(crate) mod io_uring_shared;
 
 use super::RunArgs;
 pub use error::{ErrorMap, PipelineError};
