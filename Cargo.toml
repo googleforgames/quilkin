@@ -16,7 +16,7 @@
 
 [package]
 name = "quilkin"
-version = "0.9.0-dev"
+version = "0.9.0"
 authors = [
     "Mark Mandel <markmandel@google.com>",
     "Ifeanyi Ubah <ifeanyi.ubah@embark-studios.com>",
@@ -74,7 +74,7 @@ test = false
 
 [dependencies]
 # Local
-quilkin-macros = { version = "0.9.0-dev", path = "./crates/macros" }
+quilkin-macros = { version = "0.9.0", path = "./crates/macros" }
 xds = { path = "crates/xds" }
 quilkin-proto.workspace = true
 
