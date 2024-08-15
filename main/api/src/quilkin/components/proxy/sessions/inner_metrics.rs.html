@@ -85,6 +85,7 @@
 <a href="#83" id="83">83</a>
 <a href="#84" id="84">84</a>
 <a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -128,7 +129,8 @@
         <span class="kw">let </span>len = <span class="kw">crate</span>::metrics::itoa(asnfo.id, <span class="kw-2">&amp;mut </span>asn);
 
         ACTIVE_SESSIONS.with_label_values(<span class="kw-2">&amp;</span>[
-            <span class="kw">unsafe </span>{ std::str::from_utf8_unchecked(<span class="kw-2">&amp;</span>asn[..len <span class="kw">as _</span>]) },
+            <span class="comment">// SAFETY: itoa only writes ASCII
+            </span><span class="kw">unsafe </span>{ std::str::from_utf8_unchecked(<span class="kw-2">&amp;</span>asn[..len <span class="kw">as _</span>]) },
             <span class="kw-2">&amp;</span>asnfo.as_name,
             <span class="kw-2">&amp;</span>asnfo.as_cc,
             <span class="kw-2">&amp;</span>asnfo.prefix,

@@ -304,6 +304,8 @@
 <a href="#302" id="302">302</a>
 <a href="#303" id="303">303</a>
 <a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -392,7 +394,8 @@
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; AsnInfo&lt;<span class="lifetime">'a</span>&gt; {
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>asn_str(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>str {
-        <span class="kw">unsafe </span>{ std::str::from_utf8_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>.asn[..<span class="self">self</span>.asn_len <span class="kw">as _</span>]) }
+        <span class="comment">// SAFETY: we only write ASCII in itoa
+        </span><span class="kw">unsafe </span>{ std::str::from_utf8_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>.asn[..<span class="self">self</span>.asn_len <span class="kw">as _</span>]) }
     }
 }
 
@@ -593,7 +596,8 @@
         <span class="kw">let </span><span class="kw-2">mut </span>asn = [<span class="number">0u8</span>; <span class="number">10</span>];
         <span class="kw">let </span>len = <span class="kw">super</span>::itoa(num, <span class="kw-2">&amp;mut </span>asn);
 
-        <span class="kw">let </span>asn_str = <span class="kw">unsafe </span>{ std::str::from_utf8_unchecked(<span class="kw-2">&amp;</span>asn[..len <span class="kw">as _</span>]) };
+        <span class="comment">// SAFETY: itoa only writes ASCII
+        </span><span class="kw">let </span>asn_str = <span class="kw">unsafe </span>{ std::str::from_utf8_unchecked(<span class="kw-2">&amp;</span>asn[..len <span class="kw">as _</span>]) };
 
         <span class="macro">assert_eq!</span>(asn_str, exp);
     }

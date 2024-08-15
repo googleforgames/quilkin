@@ -180,7 +180,7 @@
             <span class="prelude-val">None
         </span>};
 
-        <span class="kw">crate</span>::codec::qcmp::spawn(<span class="self">self</span>.qcmp_socket, shutdown_rx.clone());
+        <span class="kw">crate</span>::codec::qcmp::spawn(<span class="self">self</span>.qcmp_socket, shutdown_rx.clone())<span class="question-mark">?</span>;
         shutdown_rx.changed().<span class="kw">await</span>.map_err(From::from)
     }
 }
