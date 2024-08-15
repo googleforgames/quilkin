@@ -20,9 +20,8 @@ having to custom build and integrate this functionality into their game clients 
 
 ## Project State
 
-Project is currently in *alpha* status, and is being actively developed. Expect things to break.
-
-Not to be used in production systems.
+Project is currently in *beta* status, meaning that it is being actively developed, and being used in production
+systems, but that the API may break and functionality may be changed or removed between releases.
 
 ## Documentation
 
