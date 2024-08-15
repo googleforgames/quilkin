@@ -829,7 +829,7 @@ mod tests {
 
         let (_tx, rx) = crate::make_shutdown_channel(Default::default());
         let socket = raw_socket_with_reuse(qcmp_port).unwrap();
-        crate::codec::qcmp::spawn(socket, rx.clone());
+        crate::codec::qcmp::spawn(socket, rx.clone()).unwrap();
         tokio::time::sleep(Duration::from_millis(150)).await;
 
         let measurement =

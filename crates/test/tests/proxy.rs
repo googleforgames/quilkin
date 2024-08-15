@@ -124,17 +124,17 @@ trace_test!(uring_receiver, {
             config,
             tx,
             BUFFER_POOL.clone(),
-            shutdown_rx,
+            shutdown_rx.clone(),
         ),
     }
-    .spawn()
+    .spawn(shutdown_rx)
     .await
     .expect("failed to spawn task");
 
     // Drop the socket, otherwise it can
     drop(ws);
 
-    sb.timeout(500, ready.notified()).await;
+    let _ = sb.timeout(500, ready).await;
 
     let msg = "hello-downstream";
     tracing::debug!("sending packet");
@@ -166,7 +166,7 @@ trace_test!(
             config.clone(),
             tx,
             BUFFER_POOL.clone(),
-            shutdown_rx,
+            shutdown_rx.clone(),
         );
 
         const WORKER_COUNT: usize = 3;
@@ -179,12 +179,13 @@ trace_test!(
             &sessions,
             rx,
             BUFFER_POOL.clone(),
+            shutdown_rx,
         )
         .await
         .unwrap();
 
         for wn in workers {
-            sb.timeout(200, wn.notified()).await;
+            let _ = sb.timeout(200, wn).await;
         }
 
         let socket = std::sync::Arc::new(sb.client());

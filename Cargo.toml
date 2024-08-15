@@ -38,6 +38,9 @@ categories = ["game-development", "network-programming"]
 edition.workspace = true
 exclude = ["docs", "build", "examples", "image"]
 
+[lints]
+workspace = true
+
 [[bench]]
 name = "read_write"
 harness = false
@@ -144,8 +147,10 @@ version = "0.1"
 features = ["client", "client-legacy"]
 
 [target.'cfg(target_os = "linux")'.dependencies]
+io-uring = { version = "0.6", default-features = false }
+libc = "0.2"
+slab = "0.4"
 sys-info = "0.9.1"
-tokio-uring = { version = "0.5", features = ["bytes"] }
 pprof = { version = "0.13.0", features = ["prost", "prost-codec"] }
 
 [dev-dependencies]
@@ -225,3 +230,6 @@ fixedstr = { version = "0.5", features = ["flex-str"] }
 parking_lot = "0.12.1"
 schemars = { version = "0.8.15", features = ["bytes", "url"] }
 url = { version = "2.4.1", features = ["serde"] }
+
+[workspace.lints.clippy]
+undocumented_unsafe_blocks = "deny"

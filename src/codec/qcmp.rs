@@ -38,35 +38,19 @@ const PING: u8 = 0;
 const PONG: u8 = 1;
 
 pub struct QcmpPacket {
-    buf: Vec<u8>,
+    buf: [u8; MAX_QCMP_PACKET_LEN],
     len: usize,
 }
 
 impl Default for QcmpPacket {
     fn default() -> Self {
         Self {
-            buf: vec![0; MAX_QCMP_PACKET_LEN],
+            buf: [0; MAX_QCMP_PACKET_LEN],
             len: 0,
         }
     }
 }
 
-#[cfg(target_os = "linux")]
-unsafe impl tokio_uring::buf::IoBuf for QcmpPacket {
-    fn stable_ptr(&self) -> *const u8 {
-        self.buf.as_ptr()
-    }
-
-    fn bytes_init(&self) -> usize {
-        self.len
-    }
-
-    fn bytes_total(&self) -> usize {
-        self.buf.len()
-    }
-}
-
-#[cfg(not(target_os = "linux"))]
 impl std::ops::Deref for QcmpPacket {
     type Target = [u8];
 
@@ -208,7 +192,8 @@ impl Measurement for QcmpMeasurement {
     }
 }
 
-pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) {
+#[cfg(not(target_os = "linux"))]
+pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) -> crate::Result<()> {
     let port = crate::net::socket_port(&socket);
 
     uring_spawn!(uring_span!(tracing::debug_span!("qcmp")), async move {
@@ -266,6 +251,191 @@ pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) {
             };
         }
     });
+
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) -> crate::Result<()> {
+    use crate::components::proxy::io_uring_shared::EventFd;
+    use eyre::Context as _;
+
+    let port = crate::net::socket_port(&socket);
+
+    // Create an eventfd so we can signal to the qcmp loop when we want to exit
+    let mut shutdown_event = EventFd::new()?;
+    let shutdown = shutdown_event.writer();
+
+    // Spawn a task on the main loop whose sole purpose is to signal the eventfd
+    tokio::task::spawn(async move {
+        let _ = shutdown_rx.changed().await;
+        shutdown.write(1);
+    });
+
+    let _thread_span = uring_span!(tracing::debug_span!("qcmp").or_current());
+    let dispatcher = tracing::dispatcher::get_default(|d| d.clone());
+
+    std::thread::Builder::new()
+        .name("qcmp".into())
+        .spawn(move || -> eyre::Result<()> {
+            let _guard = tracing::dispatcher::set_default(&dispatcher);
+
+            let mut ring = io_uring::IoUring::new(3).context("unable to create io uring")?;
+            let (submitter, mut sq, mut cq) = ring.split();
+
+            const RECV: u64 = 0;
+            const SEND: u64 = 1;
+            const SHUTDOWN: u64 = 2;
+
+            // Queue the read from the shutdown eventfd used to signal when the loop
+            // should exit
+            let entry = shutdown_event.io_uring_entry().user_data(SHUTDOWN);
+            // SAFETY: the memory being written to is located on the stack inside the shutdown event, and is alive
+            // at least as long as the uring loop
+            unsafe {
+                sq.push(&entry).context("unable to insert io-uring entry")?;
+            }
+
+            // Our loop is simple and only ever processes one ping/pong pair at a time
+            // so we just reuse the same buffer for both receives and sends
+            let mut buf = QcmpPacket::default();
+            // SAFETY: msghdr is POD
+            let mut msghdr: libc::msghdr = unsafe { std::mem::zeroed() };
+            // SAFETY: msghdr is POD
+            let addr = unsafe {
+                socket2::SockAddr::new(
+                    std::mem::zeroed(),
+                    std::mem::size_of::<libc::sockaddr_storage>() as _,
+                )
+            };
+
+            let mut iov = libc::iovec {
+                iov_base: buf.buf.as_mut_ptr() as *mut _,
+                iov_len: 0,
+            };
+
+            msghdr.msg_iov = std::ptr::addr_of_mut!(iov);
+            msghdr.msg_iovlen = 1;
+            msghdr.msg_name = addr.as_ptr() as *mut libc::sockaddr_storage as *mut _;
+            msghdr.msg_namelen = addr.len();
+
+            let msghdr_mut = std::ptr::addr_of_mut!(msghdr);
+
+            let socket = DualStackLocalSocket::new(port)
+                .context("failed to create already bound qcmp socket")?;
+            let socket_fd = socket.raw_fd();
+
+            let enqueue_recv =
+                |sq: &mut io_uring::SubmissionQueue, iov: &mut libc::iovec| -> eyre::Result<()> {
+                    iov.iov_len = MAX_QCMP_PACKET_LEN;
+                    let entry = io_uring::opcode::RecvMsg::new(socket_fd, msghdr_mut)
+                        .build()
+                        .user_data(RECV);
+                    // SAFETY: the memory being written to is located on the stack and outlives the uring loop
+                    unsafe { sq.push(&entry) }.context("unable to insert io-uring entry")?;
+                    Ok(())
+                };
+
+            enqueue_recv(&mut sq, &mut iov)?;
+
+            sq.sync();
+
+            loop {
+                match submitter.submit_and_wait(1) {
+                    Ok(_) => {}
+                    Err(ref err) if err.raw_os_error() == Some(libc::EBUSY) => {}
+                    Err(err) => {
+                        return Err(err).context("failed to submit io-uring operations");
+                    }
+                }
+                cq.sync();
+
+                let mut has_pending_send = false;
+                for cqe in &mut cq {
+                    let ret = cqe.result();
+
+                    match cqe.user_data() {
+                        RECV => {
+                            if ret < 0 {
+                                let error = std::io::Error::from_raw_os_error(-ret).to_string();
+                                tracing::error!(%error, "failed to send QCMP response");
+                                continue;
+                            }
+
+                            buf.len = ret as _;
+                            let received_at = UtcTimestamp::now();
+                            let command = match Protocol::parse(&buf) {
+                                Ok(Some(command)) => command,
+                                Ok(None) => {
+                                    tracing::debug!("rejected non-QCMP packet");
+                                    continue;
+                                }
+                                Err(error) => {
+                                    tracing::debug!(%error, "rejected malformed packet");
+                                    continue;
+                                }
+                            };
+
+                            let Protocol::Ping {
+                                client_timestamp,
+                                nonce,
+                            } = command
+                            else {
+                                tracing::warn!("rejected unsupported QCMP packet");
+                                continue;
+                            };
+
+                            Protocol::ping_reply(nonce, client_timestamp, received_at)
+                                .encode(&mut buf);
+
+                            tracing::debug!("sending QCMP ping reply");
+
+                            // Update the iovec with the actual length of the pong
+                            iov.iov_len = buf.len;
+
+                            // Note we don't have to do anything else with the msghdr
+                            // as the recv has already filled in the socket address
+                            // of the sender, which is also our destination
+
+                            {
+                                let entry = io_uring::opcode::SendMsg::new(
+                                    socket_fd,
+                                    std::ptr::addr_of!(msghdr),
+                                )
+                                .build()
+                                .user_data(SEND);
+                                // SAFETY: the memory being read from is located on the stack and outlives the uring loop
+                                if unsafe { sq.push(&entry) }.is_err() {
+                                    tracing::error!("failed to enqueue QCMP pong response");
+                                    continue;
+                                }
+                            }
+
+                            has_pending_send = true;
+                        }
+                        SEND => {
+                            if ret < 0 {
+                                let error = std::io::Error::from_raw_os_error(-ret).to_string();
+                                tracing::error!(%error, "failed to send QCMP response");
+                            }
+                        }
+                        SHUTDOWN => {
+                            tracing::info!("QCMP thread was signaled to shutdown");
+                            return Ok(());
+                        }
+                        ud => unreachable!("io-uring user data {ud} is invalid"),
+                    }
+                }
+
+                if !has_pending_send {
+                    enqueue_recv(&mut sq, &mut iov)?;
+                }
+
+                sq.sync();
+            }
+        })?;
+
+    Ok(())
 }
 
 /// The set of possible QCMP commands.
@@ -680,7 +850,7 @@ mod tests {
         let addr = socket.local_addr().unwrap().as_socket().unwrap();
 
         let (_tx, rx) = crate::make_shutdown_channel(Default::default());
-        spawn(socket, rx);
+        spawn(socket, rx).unwrap();
 
         let delay = Duration::from_millis(50);
         let node = QcmpMeasurement::with_artificial_delay(delay).unwrap();

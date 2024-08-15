@@ -86,6 +86,7 @@ pub struct AsnInfo<'a> {
 impl<'a> AsnInfo<'a> {
     #[inline]
     fn asn_str(&self) -> &str {
+        // SAFETY: we only write ASCII in itoa
         unsafe { std::str::from_utf8_unchecked(&self.asn[..self.asn_len as _]) }
     }
 }
@@ -287,6 +288,7 @@ mod test {
         let mut asn = [0u8; 10];
         let len = super::itoa(num, &mut asn);
 
+        // SAFETY: itoa only writes ASCII
         let asn_str = unsafe { std::str::from_utf8_unchecked(&asn[..len as _]) };
 
         assert_eq!(asn_str, exp);
