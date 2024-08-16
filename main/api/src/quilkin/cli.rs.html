@@ -254,6 +254,10 @@
 <a href="#252" id="252">252</a>
 <a href="#253" id="253">253</a>
 <a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -447,6 +451,10 @@
         }
 
         <span class="kw">let </span>(shutdown_tx, shutdown_rx) = <span class="kw">crate</span>::make_shutdown_channel(Default::default());
+        <span class="kw">crate</span>::alloc::spawn_heap_stats_updates(
+            std::time::Duration::from_secs(<span class="number">10</span>),
+            shutdown_rx.clone(),
+        );
 
         <span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)]
         </span><span class="kw">let </span><span class="kw-2">mut </span>sig_term_fut = signal::unix::signal(signal::unix::SignalKind::terminate())<span class="question-mark">?</span>;
