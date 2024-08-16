@@ -273,7 +273,7 @@ shell: ensure-gcloud-dirs ensure-kube-dirs ensure-build-image
 		 --entrypoint=bash $(BUILD_IMAGE_TAG)
 
 ensure-build-image: ensure-cargo-registry
-	docker build $(BUILD_IMAGE_ARG) --build-arg RUST_TOOLCHAIN=$(rust_toolchain) --tag=$(BUILD_IMAGE_TAG) $(build_path)/build-image/
+	docker buildx build $(BUILD_IMAGE_ARG) --cache-to type=inline --cache-from type=registry,ref=$(BUILD_IMAGE_TAG) --build-arg RUST_TOOLCHAIN=$(rust_toolchain) --tag=$(BUILD_IMAGE_TAG) $(build_path)/build-image/
 
 ensure-cargo-registry:
 	-mkdir -p $(CARGO_HOME)/registry

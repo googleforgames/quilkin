@@ -103,7 +103,6 @@ options:
     - "CARGO_HOME=/workspace/.cargo"
     - "REPOSITORY=${_REPOSITORY}"
     - "BUILD_IMAGE_TAG=${_BUILD_IMAGE_TAG}"
-    - "BUILD_IMAGE_ARG=--cache-from ${_BUILD_IMAGE_TAG}"
   machineType: E2_HIGHCPU_32
   dynamic_substitutions: true
 timeout: 7200s
