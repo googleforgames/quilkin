@@ -38,6 +38,12 @@ categories = ["game-development", "network-programming"]
 edition.workspace = true
 exclude = ["docs", "build", "examples", "image"]
 
+[features]
+default = []
+instrument = []
+mimalloc = ["dep:mimalloc"]
+heap-stats = ["dep:crossbeam-utils"]
+
 [lints]
 workspace = true
 
@@ -80,7 +86,7 @@ base64.workspace = true
 base64-serde = "0.7.0"
 bytes = { version = "1.5.0", features = ["serde"] }
 cached.workspace = true
-time = { version = "0.3", default-features = false, features = ["std"] }
+crossbeam-utils = { version = "0.8", optional = true }
 clap = { version = "4.4.6", features = ["cargo", "derive", "env"] }
 dashmap = { version = "5.5", features = ["serde"] }
 either = "1.9.0"
@@ -100,6 +106,7 @@ lz4_flex = { version = "0.11", default-features = false }
 maxminddb = "0.24.0"
 notify = "6.1.1"
 num_cpus = "1.16.0"
+mimalloc = { version = "0.1.43", optional = true }
 once_cell.workspace = true
 parking_lot.workspace = true
 prometheus.workspace = true
@@ -118,6 +125,7 @@ snap = "1.1.0"
 socket2.workspace = true
 stable-eyre = "0.2.2"
 thiserror.workspace = true
+time = { version = "0.3", default-features = false, features = ["std"] }
 tokio.workspace = true
 tokio-stream.workspace = true
 tonic.workspace = true
@@ -162,10 +170,6 @@ regex.workspace = true
 tracing-test = "0.2.4"
 tempfile.workspace = true
 xxhash-rust = { version = "0.8", features = ["xxh3"] }
-
-[features]
-default = []
-instrument = []
 
 # We want debug information when doing benchmarks for debugging purposes as well
 # as better (correct) callstacks in perf

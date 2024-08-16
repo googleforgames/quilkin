@@ -16,6 +16,7 @@
 
 #![deny(unused_must_use)]
 
+pub mod alloc;
 pub(crate) mod collections;
 pub(crate) mod metrics;
 pub mod pool;

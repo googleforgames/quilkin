@@ -191,6 +191,10 @@ impl Cli {
         }
 
         let (shutdown_tx, shutdown_rx) = crate::make_shutdown_channel(Default::default());
+        crate::alloc::spawn_heap_stats_updates(
+            std::time::Duration::from_secs(10),
+            shutdown_rx.clone(),
+        );
 
         #[cfg(target_os = "linux")]
         let mut sig_term_fut = signal::unix::signal(signal::unix::SignalKind::terminate())?;
