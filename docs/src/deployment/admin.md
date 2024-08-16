@@ -84,6 +84,27 @@ See the [Proxy Metrics](../services/proxy/metrics.md) documentation for what pro
 
 See the [xDS Metrics](../services/xds/metrics.md) documentation for what xDS metrics are available.
 
+#### Heap Allocation Metrics
+
+Quilkin exposes the following metrics on heap allocations, which are useful for performance observability:
+
+
+* `quilkin_allocation_bytes_total` (Counter)
+    
+    The total number of allocated bytes.
+
+* `quilkin_allocation_total` (Counter)
+
+    The total number of allocations.
+
+* `quilkin_extant_allocation_size` (Gauge)
+
+    The current total of extant allocation bytes.
+
+ * `quilkin_extant_allocation_count` (Gauge)
+
+    The current number of extant allocations"
+
 ### /debug/pprof/profile
 
 This provides a endpoint to profile Quilkin's performance. You can use with any
