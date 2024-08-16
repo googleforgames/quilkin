@@ -238,6 +238,26 @@ until they are fully populated.</p>
 <p>Outputs <a href="https://prometheus.io/">Prometheus</a> formatted metrics for this instance.</p>
 <p>See the <a href="../services/proxy/metrics.html">Proxy Metrics</a> documentation for what proxy metrics are available.</p>
 <p>See the <a href="../services/xds/metrics.html">xDS Metrics</a> documentation for what xDS metrics are available.</p>
+<h4 id="heap-allocation-metrics"><a class="header" href="#heap-allocation-metrics">Heap Allocation Metrics</a></h4>
+<p>Quilkin exposes the following metrics on heap allocations, which are useful for performance observability:</p>
+<ul>
+<li>
+<p><code>quilkin_allocation_bytes_total</code> (Counter)</p>
+<p>The total number of allocated bytes.</p>
+</li>
+<li>
+<p><code>quilkin_allocation_total</code> (Counter)</p>
+<p>The total number of allocations.</p>
+</li>
+<li>
+<p><code>quilkin_extant_allocation_size</code> (Gauge)</p>
+<p>The current total of extant allocation bytes.</p>
+</li>
+<li>
+<p><code>quilkin_extant_allocation_count</code> (Gauge)</p>
+<p>The current number of extant allocations"</p>
+</li>
+</ul>
 <h3 id="debugpprofprofile"><a class="header" href="#debugpprofprofile">/debug/pprof/profile</a></h3>
 <p>This provides a endpoint to profile Quilkin's performance. You can use with any
 system which supports pprof output such as <a href="https://pyroscope.io">Pyroscope</a>.</p>
