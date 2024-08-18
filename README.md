@@ -27,6 +27,9 @@ systems, but that the API may break and functionality may be changed or removed 
 
 ### Releases
 
+* v0.9.0 ([guides](https://googleforgames.github.io/quilkin/v0.9.0/book/),
+  [api](https://googleforgames.github.io/quilkin/v0.9.0/api/quilkin/),
+  [macros](https://googleforgames.github.io/quilkin/v0.9.0/api/quilkin_macros/))
 * v0.8.0 ([guides](https://googleforgames.github.io/quilkin/v0.8.0/book/),
   [api](https://googleforgames.github.io/quilkin/v0.8.0/api/quilkin/),
   [macros](https://googleforgames.github.io/quilkin/v0.8.0/api/quilkin_macros/))

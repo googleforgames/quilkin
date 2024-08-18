@@ -15,7 +15,7 @@
 - [ ] Update Cargo version for release
     - [ ] Edit the `version` field in `./Cargo.toml` and remove the `-dev` suffix.
     - [ ] Edit the `quilkin-macros` dependency in `./Cargo.toml` and remove the `-dev` suffix.
-    - [ ] Edit the `version` field in `./macros/Cargo.toml` and remove the `-dev` suffix.
+    - [ ] Edit the `version` field in `./crates/macros/Cargo.toml` and remove the `-dev` suffix.
 - [ ] cd to `./build/release` and run `make` to submit the cloud build
 - [ ] Download all the artifacts from the cloud build.
 - [ ] Review `license.html` to ensure that there aren't any new MPL, or CDDL dependencies from the last 
@@ -23,7 +23,7 @@
     - [ ] Add the dependencies to [archive_dependencies.sh](https://github.com/googleforgames/quilkin/blob/main/build/release/archive_dependencies.sh)
           so that the source is archived in the container image.
     - [ ] Reset checklist back to "run `make` to submit the cloud build", and start from there again.
-- [ ] Run `cd macros && cargo publish --dry-run --allow-dirty` and ensure there are no issues.
+- [ ] Run `cd crates/macros && cargo publish --dry-run --allow-dirty` and ensure there are no issues.
 - [ ] Run `cargo clippy` in the root directory, and ensure there are no issues.
 - [ ] Add a release item to README.md "Documentation" > "Releases" list with related links in reverse chronological 
   order.

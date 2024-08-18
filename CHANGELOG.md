@@ -1,5 +1,74 @@
 # Changelog
 
+# v0.9.0 (2024-08-18)
+
+## What's Changed
+### Breaking changes
+* Remove idle request interval for agent by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/946
+### Implemented enhancements
+* Implement remaining proxy tests by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/916
+* Add node address selection via type and ip kind by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/934
+* Add PortPolicy::None by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/940
+* Add some performance optimizations by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/944
+* Upgrade Agones to 1.40.0 + CRD changes by @markmandel in https://github.com/googleforgames/quilkin/pull/945
+* Add an optimized token router filter by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/948
+* Build single token -> address map by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/978
+* Replace `tokio-uring` with `io-uring` by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/993
+* Update project to beta status by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/997
+* Add basic heap stats by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/998
+### Fixed bugs
+* Fix timestamp/duration unit confusion by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/921
+* Fix safety issue by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/922
+* Fix phoenix http by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/926
+* Don't run `add_host_to_datacenter` by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/931
+* Fix infinite loop by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/956
+* Ignore config maps for agents by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/957
+* Fix relay listener updates by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/966
+* Increase downstream->upstream buffer by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/969
+* Cap error heap usage by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/987
+### Security fixes
+* cargo update + flake fixes by @markmandel in https://github.com/googleforgames/quilkin/pull/930
+### Other
+* Bump google.golang.org/protobuf from 1.32.0 to 1.33.0 in /build/ci/github-bot by @dependabot in https://github.com/googleforgames/quilkin/pull/907
+* Prep for 0.9.0-dev by @markmandel in https://github.com/googleforgames/quilkin/pull/908
+* Test refactor proposal by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/909
+* Add more logs to phoenix service by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/913
+* Reenable test by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/914
+* Update to Rust 1.77.0 by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/912
+* Make idle request logs debug by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/915
+* Add change detection log by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/917
+* Add debugging to phoenix http service by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/919
+* Make unknown gameserver log debug by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/923
+* Slight test improvements by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/925
+* Bump golang.org/x/net from 0.19.0 to 0.23.0 in /build/ci/github-bot by @dependabot in https://github.com/googleforgames/quilkin/pull/928
+* Upgrade Agones CRD by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/937
+* Update kube to 0.91 by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/941
+* Add kube@0.91 to skip-tree by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/943
+* Remove manual build of rust-linux-darwin-builder by @markmandel in https://github.com/googleforgames/quilkin/pull/947
+* Add test for hashed token router by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/950
+* Move related crates into crates directory by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/961
+* Always build token maps by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/962
+* Move xDS and protobuf definitions into separate crates. by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/963
+* Nuke non-delta streams by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/965
+* Move MaxmindDb::lookup to session creation by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/968
+* Guide: Show command options for `manage providers` by @markmandel in https://github.com/googleforgames/quilkin/pull/971
+* Github: PR Labeler action by @markmandel in https://github.com/googleforgames/quilkin/pull/972
+* Build tooling updates and fixes. by @markmandel in https://github.com/googleforgames/quilkin/pull/974
+* Update agent documentation by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/976
+* Make xDS library generic over any resource type. by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/967
+* Update crates by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/977
+* Cleanup by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/979
+* Rename HashedTokenRouter -> TokenRouter by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/980
+* Reduce ASN related allocations by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/991
+* Generate reference docs from proto files by @markmandel in https://github.com/googleforgames/quilkin/pull/982
+* Update crates/cargo-deny by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/992
+* Add Apache Headers to those that are missing by @markmandel in https://github.com/googleforgames/quilkin/pull/999
+* Docs for Heap Allocation Metrics by @markmandel in https://github.com/googleforgames/quilkin/pull/1000
+* Build: More explicit container caching by @markmandel in https://github.com/googleforgames/quilkin/pull/1001
+
+
+**Full Changelog**: https://github.com/googleforgames/quilkin/compare/v0.8.0...v0.9.0
+
 # v0.8.0 (2024-03-13)
 
 ## What's Changed
