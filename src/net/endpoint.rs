@@ -28,7 +28,7 @@ pub use self::{
     metadata::DynamicMetadata,
 };
 
-pub use xds::locality::Locality;
+pub use quilkin_xds::locality::Locality;
 
 pub type EndpointMetadata = metadata::MetadataView<Metadata>;
 pub use base64_set::Set;

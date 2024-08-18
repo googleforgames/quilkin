@@ -65,7 +65,7 @@ pub mod endpoint;
 pub(crate) mod maxmind_db;
 pub mod phoenix;
 
-pub use xds;
+pub use quilkin_xds as xds;
 pub use xds::net::TcpListener;
 
 use std::{
