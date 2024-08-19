@@ -84,7 +84,7 @@ pub struct Config {
     pub datacenter: DatacenterConfig,
 }
 
-impl xds::config::Configuration for Config {
+impl quilkin_xds::config::Configuration for Config {
     fn identifier(&self) -> String {
         (*self.id.load()).clone()
     }
@@ -99,14 +99,14 @@ impl xds::config::Configuration for Config {
         resources: Vec<XdsResource>,
         removed_resources: &[String],
         remote_addr: Option<std::net::SocketAddr>,
-    ) -> xds::Result<()> {
+    ) -> quilkin_xds::Result<()> {
         self.apply_delta(type_url, resources, removed_resources, remote_addr)
     }
 
     fn delta_discovery_request(
         &self,
-        client_state: &xds::config::ClientState,
-    ) -> xds::Result<DeltaDiscoveryRes> {
+        client_state: &quilkin_xds::config::ClientState,
+    ) -> quilkin_xds::Result<DeltaDiscoveryRes> {
         self.delta_discovery_request(client_state)
     }
 
@@ -120,7 +120,7 @@ impl xds::config::Configuration for Config {
 
     fn on_changed(
         &self,
-        control_plane: xds::server::ControlPlane<Self>,
+        control_plane: quilkin_xds::server::ControlPlane<Self>,
     ) -> impl std::future::Future<Output = ()> + Send + 'static {
         let mut cluster_watcher = self.clusters.watch();
 
@@ -217,7 +217,7 @@ impl Config {
     /// from those of the client
     pub fn delta_discovery_request(
         &self,
-        client_state: &xds::config::ClientState,
+        client_state: &quilkin_xds::config::ClientState,
     ) -> crate::Result<DeltaDiscoveryRes> {
         let mut resources = Vec::new();
         let mut removed = std::collections::HashSet::new();
@@ -331,7 +331,7 @@ impl Config {
                         }
 
                         let resource = crate::xds::Resource::Cluster(
-                            xds::generated::quilkin::config::v1alpha1::Cluster {
+                            quilkin_xds::generated::quilkin::config::v1alpha1::Cluster {
                                 locality: key.clone().map(|l| l.into()),
                                 endpoints: value.endpoints.iter().map(|ep| ep.into()).collect(),
                             },

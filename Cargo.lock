@@ -2367,6 +2367,7 @@ dependencies = [
  "prost-types",
  "quilkin-macros",
  "quilkin-proto",
+ "quilkin-xds",
  "rand",
  "regex",
  "schemars",
@@ -2397,7 +2398,6 @@ dependencies = [
  "tryhard",
  "url",
  "uuid",
- "xds",
  "xxhash-rust",
 ]
 
@@ -2412,11 +2412,43 @@ dependencies = [
 
 [[package]]
 name = "quilkin-proto"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "prost",
  "prost-types",
  "tonic",
+]
+
+[[package]]
+name = "quilkin-xds"
+version = "0.9.0"
+dependencies = [
+ "arc-swap",
+ "async-stream",
+ "cached",
+ "enum-map",
+ "eyre",
+ "fixedstr",
+ "futures",
+ "once_cell",
+ "parking_lot",
+ "prometheus",
+ "prost",
+ "prost-types",
+ "quilkin-proto",
+ "rand",
+ "schemars",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tokio-stream",
+ "tonic",
+ "tracing",
+ "tracing-futures",
+ "tryhard",
+ "url",
+ "uuid",
 ]
 
 [[package]]
@@ -3841,38 +3873,6 @@ checksum = "524e57b2c537c0f9b1e69f1965311ec12182b4122e45035b1508cd24d2adadb1"
 dependencies = [
  "cfg-if",
  "windows-sys 0.48.0",
-]
-
-[[package]]
-name = "xds"
-version = "0.1.0"
-dependencies = [
- "arc-swap",
- "async-stream",
- "cached",
- "enum-map",
- "eyre",
- "fixedstr",
- "futures",
- "once_cell",
- "parking_lot",
- "prometheus",
- "prost",
- "prost-types",
- "quilkin-proto",
- "rand",
- "schemars",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
- "tokio-stream",
- "tonic",
- "tracing",
- "tracing-futures",
- "tryhard",
- "url",
- "uuid",
 ]
 
 [[package]]

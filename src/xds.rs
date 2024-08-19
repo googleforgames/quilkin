@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-use ::xds::generated::quilkin::config::v1alpha1 as proto;
+use ::quilkin_xds::generated::quilkin::config::v1alpha1 as proto;
 use prost::Message;
 use prost_types::Any;
 
