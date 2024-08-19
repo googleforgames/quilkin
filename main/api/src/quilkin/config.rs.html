@@ -1234,7 +1234,7 @@
     </span><span class="kw">pub </span>datacenter: DatacenterConfig,
 }
 
-<span class="kw">impl </span>xds::config::Configuration <span class="kw">for </span>Config {
+<span class="kw">impl </span>quilkin_xds::config::Configuration <span class="kw">for </span>Config {
     <span class="kw">fn </span>identifier(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
         (<span class="kw-2">*</span><span class="self">self</span>.id.load()).clone()
     }
@@ -1249,14 +1249,14 @@
         resources: Vec&lt;XdsResource&gt;,
         removed_resources: <span class="kw-2">&amp;</span>[String],
         remote_addr: <span class="prelude-ty">Option</span>&lt;std::net::SocketAddr&gt;,
-    ) -&gt; xds::Result&lt;()&gt; {
+    ) -&gt; quilkin_xds::Result&lt;()&gt; {
         <span class="self">self</span>.apply_delta(type_url, resources, removed_resources, remote_addr)
     }
 
     <span class="kw">fn </span>delta_discovery_request(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        client_state: <span class="kw-2">&amp;</span>xds::config::ClientState,
-    ) -&gt; xds::Result&lt;DeltaDiscoveryRes&gt; {
+        client_state: <span class="kw-2">&amp;</span>quilkin_xds::config::ClientState,
+    ) -&gt; quilkin_xds::Result&lt;DeltaDiscoveryRes&gt; {
         <span class="self">self</span>.delta_discovery_request(client_state)
     }
 
@@ -1270,7 +1270,7 @@
 
     <span class="kw">fn </span>on_changed(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        control_plane: xds::server::ControlPlane&lt;<span class="self">Self</span>&gt;,
+        control_plane: quilkin_xds::server::ControlPlane&lt;<span class="self">Self</span>&gt;,
     ) -&gt; <span class="kw">impl </span>std::future::Future&lt;Output = ()&gt; + Send + <span class="lifetime">'static </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>cluster_watcher = <span class="self">self</span>.clusters.watch();
 
@@ -1367,7 +1367,7 @@
     /// from those of the client
     </span><span class="kw">pub fn </span>delta_discovery_request(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        client_state: <span class="kw-2">&amp;</span>xds::config::ClientState,
+        client_state: <span class="kw-2">&amp;</span>quilkin_xds::config::ClientState,
     ) -&gt; <span class="kw">crate</span>::Result&lt;DeltaDiscoveryRes&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>resources = Vec::new();
         <span class="kw">let </span><span class="kw-2">mut </span>removed = std::collections::HashSet::new();
@@ -1481,7 +1481,7 @@
                         }
 
                         <span class="kw">let </span>resource = <span class="kw">crate</span>::xds::Resource::Cluster(
-                            xds::generated::quilkin::config::v1alpha1::Cluster {
+                            quilkin_xds::generated::quilkin::config::v1alpha1::Cluster {
                                 locality: key.clone().map(|l| l.into()),
                                 endpoints: value.endpoints.iter().map(|ep| ep.into()).collect(),
                             },
