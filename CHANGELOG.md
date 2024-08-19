@@ -1,6 +1,6 @@
 # Changelog
 
-# v0.9.0 (2024-08-18)
+# v0.9.0 (2024-08-19)
 
 ## What's Changed
 ### Breaking changes
@@ -26,6 +26,7 @@
 * Fix relay listener updates by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/966
 * Increase downstream->upstream buffer by @XAMPPRocky in https://github.com/googleforgames/quilkin/pull/969
 * Cap error heap usage by @Jake-Shadle in https://github.com/googleforgames/quilkin/pull/987
+* Unstick release 0.9.0 by @markmandel in https://github.com/googleforgames/quilkin/pull/1002
 ### Security fixes
 * cargo update + flake fixes by @markmandel in https://github.com/googleforgames/quilkin/pull/930
 ### Other
@@ -65,7 +66,7 @@
 * Add Apache Headers to those that are missing by @markmandel in https://github.com/googleforgames/quilkin/pull/999
 * Docs for Heap Allocation Metrics by @markmandel in https://github.com/googleforgames/quilkin/pull/1000
 * Build: More explicit container caching by @markmandel in https://github.com/googleforgames/quilkin/pull/1001
-
+* Release 0.9.0 by @markmandel in https://github.com/googleforgames/quilkin/pull/996
 
 **Full Changelog**: https://github.com/googleforgames/quilkin/compare/v0.8.0...v0.9.0
 

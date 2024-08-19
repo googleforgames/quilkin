@@ -16,7 +16,7 @@
 
 [package]
 name = "quilkin"
-version = "0.9.0"
+version = "0.10.0-dev"
 authors = [
     "Mark Mandel <markmandel@google.com>",
     "Ifeanyi Ubah <ifeanyi.ubah@embark-studios.com>",
@@ -74,8 +74,8 @@ test = false
 
 [dependencies]
 # Local
-quilkin-macros = { version = "0.9.0", path = "./crates/macros" }
-quilkin-xds = {version = "0.9.0",path = "crates/xds" }
+quilkin-macros = { version = "0.10.0-dev", path = "./crates/macros" }
+quilkin-xds = {version = "0.10.0-dev",path = "crates/xds" }
 quilkin-proto.workspace = true
 
 # Crates.io
@@ -206,7 +206,7 @@ prometheus = { version = "0.13.3", default-features = false }
 prost = "0.12"
 prost-types = "0.12"
 quilkin = { path = "." }
-quilkin-proto = {version = "0.9.0", path = "crates/quilkin-proto" }
+quilkin-proto = {version = "0.10.0-dev", path = "crates/quilkin-proto" }
 rand = "0.8.5"
 regex = "1.9.6"
 serde = { version = "1.0.188", features = ["derive", "rc"] }
