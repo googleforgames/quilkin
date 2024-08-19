@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["AddrKind","Base64Standard","ConfigType","DatacenterConfig","ValidationError","Version"],"mod":["providers","watch"],"struct":["AddressSelector","Config","Datacenter","DatacenterMap","Filter","IcaoCode","Slot"]};
