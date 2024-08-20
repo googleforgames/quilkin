@@ -113,7 +113,7 @@ spec:
           env:
             - name: RUST_LOG
               value: info
-          image: us-docker.pkg.dev/quilkin-mark-dev/release/quilkin:0.7.0
+          image: us-docker.pkg.dev/quilkin/release/quilkin:0.9.0
           livenessProbe:
             periodSeconds: 5
             failureThreshold: 3
@@ -167,7 +167,7 @@ spec:
           env:
             - name: RUST_LOG
               value: info
-          image: us-docker.pkg.dev/quilkin-mark-dev/release/quilkin:0.7.0
+          image: us-docker.pkg.dev/quilkin/release/quilkin:0.9.0
           livenessProbe:
             periodSeconds: 5
             failureThreshold: 3
