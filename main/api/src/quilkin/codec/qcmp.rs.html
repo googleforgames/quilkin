@@ -1053,7 +1053,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>recv = [<span class="number">0u8</span>; <span class="number">512</span>];
 
         <span class="kw">let </span>(size, <span class="kw">_</span>) = tokio::time::timeout(
-            std::time::Duration::from_millis(<span class="number">500</span>),
+            std::time::Duration::from_secs(<span class="number">5</span>),
             <span class="self">self</span>.socket.recv_from(<span class="kw-2">&amp;mut </span>recv),
         )
         .<span class="kw">await</span><span class="question-mark">??</span>;
