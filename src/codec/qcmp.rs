@@ -171,7 +171,7 @@ impl Measurement for QcmpMeasurement {
         let mut recv = [0u8; 512];
 
         let (size, _) = tokio::time::timeout(
-            std::time::Duration::from_millis(500),
+            std::time::Duration::from_secs(5),
             self.socket.recv_from(&mut recv),
         )
         .await??;
