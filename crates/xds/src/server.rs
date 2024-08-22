@@ -198,6 +198,7 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                 .map_err(|error| tonic::Status::internal(error.to_string()))?;
 
             if req.resources.is_empty() && req.removed.is_empty() {
+                tracing::warn!(kind = type_url, "Empty resources received and no resources to remove");
                 return Ok(None);
             }
 
