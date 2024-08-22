@@ -185,6 +185,7 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                 cs
             } else {
                 let Some(cs) = client_tracker.get_state(type_url) else {
+                    tracing::warn!(kind = type_url, "No client state found for resource");
                     return Ok(None);
                 };
 
