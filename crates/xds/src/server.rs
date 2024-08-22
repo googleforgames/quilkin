@@ -282,7 +282,14 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                             Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {
                                 let tracked_resources: Vec<_> = client_tracker.tracked_resources().collect();
                                 for rt in tracked_resources {
-                                    yield responder(None, &rt, &mut client_tracker)?.unwrap();
+                                    match responder(None, &rt, &mut client_tracker) {
+                                        Ok(Some(res)) => yield res,
+                                        Ok(None) => {},
+                                        Err(error) => {
+                                            tracing::error!(%error, "responder failed to generate response");
+                                            continue;
+                                        }
+                                    }
                                 }
                             }
                         }
