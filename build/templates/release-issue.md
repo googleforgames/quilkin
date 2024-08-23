@@ -36,6 +36,7 @@
   order.
 - [ ] Review any `data-proofer-ignore` attributes from links in the documentation in `./docs`, and remove any no 
   longer needed.
+- [ ] Update all yaml files in to `./examples` to the next release version.
 - [ ] Create a draft [Github release](https://github.com/googleforgames/quilkin/releases/new)
     - [ ] Populate the tag with `v{version}`
     - [ ] Click `Generate release notes` to generate the change log for this release.
