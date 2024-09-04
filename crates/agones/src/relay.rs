@@ -169,6 +169,10 @@ mod tests {
             .delete(&config_map.name_unchecked(), &dp)
             .await
             .unwrap();
+        deployments
+            .delete_collection(&dp, &kube::api::ListParams::default())
+            .await
+            .unwrap();
     }
 
     /// Deploys the Agent and Relay Server Deployments and Services
