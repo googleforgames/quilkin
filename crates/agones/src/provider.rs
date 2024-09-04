@@ -78,6 +78,7 @@ mod tests {
             PROXY_DEPLOYMENT.into(),
             7005,
             "http://quilkin-manage-agones:7800".into(),
+            true,
         )
         .await;
 
@@ -210,7 +211,7 @@ mod tests {
                         ..Default::default()
                     }),
                     spec: Some(PodSpec {
-                        containers: vec![quilkin_container(client, Some(args), None)],
+                        containers: vec![quilkin_container(client, Some(args), None, true)],
                         service_account_name: Some(rbac_name),
                         ..Default::default()
                     }),

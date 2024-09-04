@@ -57,6 +57,12 @@ mod tests {
     /// for this test, we should only run Agones integration test in a serial manner, since they
     /// could easily collide with each other.
     async fn agones_token_router() {
+        run_test(true, true, false).await;
+        run_test(true, false, true).await;
+        run_test(false, true, true).await;
+    }
+
+    async fn run_test(proxy: bool, relay: bool, agent: bool) {
         let client = Client::new().await;
         let config_maps: Api<ConfigMap> = client.namespaced_api();
         let deployments: Api<Deployment> = client.namespaced_api();
@@ -67,7 +73,7 @@ mod tests {
         let dp = DeleteParams::default();
 
         let config_map = create_token_router_config(&config_maps).await;
-        agones_agent_deployment(&client, deployments.clone()).await;
+        agones_agent_deployment(&client, deployments.clone(), relay, agent).await;
 
         let relay_proxy_name = "quilkin-relay-proxy";
         let proxy_address = quilkin_proxy_deployment(
@@ -76,6 +82,7 @@ mod tests {
             relay_proxy_name.into(),
             7005,
             "http://quilkin-relay-agones:7800".into(),
+            proxy,
         )
         .await;
 
@@ -165,7 +172,12 @@ mod tests {
     }
 
     /// Deploys the Agent and Relay Server Deployments and Services
-    async fn agones_agent_deployment(client: &Client, deployments: Api<Deployment>) {
+    async fn agones_agent_deployment(
+        client: &Client,
+        deployments: Api<Deployment>,
+        relay: bool,
+        agent: bool,
+    ) {
         let service_accounts: Api<ServiceAccount> = client.namespaced_api();
         let cluster_roles: Api<ClusterRole> = Api::all(client.kubernetes.clone());
         let role_bindings: Api<RoleBinding> = client.namespaced_api();
@@ -205,7 +217,7 @@ mod tests {
                         ..Default::default()
                     }),
                     spec: Some(PodSpec {
-                        containers: vec![quilkin_container(client, Some(args), None)],
+                        containers: vec![quilkin_container(client, Some(args), None, relay)],
                         service_account_name: Some(rbac_name.clone()),
                         ..Default::default()
                     }),
@@ -291,7 +303,7 @@ mod tests {
                         ..Default::default()
                     }),
                     spec: Some(PodSpec {
-                        containers: vec![quilkin_container(client, Some(args), None)],
+                        containers: vec![quilkin_container(client, Some(args), None, agent)],
                         service_account_name: Some(rbac_name),
                         ..Default::default()
                     }),

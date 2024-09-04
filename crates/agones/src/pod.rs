@@ -38,7 +38,7 @@ mod tests {
                 ..Default::default()
             },
             spec: Some(PodSpec {
-                containers: vec![quilkin_container(&client, Some(cmds), None)],
+                containers: vec![quilkin_container(&client, Some(cmds), None, true)],
                 ..Default::default()
             }),
             status: None,
