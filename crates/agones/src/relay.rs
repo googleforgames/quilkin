@@ -57,12 +57,12 @@ mod tests {
     /// for this test, we should only run Agones integration test in a serial manner, since they
     /// could easily collide with each other.
     async fn agones_token_router() {
-        run_test(true, true, false).await;
-        run_test(true, false, true).await;
-        run_test(false, true, true).await;
+        run_test(true, true, false, 0).await;
+        run_test(true, false, true, 1).await;
+        run_test(false, true, true, 2).await;
     }
 
-    async fn run_test(proxy: bool, relay: bool, agent: bool) {
+    async fn run_test(proxy: bool, relay: bool, agent: bool, id: u8) {
         let client = Client::new().await;
         let config_maps: Api<ConfigMap> = client.namespaced_api();
         let deployments: Api<Deployment> = client.namespaced_api();
@@ -73,13 +73,13 @@ mod tests {
         let dp = DeleteParams::default();
 
         let config_map = create_token_router_config(&config_maps).await;
-        agones_agent_deployment(&client, deployments.clone(), relay, agent).await;
+        agones_agent_deployment(&client, deployments.clone(), relay, agent, id).await;
 
-        let relay_proxy_name = "quilkin-relay-proxy";
+        let relay_proxy_name = format!("quilkin-relay-proxy-{id}");
         let proxy_address = quilkin_proxy_deployment(
             &client,
             deployments.clone(),
-            relay_proxy_name.into(),
+            relay_proxy_name.clone(),
             7005,
             "http://quilkin-relay-agones:7800".into(),
             proxy,
@@ -106,7 +106,11 @@ mod tests {
         // Proxy Deployment should be ready, since there is now an endpoint
         if timeout(
             Duration::from_secs(30),
-            await_condition(deployments.clone(), relay_proxy_name, is_deployment_ready()),
+            await_condition(
+                deployments.clone(),
+                &relay_proxy_name,
+                is_deployment_ready(),
+            ),
         )
         .await
         .is_err()
@@ -181,6 +185,7 @@ mod tests {
         deployments: Api<Deployment>,
         relay: bool,
         agent: bool,
+        id: u8,
     ) {
         let service_accounts: Api<ServiceAccount> = client.namespaced_api();
         let cluster_roles: Api<ClusterRole> = Api::all(client.kubernetes.clone());
@@ -205,7 +210,7 @@ mod tests {
         let labels = BTreeMap::from([("role".to_string(), "relay".to_string())]);
         let deployment = Deployment {
             metadata: ObjectMeta {
-                name: Some("quilkin-relay-agones".into()),
+                name: Some(format!("quilkin-relay-agones-{id}")),
                 labels: Some(labels.clone()),
                 ..Default::default()
             },
@@ -235,7 +240,7 @@ mod tests {
         // relay service
         let service = Service {
             metadata: ObjectMeta {
-                name: Some("quilkin-relay-agones".into()),
+                name: Some(format!("quilkin-relay-agones-{id}")),
                 ..Default::default()
             },
             spec: Some(ServiceSpec {
@@ -291,7 +296,7 @@ mod tests {
         let labels = BTreeMap::from([("role".to_string(), "agent".to_string())]);
         let deployment = Deployment {
             metadata: ObjectMeta {
-                name: Some("quilkin-agones-agent".into()),
+                name: Some(format!("quilkin-agones-agent-{id}")),
                 labels: Some(labels.clone()),
                 ..Default::default()
             },
