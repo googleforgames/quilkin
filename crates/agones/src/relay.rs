@@ -51,12 +51,23 @@ mod tests {
         TOKEN_KEY,
     };
 
+    const SLOW: Duration = Duration::from_secs(30);
+
     #[tokio::test]
     #[serial]
     /// Test for Agones Provider integration. Since this will look at all GameServers in the namespace
     /// for this test, we should only run Agones integration test in a serial manner, since they
     /// could easily collide with each other.
     async fn agones_token_router() {
+        run_test(true, true, true, 0).await;
+        run_test(true, true, false, 1).await;
+        run_test(true, false, true, 2).await;
+        run_test(false, true, true, 3).await;
+    }
+
+    async fn run_test(proxy: bool, relay: bool, agent: bool, id: u8) {
+        println!("running agones_token_router {id}");
+
         let client = Client::new().await;
         let config_maps: Api<ConfigMap> = client.namespaced_api();
         let deployments: Api<Deployment> = client.namespaced_api();
@@ -67,15 +78,17 @@ mod tests {
         let dp = DeleteParams::default();
 
         let config_map = create_token_router_config(&config_maps).await;
-        agones_agent_deployment(&client, deployments.clone()).await;
+        let (relay_name, agent_name) =
+            agones_agent_deployment(&client, deployments.clone(), relay, agent, id).await;
 
-        let relay_proxy_name = "quilkin-relay-proxy";
+        let relay_proxy_name = format!("quilkin-relay-proxy-{id}");
         let proxy_address = quilkin_proxy_deployment(
             &client,
             deployments.clone(),
-            relay_proxy_name.into(),
+            relay_proxy_name.clone(),
             7005,
-            "http://quilkin-relay-agones:7800".into(),
+            format!("http://{relay_name}:7800"),
+            proxy,
         )
         .await;
 
@@ -98,8 +111,12 @@ mod tests {
 
         // Proxy Deployment should be ready, since there is now an endpoint
         if timeout(
-            Duration::from_secs(30),
-            await_condition(deployments.clone(), relay_proxy_name, is_deployment_ready()),
+            SLOW,
+            await_condition(
+                deployments.clone(),
+                &relay_proxy_name,
+                is_deployment_ready(),
+            ),
         )
         .await
         .is_err()
@@ -157,15 +174,77 @@ mod tests {
         }
         assert!(failed, "Packet should have failed");
 
+        println!("deleting resources...");
+        use either::Either;
+        let cm_name = config_map.name_unchecked();
         // cleanup
-        config_maps
-            .delete(&config_map.name_unchecked(), &dp)
+        match config_maps
+            .delete(&cm_name, &dp)
             .await
-            .unwrap();
+            .expect("failed to delete config map")
+        {
+            Either::Left(_) => {
+                timeout(
+                    SLOW,
+                    await_condition(
+                        deployments.clone(),
+                        &relay_proxy_name,
+                        kube::runtime::conditions::is_deleted(&cm_name),
+                    ),
+                )
+                .await
+                .expect("failed to delete config map within timeout")
+                .expect("failed to delete config map");
+                println!("...config map deleted");
+            }
+            Either::Right(_) => {
+                println!("config map deleted");
+            }
+        }
+
+        async fn delete_deployment(dp: &Api<Deployment>, name: &str) -> Result<(), kube::Error> {
+            async fn inner(dp: &Api<Deployment>, name: &str) -> Result<(), kube::Error> {
+                if let Either::Left(d) = dp.delete(name, &DeleteParams::default()).await? {
+                    await_condition(
+                        dp.clone(),
+                        name,
+                        kube::runtime::conditions::is_deleted(&d.uid().unwrap()),
+                    )
+                    .await
+                    .map_err(|err| kube::Error::Service(Box::new(err)))?;
+                }
+
+                Ok(())
+            }
+
+            timeout(SLOW, inner(dp, name)).await.map_err(|_err| {
+                kube::Error::Api(kube::error::ErrorResponse {
+                    message: format!("failed to delete deployment {name} within {SLOW:?}"),
+                    status: String::new(),
+                    reason: String::new(),
+                    code: 408,
+                })
+            })??;
+            println!("deployment {name} deleted");
+            Ok(())
+        }
+
+        tokio::try_join!(
+            delete_deployment(&deployments, &relay_proxy_name),
+            delete_deployment(&deployments, &agent_name),
+            delete_deployment(&deployments, &relay_name),
+        )
+        .expect("failed to delete deployment(s) within timeout");
     }
 
     /// Deploys the Agent and Relay Server Deployments and Services
-    async fn agones_agent_deployment(client: &Client, deployments: Api<Deployment>) {
+    async fn agones_agent_deployment(
+        client: &Client,
+        deployments: Api<Deployment>,
+        relay: bool,
+        agent: bool,
+        id: u8,
+    ) -> (String, String) {
         let service_accounts: Api<ServiceAccount> = client.namespaced_api();
         let cluster_roles: Api<ClusterRole> = Api::all(client.kubernetes.clone());
         let role_bindings: Api<RoleBinding> = client.namespaced_api();
@@ -176,6 +255,8 @@ mod tests {
         let rbac_name =
             create_agones_rbac_read_account(client, service_accounts, cluster_roles, role_bindings)
                 .await;
+
+        let relay_name = format!("quilkin-relay-agones-{id}");
 
         // Setup the relay
         let args = [
@@ -189,7 +270,7 @@ mod tests {
         let labels = BTreeMap::from([("role".to_string(), "relay".to_string())]);
         let deployment = Deployment {
             metadata: ObjectMeta {
-                name: Some("quilkin-relay-agones".into()),
+                name: Some(relay_name.clone()),
                 labels: Some(labels.clone()),
                 ..Default::default()
             },
@@ -205,7 +286,7 @@ mod tests {
                         ..Default::default()
                     }),
                     spec: Some(PodSpec {
-                        containers: vec![quilkin_container(client, Some(args), None)],
+                        containers: vec![quilkin_container(client, Some(args), None, relay)],
                         service_account_name: Some(rbac_name.clone()),
                         ..Default::default()
                     }),
@@ -219,7 +300,7 @@ mod tests {
         // relay service
         let service = Service {
             metadata: ObjectMeta {
-                name: Some("quilkin-relay-agones".into()),
+                name: Some(relay_name.clone()),
                 ..Default::default()
             },
             spec: Some(ServiceSpec {
@@ -248,8 +329,8 @@ mod tests {
 
         let name = relay_deployment.name_unchecked();
         let result = timeout(
-            Duration::from_secs(30),
-            await_condition(deployments.clone(), name.as_str(), is_deployment_ready()),
+            SLOW,
+            await_condition(deployments.clone(), &name, is_deployment_ready()),
         )
         .await;
         if result.is_err() {
@@ -259,11 +340,13 @@ mod tests {
         }
         result.unwrap().expect("Should have a relay deployment");
 
+        let agent_name = format!("quilkin-agones-agent-{id}");
+
         // agent deployment
         let args = [
             "agent",
             "--relay",
-            "http://quilkin-relay-agones:7900",
+            &format!("http://{relay_name}:7900"),
             "agones",
             "--config-namespace",
             client.namespace.as_str(),
@@ -275,7 +358,7 @@ mod tests {
         let labels = BTreeMap::from([("role".to_string(), "agent".to_string())]);
         let deployment = Deployment {
             metadata: ObjectMeta {
-                name: Some("quilkin-agones-agent".into()),
+                name: Some(agent_name.clone()),
                 labels: Some(labels.clone()),
                 ..Default::default()
             },
@@ -291,7 +374,7 @@ mod tests {
                         ..Default::default()
                     }),
                     spec: Some(PodSpec {
-                        containers: vec![quilkin_container(client, Some(args), None)],
+                        containers: vec![quilkin_container(client, Some(args), None, agent)],
                         service_account_name: Some(rbac_name),
                         ..Default::default()
                     }),
@@ -303,7 +386,7 @@ mod tests {
         let agent_deployment = deployments.create(&pp, &deployment).await.unwrap();
         let name = agent_deployment.name_unchecked();
         let result = timeout(
-            Duration::from_secs(30),
+            SLOW,
             await_condition(deployments.clone(), name.as_str(), is_deployment_ready()),
         )
         .await;
@@ -312,5 +395,6 @@ mod tests {
             panic!("Agent Deployment should be ready");
         }
         result.unwrap().expect("Should have an agent deployment");
+        (relay_name, agent_name)
     }
 }

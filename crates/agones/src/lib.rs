@@ -60,10 +60,9 @@ mod provider;
 mod relay;
 mod sidecar;
 
-#[allow(dead_code)]
-static CLIENT: OnceCell<Client> = OnceCell::const_new();
-#[allow(dead_code)]
-const IMAGE_TAG: &str = "IMAGE_TAG";
+pub static CLIENT: OnceCell<Client> = OnceCell::const_new();
+pub const IMAGE_TAG: &str = "IMAGE_TAG";
+pub const PREV_IMAGE_TAG: &str = "PREV_IMAGE_TAG";
 const DELETE_DELAY_SECONDS: &str = "DELETE_DELAY_SECONDS";
 /// A simple udp server that returns packets that are sent to it.
 /// See: <https://github.com/googleforgames/agones/tree/main/examples/simple-game-server>
@@ -82,6 +81,7 @@ pub struct Client {
     pub namespace: String,
     /// The name and tag of the Quilkin image being tested
     pub quilkin_image: String,
+    pub prev_quilkin_image: String,
 }
 
 impl Client {
@@ -100,7 +100,8 @@ impl Client {
                 Client {
                     kubernetes: client.clone(),
                     namespace: setup_namespace(client).await,
-                    quilkin_image: env::var(IMAGE_TAG).unwrap(),
+                    quilkin_image: env::var(IMAGE_TAG).expect(IMAGE_TAG),
+                    prev_quilkin_image: env::var(PREV_IMAGE_TAG).expect(PREV_IMAGE_TAG),
                 }
             })
             .await
@@ -303,7 +304,7 @@ pub async fn create_agones_rbac_read_account(
     rbac_name.into()
 }
 
-/// Create a Deployment with a singular Quilkin proxy, and return it's address.
+/// Create a Deployment with a singular Quilkin proxy, and return its address.
 /// The `name` variable is used as role={name} for label lookup.
 pub async fn quilkin_proxy_deployment(
     client: &Client,
@@ -311,6 +312,7 @@ pub async fn quilkin_proxy_deployment(
     name: String,
     host_port: u16,
     management_server: String,
+    current: bool,
 ) -> SocketAddr {
     let pp = PostParams::default();
     let mut container = quilkin_container(
@@ -320,6 +322,7 @@ pub async fn quilkin_proxy_deployment(
             format!("--management-server={management_server}"),
         ]),
         None,
+        current,
     );
 
     // we'll use a host port, since spinning up a load balancer takes a long time.
@@ -580,10 +583,17 @@ pub fn quilkin_container(
     client: &Client,
     args: Option<Vec<String>>,
     volume_mount: Option<String>,
+    current: bool,
 ) -> Container {
+    let image = if current {
+        client.quilkin_image.clone()
+    } else {
+        client.prev_quilkin_image.clone()
+    };
+
     let mut container = Container {
         name: "quilkin".into(),
-        image: Some(client.quilkin_image.clone()),
+        image: Some(image),
         args,
         env: Some(vec![EnvVar {
             name: "RUST_LOG".to_string(),
