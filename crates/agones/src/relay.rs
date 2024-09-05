@@ -78,7 +78,7 @@ mod tests {
         let dp = DeleteParams::default();
 
         let config_map = create_token_router_config(&config_maps).await;
-        let (relay_name, _agent_name) =
+        let (relay_name, agent_name) =
             agones_agent_deployment(&client, deployments.clone(), relay, agent, id).await;
 
         let relay_proxy_name = format!("quilkin-relay-proxy-{id}");
@@ -202,49 +202,39 @@ mod tests {
             }
         }
 
-        // match deployments
-        //     .delete_collection(&dp, &kube::api::ListParams::default())
-        //     .await
-        //     .expect("failed to delete deployments")
-        // {
-        //     Either::Left(_) => {
-        //         let (pd, ad, rd) = tokio::try_join!(
-        //             timeout(
-        //                 SLOW,
-        //                 await_condition(
-        //                     deployments.clone(),
-        //                     &relay_proxy_name,
-        //                     kube::runtime::conditions::is_deleted(&relay_proxy_name),
-        //                 )
-        //             ),
-        //             timeout(
-        //                 SLOW,
-        //                 await_condition(
-        //                     deployments.clone(),
-        //                     &agent_name,
-        //                     kube::runtime::conditions::is_deleted(&agent_name),
-        //                 )
-        //             ),
-        //             timeout(
-        //                 SLOW,
-        //                 await_condition(
-        //                     deployments.clone(),
-        //                     &relay_name,
-        //                     kube::runtime::conditions::is_deleted(&relay_name),
-        //                 )
-        //             ),
-        //         )
-        //         .expect("failed to delete config_map within timeout");
+        async fn delete_deployment(dp: &Api<Deployment>, name: &str) -> Result<(), kube::Error> {
+            async fn inner(dp: &Api<Deployment>, name: &str) -> Result<(), kube::Error> {
+                if let Either::Left(d) = dp.delete(name, &DeleteParams::default()).await? {
+                    await_condition(
+                        dp.clone(),
+                        name,
+                        kube::runtime::conditions::is_deleted(&d.uid().unwrap()),
+                    )
+                    .await
+                    .map_err(|err| kube::Error::Service(Box::new(err)))?;
+                }
 
-        //         pd.expect("failed to delete proxy");
-        //         ad.expect("failed to delete agent");
-        //         rd.expect("failed to delete relay");
-        //         println!("...deployments deleted");
-        //     }
-        //     Either::Right(_) => {
-        //         println!("deployments deleted");
-        //     }
-        // }
+                Ok(())
+            }
+
+            timeout(SLOW, inner(dp, name)).await.map_err(|_err| {
+                kube::Error::Api(kube::error::ErrorResponse {
+                    message: format!("failed to delete deployment {name} within {SLOW:?}"),
+                    status: String::new(),
+                    reason: String::new(),
+                    code: 408,
+                })
+            })??;
+            println!("deployment {name} deleted");
+            Ok(())
+        }
+
+        tokio::try_join!(
+            delete_deployment(&deployments, &relay_proxy_name),
+            delete_deployment(&deployments, &agent_name),
+            delete_deployment(&deployments, &relay_name),
+        )
+        .expect("failed to delete deployment(s) within timeout");
     }
 
     /// Deploys the Agent and Relay Server Deployments and Services
