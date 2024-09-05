@@ -51,6 +51,8 @@ mod tests {
         TOKEN_KEY,
     };
 
+    const SLOW: Duration = Duration::from_secs(60);
+
     #[tokio::test]
     #[serial]
     /// Test for Agones Provider integration. Since this will look at all GameServers in the namespace
@@ -108,7 +110,7 @@ mod tests {
 
         // Proxy Deployment should be ready, since there is now an endpoint
         if timeout(
-            Duration::from_secs(30),
+            SLOW,
             await_condition(
                 deployments.clone(),
                 &relay_proxy_name,
@@ -182,7 +184,7 @@ mod tests {
         {
             Either::Left(_) => {
                 timeout(
-                    Duration::from_secs(30),
+                    SLOW,
                     await_condition(
                         deployments.clone(),
                         &relay_proxy_name,
@@ -336,7 +338,7 @@ mod tests {
 
         let name = relay_deployment.name_unchecked();
         let result = timeout(
-            Duration::from_secs(30),
+            SLOW,
             await_condition(deployments.clone(), &name, is_deployment_ready()),
         )
         .await;
@@ -393,7 +395,7 @@ mod tests {
         let agent_deployment = deployments.create(&pp, &deployment).await.unwrap();
         let name = agent_deployment.name_unchecked();
         let result = timeout(
-            Duration::from_secs(30),
+            SLOW,
             await_condition(deployments.clone(), name.as_str(), is_deployment_ready()),
         )
         .await;

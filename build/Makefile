@@ -215,6 +215,7 @@ test-agones:
 
 run-test-agones: ensure-kube-dirs
 run-test-agones:
+	docker image pull ${PREV_IMAGE_TAG}
 	docker run --rm $(DOCKER_RUN_ARGS) $(common_rust_args) -w /workspace/crates/agones  \
 			--entrypoint=cargo $(BUILD_IMAGE_TAG) clippy --tests -- -D warnings
 	docker run --rm $(DOCKER_RUN_ARGS) $(common_rust_args) -w /workspace/crates/agones \
