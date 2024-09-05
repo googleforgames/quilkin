@@ -51,7 +51,7 @@ mod tests {
         TOKEN_KEY,
     };
 
-    const SLOW: Duration = Duration::from_secs(120);
+    const SLOW: Duration = Duration::from_secs(30);
 
     #[tokio::test]
     #[serial]
@@ -87,7 +87,7 @@ mod tests {
             deployments.clone(),
             relay_proxy_name.clone(),
             7005,
-            "http://quilkin-relay-agones:7800".into(),
+            format!("http://{relay_name}:7800"),
             proxy,
         )
         .await;
@@ -356,7 +356,7 @@ mod tests {
         let args = [
             "agent",
             "--relay",
-            "http://quilkin-relay-agones:7900",
+            &format!("http://{relay_name}:7900"),
             "agones",
             "--config-namespace",
             client.namespace.as_str(),
