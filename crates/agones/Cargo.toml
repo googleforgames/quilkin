@@ -28,6 +28,7 @@ workspace = true
 
 [dependencies]
 base64.workspace = true
+either = "1.13"
 futures.workspace = true
 k8s-openapi.workspace = true
 kube = { workspace = true, features = ["openssl-tls", "client", "derive", "runtime"] }

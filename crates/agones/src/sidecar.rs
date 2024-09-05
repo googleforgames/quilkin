@@ -100,6 +100,7 @@ clusters:
             &client,
             Some(vec!["proxy".into()]),
             Some(mount_name.clone()),
+            true,
         ));
 
         template.volumes = Some(vec![Volume {
