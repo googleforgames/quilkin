@@ -187,12 +187,12 @@
     </span><span class="attr">#[clap(short, long, env = <span class="string">"QUILKIN_QCMP_PORT"</span>, default_value_t = QCMP_PORT)]
     </span><span class="kw">pub </span>qcmp_port: u16,
     <span class="doccomment">/// One or more socket addresses to forward packets to.
-    </span><span class="attr">#[clap(short, long, env = <span class="string">"QUILKIN_DEST"</span>)]
+    </span><span class="attr">#[clap(long, env = <span class="string">"QUILKIN_DEST"</span>)]
     </span><span class="kw">pub </span>to: Vec&lt;SocketAddr&gt;,
     <span class="doccomment">/// Assigns dynamic tokens to each address in the `--to` argument
     ///
     /// Format is `&lt;number of unique tokens&gt;:&lt;length of token suffix for each packet&gt;`
-    </span><span class="attr">#[clap(short, long, env = <span class="string">"QUILKIN_DEST_TOKENS"</span>, requires(<span class="string">"to"</span>))]
+    </span><span class="attr">#[clap(long, env = <span class="string">"QUILKIN_DEST_TOKENS"</span>, requires(<span class="string">"to"</span>))]
     </span><span class="kw">pub </span>to_tokens: <span class="prelude-ty">Option</span>&lt;String&gt;,
     <span class="doccomment">/// The interval in seconds at which the relay will send a discovery request
     /// to an management server after receiving no updates.
