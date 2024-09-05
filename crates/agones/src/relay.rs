@@ -59,9 +59,10 @@ mod tests {
     /// for this test, we should only run Agones integration test in a serial manner, since they
     /// could easily collide with each other.
     async fn agones_token_router() {
-        run_test(true, true, false, 0).await;
-        run_test(true, false, true, 1).await;
-        run_test(false, true, true, 2).await;
+        run_test(true, true, true, 0).await;
+        run_test(true, true, false, 1).await;
+        run_test(true, false, true, 2).await;
+        run_test(false, true, true, 3).await;
     }
 
     async fn run_test(proxy: bool, relay: bool, agent: bool, id: u8) {
