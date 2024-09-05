@@ -44,12 +44,12 @@ pub struct Proxy {
     #[clap(short, long, env = "QUILKIN_QCMP_PORT", default_value_t = QCMP_PORT)]
     pub qcmp_port: u16,
     /// One or more socket addresses to forward packets to.
-    #[clap(short, long, env = "QUILKIN_DEST")]
+    #[clap(long, env = "QUILKIN_DEST")]
     pub to: Vec<SocketAddr>,
     /// Assigns dynamic tokens to each address in the `--to` argument
     ///
     /// Format is `<number of unique tokens>:<length of token suffix for each packet>`
-    #[clap(short, long, env = "QUILKIN_DEST_TOKENS", requires("to"))]
+    #[clap(long, env = "QUILKIN_DEST_TOKENS", requires("to"))]
     pub to_tokens: Option<String>,
     /// The interval in seconds at which the relay will send a discovery request
     /// to an management server after receiving no updates.
