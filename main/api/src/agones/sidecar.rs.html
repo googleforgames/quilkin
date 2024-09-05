@@ -137,6 +137,7 @@
 <a href="#135" id="135">135</a>
 <a href="#136" id="136">136</a>
 <a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -239,6 +240,7 @@ clusters:
             <span class="kw-2">&amp;</span>client,
             <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="string">"proxy"</span>.into()]),
             <span class="prelude-val">Some</span>(mount_name.clone()),
+            <span class="bool-val">true</span>,
         ));
 
         template.volumes = <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[Volume {

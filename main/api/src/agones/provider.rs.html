@@ -254,6 +254,7 @@
 <a href="#252" id="252">252</a>
 <a href="#253" id="253">253</a>
 <a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -334,6 +335,7 @@
             PROXY_DEPLOYMENT.into(),
             <span class="number">7005</span>,
             <span class="string">"http://quilkin-manage-agones:7800"</span>.into(),
+            <span class="bool-val">true</span>,
         )
         .<span class="kw">await</span>;
 
@@ -466,7 +468,7 @@
                         ..Default::default()
                     }),
                     spec: <span class="prelude-val">Some</span>(PodSpec {
-                        containers: <span class="macro">vec!</span>[quilkin_container(client, <span class="prelude-val">Some</span>(args), <span class="prelude-val">None</span>)],
+                        containers: <span class="macro">vec!</span>[quilkin_container(client, <span class="prelude-val">Some</span>(args), <span class="prelude-val">None</span>, <span class="bool-val">true</span>)],
                         service_account_name: <span class="prelude-val">Some</span>(rbac_name),
                         ..Default::default()
                     }),
