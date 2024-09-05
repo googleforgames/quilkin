@@ -63,6 +63,8 @@ mod tests {
     }
 
     async fn run_test(proxy: bool, relay: bool, agent: bool, id: u8) {
+        println!("running agones_token_router {id}");
+
         let client = Client::new().await;
         let config_maps: Api<ConfigMap> = client.namespaced_api();
         let deployments: Api<Deployment> = client.namespaced_api();
@@ -73,7 +75,8 @@ mod tests {
         let dp = DeleteParams::default();
 
         let config_map = create_token_router_config(&config_maps).await;
-        agones_agent_deployment(&client, deployments.clone(), relay, agent, id).await;
+        let (relay_name, agent_name) =
+            agones_agent_deployment(&client, deployments.clone(), relay, agent, id).await;
 
         let relay_proxy_name = format!("quilkin-relay-proxy-{id}");
         let proxy_address = quilkin_proxy_deployment(
@@ -168,15 +171,77 @@ mod tests {
         }
         assert!(failed, "Packet should have failed");
 
+        println!("deleting resources...");
+        use either::Either;
+        let cm_name = config_map.name_unchecked();
         // cleanup
-        config_maps
-            .delete(&config_map.name_unchecked(), &dp)
+        match config_maps
+            .delete(&cm_name, &dp)
             .await
-            .unwrap();
-        deployments
+            .expect("failed to delete config map")
+        {
+            Either::Left(_) => {
+                timeout(
+                    Duration::from_secs(30),
+                    await_condition(
+                        deployments.clone(),
+                        &relay_proxy_name,
+                        kube::runtime::conditions::is_deleted(&cm_name),
+                    ),
+                )
+                .await
+                .expect("failed to delete config map within timeout")
+                .expect("failed to delete config map");
+                println!("...config map deleted");
+            }
+            Either::Right(_) => {
+                println!("config map deleted");
+            }
+        }
+
+        match deployments
             .delete_collection(&dp, &kube::api::ListParams::default())
             .await
-            .unwrap();
+            .expect("failed to delete deployments")
+        {
+            Either::Left(_) => {
+                let (pd, ad, rd) = tokio::try_join!(
+                    timeout(
+                        Duration::from_secs(30),
+                        await_condition(
+                            deployments.clone(),
+                            &relay_proxy_name,
+                            kube::runtime::conditions::is_deleted(&relay_proxy_name),
+                        )
+                    ),
+                    timeout(
+                        Duration::from_secs(30),
+                        await_condition(
+                            deployments.clone(),
+                            &agent_name,
+                            kube::runtime::conditions::is_deleted(&agent_name),
+                        )
+                    ),
+                    timeout(
+                        Duration::from_secs(30),
+                        await_condition(
+                            deployments.clone(),
+                            &relay_name,
+                            kube::runtime::conditions::is_deleted(&relay_name),
+                        )
+                    ),
+                )
+                .expect("failed to delete config_map within timeout");
+
+                pd.expect("failed to delete proxy");
+                ad.expect("failed to delete agent");
+                rd.expect("failed to delete relay");
+                println!("...deployments deleted");
+            }
+            Either::Right(_) => {
+                println!("deployments deleted");
+            }
+        }
     }
 
     /// Deploys the Agent and Relay Server Deployments and Services
@@ -186,7 +251,7 @@ mod tests {
         relay: bool,
         agent: bool,
         id: u8,
-    ) {
+    ) -> (String, String) {
         let service_accounts: Api<ServiceAccount> = client.namespaced_api();
         let cluster_roles: Api<ClusterRole> = Api::all(client.kubernetes.clone());
         let role_bindings: Api<RoleBinding> = client.namespaced_api();
@@ -197,6 +262,8 @@ mod tests {
         let rbac_name =
             create_agones_rbac_read_account(client, service_accounts, cluster_roles, role_bindings)
                 .await;
+
+        let relay_name = format!("quilkin-relay-agones-{id}");
 
         // Setup the relay
         let args = [
@@ -210,7 +277,7 @@ mod tests {
         let labels = BTreeMap::from([("role".to_string(), "relay".to_string())]);
         let deployment = Deployment {
             metadata: ObjectMeta {
-                name: Some(format!("quilkin-relay-agones-{id}")),
+                name: Some(relay_name.clone()),
                 labels: Some(labels.clone()),
                 ..Default::default()
             },
@@ -240,7 +307,7 @@ mod tests {
         // relay service
         let service = Service {
             metadata: ObjectMeta {
-                name: Some(format!("quilkin-relay-agones-{id}")),
+                name: Some(relay_name.clone()),
                 ..Default::default()
             },
             spec: Some(ServiceSpec {
@@ -270,7 +337,7 @@ mod tests {
         let name = relay_deployment.name_unchecked();
         let result = timeout(
             Duration::from_secs(30),
-            await_condition(deployments.clone(), name.as_str(), is_deployment_ready()),
+            await_condition(deployments.clone(), &name, is_deployment_ready()),
         )
         .await;
         if result.is_err() {
@@ -279,6 +346,8 @@ mod tests {
             panic!("Relay Deployment should be ready");
         }
         result.unwrap().expect("Should have a relay deployment");
+
+        let agent_name = format!("quilkin-agones-agent-{id}");
 
         // agent deployment
         let args = [
@@ -296,7 +365,7 @@ mod tests {
         let labels = BTreeMap::from([("role".to_string(), "agent".to_string())]);
         let deployment = Deployment {
             metadata: ObjectMeta {
-                name: Some(format!("quilkin-agones-agent-{id}")),
+                name: Some(agent_name.clone()),
                 labels: Some(labels.clone()),
                 ..Default::default()
             },
@@ -333,5 +402,6 @@ mod tests {
             panic!("Agent Deployment should be ready");
         }
         result.unwrap().expect("Should have an agent deployment");
+        (relay_name, agent_name)
     }
 }
