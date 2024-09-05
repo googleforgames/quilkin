@@ -28,6 +28,7 @@ name = "agones"
 version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
+ "either",
  "futures",
  "k8s-openapi",
  "kube",

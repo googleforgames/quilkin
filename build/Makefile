@@ -38,6 +38,7 @@ endif
 # Set this value if you want to use an external registry
 REPOSITORY ?= ""
 IMAGE_TAG ?= ${REPOSITORY}quilkin:$(package_version)
+PREV_IMAGE_TAG ?= us-docker.pkg.dev/quilkin/release/quilkin:0.9.0
 MINIKUBE_PROFILE ?= quilkin
 CARGO_TARGET_DIR ?= /workspace/target/build-image
 common_rust_args := -v $(project_path):/workspace -w /workspace \
@@ -214,6 +215,7 @@ test-agones:
 
 run-test-agones: ensure-kube-dirs
 run-test-agones:
+	docker image pull ${PREV_IMAGE_TAG}
 	docker run --rm $(DOCKER_RUN_ARGS) $(common_rust_args) -w /workspace/crates/agones  \
 			--entrypoint=cargo $(BUILD_IMAGE_TAG) clippy --tests -- -D warnings
 	docker run --rm $(DOCKER_RUN_ARGS) $(common_rust_args) -w /workspace/crates/agones \
@@ -222,7 +224,7 @@ run-test-agones:
 	docker run --rm $(DOCKER_RUN_ARGS) $(common_rust_args) $(kube_mount_args) -w /workspace/crates/agones \
 		--entrypoint=kubectl $(BUILD_IMAGE_TAG) get ns
 	docker run --rm $(DOCKER_RUN_ARGS) $(common_rust_args) $(kube_mount_args) -w /workspace/crates/agones \
-			-e "RUST_BACKTRACE=1" -e "IMAGE_TAG=${IMAGE_TAG}" --entrypoint=cargo $(BUILD_IMAGE_TAG) test $(ARGS)
+			-e "RUST_BACKTRACE=1" -e "IMAGE_TAG=${IMAGE_TAG}" -e "PREV_IMAGE_TAG=${PREV_IMAGE_TAG}" --entrypoint=cargo $(BUILD_IMAGE_TAG) test $(ARGS)
 
 # Convenience target to build and push quilkin images to a repository.
 # Use `REPOSITORY` arg to specify the repository to push to.
