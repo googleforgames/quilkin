@@ -464,7 +464,7 @@ impl AdsClient {
                 eyre::bail!("expected at least one response from the management server");
             };
 
-            Ok(dbg!(resource_subscriptions))
+            Ok(resource_subscriptions)
         }
 
         let resource_subscriptions = match handle_first_response(&mut stream, resources).await {
