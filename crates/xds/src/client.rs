@@ -414,13 +414,11 @@ impl AdsClient {
         config: Arc<C>,
         is_healthy: Arc<AtomicBool>,
         notifier: Option<tokio::sync::mpsc::UnboundedSender<String>>,
-        resources: impl IntoIterator<Item = (&'static str, Vec<String>)>,
+        resources: &'static [(&'static str, &'static [(&'static str, Vec<String>)])],
     ) -> Result<DeltaSubscription, Self> {
-        let resource_subscriptions: Vec<_> = resources.into_iter().collect();
-
         let identifier = String::from(&*self.identifier);
 
-        let (mut ds, stream) = match DeltaClientStream::connect(
+        let (mut ds, mut stream) = match DeltaClientStream::connect(
             self.client.clone(),
             identifier.clone(),
         )
@@ -429,6 +427,49 @@ impl AdsClient {
             Ok(ds) => ds,
             Err(err) => {
                 tracing::error!(error = ?err, "failed to acquire aggregated delta stream from management server");
+                return Err(self);
+            }
+        };
+
+        async fn handle_first_response(
+            stream: &mut tonic::Streaming<DeltaDiscoveryResponse>,
+            resources: &'static [(&'static str, &'static [(&'static str, Vec<String>)])],
+        ) -> eyre::Result<&'static [(&'static str, Vec<String>)]> {
+            let resource_subscriptions = if let Some(first) = stream.message().await? {
+                let mut rsubs = None;
+                if first.type_url == "ignore-me" {
+                    if !first.system_version_info.is_empty() {
+                        rsubs = resources.iter().find_map(|(vers, subs)| {
+                            (*vers == first.system_version_info).then_some(subs)
+                        });
+                    }
+                } else {
+                    tracing::warn!("expected `ignore-me` response from management server");
+                }
+
+                if let Some(subs) = rsubs {
+                    subs
+                } else {
+                    let Some(subs) = resources
+                        .iter()
+                        .find_map(|(vers, subs)| vers.is_empty().then_some(subs))
+                    else {
+                        eyre::bail!("failed to find fallback resource subscription set");
+                    };
+
+                    subs
+                }
+            } else {
+                eyre::bail!("expected at least one response from the management server");
+            };
+
+            Ok(dbg!(resource_subscriptions))
+        }
+
+        let resource_subscriptions = match handle_first_response(&mut stream, resources).await {
+            Ok(rs) => rs,
+            Err(error) => {
+                tracing::error!(%error, "failed to acquire matching resource subscriptions based on response from management sever");
                 return Err(self);
             }
         };
@@ -454,6 +495,7 @@ impl AdsClient {
             async move {
                 tracing::trace!("starting xDS delta stream task");
                 let mut stream = stream;
+                let mut resource_subscriptions = resource_subscriptions;
 
                 loop {
                     tracing::trace!("creating discovery response handler");
@@ -504,6 +546,9 @@ impl AdsClient {
 
                     (ds, stream) =
                         DeltaClientStream::connect(new_client, identifier.clone()).await?;
+
+                    resource_subscriptions = handle_first_response(&mut stream, resources).await?;
+
                     ds.refresh(&identifier, resource_subscriptions.to_vec(), &local)
                         .await?;
                 }

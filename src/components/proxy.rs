@@ -220,6 +220,25 @@ impl Proxy {
             shutdown_rx.clone(),
         );
 
+        const SUBS: &[(&str, &[(&str, Vec<String>)])] = &[
+            (
+                "9",
+                &[
+                    (crate::xds::CLUSTER_TYPE, Vec::new()),
+                    (crate::xds::DATACENTER_TYPE, Vec::new()),
+                    (crate::xds::FILTER_CHAIN_TYPE, Vec::new()),
+                ],
+            ),
+            (
+                "",
+                &[
+                    (crate::xds::CLUSTER_TYPE, Vec::new()),
+                    (crate::xds::DATACENTER_TYPE, Vec::new()),
+                    (crate::xds::LISTENER_TYPE, Vec::new()),
+                ],
+            ),
+        ];
+
         if !self.management_servers.is_empty() {
             {
                 let mut lock = ready.xds_is_healthy.write();
@@ -259,16 +278,7 @@ impl Proxy {
                                 ready.xds_is_healthy.read().as_ref().unwrap().clone();
 
                             let _stream = client
-                                .delta_subscribe(
-                                    config.clone(),
-                                    xds_is_healthy.clone(),
-                                    tx,
-                                    [
-                                        (crate::xds::CLUSTER_TYPE, Vec::new()),
-                                        (crate::xds::DATACENTER_TYPE, Vec::new()),
-                                        (crate::xds::FILTER_CHAIN_TYPE, Vec::new()),
-                                    ],
-                                )
+                                .delta_subscribe(config.clone(), xds_is_healthy.clone(), tx, SUBS)
                                 .await
                                 .map_err(|_| eyre::eyre!("failed to acquire delta stream"))?;
 
