@@ -72,6 +72,7 @@ pub trait FilterFactory: Sync + Send {
     /// - `module`: The rust module name containing the filter item
     /// - `version`: The filter's version.
     /// - `item-name`: The name of the rust item (e.g enum, struct) implementing the filter.
+    ///
     /// For example the `v1alpha1` version of the debug filter has the name:
     ///     `quilkin.filters.debug_filter.v1alpha1.Debug`
     fn name(&self) -> &'static str;

@@ -39,6 +39,7 @@ const SESSION_EXPIRY_POLL_INTERVAL: Duration = Duration::from_secs(60);
 /// - A counter that tracks how many packets we've processed within a time window.
 /// - A timestamp that stores the time we last reset the counter. It tracks
 ///   the start of the time window.
+///
 /// This allows us to have a simpler implementation for calculating token
 /// exhaustion without needing a write lock in the common case. The downside
 /// however is that since we're relying on two independent atomics, there is

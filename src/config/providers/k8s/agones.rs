@@ -639,11 +639,7 @@ impl ::kube::core::crd::v1::CustomResourceExt for Fleet {
         > = ::serde_json::from_str("[  ]").expect("valid printer column json");
         let scale: Option<
             ::k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceSubresourceScale,
-        > = if "".is_empty() {
-            None
-        } else {
-            ::serde_json::from_str("").expect("valid scale subresource json")
-        };
+        > = None;
         let categories: Vec<String> = ::serde_json::from_str("[]").expect("valid categories");
         let shorts: Vec<String> = ::serde_json::from_str("[]").expect("valid shortnames");
         let subres = if true {

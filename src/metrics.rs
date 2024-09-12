@@ -165,7 +165,7 @@ pub(crate) fn bytes_total(direction: Direction, asn: &AsnInfo) -> IntCounter {
         .unwrap()
     });
 
-    BYTES_TOTAL.with_label_values(&[direction.label(), asn.asn_str(), &asn.prefix])
+    BYTES_TOTAL.with_label_values(&[direction.label(), asn.asn_str(), asn.prefix])
 }
 
 pub(crate) fn errors_total(direction: Direction, display: &str, asn: &AsnInfo) -> IntCounter {
@@ -181,7 +181,7 @@ pub(crate) fn errors_total(direction: Direction, display: &str, asn: &AsnInfo) -
         .unwrap()
     });
 
-    ERRORS_TOTAL.with_label_values(&[direction.label(), display, asn.asn_str(), &asn.prefix])
+    ERRORS_TOTAL.with_label_values(&[direction.label(), display, asn.asn_str(), asn.prefix])
 }
 
 pub(crate) fn packet_jitter(direction: Direction, asn: &AsnInfo) -> IntGauge {
@@ -197,7 +197,7 @@ pub(crate) fn packet_jitter(direction: Direction, asn: &AsnInfo) -> IntGauge {
         .unwrap()
     });
 
-    PACKET_JITTER.with_label_values(&[direction.label(), asn.asn_str(), &asn.prefix])
+    PACKET_JITTER.with_label_values(&[direction.label(), asn.asn_str(), asn.prefix])
 }
 
 pub(crate) fn packets_total(direction: Direction, asn: &AsnInfo) -> IntCounter {
@@ -213,7 +213,7 @@ pub(crate) fn packets_total(direction: Direction, asn: &AsnInfo) -> IntCounter {
         .unwrap()
     });
 
-    PACKETS_TOTAL.with_label_values(&[direction.label(), asn.asn_str(), &asn.prefix])
+    PACKETS_TOTAL.with_label_values(&[direction.label(), asn.asn_str(), asn.prefix])
 }
 
 pub(crate) fn packets_dropped_total(
@@ -233,7 +233,7 @@ pub(crate) fn packets_dropped_total(
         .unwrap()
     });
 
-    PACKETS_DROPPED.with_label_values(&[direction.label(), source, asn.asn_str(), &asn.prefix])
+    PACKETS_DROPPED.with_label_values(&[direction.label(), source, asn.asn_str(), asn.prefix])
 }
 
 /// Create a generic metrics options.
