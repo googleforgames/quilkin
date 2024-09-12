@@ -220,6 +220,7 @@ impl Proxy {
             shutdown_rx.clone(),
         );
 
+        #[allow(clippy::type_complexity)]
         const SUBS: &[(&str, &[(&str, Vec<String>)])] = &[
             (
                 "9",

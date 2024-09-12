@@ -409,6 +409,7 @@ impl Drop for DeltaSubscription {
 impl AdsClient {
     /// Attempts to start a new delta stream to the xDS management server, if the
     /// management server does not support delta xDS we return the client as an error
+    #[allow(clippy::type_complexity)]
     pub async fn delta_subscribe<C: crate::config::Configuration>(
         self,
         config: Arc<C>,
