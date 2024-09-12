@@ -255,7 +255,16 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                 tracing::debug!(client = %node_id, resource_type = %message.type_url, "initial delta response");
 
                 let type_url = message.type_url.clone();
-                responder(Some(message), &type_url, &mut client_tracker)?.unwrap()
+                responder(Some(message), &type_url, &mut client_tracker)?.unwrap_or(
+                    DeltaDiscoveryResponse {
+                        resources: Vec::new(),
+                        nonce: String::new(),
+                        control_plane: None,
+                        type_url,
+                        removed_resources: Vec::new(),
+                        system_version_info: VERSION_INFO.into(),
+                    },
+                )
             }
         };
 
