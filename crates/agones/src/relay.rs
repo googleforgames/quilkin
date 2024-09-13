@@ -127,6 +127,10 @@ mod tests {
             debug_pods(&client, "role=xds".into()).await;
             debug_pods(&client, "role=agent".into()).await;
             panic!("Quilkin proxy deployment should be ready");
+        } else {
+            debug_pods(&client, format!("role={relay_proxy_name}")).await;
+            debug_pods(&client, "role=xds".into()).await;
+            debug_pods(&client, "role=agent".into()).await;
         }
 
         // keep trying to send the packet to the proxy until it works, since distributed systems are eventually consistent.
