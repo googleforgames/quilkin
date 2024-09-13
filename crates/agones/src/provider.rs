@@ -109,7 +109,7 @@ mod tests {
         .await
         .is_err()
         {
-            debug_pods(&client, format!("role={PROXY_DEPLOYMENT}")).await;
+            debug_pods(&client, Some(format!("role={PROXY_DEPLOYMENT}"))).await;
             panic!("Quilkin proxy deployment should be ready");
         }
 
@@ -157,8 +157,8 @@ mod tests {
             }
         }
         if !failed {
-            debug_pods(&client, format!("role={PROXY_DEPLOYMENT}")).await;
-            debug_pods(&client, "role=xds".into()).await;
+            debug_pods(&client, Some(format!("role={PROXY_DEPLOYMENT}"))).await;
+            debug_pods(&client, Some("role=xds".into())).await;
         }
         assert!(failed, "Packet should have failed");
 

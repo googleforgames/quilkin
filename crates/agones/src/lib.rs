@@ -689,7 +689,7 @@ pub fn gameserver_address(gs: &GameServer) -> String {
 // Useful for determining why something is failing in CI without having to run a cluster.
 // Requires quilkin::test::enable_log("agones=debug"); to enable debug logging within
 // the test
-pub async fn debug_pods(client: &Client, labels: String) {
+pub async fn debug_pods(client: &Client, labels: Option<String>) {
     debug!(labels, "🪓 Debug output for Selector");
     let pods: Api<Pod> = client.namespaced_api();
     let events: Api<Event> = client.namespaced_api();
@@ -698,7 +698,7 @@ pub async fn debug_pods(client: &Client, labels: String) {
     let event_list = events.list(&params).await.unwrap();
     let pod_list = pods
         .list(&ListParams {
-            label_selector: Some(labels),
+            label_selector: labels,
             ..Default::default()
         })
         .await

@@ -59,6 +59,8 @@ mod tests {
     /// for this test, we should only run Agones integration test in a serial manner, since they
     /// could easily collide with each other.
     async fn agones_token_router() {
+        quilkin::test::enable_log("agones=debug");
+
         run_test(true, true, true, 0).await;
         run_test(true, true, false, 1).await;
         run_test(true, false, true, 2).await;
@@ -121,7 +123,7 @@ mod tests {
         .await
         .is_err()
         {
-            debug_pods(&client, format!("role={relay_proxy_name}")).await;
+            debug_pods(&client, None).await;
             panic!("Quilkin proxy deployment should be ready");
         }
 
@@ -169,8 +171,7 @@ mod tests {
             }
         }
         if !failed {
-            debug_pods(&client, format!("role={relay_proxy_name}")).await;
-            debug_pods(&client, "role=xds".into()).await;
+            debug_pods(&client, None).await;
         }
         assert!(failed, "Packet should have failed");
 
@@ -334,7 +335,7 @@ mod tests {
         )
         .await;
         if result.is_err() {
-            debug_pods(client, "role=relay".into()).await;
+            debug_pods(client, Some("role=relay".into())).await;
 
             panic!("Relay Deployment should be ready");
         }
@@ -391,7 +392,7 @@ mod tests {
         )
         .await;
         if result.is_err() {
-            debug_pods(client, "role=agent".into()).await;
+            debug_pods(client, Some("role=agent".into())).await;
             panic!("Agent Deployment should be ready");
         }
         result.unwrap().expect("Should have an agent deployment");
