@@ -123,7 +123,9 @@ mod tests {
         .await
         .is_err()
         {
-            debug_pods(&client, None).await;
+            debug_pods(&client, format!("role={relay_proxy_name}")).await;
+            debug_pods(&client, "role=xds".into()).await;
+            debug_pods(&client, "role=agent".into()).await;
             panic!("Quilkin proxy deployment should be ready");
         }
 
@@ -171,7 +173,9 @@ mod tests {
             }
         }
         if !failed {
-            debug_pods(&client, None).await;
+            debug_pods(&client, format!("role={relay_proxy_name}")).await;
+            debug_pods(&client, "role=xds".into()).await;
+            debug_pods(&client, "role=agent".into()).await;
         }
         assert!(failed, "Packet should have failed");
 
@@ -335,7 +339,7 @@ mod tests {
         )
         .await;
         if result.is_err() {
-            debug_pods(client, Some("role=relay".into())).await;
+            debug_pods(client, "role=relay".into()).await;
 
             panic!("Relay Deployment should be ready");
         }
@@ -392,7 +396,7 @@ mod tests {
         )
         .await;
         if result.is_err() {
-            debug_pods(client, Some("role=agent".into())).await;
+            debug_pods(client, "role=agent".into()).await;
             panic!("Agent Deployment should be ready");
         }
         result.unwrap().expect("Should have an agent deployment");
