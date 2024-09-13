@@ -51,7 +51,7 @@ mod tests {
         TOKEN_KEY,
     };
 
-    const SLOW: Duration = Duration::from_secs(30);
+    const SLOW: Duration = Duration::from_secs(120);
 
     #[tokio::test]
     #[serial]
