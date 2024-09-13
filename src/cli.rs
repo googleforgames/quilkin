@@ -123,12 +123,12 @@ impl Cli {
                 LogFormats::Auto => {
                     use std::io::IsTerminal;
                     if !std::io::stdout().is_terminal() {
-                        subscriber.json().init();
+                        subscriber.with_ansi(false).json().init();
                     } else {
                         subscriber.init();
                     }
                 }
-                LogFormats::Json => subscriber.json().init(),
+                LogFormats::Json => subscriber.with_ansi(false).json().init(),
                 LogFormats::Plain => subscriber.init(),
                 LogFormats::Pretty => subscriber.pretty().init(),
             }
