@@ -600,16 +600,16 @@ pub fn quilkin_container(
             value: Some("quilkin=trace".into()),
             value_from: None,
         }]),
-        // liveness_probe: Some(Probe {
-        //     http_get: Some(HTTPGetAction {
-        //         path: Some("/live".into()),
-        //         port: IntOrString::Int(8000),
-        //         ..Default::default()
-        //     }),
-        //     initial_delay_seconds: Some(3),
-        //     period_seconds: Some(2),
-        //     ..Default::default()
-        // }),
+        liveness_probe: Some(Probe {
+            http_get: Some(HTTPGetAction {
+                path: Some("/live".into()),
+                port: IntOrString::Int(8000),
+                ..Default::default()
+            }),
+            initial_delay_seconds: Some(3),
+            period_seconds: Some(2),
+            ..Default::default()
+        }),
         readiness_probe: Some(Probe {
             http_get: Some(HTTPGetAction {
                 path: Some("/ready".into()),

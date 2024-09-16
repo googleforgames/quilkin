@@ -38,7 +38,7 @@ endif
 # Set this value if you want to use an external registry
 REPOSITORY ?= ""
 IMAGE_TAG ?= ${REPOSITORY}quilkin:$(package_version)
-PREV_IMAGE_TAG ?= us-docker.pkg.dev/quilkin/release/quilkin:0.9.0
+PREV_IMAGE_TAG ?= us-docker.pkg.dev/quilkin/release/quilkin:0.8.0
 MINIKUBE_PROFILE ?= quilkin
 CARGO_TARGET_DIR ?= /workspace/target/build-image
 common_rust_args := -v $(project_path):/workspace -w /workspace \
