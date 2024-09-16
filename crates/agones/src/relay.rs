@@ -61,7 +61,7 @@ mod tests {
     async fn agones_token_router() {
         quilkin::test::enable_log("agones=debug");
 
-        //run_test(true, true, true, 0).await;
+        run_test(true, true, true, 0).await;
         run_test(true, true, false, 1).await;
         run_test(true, false, true, 2).await;
         run_test(false, true, true, 3).await;
