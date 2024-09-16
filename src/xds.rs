@@ -85,6 +85,8 @@ impl Resource {
                     None
                 };
 
+                tracing::info!("LISTENER CONFIG: '{config:?}'");
+
                 Ok(proto::Filter {
                     name: filter.name,
                     label: None,
