@@ -52,8 +52,6 @@ impl Resource {
 
     #[inline]
     fn decode_listener(buf: &[u8]) -> eyre::Result<Self> {
-        use eyre::Context as _;
-
         let mut listener =
             quilkin_xds::generated::envoy::config::listener::v3::Listener::decode(buf)?;
         eyre::ensure!(
@@ -80,12 +78,16 @@ impl Resource {
                         }
                     };
 
-                    Some(String::from_utf8(config.value).context("filter config was non-utf8")?)
+                    let json_value = crate::filters::FilterRegistry::get_factory(&filter.name)
+                        .ok_or_else(|| {
+                            crate::filters::CreationError::NotFound(filter.name.clone())
+                        })?
+                        .encode_config_to_json(config)?;
+
+                    Some(serde_json::to_string(&json_value)?)
                 } else {
                     None
                 };
-
-                tracing::info!("LISTENER CONFIG: '{config:?}'");
 
                 Ok(proto::Filter {
                     name: filter.name,
