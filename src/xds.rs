@@ -78,11 +78,20 @@ impl Resource {
                         }
                     };
 
-                    let json_value = crate::filters::FilterRegistry::get_factory(&filter.name)
+                    let len = config.value.len();
+
+                    let json_value = match crate::filters::FilterRegistry::get_factory(&filter.name)
                         .ok_or_else(|| {
                             crate::filters::CreationError::NotFound(filter.name.clone())
                         })?
-                        .encode_config_to_json(config)?;
+                        .encode_config_to_json(config)
+                    {
+                        Ok(jv) => jv,
+                        Err(err) => {
+                            tracing::error!("wtf {} {len} {err:#}", filter.name);
+                            return Err(err.into());
+                        }
+                    };
 
                     Some(serde_json::to_string(&json_value)?)
                 } else {
