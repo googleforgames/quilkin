@@ -51,7 +51,7 @@ mod tests {
         TOKEN_KEY,
     };
 
-    const SLOW: Duration = Duration::from_secs(120);
+    const SLOW: Duration = Duration::from_secs(30);
 
     #[tokio::test]
     #[serial]
@@ -59,8 +59,6 @@ mod tests {
     /// for this test, we should only run Agones integration test in a serial manner, since they
     /// could easily collide with each other.
     async fn agones_token_router() {
-        quilkin::test::enable_log("agones=debug");
-
         run_test(true, true, true, 0).await;
         run_test(true, true, false, 1).await;
         run_test(true, false, true, 2).await;
@@ -127,10 +125,6 @@ mod tests {
             debug_pods(&client, "role=relay".into()).await;
             debug_pods(&client, "role=agent".into()).await;
             panic!("Quilkin proxy deployment should be ready");
-        } else {
-            debug_pods(&client, format!("role={relay_proxy_name}")).await;
-            debug_pods(&client, "role=relay".into()).await;
-            debug_pods(&client, "role=agent".into()).await;
         }
 
         // keep trying to send the packet to the proxy until it works, since distributed systems are eventually consistent.
