@@ -195,7 +195,10 @@ pub trait Configuration: Send + Sync + Sized + 'static {
         subscribed: crate::server::ControlPlane<Self>,
     ) -> impl std::future::Future<Output = ()> + Send + 'static;
 
-    fn interested_resources(&self) -> impl Iterator<Item = (&'static str, Vec<String>)>;
+    fn interested_resources(
+        &self,
+        server_version: &str,
+    ) -> impl Iterator<Item = (&'static str, Vec<String>)>;
 }
 
 pub struct DeltaDiscoveryRes {

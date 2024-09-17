@@ -59,7 +59,10 @@ impl xds::config::Configuration for ClientConfig {
         unreachable!();
     }
 
-    fn interested_resources(&self) -> impl Iterator<Item = (&'static str, Vec<String>)> {
+    fn interested_resources(
+        &self,
+        _server_version: &str,
+    ) -> impl Iterator<Item = (&'static str, Vec<String>)> {
         [].into_iter()
     }
 
@@ -145,13 +148,13 @@ impl xds::config::Configuration for ServerConfig {
             }
         }
 
-        Ok(DeltaDiscoveryRes {
-            resources,
-            removed,
-        })
+        Ok(DeltaDiscoveryRes { resources, removed })
     }
 
-    fn interested_resources(&self) -> impl Iterator<Item = (&'static str, Vec<String>)> {
+    fn interested_resources(
+        &self,
+        _server_version: &str,
+    ) -> impl Iterator<Item = (&'static str, Vec<String>)> {
         [(TYPE, Vec::new())].into_iter()
     }
 
@@ -164,7 +167,9 @@ impl xds::config::Configuration for ServerConfig {
 
         async move {
             loop {
-                if item_watcher.recv().await.is_err() { break; };
+                if item_watcher.recv().await.is_err() {
+                    break;
+                };
                 control_plane.push_update(TYPE);
             }
         }
@@ -189,17 +194,19 @@ async fn main() {
     let relay_listener = xds::net::TcpListener::bind(None).unwrap();
     let addr = relay_listener.local_addr();
 
-    let server = xds::server::ControlPlane::from_arc(sc.clone(), std::time::Duration::from_secs(60)).management_server(relay_listener).unwrap();
+    let server =
+        xds::server::ControlPlane::from_arc(sc.clone(), std::time::Duration::from_secs(60))
+            .management_server(relay_listener)
+            .unwrap();
 
-    tokio::task::spawn(async move {
-        server.await
-    });
+    tokio::task::spawn(async move { server.await });
 
     let client = xds::client::AdsClient::connect(
         "client".into(),
         vec![format!("http://{addr}").try_into().unwrap()],
     )
-    .await.unwrap();
+    .await
+    .unwrap();
 
     let (stx, srx) = tokio::sync::oneshot::channel();
 
@@ -207,15 +214,15 @@ async fn main() {
         let cc = cc.clone();
         async move {
             let _stream = client
-            .delta_subscribe(
-                cc,
-                Arc::new(std::sync::atomic::AtomicBool::new(true)),
-                None,
-                [
-                    (TYPE, Vec::new()),
-                ],
-            )
-            .await.map_err(|_| "failed to subscribe").unwrap();
+                .delta_subscribe(
+                    cc,
+                    Arc::new(std::sync::atomic::AtomicBool::new(true)),
+                    None,
+                    &[("", &[(TYPE, Vec::new())])],
+                )
+                .await
+                .map_err(|_| "failed to subscribe")
+                .unwrap();
 
             srx.await.unwrap();
         }

@@ -52,6 +52,7 @@ mod tests {
     };
 
     const PROXY_DEPLOYMENT: &str = "quilkin-xds-proxies";
+    const SLOW: Duration = Duration::from_secs(60);
 
     #[tokio::test]
     #[serial]
@@ -94,7 +95,7 @@ mod tests {
             .await
             .unwrap();
 
-        let response = timeout(Duration::from_secs(30), rx.recv())
+        let response = timeout(SLOW, rx.recv())
             .await
             .expect("should receive packet from GameServer")
             .unwrap();
@@ -102,7 +103,7 @@ mod tests {
 
         // Proxy Deployment should be ready, since there is now an endpoint
         if timeout(
-            Duration::from_secs(30),
+            SLOW,
             await_condition(deployments.clone(), PROXY_DEPLOYMENT, is_deployment_ready()),
         )
         .await

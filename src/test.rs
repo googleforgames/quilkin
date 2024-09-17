@@ -39,6 +39,7 @@ pub fn enable_log(filter: impl Into<EnvFilter>) {
     LOG_ONCE.call_once(|| {
         tracing_subscriber::fmt()
             .pretty()
+            .with_ansi(false)
             .with_env_filter(filter)
             .init()
     });
