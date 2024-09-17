@@ -197,10 +197,11 @@ pub struct ConvertProtoConfigError {
 
 impl ConvertProtoConfigError {
     pub fn new(reason: impl std::fmt::Display, field: Option<String>) -> Self {
-        Self {
-            reason: reason.to_string(),
-            field,
-        }
+        panic!("ok? {reason} {field:?}");
+        // Self {
+        //     reason: reason.to_string(),
+        //     field,
+        // }
     }
 
     pub fn missing_field(field: &'static str) -> Self {
