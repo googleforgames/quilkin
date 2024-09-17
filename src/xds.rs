@@ -134,11 +134,8 @@ impl Resource {
                             quilkin_xds::generated::envoy::config::listener::v3::Filter {
                                 name: f.name.clone(),
                                 config_type: if let Some(cfg) = &f.config {
-                                    let cfg = prost_types::Any {
-                                        type_url: f.name.clone(),
-                                        value: cfg.clone().into(),
-                                    };
-                                    Some(quilkin_xds::generated::envoy::config::listener::v3::filter::ConfigType::TypedConfig(cfg))
+                                    let jval: serde_json::Value = serde_json::from_str(cfg).unwrap();
+                                    Some(quilkin_xds::generated::envoy::config::listener::v3::filter::ConfigType::TypedConfig(crate::filters::FilterRegistry::get_factory(&f.name).unwrap().encode_config_to_protobuf(jval).unwrap()))
                                 } else {
                                     None
                                 },
