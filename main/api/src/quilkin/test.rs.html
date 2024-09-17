@@ -539,6 +539,7 @@
 <a href="#537" id="537">537</a>
 <a href="#538" id="538">538</a>
 <a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -580,6 +581,7 @@
     LOG_ONCE.call_once(|| {
         tracing_subscriber::fmt()
             .pretty()
+            .with_ansi(<span class="bool-val">false</span>)
             .with_env_filter(filter)
             .init()
     });

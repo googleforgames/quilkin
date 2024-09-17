@@ -297,6 +297,9 @@
 <a href="#295" id="295">295</a>
 <a href="#296" id="296">296</a>
 <a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::discovery::{DeltaDiscoveryRequest, DeltaDiscoveryResponse, Resource};
 <span class="kw">use </span>std::{
     collections::{BTreeSet, HashMap},
@@ -494,7 +497,10 @@
         subscribed: <span class="kw">crate</span>::server::ControlPlane&lt;<span class="self">Self</span>&gt;,
     ) -&gt; <span class="kw">impl </span>std::future::Future&lt;Output = ()&gt; + Send + <span class="lifetime">'static</span>;
 
-    <span class="kw">fn </span>interested_resources(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl </span>Iterator&lt;Item = (<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, Vec&lt;String&gt;)&gt;;
+    <span class="kw">fn </span>interested_resources(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        server_version: <span class="kw-2">&amp;</span>str,
+    ) -&gt; <span class="kw">impl </span>Iterator&lt;Item = (<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, Vec&lt;String&gt;)&gt;;
 }
 
 <span class="kw">pub struct </span>DeltaDiscoveryRes {

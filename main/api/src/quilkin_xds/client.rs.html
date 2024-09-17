@@ -528,6 +528,52 @@
 <a href="#526" id="526">526</a>
 <a href="#527" id="527">527</a>
 <a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
+<a href="#532" id="532">532</a>
+<a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a>
+<a href="#543" id="543">543</a>
+<a href="#544" id="544">544</a>
+<a href="#545" id="545">545</a>
+<a href="#546" id="546">546</a>
+<a href="#547" id="547">547</a>
+<a href="#548" id="548">548</a>
+<a href="#549" id="549">549</a>
+<a href="#550" id="550">550</a>
+<a href="#551" id="551">551</a>
+<a href="#552" id="552">552</a>
+<a href="#553" id="553">553</a>
+<a href="#554" id="554">554</a>
+<a href="#555" id="555">555</a>
+<a href="#556" id="556">556</a>
+<a href="#557" id="557">557</a>
+<a href="#558" id="558">558</a>
+<a href="#559" id="559">559</a>
+<a href="#560" id="560">560</a>
+<a href="#561" id="561">561</a>
+<a href="#562" id="562">562</a>
+<a href="#563" id="563">563</a>
+<a href="#564" id="564">564</a>
+<a href="#565" id="565">565</a>
+<a href="#566" id="566">566</a>
+<a href="#567" id="567">567</a>
+<a href="#568" id="568">568</a>
+<a href="#569" id="569">569</a>
+<a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a>
+<a href="#574" id="574">574</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -939,18 +985,17 @@
 <span class="kw">impl </span>AdsClient {
     <span class="doccomment">/// Attempts to start a new delta stream to the xDS management server, if the
     /// management server does not support delta xDS we return the client as an error
+    </span><span class="attr">#[allow(clippy::type_complexity)]
     </span><span class="kw">pub async fn </span>delta_subscribe&lt;C: <span class="kw">crate</span>::config::Configuration&gt;(
         <span class="self">self</span>,
         config: Arc&lt;C&gt;,
         is_healthy: Arc&lt;AtomicBool&gt;,
         notifier: <span class="prelude-ty">Option</span>&lt;tokio::sync::mpsc::UnboundedSender&lt;String&gt;&gt;,
-        resources: <span class="kw">impl </span>IntoIterator&lt;Item = (<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, Vec&lt;String&gt;)&gt;,
+        resources: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[(<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[(<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, Vec&lt;String&gt;)])],
     ) -&gt; <span class="prelude-ty">Result</span>&lt;DeltaSubscription, <span class="self">Self</span>&gt; {
-        <span class="kw">let </span>resource_subscriptions: Vec&lt;<span class="kw">_</span>&gt; = resources.into_iter().collect();
-
         <span class="kw">let </span>identifier = String::from(<span class="kw-2">&amp;*</span><span class="self">self</span>.identifier);
 
-        <span class="kw">let </span>(<span class="kw-2">mut </span>ds, stream) = <span class="kw">match </span>DeltaClientStream::connect(
+        <span class="kw">let </span>(<span class="kw-2">mut </span>ds, <span class="kw-2">mut </span>stream) = <span class="kw">match </span>DeltaClientStream::connect(
             <span class="self">self</span>.client.clone(),
             identifier.clone(),
         )
@@ -959,6 +1004,49 @@
             <span class="prelude-val">Ok</span>(ds) =&gt; ds,
             <span class="prelude-val">Err</span>(err) =&gt; {
                 <span class="macro">tracing::error!</span>(error = <span class="question-mark">?</span>err, <span class="string">"failed to acquire aggregated delta stream from management server"</span>);
+                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="self">self</span>);
+            }
+        };
+
+        <span class="kw">async fn </span>handle_first_response(
+            stream: <span class="kw-2">&amp;mut </span>tonic::Streaming&lt;DeltaDiscoveryResponse&gt;,
+            resources: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[(<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[(<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, Vec&lt;String&gt;)])],
+        ) -&gt; eyre::Result&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>[(<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, Vec&lt;String&gt;)]&gt; {
+            <span class="kw">let </span>resource_subscriptions = <span class="kw">if let </span><span class="prelude-val">Some</span>(first) = stream.message().<span class="kw">await</span><span class="question-mark">? </span>{
+                <span class="kw">let </span><span class="kw-2">mut </span>rsubs = <span class="prelude-val">None</span>;
+                <span class="kw">if </span>first.type_url == <span class="string">"ignore-me" </span>{
+                    <span class="kw">if </span>!first.system_version_info.is_empty() {
+                        rsubs = resources.iter().find_map(|(vers, subs)| {
+                            (<span class="kw-2">*</span>vers == first.system_version_info).then_some(subs)
+                        });
+                    }
+                } <span class="kw">else </span>{
+                    <span class="macro">tracing::warn!</span>(<span class="string">"expected `ignore-me` response from management server"</span>);
+                }
+
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(subs) = rsubs {
+                    subs
+                } <span class="kw">else </span>{
+                    <span class="kw">let </span><span class="prelude-val">Some</span>(subs) = resources
+                        .iter()
+                        .find_map(|(vers, subs)| vers.is_empty().then_some(subs))
+                    <span class="kw">else </span>{
+                        <span class="macro">eyre::bail!</span>(<span class="string">"failed to find fallback resource subscription set"</span>);
+                    };
+
+                    subs
+                }
+            } <span class="kw">else </span>{
+                <span class="macro">eyre::bail!</span>(<span class="string">"expected at least one response from the management server"</span>);
+            };
+
+            <span class="prelude-val">Ok</span>(resource_subscriptions)
+        }
+
+        <span class="kw">let </span>resource_subscriptions = <span class="kw">match </span>handle_first_response(<span class="kw-2">&amp;mut </span>stream, resources).<span class="kw">await </span>{
+            <span class="prelude-val">Ok</span>(rs) =&gt; rs,
+            <span class="prelude-val">Err</span>(error) =&gt; {
+                <span class="macro">tracing::error!</span>(%error, <span class="string">"failed to acquire matching resource subscriptions based on response from management sever"</span>);
                 <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="self">self</span>);
             }
         };
@@ -984,6 +1072,7 @@
             <span class="kw">async move </span>{
                 <span class="macro">tracing::trace!</span>(<span class="string">"starting xDS delta stream task"</span>);
                 <span class="kw">let </span><span class="kw-2">mut </span>stream = stream;
+                <span class="kw">let </span><span class="kw-2">mut </span>resource_subscriptions = resource_subscriptions;
 
                 <span class="kw">loop </span>{
                     <span class="macro">tracing::trace!</span>(<span class="string">"creating discovery response handler"</span>);
@@ -1034,6 +1123,9 @@
 
                     (ds, stream) =
                         DeltaClientStream::connect(new_client, identifier.clone()).<span class="kw">await</span><span class="question-mark">?</span>;
+
+                    resource_subscriptions = handle_first_response(<span class="kw-2">&amp;mut </span>stream, resources).<span class="kw">await</span><span class="question-mark">?</span>;
+
                     ds.refresh(<span class="kw-2">&amp;</span>identifier, resource_subscriptions.to_vec(), <span class="kw-2">&amp;</span>local)
                         .<span class="kw">await</span><span class="question-mark">?</span>;
                 }

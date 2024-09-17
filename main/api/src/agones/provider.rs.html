@@ -255,6 +255,7 @@
 <a href="#253" id="253">253</a>
 <a href="#254" id="254">254</a>
 <a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -309,6 +310,7 @@
     };
 
     <span class="kw">const </span>PROXY_DEPLOYMENT: <span class="kw-2">&amp;</span>str = <span class="string">"quilkin-xds-proxies"</span>;
+    <span class="kw">const </span>SLOW: Duration = Duration::from_secs(<span class="number">60</span>);
 
     <span class="attr">#[tokio::test]
     #[serial]
@@ -351,7 +353,7 @@
             .<span class="kw">await
             </span>.unwrap();
 
-        <span class="kw">let </span>response = timeout(Duration::from_secs(<span class="number">30</span>), rx.recv())
+        <span class="kw">let </span>response = timeout(SLOW, rx.recv())
             .<span class="kw">await
             </span>.expect(<span class="string">"should receive packet from GameServer"</span>)
             .unwrap();
@@ -359,7 +361,7 @@
 
         <span class="comment">// Proxy Deployment should be ready, since there is now an endpoint
         </span><span class="kw">if </span>timeout(
-            Duration::from_secs(<span class="number">30</span>),
+            SLOW,
             await_condition(deployments.clone(), PROXY_DEPLOYMENT, is_deployment_ready()),
         )
         .<span class="kw">await

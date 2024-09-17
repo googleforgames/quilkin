@@ -330,6 +330,17 @@
 <a href="#328" id="328">328</a>
 <a href="#329" id="329">329</a>
 <a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
+<a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
+<a href="#336" id="336">336</a>
+<a href="#337" id="337">337</a>
+<a href="#338" id="338">338</a>
+<a href="#339" id="339">339</a>
+<a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
@@ -552,6 +563,26 @@
             shutdown_rx.clone(),
         );
 
+        <span class="attr">#[allow(clippy::type_complexity)]
+        </span><span class="kw">const </span>SUBS: <span class="kw-2">&amp;</span>[(<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>[(<span class="kw-2">&amp;</span>str, Vec&lt;String&gt;)])] = <span class="kw-2">&amp;</span>[
+            (
+                <span class="string">"9"</span>,
+                <span class="kw-2">&amp;</span>[
+                    (<span class="kw">crate</span>::xds::CLUSTER_TYPE, Vec::new()),
+                    (<span class="kw">crate</span>::xds::DATACENTER_TYPE, Vec::new()),
+                    (<span class="kw">crate</span>::xds::FILTER_CHAIN_TYPE, Vec::new()),
+                ],
+            ),
+            (
+                <span class="string">""</span>,
+                <span class="kw-2">&amp;</span>[
+                    (<span class="kw">crate</span>::xds::CLUSTER_TYPE, Vec::new()),
+                    (<span class="kw">crate</span>::xds::DATACENTER_TYPE, Vec::new()),
+                    (<span class="kw">crate</span>::xds::LISTENER_TYPE, Vec::new()),
+                ],
+            ),
+        ];
+
         <span class="kw">if </span>!<span class="self">self</span>.management_servers.is_empty() {
             {
                 <span class="kw">let </span><span class="kw-2">mut </span>lock = ready.xds_is_healthy.write();
@@ -591,16 +622,7 @@
                                 ready.xds_is_healthy.read().as_ref().unwrap().clone();
 
                             <span class="kw">let </span>_stream = client
-                                .delta_subscribe(
-                                    config.clone(),
-                                    xds_is_healthy.clone(),
-                                    tx,
-                                    [
-                                        (<span class="kw">crate</span>::xds::CLUSTER_TYPE, Vec::new()),
-                                        (<span class="kw">crate</span>::xds::DATACENTER_TYPE, Vec::new()),
-                                        (<span class="kw">crate</span>::xds::FILTER_CHAIN_TYPE, Vec::new()),
-                                    ],
-                                )
+                                .delta_subscribe(config.clone(), xds_is_healthy.clone(), tx, SUBS)
                                 .<span class="kw">await
                                 </span>.map_err(|<span class="kw">_</span>| <span class="macro">eyre::eyre!</span>(<span class="string">"failed to acquire delta stream"</span>))<span class="question-mark">?</span>;
 

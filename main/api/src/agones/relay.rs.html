@@ -400,6 +400,9 @@
 <a href="#398" id="398">398</a>
 <a href="#399" id="399">399</a>
 <a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2023 Google LLC All Rights Reserved.
  *
@@ -524,6 +527,8 @@
         </span>.is_err()
         {
             debug_pods(<span class="kw-2">&amp;</span>client, <span class="macro">format!</span>(<span class="string">"role={relay_proxy_name}"</span>)).<span class="kw">await</span>;
+            debug_pods(<span class="kw-2">&amp;</span>client, <span class="string">"role=relay"</span>.into()).<span class="kw">await</span>;
+            debug_pods(<span class="kw-2">&amp;</span>client, <span class="string">"role=agent"</span>.into()).<span class="kw">await</span>;
             <span class="macro">panic!</span>(<span class="string">"Quilkin proxy deployment should be ready"</span>);
         }
 
@@ -572,7 +577,8 @@
         }
         <span class="kw">if </span>!failed {
             debug_pods(<span class="kw-2">&amp;</span>client, <span class="macro">format!</span>(<span class="string">"role={relay_proxy_name}"</span>)).<span class="kw">await</span>;
-            debug_pods(<span class="kw-2">&amp;</span>client, <span class="string">"role=xds"</span>.into()).<span class="kw">await</span>;
+            debug_pods(<span class="kw-2">&amp;</span>client, <span class="string">"role=relay"</span>.into()).<span class="kw">await</span>;
+            debug_pods(<span class="kw-2">&amp;</span>client, <span class="string">"role=agent"</span>.into()).<span class="kw">await</span>;
         }
         <span class="macro">assert!</span>(failed, <span class="string">"Packet should have failed"</span>);
 

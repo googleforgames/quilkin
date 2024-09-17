@@ -258,6 +258,30 @@
 <a href="#256" id="256">256</a>
 <a href="#257" id="257">257</a>
 <a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -383,12 +407,12 @@
                 LogFormats::Auto =&gt; {
                     <span class="kw">use </span>std::io::IsTerminal;
                     <span class="kw">if </span>!std::io::stdout().is_terminal() {
-                        subscriber.json().init();
+                        subscriber.with_ansi(<span class="bool-val">false</span>).json().init();
                     } <span class="kw">else </span>{
                         subscriber.init();
                     }
                 }
-                LogFormats::Json =&gt; subscriber.json().init(),
+                LogFormats::Json =&gt; subscriber.with_ansi(<span class="bool-val">false</span>).json().init(),
                 LogFormats::Plain =&gt; subscriber.init(),
                 LogFormats::Pretty =&gt; subscriber.pretty().init(),
             }
@@ -441,7 +465,31 @@
         <span class="macro">tracing::debug!</span>(cli = <span class="question-mark">?</span><span class="self">self</span>, <span class="string">"config parameters"</span>);
 
         <span class="kw">let </span>config = Arc::new(<span class="kw">match </span><span class="self">Self</span>::read_config(<span class="self">self</span>.config)<span class="question-mark">? </span>{
-            <span class="prelude-val">Some</span>(config) =&gt; config,
+            <span class="prelude-val">Some</span>(<span class="kw-2">mut </span>config) =&gt; {
+                <span class="comment">// Workaround deficiency in serde flatten + untagged
+                </span><span class="kw">if </span><span class="macro">matches!</span>(<span class="self">self</span>.command, Commands::Agent(..)) {
+                    config.datacenter = <span class="kw">match </span>config.datacenter {
+                        <span class="kw">crate</span>::config::DatacenterConfig::Agent {
+                            icao_code,
+                            qcmp_port,
+                        } =&gt; <span class="kw">crate</span>::config::DatacenterConfig::Agent {
+                            icao_code,
+                            qcmp_port,
+                        },
+                        <span class="kw">crate</span>::config::DatacenterConfig::NonAgent { datacenters } =&gt; {
+                            <span class="macro">eyre::ensure!</span>(datacenters.read().is_empty(), <span class="string">"starting an agent, but the configuration file has `datacenters` set"</span>);
+                            <span class="kw">crate</span>::config::DatacenterConfig::Agent {
+                                icao_code: <span class="kw">crate</span>::config::Slot::new(
+                                    <span class="kw">crate</span>::config::IcaoCode::default(),
+                                ),
+                                qcmp_port: <span class="kw">crate</span>::config::Slot::new(<span class="number">0</span>),
+                            }
+                        }
+                    };
+                }
+
+                config
+            }
             <span class="prelude-val">None </span><span class="kw">if </span><span class="macro">matches!</span>(<span class="self">self</span>.command, Commands::Agent(..)) =&gt; Config::default_agent(),
             <span class="prelude-val">None </span>=&gt; Config::default_non_agent(),
         });

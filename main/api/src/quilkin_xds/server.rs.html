@@ -475,6 +475,31 @@
 <a href="#473" id="473">473</a>
 <a href="#474" id="474">474</a>
 <a href="#475" id="475">475</a>
+<a href="#476" id="476">476</a>
+<a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
+<a href="#479" id="479">479</a>
+<a href="#480" id="480">480</a>
+<a href="#481" id="481">481</a>
+<a href="#482" id="482">482</a>
+<a href="#483" id="483">483</a>
+<a href="#484" id="484">484</a>
+<a href="#485" id="485">485</a>
+<a href="#486" id="486">486</a>
+<a href="#487" id="487">487</a>
+<a href="#488" id="488">488</a>
+<a href="#489" id="489">489</a>
+<a href="#490" id="490">490</a>
+<a href="#491" id="491">491</a>
+<a href="#492" id="492">492</a>
+<a href="#493" id="493">493</a>
+<a href="#494" id="494">494</a>
+<a href="#495" id="495">495</a>
+<a href="#496" id="496">496</a>
+<a href="#497" id="497">497</a>
+<a href="#498" id="498">498</a>
+<a href="#499" id="499">499</a>
+<a href="#500" id="500">500</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -510,6 +535,8 @@
     metrics,
     net::TcpListener,
 };
+
+<span class="kw">const </span>VERSION_INFO: <span class="kw-2">&amp;</span>str = <span class="string">"9"</span>;
 
 <span class="kw">pub struct </span>ControlPlane&lt;C&gt; {
     <span class="kw">pub </span>config: Arc&lt;C&gt;,
@@ -695,8 +722,7 @@
                         control_plane: <span class="prelude-val">Some</span>(control_plane_id.clone()),
                         type_url: type_url.into(),
                         removed_resources,
-                        <span class="comment">// Only used for debugging, not really useful
-                        </span>system_version_info: String::new(),
+                        system_version_info: VERSION_INFO.into(),
                     };
 
                     <span class="macro">tracing::trace!</span>(
@@ -725,14 +751,22 @@
                     control_plane: <span class="prelude-val">None</span>,
                     type_url: message.type_url,
                     removed_resources: Vec::new(),
-                    <span class="comment">// Only used for debugging, not really useful
-                    </span>system_version_info: String::new(),
+                    system_version_info: VERSION_INFO.into(),
                 }
             } <span class="kw">else </span>{
                 <span class="macro">tracing::debug!</span>(client = %node_id, resource_type = %message.type_url, <span class="string">"initial delta response"</span>);
 
                 <span class="kw">let </span>type_url = message.type_url.clone();
-                responder(<span class="prelude-val">Some</span>(message), <span class="kw-2">&amp;</span>type_url, <span class="kw-2">&amp;mut </span>client_tracker)<span class="question-mark">?</span>.unwrap()
+                responder(<span class="prelude-val">Some</span>(message), <span class="kw-2">&amp;</span>type_url, <span class="kw-2">&amp;mut </span>client_tracker)<span class="question-mark">?</span>.unwrap_or(
+                    DeltaDiscoveryResponse {
+                        resources: Vec::new(),
+                        nonce: String::new(),
+                        control_plane: <span class="prelude-val">None</span>,
+                        type_url,
+                        removed_resources: Vec::new(),
+                        system_version_info: VERSION_INFO.into(),
+                    },
+                )
             }
         };
 
@@ -883,17 +917,25 @@
 
         <span class="macro">tracing::info!</span>(<span class="string">"control plane discovery delta stream attempt"</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>responses = responses.into_inner();
-        <span class="kw">let </span><span class="prelude-val">Some</span>(identifier) = responses
+
+        <span class="kw">fn </span>handle_first_response(
+            res: DeltaDiscoveryResponse,
+        ) -&gt; <span class="prelude-ty">Result</span>&lt;(String, String), tonic::Status&gt; {
+            <span class="kw">let </span><span class="prelude-val">Some</span>(identifier) = res.control_plane.map(|cp| cp.identifier) <span class="kw">else </span>{
+                <span class="kw">return </span><span class="prelude-val">Err</span>(tonic::Status::invalid_argument(
+                    <span class="string">"DeltaDiscoveryResponse.control_plane.identifier is required in the first message"</span>,
+                ));
+            };
+
+            <span class="prelude-val">Ok</span>((identifier, res.system_version_info))
+        }
+
+        <span class="kw">let </span>first_response = responses
             .next()
             .<span class="kw">await
-            </span>.ok_or_else(|| tonic::Status::cancelled(<span class="string">"received empty first response"</span>))<span class="question-mark">??
-            </span>.control_plane
-            .map(|cp| cp.identifier)
-        <span class="kw">else </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(tonic::Status::invalid_argument(
-                <span class="string">"DeltaDiscoveryResponse.control_plane.identifier is required in the first message"</span>,
-            ));
-        };
+            </span>.ok_or_else(|| tonic::Status::cancelled(<span class="string">"received empty first response"</span>))<span class="question-mark">??</span>;
+
+        <span class="kw">let </span>(identifier, server_version) = handle_first_response(first_response)<span class="question-mark">?</span>;
 
         <span class="macro">tracing::info!</span>(identifier, <span class="string">"new control plane delta discovery stream"</span>);
         <span class="kw">let </span>config = <span class="self">self</span>.config.clone();
@@ -906,12 +948,16 @@
                 <span class="macro">tracing::info!</span>(identifier, <span class="string">"sending initial delta discovery request"</span>);
 
                 <span class="kw">let </span>local = Arc::new(<span class="kw">crate</span>::config::LocalVersions::new(
-                    config.interested_resources().map(|(n, <span class="kw">_</span>)| n),
+                    config.interested_resources(<span class="kw-2">&amp;</span>server_version).map(|(n, <span class="kw">_</span>)| n),
                 ));
 
-                ds.refresh(<span class="kw-2">&amp;</span>identifier, config.interested_resources().collect(), <span class="kw-2">&amp;</span>local)
-                    .<span class="kw">await
-                    </span>.map_err(|error| tonic::Status::internal(error.to_string()))<span class="question-mark">?</span>;
+                ds.refresh(
+                    <span class="kw-2">&amp;</span>identifier,
+                    config.interested_resources(<span class="kw-2">&amp;</span>server_version).collect(),
+                    <span class="kw-2">&amp;</span>local,
+                )
+                .<span class="kw">await
+                </span>.map_err(|error| tonic::Status::internal(error.to_string()))<span class="question-mark">?</span>;
 
                 <span class="kw">let </span><span class="kw-2">mut </span>response_stream = <span class="kw">crate</span>::config::handle_delta_discovery_responses(
                     identifier.clone(),
@@ -933,9 +979,13 @@
                             </span>.map_err(|<span class="kw">_</span>| tonic::Status::internal(<span class="string">"this should not be reachable"</span>))<span class="question-mark">?</span>;
                     } <span class="kw">else </span>{
                         <span class="macro">tracing::trace!</span>(<span class="string">"exceeded idle interval, sending request"</span>);
-                        ds.refresh(<span class="kw-2">&amp;</span>identifier, config.interested_resources().collect(), <span class="kw-2">&amp;</span>local)
-                            .<span class="kw">await
-                            </span>.map_err(|error| tonic::Status::internal(error.to_string()))<span class="question-mark">?</span>;
+                        ds.refresh(
+                            <span class="kw-2">&amp;</span>identifier,
+                            config.interested_resources(<span class="kw-2">&amp;</span>server_version).collect(),
+                            <span class="kw-2">&amp;</span>local,
+                        )
+                        .<span class="kw">await
+                        </span>.map_err(|error| tonic::Status::internal(error.to_string()))<span class="question-mark">?</span>;
                     }
                 }
             }
