@@ -194,9 +194,6 @@
 <a href="#192" id="192">192</a>
 <a href="#193" id="193">193</a>
 <a href="#194" id="194">194</a>
-<a href="#195" id="195">195</a>
-<a href="#196" id="196">196</a>
-<a href="#197" id="197">197</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
@@ -277,8 +274,6 @@
                         }
                     };
 
-                    <span class="kw">let </span>len = config.value.len();
-
                     <span class="kw">let </span>json_value = <span class="kw">match </span><span class="kw">crate</span>::filters::FilterRegistry::get_factory(<span class="kw-2">&amp;</span>filter.name)
                         .ok_or_else(|| {
                             <span class="kw">crate</span>::filters::CreationError::NotFound(filter.name.clone())
@@ -287,7 +282,6 @@
                     {
                         <span class="prelude-val">Ok</span>(jv) =&gt; jv,
                         <span class="prelude-val">Err</span>(err) =&gt; {
-                            <span class="macro">tracing::error!</span>(<span class="string">"wtf {} {len} {err:#}"</span>, filter.name);
                             <span class="kw">return </span><span class="prelude-val">Err</span>(err.into());
                         }
                     };
