@@ -78,8 +78,6 @@ impl Resource {
                         }
                     };
 
-                    let len = config.value.len();
-
                     let json_value = match crate::filters::FilterRegistry::get_factory(&filter.name)
                         .ok_or_else(|| {
                             crate::filters::CreationError::NotFound(filter.name.clone())
@@ -88,7 +86,6 @@ impl Resource {
                     {
                         Ok(jv) => jv,
                         Err(err) => {
-                            tracing::error!("wtf {} {len} {err:#}", filter.name);
                             return Err(err.into());
                         }
                     };
