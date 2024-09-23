@@ -786,6 +786,9 @@
 <a href="#784" id="784">784</a>
 <a href="#785" id="785">785</a>
 <a href="#786" id="786">786</a>
+<a href="#787" id="787">787</a>
+<a href="#788" id="788">788</a>
+<a href="#789" id="789">789</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
@@ -1413,6 +1416,9 @@
                     <span class="kw">match </span>submitter.submit_and_wait(<span class="number">1</span>) {
                         <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; {}
                         <span class="prelude-val">Err</span>(<span class="kw-2">ref </span>err) <span class="kw">if </span>err.raw_os_error() == <span class="prelude-val">Some</span>(libc::EBUSY) =&gt; {}
+                        <span class="prelude-val">Err</span>(<span class="kw-2">ref </span>err) <span class="kw">if </span>err.raw_os_error() == <span class="prelude-val">Some</span>(libc::EINTR) =&gt; {
+                            <span class="kw">continue</span>;
+                        }
                         <span class="prelude-val">Err</span>(error) =&gt; {
                             <span class="macro">tracing::error!</span>(%error, <span class="string">"io-uring submit_and_wait failed"</span>);
                             <span class="kw">return</span>;
