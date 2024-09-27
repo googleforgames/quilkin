@@ -49,8 +49,8 @@ pub struct Manage {
     #[clap(long)]
     pub address_type: Option<String>,
     /// If specified, additionally filters the gameserver address by its ip kind
-    #[clap(long, requires("address_type"), value_enum)]
-    pub ip_kind: Option<crate::config::AddrKind>,
+    #[clap(long, requires("address_type"), value_enum, default_value_t=crate::config::AddrKind::Any)]
+    pub ip_kind: crate::config::AddrKind,
 }
 
 impl Manage {
@@ -78,7 +78,7 @@ impl Manage {
             listener,
             address_selector: self.address_type.map(|at| crate::config::AddressSelector {
                 name: at,
-                kind: self.ip_kind.unwrap_or(crate::config::AddrKind::Any),
+                kind: self.ip_kind,
             }),
         }
         .run(crate::components::RunArgs {
