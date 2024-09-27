@@ -26,6 +26,7 @@ pub struct Manage {
     pub relay_servers: Vec<tonic::transport::Endpoint>,
     pub provider: Providers,
     pub listener: crate::net::TcpListener,
+    pub address_selector: Option<crate::config::AddressSelector>,
 }
 
 impl Manage {
@@ -48,7 +49,7 @@ impl Manage {
             config.clone(),
             ready.provider_is_healthy.clone(),
             self.locality,
-            None,
+            self.address_selector,
             false,
         );
 
