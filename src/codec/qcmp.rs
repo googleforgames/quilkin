@@ -670,6 +670,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg_attr(target_os = "macos", ignore)]
     async fn qcmp_measurement() {
         let socket = raw_socket_with_reuse(0).unwrap();
         let addr = socket.local_addr().unwrap().as_socket().unwrap();

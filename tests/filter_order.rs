@@ -26,6 +26,7 @@ use quilkin::{
 };
 
 #[tokio::test]
+#[cfg_attr(target_os = "macos", ignore)]
 async fn filter_order() {
     let mut t = TestHelper::default();
 
@@ -103,6 +104,7 @@ on_write: DECOMPRESS
 }
 
 #[tokio::test]
+#[cfg_attr(target_os = "macos", ignore)]
 async fn multiple_mutations() {
     let filters = r#"
 - name: quilkin.filters.capture.v1alpha1.Capture

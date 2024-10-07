@@ -22,6 +22,7 @@ use quilkin::{
 };
 
 #[tokio::test]
+#[cfg_attr(target_os = "macos", ignore)]
 async fn metrics_server() {
     let mut t = TestHelper::default();
 

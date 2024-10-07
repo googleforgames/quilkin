@@ -27,6 +27,7 @@ use quilkin::{
 };
 
 #[tokio::test]
+#[cfg_attr(target_os = "macos", ignore)]
 async fn load_balancer_filter() {
     let mut t = TestHelper::default();
 

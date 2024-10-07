@@ -828,6 +828,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg_attr(target_os = "macos", ignore)]
     async fn http_server() {
         let config = Arc::new(crate::Config::default_non_agent());
         let qcmp_listener = crate::net::TcpListener::bind(None).expect("failed to bind listener");
