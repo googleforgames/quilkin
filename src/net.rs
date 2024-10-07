@@ -18,7 +18,7 @@
 #[cfg(not(target_os = "linux"))]
 macro_rules! uring_spawn {
     ($span:expr, $future:expr) => {{
-        let (tx, rx) = tokio::sync::oneshot::channel::<()>();
+        let (tx, rx) = std::sync::mpsc::channel::<()>();
         use tracing::Instrument as _;
 
         use tracing::instrument::WithSubscriber as _;

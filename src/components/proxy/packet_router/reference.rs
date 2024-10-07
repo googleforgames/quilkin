@@ -20,7 +20,7 @@ impl super::DownstreamReceiveWorkerConfig {
     pub async fn spawn(
         self,
         _shutdown: crate::ShutdownRx,
-    ) -> eyre::Result<tokio::sync::oneshot::Receiver<()>> {
+    ) -> eyre::Result<std::sync::mpsc::Receiver<()>> {
         let Self {
             worker_id,
             upstream_receiver,
@@ -31,7 +31,7 @@ impl super::DownstreamReceiveWorkerConfig {
             buffer_pool,
         } = self;
 
-        let (tx, rx) = tokio::sync::oneshot::channel();
+        let (tx, rx) = std::sync::mpsc::channel();
 
         let thread_span =
             uring_span!(tracing::debug_span!("receiver", id = worker_id).or_current());
@@ -131,8 +131,7 @@ impl super::DownstreamReceiveWorkerConfig {
                         }
                         last_received_at = Some(received_at);
 
-                        Self::process_task(packet, worker_id, &config, &sessions, &mut error_acc)
-                            .await;
+                        Self::process_task(packet, worker_id, &config, &sessions, &mut error_acc);
                     }
                     Err(error) => {
                         tracing::error!(%error, "error receiving packet");
@@ -143,7 +142,7 @@ impl super::DownstreamReceiveWorkerConfig {
         });
 
         use eyre::WrapErr as _;
-        worker.await.context("failed to spawn receiver task")?;
+        worker.recv().context("failed to spawn receiver task")?;
         Ok(rx)
     }
 }

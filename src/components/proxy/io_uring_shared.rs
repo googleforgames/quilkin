@@ -319,8 +319,7 @@ fn spawn_workers(
                         &config,
                         &sessions,
                         &mut error_acc,
-                    )
-                    .await;
+                    );
 
                     packet_processed_event.write(1);
                 }
@@ -546,9 +545,9 @@ impl IoUringLoop {
         ctx: PacketProcessorCtx,
         buffer_pool: Arc<crate::pool::BufferPool>,
         shutdown: crate::ShutdownRx,
-    ) -> Result<tokio::sync::oneshot::Receiver<()>, PipelineError> {
+    ) -> Result<std::sync::mpsc::Receiver<()>, PipelineError> {
         let dispatcher = tracing::dispatcher::get_default(|d| d.clone());
-        let (tx, rx) = tokio::sync::oneshot::channel();
+        let (tx, rx) = std::sync::mpsc::channel();
 
         let rt = self.runtime;
         let socket = self.socket;

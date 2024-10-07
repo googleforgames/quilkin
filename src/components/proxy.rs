@@ -311,7 +311,7 @@ impl Proxy {
         )?;
 
         for notification in worker_notifications {
-            let _ = notification.await;
+            let _ = notification.recv();
         }
 
         tracing::info!("Quilkin is ready");

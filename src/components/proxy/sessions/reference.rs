@@ -20,7 +20,7 @@ impl super::SessionPool {
         raw_socket: socket2::Socket,
         port: u16,
         mut downstream_receiver: tokio::sync::mpsc::Receiver<crate::components::proxy::SendPacket>,
-    ) -> Result<tokio::sync::oneshot::Receiver<()>, crate::components::proxy::PipelineError> {
+    ) -> Result<std::sync::mpsc::Receiver<()>, crate::components::proxy::PipelineError> {
         let pool = self;
 
         let rx = uring_spawn!(

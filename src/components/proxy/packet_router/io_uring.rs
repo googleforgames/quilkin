@@ -20,7 +20,7 @@ impl super::DownstreamReceiveWorkerConfig {
     pub async fn spawn(
         self,
         shutdown: crate::ShutdownRx,
-    ) -> eyre::Result<tokio::sync::oneshot::Receiver<()>> {
+    ) -> eyre::Result<std::sync::mpsc::Receiver<()>> {
         use crate::components::proxy::io_uring_shared;
 
         let Self {
