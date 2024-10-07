@@ -370,8 +370,6 @@ enum Token {
     Recv { key: usize },
     /// Packet sent
     Send { key: usize },
-    /// Recv packet processed
-    RecvPacketProcessed,
     /// One or more packets are ready to be sent
     PendingsSends,
     /// Loop shutdown requested
@@ -549,7 +547,7 @@ impl IoUringLoop {
         // Used to notify the uring when a received packet has finished
         // processing and we can perform another recv, as we (currently) only
         // ever process a single packet at a time
-        let mut process_event = EventFd::new()?;
+        let process_event = EventFd::new()?;
         // Used to notify the uring loop to shutdown
         let mut shutdown_event = EventFd::new()?;
 
@@ -655,13 +653,6 @@ impl IoUringLoop {
                                     &mut last_received_at,
                                 );
 
-                                // Queue the wait for the processing of the packet to finish
-                                loop_ctx.push_with_token(
-                                    process_event.io_uring_entry(),
-                                    Token::RecvPacketProcessed,
-                                );
-                            }
-                            Token::RecvPacketProcessed => {
                                 loop_ctx.enqueue_recv(buffer_pool.clone().alloc());
                             }
                             Token::PendingsSends => {
