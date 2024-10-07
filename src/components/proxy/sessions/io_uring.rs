@@ -40,11 +40,8 @@ impl super::SessionPool {
 
         io_loop.spawn(
             format!("session-{id}"),
-            io_uring_shared::PacketProcessorCtx::SessionPool {
-                pool,
-                downstream_receiver,
-                port,
-            },
+            io_uring_shared::PacketProcessorCtx::SessionPool { pool, port },
+            io_uring_shared::PacketReceiver::SessionPool(downstream_receiver),
             buffer_pool,
             shutdown,
         )

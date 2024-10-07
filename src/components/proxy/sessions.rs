@@ -159,7 +159,7 @@ impl SessionPool {
         self.create_session_from_existing_socket(key, downstream_sender, port)
     }
 
-    pub(crate) async fn process_received_upstream_packet(
+    pub(crate) fn process_received_upstream_packet(
         self: &Arc<Self>,
         packet: PoolBuffer,
         mut recv_addr: SocketAddr,

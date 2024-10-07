@@ -101,7 +101,7 @@ impl super::SessionPool {
                                     tracing::trace!(%error, "error receiving packet");
                                     crate::metrics::errors_total(crate::metrics::WRITE, &error.to_string(), &crate::metrics::EMPTY).inc();
                                 },
-                                Ok((_size, recv_addr)) => pool.process_received_upstream_packet(buf, recv_addr, port, &mut last_received_at).await,
+                                Ok((_size, recv_addr)) => pool.process_received_upstream_packet(buf, recv_addr, port, &mut last_received_at),
                             }
                         }
                         _ = shutdown_rx.changed() => {

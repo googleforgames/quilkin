@@ -43,10 +43,10 @@ impl super::DownstreamReceiveWorkerConfig {
                 io_uring_shared::PacketProcessorCtx::Router {
                     config,
                     sessions,
-                    error_sender,
-                    upstream_receiver,
+                    error_acc: super::super::error::ErrorAccumulator::new(error_sender),
                     worker_id,
                 },
+                io_uring_shared::PacketReceiver::Router(upstream_receiver),
                 buffer_pool,
                 shutdown,
             )
