@@ -395,6 +395,7 @@
 <a href="#393" id="393">393</a>
 <a href="#394" id="394">394</a>
 <a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
@@ -734,6 +735,7 @@
     }
 
     <span class="attr">#[tokio::test]
+    #[cfg_attr(target_os = <span class="string">"macos"</span>, ignore)]
     </span><span class="kw">async fn </span>dual_stack_socket() {
         <span class="comment">// Since the TestHelper uses the DualStackSocket, we can use it to test ourselves.
         </span><span class="kw">let </span><span class="kw-2">mut </span>t = TestHelper::default();

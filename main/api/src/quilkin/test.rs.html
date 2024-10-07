@@ -540,6 +540,7 @@
 <a href="#538" id="538">538</a>
 <a href="#539" id="539">539</a>
 <a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -1061,6 +1062,7 @@
     <span class="kw">use </span><span class="kw">crate</span>::test::{AddressType, TestHelper};
 
     <span class="attr">#[tokio::test]
+    #[cfg_attr(target_os = <span class="string">"macos"</span>, ignore)]
     </span><span class="kw">async fn </span>test_echo_server() {
         <span class="kw">let </span><span class="kw-2">mut </span>t = TestHelper::default();
         <span class="kw">let </span>echo_addr = t.run_echo_server(AddressType::Random).<span class="kw">await</span>;

@@ -705,6 +705,7 @@
 <a href="#703" id="703">703</a>
 <a href="#704" id="704">704</a>
 <a href="#705" id="705">705</a>
+<a href="#706" id="706">706</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2023 Google LLC
  *
@@ -1377,6 +1378,7 @@
     }
 
     <span class="attr">#[tokio::test]
+    #[cfg_attr(target_os = <span class="string">"macos"</span>, ignore)]
     </span><span class="kw">async fn </span>qcmp_measurement() {
         <span class="kw">let </span>socket = raw_socket_with_reuse(<span class="number">0</span>).unwrap();
         <span class="kw">let </span>addr = socket.local_addr().unwrap().as_socket().unwrap();
