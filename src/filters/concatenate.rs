@@ -42,9 +42,8 @@ impl Concatenate {
     }
 }
 
-#[async_trait::async_trait]
 impl Filter for Concatenate {
-    async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         match self.on_read {
             Strategy::Append => {
                 ctx.contents.extend_from_slice(&self.bytes);
@@ -58,7 +57,7 @@ impl Filter for Concatenate {
         Ok(())
     }
 
-    async fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
+    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
         match self.on_write {
             Strategy::Append => {
                 ctx.contents.extend_from_slice(&self.bytes);

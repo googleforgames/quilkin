@@ -104,10 +104,7 @@ impl DownstreamReceiveWorkerConfig {
             packet.source.into(),
             packet.contents,
         );
-        filters
-            .read(&mut context)
-            .await
-            .map_err(PipelineError::Filter)?;
+        filters.read(&mut context).map_err(PipelineError::Filter)?;
 
         let ReadContext {
             destinations,
@@ -123,7 +120,7 @@ impl DownstreamReceiveWorkerConfig {
         for epa in destinations {
             let session_key = SessionKey {
                 source: packet.source,
-                dest: epa.to_socket_addr().await?,
+                dest: epa.to_socket_addr()?,
             };
 
             sessions.send(session_key, contents.clone()).await?;

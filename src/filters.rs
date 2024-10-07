@@ -83,13 +83,12 @@ pub use self::chain::FilterChain;
 /// struct Greet;
 ///
 /// /// Prepends data on each packet
-/// #[async_trait::async_trait]
 /// impl Filter for Greet {
-///     async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+///     fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
 ///         ctx.contents.prepend_from_slice(b"Hello ");
 ///         Ok(())
 ///     }
-///     async fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
+///     fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
 ///         ctx.contents.prepend_from_slice(b"Goodbye ");
 ///         Ok(())
 ///     }
@@ -208,7 +207,6 @@ where
 ///   `write` implementation to execute.
 ///   * Labels
 ///     * `filter` The name of the filter being executed.
-#[async_trait::async_trait]
 pub trait Filter: Send + Sync {
     /// [`Filter::read`] is invoked when the proxy receives data from a
     /// downstream connection on the listening port.
@@ -216,7 +214,7 @@ pub trait Filter: Send + Sync {
     /// This function should return an `Some` if the packet processing should
     /// proceed. If the packet should be rejected, it will return [`None`]
     /// instead. By default, the context passes through unchanged.
-    async fn read(&self, _: &mut ReadContext) -> Result<(), FilterError> {
+    fn read(&self, _: &mut ReadContext) -> Result<(), FilterError> {
         Ok(())
     }
 
@@ -226,7 +224,7 @@ pub trait Filter: Send + Sync {
     ///
     /// This function should return an `Some` if the packet processing should
     /// proceed. If the packet should be rejected, it will return [`None`]
-    async fn write(&self, _: &mut WriteContext) -> Result<(), FilterError> {
+    fn write(&self, _: &mut WriteContext) -> Result<(), FilterError> {
         Ok(())
     }
 }

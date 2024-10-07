@@ -120,7 +120,7 @@ async fn multiple_clients() {
 // start an echo server and return what port it's on.
 async fn echo_server(t: &mut TestHelper) -> SocketAddr {
     let mut echo = t.run_echo_server(AddressType::Ipv6).await;
-    quilkin::test::map_to_localhost(&mut echo).await;
+    quilkin::test::map_to_localhost(&mut echo);
 
     let capture_yaml = "
 suffix:

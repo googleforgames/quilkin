@@ -29,15 +29,14 @@ impl Pass {
     }
 }
 
-#[async_trait::async_trait]
 impl Filter for Pass {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip_all))]
-    async fn read(&self, _: &mut ReadContext) -> Result<(), FilterError> {
+    fn read(&self, _: &mut ReadContext) -> Result<(), FilterError> {
         Ok(())
     }
 
     #[cfg_attr(feature = "instrument", tracing::instrument(skip_all))]
-    async fn write(&self, _: &mut WriteContext) -> Result<(), FilterError> {
+    fn write(&self, _: &mut WriteContext) -> Result<(), FilterError> {
         Ok(())
     }
 }

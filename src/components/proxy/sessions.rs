@@ -201,7 +201,6 @@ impl SessionPool {
                 asn_info,
                 packet,
             )
-            .await
         };
 
         if let Err((asn_info, error)) = result {
@@ -334,7 +333,7 @@ impl SessionPool {
     }
 
     /// process_recv_packet processes a packet that is received by this session.
-    async fn process_recv_packet(
+    fn process_recv_packet(
         config: Arc<crate::Config>,
         downstream_sender: &DownstreamSender,
         source: SocketAddr,
@@ -346,7 +345,7 @@ impl SessionPool {
 
         let mut context = crate::filters::WriteContext::new(source.into(), dest.into(), packet);
 
-        if let Err(err) = config.filters.load().write(&mut context).await {
+        if let Err(err) = config.filters.load().write(&mut context) {
             return Err((asn_info, err.into()));
         }
 
@@ -723,7 +722,7 @@ mod tests {
     async fn send_and_recv() {
         let mut t = TestHelper::default();
         let dest = t.run_echo_server(AddressType::Ipv6).await;
-        let mut dest = dest.to_socket_addr().await.unwrap();
+        let mut dest = dest.to_socket_addr().unwrap();
         crate::test::map_addr_to_localhost(&mut dest);
         let source = available_addr(AddressType::Ipv6).await;
         let socket = tokio::net::UdpSocket::bind(source).await.unwrap();

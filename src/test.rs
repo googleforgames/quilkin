@@ -98,9 +98,8 @@ fn get_address(address_type: AddressType, socket: &DualStackLocalSocket) -> Sock
 // TestFilter is useful for testing that commands are executing filters appropriately.
 pub struct TestFilter;
 
-#[async_trait::async_trait]
 impl Filter for TestFilter {
-    async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         // append values on each run
         ctx.metadata
             .entry("downstream".into())
@@ -112,7 +111,7 @@ impl Filter for TestFilter {
         Ok(())
     }
 
-    async fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
+    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
         // append values on each run
         ctx.metadata
             .entry("upstream".into())
@@ -361,7 +360,7 @@ pub fn alloc_buffer(data: impl AsRef<[u8]>) -> crate::pool::PoolBuffer {
 
 /// assert that read makes no changes
 #[cfg(test)]
-pub async fn assert_filter_read_no_change<F>(filter: &F)
+pub fn assert_filter_read_no_change<F>(filter: &F)
 where
     F: Filter,
 {
@@ -373,14 +372,14 @@ where
     let contents = b"hello";
     let mut context = ReadContext::new(endpoints.clone(), source, alloc_buffer(contents));
 
-    filter.read(&mut context).await.unwrap();
+    filter.read(&mut context).unwrap();
     assert!(context.destinations.is_empty());
     assert_eq!(endpoints, context.endpoints);
     assert_eq!(contents, &*context.contents);
 }
 
 /// assert that write makes no changes
-pub async fn assert_write_no_change<F>(filter: &F)
+pub fn assert_write_no_change<F>(filter: &F)
 where
     F: Filter,
 {
@@ -392,12 +391,12 @@ where
         alloc_buffer(contents),
     );
 
-    filter.write(&mut context).await.unwrap();
+    filter.write(&mut context).unwrap();
     assert_eq!(contents, &*context.contents);
 }
 
-pub async fn map_to_localhost(address: &mut EndpointAddress) {
-    let mut socket_addr = address.to_socket_addr().await.unwrap();
+pub fn map_to_localhost(address: &mut EndpointAddress) {
+    let mut socket_addr = address.to_socket_addr().unwrap();
     map_addr_to_localhost(&mut socket_addr);
     *address = socket_addr.into();
 }
@@ -526,7 +525,7 @@ mod tests {
         let msg = "hello";
         endpoint
             .socket
-            .send_to(msg.as_bytes(), &echo_addr.to_socket_addr().await.unwrap())
+            .send_to(msg.as_bytes(), &echo_addr.to_socket_addr().unwrap())
             .await
             .unwrap();
         assert_eq!(

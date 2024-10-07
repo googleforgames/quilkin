@@ -86,14 +86,13 @@ impl TryFrom<Config> for Timestamp {
     }
 }
 
-#[async_trait::async_trait]
 impl Filter for Timestamp {
-    async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         self.observe(&ctx.metadata, Direction::Read);
         Ok(())
     }
 
-    async fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
+    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
         self.observe(&ctx.metadata, Direction::Write);
         Ok(())
     }
@@ -168,7 +167,7 @@ mod tests {
             Value::Number(crate::time::UtcTimestamp::now().unix() as u64),
         );
 
-        filter.read(&mut ctx).await.unwrap();
+        filter.read(&mut ctx).unwrap();
 
         assert_eq!(1, filter.metric(Direction::Read).get_sample_count());
     }
@@ -195,8 +194,8 @@ mod tests {
             alloc_buffer([0, 0, 0, 0, 99, 81, 55, 181]),
         );
 
-        capture.read(&mut ctx).await.unwrap();
-        timestamp.read(&mut ctx).await.unwrap();
+        capture.read(&mut ctx).unwrap();
+        timestamp.read(&mut ctx).unwrap();
 
         assert_eq!(1, timestamp.metric(Direction::Read).get_sample_count());
     }

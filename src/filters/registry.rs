@@ -73,13 +73,12 @@ mod tests {
     #[allow(dead_code)]
     struct TestFilter {}
 
-    #[async_trait::async_trait]
     impl Filter for TestFilter {
-        async fn read(&self, _: &mut ReadContext) -> Result<(), FilterError> {
+        fn read(&self, _: &mut ReadContext) -> Result<(), FilterError> {
             Err(FilterError::Custom("test error"))
         }
 
-        async fn write(&self, _: &mut WriteContext) -> Result<(), FilterError> {
+        fn write(&self, _: &mut WriteContext) -> Result<(), FilterError> {
             Err(FilterError::Custom("test error"))
         }
     }
@@ -112,11 +111,9 @@ mod tests {
                 addr.clone(),
                 alloc_buffer([]),
             ))
-            .await
             .is_ok());
         assert!(filter
             .write(&mut WriteContext::new(addr.clone(), addr, alloc_buffer([])))
-            .await
             .is_ok());
     }
 }
