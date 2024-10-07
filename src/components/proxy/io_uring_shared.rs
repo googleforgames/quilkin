@@ -625,6 +625,9 @@ impl IoUringLoop {
                     match submitter.submit_and_wait(1) {
                         Ok(_) => {}
                         Err(ref err) if err.raw_os_error() == Some(libc::EBUSY) => {}
+                        Err(ref err) if err.raw_os_error() == Some(libc::EINTR) => {
+                            continue;
+                        }
                         Err(error) => {
                             tracing::error!(%error, "io-uring submit_and_wait failed");
                             return;

@@ -75,6 +75,27 @@ impl Filter for TokenRouter {
     }
 }
 
+pub struct HashedTokenRouter(TokenRouter);
+
+impl StaticFilter for HashedTokenRouter {
+    const NAME: &'static str = "quilkin.filters.token_router.v1alpha1.HashedTokenRouter";
+    type Configuration = Config;
+    type BinaryConfiguration = proto::TokenRouter;
+
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, CreationError> {
+        Ok(Self(TokenRouter {
+            config: config.unwrap_or_default(),
+        }))
+    }
+}
+
+#[async_trait::async_trait]
+impl Filter for HashedTokenRouter {
+    async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+        self.0.sync_read(ctx)
+    }
+}
+
 pub enum RouterError {
     NoTokenFound,
     NoEndpointMatch { token: bytes::Bytes },

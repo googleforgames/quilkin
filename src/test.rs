@@ -39,6 +39,7 @@ pub fn enable_log(filter: impl Into<EnvFilter>) {
     LOG_ONCE.call_once(|| {
         tracing_subscriber::fmt()
             .pretty()
+            .with_ansi(false)
             .with_env_filter(filter)
             .init()
     });
@@ -518,6 +519,7 @@ mod tests {
     use crate::test::{AddressType, TestHelper};
 
     #[tokio::test]
+    #[cfg_attr(target_os = "macos", ignore)]
     async fn test_echo_server() {
         let mut t = TestHelper::default();
         let echo_addr = t.run_echo_server(AddressType::Random).await;

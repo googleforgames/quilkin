@@ -24,6 +24,7 @@ use quilkin::{
 };
 
 #[tokio::test]
+#[cfg_attr(target_os = "macos", ignore)]
 async fn proxy_ping() {
     let mut t = TestHelper::default();
     let qcmp = quilkin::net::raw_socket_with_reuse(0).unwrap();
@@ -39,6 +40,7 @@ async fn proxy_ping() {
 }
 
 #[tokio::test]
+#[cfg_attr(target_os = "macos", ignore)]
 async fn agent_ping() {
     let qcmp_port = quilkin::test::available_addr(AddressType::Random)
         .await

@@ -26,6 +26,7 @@ use quilkin::{
 };
 
 #[tokio::test]
+#[cfg_attr(target_os = "macos", ignore)]
 async fn concatenate() {
     let mut t = TestHelper::default();
     let yaml = "

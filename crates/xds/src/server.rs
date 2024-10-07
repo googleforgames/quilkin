@@ -34,6 +34,8 @@ use crate::{
     net::TcpListener,
 };
 
+const VERSION_INFO: &str = "9";
+
 pub struct ControlPlane<C> {
     pub config: Arc<C>,
     pub idle_request_interval: Duration,
@@ -218,8 +220,7 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                         control_plane: Some(control_plane_id.clone()),
                         type_url: type_url.into(),
                         removed_resources,
-                        // Only used for debugging, not really useful
-                        system_version_info: String::new(),
+                        system_version_info: VERSION_INFO.into(),
                     };
 
                     tracing::trace!(
@@ -248,14 +249,22 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                     control_plane: None,
                     type_url: message.type_url,
                     removed_resources: Vec::new(),
-                    // Only used for debugging, not really useful
-                    system_version_info: String::new(),
+                    system_version_info: VERSION_INFO.into(),
                 }
             } else {
                 tracing::debug!(client = %node_id, resource_type = %message.type_url, "initial delta response");
 
                 let type_url = message.type_url.clone();
-                responder(Some(message), &type_url, &mut client_tracker)?.unwrap()
+                responder(Some(message), &type_url, &mut client_tracker)?.unwrap_or(
+                    DeltaDiscoveryResponse {
+                        resources: Vec::new(),
+                        nonce: String::new(),
+                        control_plane: None,
+                        type_url,
+                        removed_resources: Vec::new(),
+                        system_version_info: VERSION_INFO.into(),
+                    },
+                )
             }
         };
 
@@ -406,17 +415,25 @@ impl<C: crate::config::Configuration> AggregatedControlPlaneDiscoveryService for
 
         tracing::info!("control plane discovery delta stream attempt");
         let mut responses = responses.into_inner();
-        let Some(identifier) = responses
+
+        fn handle_first_response(
+            res: DeltaDiscoveryResponse,
+        ) -> Result<(String, String), tonic::Status> {
+            let Some(identifier) = res.control_plane.map(|cp| cp.identifier) else {
+                return Err(tonic::Status::invalid_argument(
+                    "DeltaDiscoveryResponse.control_plane.identifier is required in the first message",
+                ));
+            };
+
+            Ok((identifier, res.system_version_info))
+        }
+
+        let first_response = responses
             .next()
             .await
-            .ok_or_else(|| tonic::Status::cancelled("received empty first response"))??
-            .control_plane
-            .map(|cp| cp.identifier)
-        else {
-            return Err(tonic::Status::invalid_argument(
-                "DeltaDiscoveryResponse.control_plane.identifier is required in the first message",
-            ));
-        };
+            .ok_or_else(|| tonic::Status::cancelled("received empty first response"))??;
+
+        let (identifier, server_version) = handle_first_response(first_response)?;
 
         tracing::info!(identifier, "new control plane delta discovery stream");
         let config = self.config.clone();
@@ -429,12 +446,16 @@ impl<C: crate::config::Configuration> AggregatedControlPlaneDiscoveryService for
                 tracing::info!(identifier, "sending initial delta discovery request");
 
                 let local = Arc::new(crate::config::LocalVersions::new(
-                    config.interested_resources().map(|(n, _)| n),
+                    config.interested_resources(&server_version).map(|(n, _)| n),
                 ));
 
-                ds.refresh(&identifier, config.interested_resources().collect(), &local)
-                    .await
-                    .map_err(|error| tonic::Status::internal(error.to_string()))?;
+                ds.refresh(
+                    &identifier,
+                    config.interested_resources(&server_version).collect(),
+                    &local,
+                )
+                .await
+                .map_err(|error| tonic::Status::internal(error.to_string()))?;
 
                 let mut response_stream = crate::config::handle_delta_discovery_responses(
                     identifier.clone(),
@@ -456,9 +477,13 @@ impl<C: crate::config::Configuration> AggregatedControlPlaneDiscoveryService for
                             .map_err(|_| tonic::Status::internal("this should not be reachable"))?;
                     } else {
                         tracing::trace!("exceeded idle interval, sending request");
-                        ds.refresh(&identifier, config.interested_resources().collect(), &local)
-                            .await
-                            .map_err(|error| tonic::Status::internal(error.to_string()))?;
+                        ds.refresh(
+                            &identifier,
+                            config.interested_resources(&server_version).collect(),
+                            &local,
+                        )
+                        .await
+                        .map_err(|error| tonic::Status::internal(error.to_string()))?;
                     }
                 }
             }

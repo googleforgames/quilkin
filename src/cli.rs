@@ -123,12 +123,12 @@ impl Cli {
                 LogFormats::Auto => {
                     use std::io::IsTerminal;
                     if !std::io::stdout().is_terminal() {
-                        subscriber.json().init();
+                        subscriber.with_ansi(false).json().init();
                     } else {
                         subscriber.init();
                     }
                 }
-                LogFormats::Json => subscriber.json().init(),
+                LogFormats::Json => subscriber.with_ansi(false).json().init(),
                 LogFormats::Plain => subscriber.init(),
                 LogFormats::Pretty => subscriber.pretty().init(),
             }
@@ -181,7 +181,31 @@ impl Cli {
         tracing::debug!(cli = ?self, "config parameters");
 
         let config = Arc::new(match Self::read_config(self.config)? {
-            Some(config) => config,
+            Some(mut config) => {
+                // Workaround deficiency in serde flatten + untagged
+                if matches!(self.command, Commands::Agent(..)) {
+                    config.datacenter = match config.datacenter {
+                        crate::config::DatacenterConfig::Agent {
+                            icao_code,
+                            qcmp_port,
+                        } => crate::config::DatacenterConfig::Agent {
+                            icao_code,
+                            qcmp_port,
+                        },
+                        crate::config::DatacenterConfig::NonAgent { datacenters } => {
+                            eyre::ensure!(datacenters.read().is_empty(), "starting an agent, but the configuration file has `datacenters` set");
+                            crate::config::DatacenterConfig::Agent {
+                                icao_code: crate::config::Slot::new(
+                                    crate::config::IcaoCode::default(),
+                                ),
+                                qcmp_port: crate::config::Slot::new(0),
+                            }
+                        }
+                    };
+                }
+
+                config
+            }
             None if matches!(self.command, Commands::Agent(..)) => Config::default_agent(),
             None => Config::default_non_agent(),
         });

@@ -122,6 +122,8 @@ mod tests {
         .is_err()
         {
             debug_pods(&client, format!("role={relay_proxy_name}")).await;
+            debug_pods(&client, "role=relay".into()).await;
+            debug_pods(&client, "role=agent".into()).await;
             panic!("Quilkin proxy deployment should be ready");
         }
 
@@ -170,7 +172,8 @@ mod tests {
         }
         if !failed {
             debug_pods(&client, format!("role={relay_proxy_name}")).await;
-            debug_pods(&client, "role=xds".into()).await;
+            debug_pods(&client, "role=relay".into()).await;
+            debug_pods(&client, "role=agent".into()).await;
         }
         assert!(failed, "Packet should have failed");
 

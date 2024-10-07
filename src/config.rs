@@ -110,7 +110,10 @@ impl quilkin_xds::config::Configuration for Config {
         self.delta_discovery_request(client_state)
     }
 
-    fn interested_resources(&self) -> impl Iterator<Item = (&'static str, Vec<String>)> {
+    fn interested_resources(
+        &self,
+        _server_version: &str,
+    ) -> impl Iterator<Item = (&'static str, Vec<String>)> {
         [
             (crate::xds::CLUSTER_TYPE, Vec::new()),
             (crate::xds::DATACENTER_TYPE, Vec::new()),
@@ -242,6 +245,21 @@ impl Config {
                     resources.push(XdsResource {
                         name: "filter_chain".into(),
                         version: vstr,
+                        resource: Some(any),
+                        aliases: Vec::new(),
+                        ttl: None,
+                        cache_control: None,
+                    });
+                }
+                crate::xds::ResourceType::Listener => {
+                    let resource = crate::xds::Resource::Listener(
+                        crate::net::cluster::proto::FilterChain::try_from(&*self.filters.load())?,
+                    );
+                    let any = resource.try_encode()?;
+
+                    resources.push(XdsResource {
+                        name: "listener".into(),
+                        version: "0".into(),
                         resource: Some(any),
                         aliases: Vec::new(),
                         ttl: None,
@@ -391,7 +409,7 @@ impl Config {
         let resource_type: crate::xds::ResourceType = type_url.parse()?;
 
         match resource_type {
-            crate::xds::ResourceType::FilterChain => {
+            crate::xds::ResourceType::FilterChain | crate::xds::ResourceType::Listener => {
                 // Server should only ever send exactly one filter chain, more or less indicates a bug
                 let Some(res) = resources.pop() else {
                     eyre::bail!("no resources in delta response");
@@ -406,12 +424,13 @@ impl Config {
                     eyre::bail!("filter chain response did not contain a resource payload");
                 };
 
-                let crate::xds::Resource::FilterChain(resource) =
-                    crate::xds::Resource::try_decode(resource)?
-                else {
-                    eyre::bail!(
-                        "filter chain response contained a non-FilterChain resource payload"
-                    );
+                let resource = match crate::xds::Resource::try_decode(resource)? {
+                    crate::xds::Resource::FilterChain(r) | crate::xds::Resource::Listener(r) => r,
+                    res => {
+                        eyre::bail!(
+                            "filter chain response contained a {} resource payload", res.type_url()
+                        );
+                    }
                 };
 
                 let fc =
