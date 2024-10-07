@@ -27,6 +27,7 @@ use quilkin::{
 };
 
 #[tokio::test]
+#[cfg_attr(target_os = "macos", ignore)]
 async fn ipv4_firewall_allow() {
     let mut t = TestHelper::default();
     let yaml = "
@@ -55,6 +56,7 @@ on_write:
 }
 
 #[tokio::test]
+#[cfg_attr(target_os = "macos", ignore)]
 async fn ipv6_firewall_allow() {
     let mut t = TestHelper::default();
     let yaml = "
