@@ -41,13 +41,12 @@ sent to a downstream client.
 use quilkin::filters::prelude::*;
 
 /// Appends data to each packet
-#[async_trait::async_trait]
 impl Filter for Greet {
-    async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         ctx.contents.extend_from_slice(b"Hello");
         Ok(())
     }
-    async fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
+    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
         ctx.contents.extend_from_slice(b"Goodbye");
         Ok(())
     }

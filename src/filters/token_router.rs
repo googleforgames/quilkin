@@ -68,9 +68,8 @@ impl StaticFilter for TokenRouter {
     }
 }
 
-#[async_trait::async_trait]
 impl Filter for TokenRouter {
-    async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         self.sync_read(ctx)
     }
 }
@@ -89,9 +88,8 @@ impl StaticFilter for HashedTokenRouter {
     }
 }
 
-#[async_trait::async_trait]
 impl Filter for HashedTokenRouter {
-    async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         self.0.sync_read(ctx)
     }
 }
@@ -261,7 +259,7 @@ mod tests {
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(TOKEN_KEY.into(), Value::Bytes(b"123".to_vec().into()));
-        assert_read(&filter, ctx).await;
+        assert_read(&filter, ctx);
     }
 
     #[tokio::test]
@@ -270,7 +268,7 @@ mod tests {
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(CAPTURED_BYTES.into(), Value::Bytes(b"123".to_vec().into()));
-        assert_read(&filter, ctx).await;
+        assert_read(&filter, ctx);
     }
 
     #[tokio::test]
@@ -284,18 +282,18 @@ mod tests {
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(CAPTURED_BYTES.into(), Value::Bytes(b"123".to_vec().into()));
-        assert_read(&filter, ctx).await;
+        assert_read(&filter, ctx);
 
         // invalid key
         let mut ctx = new_ctx();
         ctx.metadata
             .insert(CAPTURED_BYTES.into(), Value::Bytes(b"567".to_vec().into()));
 
-        assert!(filter.read(&mut ctx).await.is_err());
+        assert!(filter.read(&mut ctx).is_err());
 
         // no key
         let mut ctx = new_ctx();
-        assert!(filter.read(&mut ctx).await.is_err());
+        assert!(filter.read(&mut ctx).is_err());
     }
 
     #[tokio::test]
@@ -304,7 +302,7 @@ mod tests {
             metadata_key: CAPTURED_BYTES.into(),
         };
         let filter = TokenRouter::from_config(config.into());
-        assert_write_no_change(&filter).await;
+        assert_write_no_change(&filter);
     }
 
     fn new_ctx() -> ReadContext {
@@ -332,11 +330,11 @@ mod tests {
         )
     }
 
-    async fn assert_read<F>(filter: &F, mut ctx: ReadContext)
+    fn assert_read<F>(filter: &F, mut ctx: ReadContext)
     where
         F: Filter + ?Sized,
     {
-        filter.read(&mut ctx).await.unwrap();
+        filter.read(&mut ctx).unwrap();
 
         assert_eq!(b"hello", ctx.contents.as_ref());
     }

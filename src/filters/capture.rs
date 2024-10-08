@@ -56,10 +56,9 @@ impl Capture {
     }
 }
 
-#[async_trait::async_trait]
 impl Filter for Capture {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         let capture = self.capture.capture(&mut ctx.contents);
         ctx.metadata.insert(
             self.is_present_key,
@@ -109,7 +108,7 @@ mod tests {
             }
         });
         let filter = Capture::from_config(Some(serde_json::from_value(config).unwrap()));
-        assert_end_strategy(&filter, TOKEN_KEY.into(), true).await;
+        assert_end_strategy(&filter, TOKEN_KEY.into(), true);
     }
 
     #[tokio::test]
@@ -121,7 +120,7 @@ mod tests {
         });
 
         let filter = Capture::from_config(Some(serde_json::from_value(config).unwrap()));
-        assert_end_strategy(&filter, CAPTURED_BYTES.into(), false).await;
+        assert_end_strategy(&filter, CAPTURED_BYTES.into(), false);
     }
 
     #[test]
@@ -145,7 +144,7 @@ mod tests {
         };
 
         let filter = Capture::from_config(config.into());
-        assert_end_strategy(&filter, TOKEN_KEY.into(), true).await;
+        assert_end_strategy(&filter, TOKEN_KEY.into(), true);
     }
 
     #[tokio::test]
@@ -167,7 +166,6 @@ mod tests {
                 (std::net::Ipv4Addr::LOCALHOST, 80).into(),
                 alloc_buffer(b"abc"),
             ))
-            .await
             .is_err());
     }
 
@@ -181,7 +179,7 @@ mod tests {
             metadata_key: TOKEN_KEY.into(),
         };
         let filter = Capture::from_config(config.into());
-        assert_write_no_change(&filter).await;
+        assert_write_no_change(&filter);
     }
 
     #[test]
@@ -232,7 +230,7 @@ mod tests {
         assert_eq!(b"hello", &*contents);
     }
 
-    async fn assert_end_strategy<F>(filter: &F, key: metadata::Key, remove: bool)
+    fn assert_end_strategy<F>(filter: &F, key: metadata::Key, remove: bool)
     where
         F: Filter + ?Sized,
     {
@@ -245,7 +243,7 @@ mod tests {
             alloc_buffer(b"helloabc"),
         );
 
-        filter.read(&mut context).await.unwrap();
+        filter.read(&mut context).unwrap();
 
         if remove {
             assert_eq!(b"hello", &*context.contents);

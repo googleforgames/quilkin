@@ -272,9 +272,8 @@ impl schemars::JsonSchema for FilterChain {
     }
 }
 
-#[async_trait::async_trait]
 impl Filter for FilterChain {
-    async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         for ((id, instance), histogram) in self
             .filters
             .iter()
@@ -282,7 +281,7 @@ impl Filter for FilterChain {
         {
             tracing::trace!(%id, "read filtering packet");
             let timer = histogram.start_timer();
-            let result = instance.filter().read(ctx).await;
+            let result = instance.filter().read(ctx);
             timer.stop_and_record();
             match result {
                 Ok(()) => tracing::trace!(%id, "read passing packet"),
@@ -308,7 +307,7 @@ impl Filter for FilterChain {
         Ok(())
     }
 
-    async fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
+    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
         for ((id, instance), histogram) in self
             .filters
             .iter()
@@ -317,7 +316,7 @@ impl Filter for FilterChain {
         {
             tracing::trace!(%id, "write filtering packet");
             let timer = histogram.start_timer();
-            let result = instance.filter().write(ctx).await;
+            let result = instance.filter().write(ctx);
             timer.stop_and_record();
             match result {
                 Ok(()) => tracing::trace!(%id, "write passing packet"),
@@ -389,7 +388,7 @@ mod tests {
             alloc_buffer(b"hello"),
         );
 
-        config.filters.read(&mut context).await.unwrap();
+        config.filters.read(&mut context).unwrap();
         let expected = endpoints_fixture.clone();
 
         assert_eq!(&*expected.endpoints(), &*context.destinations);
@@ -412,7 +411,7 @@ mod tests {
             "127.0.0.1:70".parse().unwrap(),
             alloc_buffer(b"hello"),
         );
-        config.filters.write(&mut context).await.unwrap();
+        config.filters.write(&mut context).unwrap();
 
         assert_eq!(
             "receive",
@@ -442,7 +441,7 @@ mod tests {
             alloc_buffer(b"hello"),
         );
 
-        chain.read(&mut context).await.unwrap();
+        chain.read(&mut context).unwrap();
         let expected = endpoints_fixture.clone();
         assert_eq!(expected.endpoints(), context.destinations);
         assert_eq!(
@@ -465,7 +464,7 @@ mod tests {
             alloc_buffer(b"hello"),
         );
 
-        chain.write(&mut context).await.unwrap();
+        chain.write(&mut context).unwrap();
         assert_eq!(
             "hello:our:127.0.0.1:80:127.0.0.1:70:our:127.0.0.1:80:127.0.0.1:70",
             std::str::from_utf8(&context.contents).unwrap(),

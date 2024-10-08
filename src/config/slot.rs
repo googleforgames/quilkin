@@ -193,14 +193,13 @@ impl<T: JsonSchema + Default> JsonSchema for Slot<T> {
     }
 }
 
-#[async_trait::async_trait]
 impl<T: crate::filters::Filter + Default> crate::filters::Filter for Slot<T> {
-    async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
-        self.load().read(ctx).await
+    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+        self.load().read(ctx)
     }
 
-    async fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
-        self.load().write(ctx).await
+    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
+        self.load().write(ctx)
     }
 }
 

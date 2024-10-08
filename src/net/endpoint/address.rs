@@ -60,7 +60,7 @@ impl EndpointAddress {
 
     /// Returns the socket address for the endpoint, resolving any DNS entries
     /// if present.
-    pub async fn to_socket_addr(&self) -> std::io::Result<SocketAddr> {
+    pub fn to_socket_addr(&self) -> std::io::Result<SocketAddr> {
         static DNS: Lazy<TokioAsyncResolver> =
             Lazy::new(|| TokioAsyncResolver::tokio_from_system_conf().unwrap());
 
@@ -73,9 +73,9 @@ impl EndpointAddress {
                 match CACHE.get(name) {
                     Some(ip) => **ip,
                     None => {
-                        let set = DNS
-                            .lookup_ip(&**name)
-                            .await?
+                        let handle = tokio::runtime::Handle::current();
+                        let set = handle
+                            .block_on(DNS.lookup_ip(&**name))?
                             .iter()
                             .collect::<std::collections::HashSet<_>>();
 

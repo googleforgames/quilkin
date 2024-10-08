@@ -54,10 +54,9 @@ impl Compress {
     }
 }
 
-#[async_trait::async_trait]
 impl Filter for Compress {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         let original_size = ctx.contents.len();
 
         match self.on_read {
@@ -102,7 +101,7 @@ impl Filter for Compress {
     }
 
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    async fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
+    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
         let original_size = ctx.contents.len();
         match self.on_write {
             Action::Compress => {
@@ -254,7 +253,7 @@ mod tests {
 
         });
         let filter = Compress::from_config(Some(serde_json::from_value(config).unwrap()));
-        assert_downstream(&filter).await;
+        assert_downstream(&filter);
     }
 
     #[tokio::test]
@@ -266,7 +265,7 @@ mod tests {
 
         });
         let filter = Compress::from_config(Some(serde_json::from_value(config).unwrap()));
-        assert_downstream(&filter).await;
+        assert_downstream(&filter);
     }
 
     #[tokio::test]
@@ -278,7 +277,7 @@ mod tests {
 
         });
         let filter = Compress::from_config(Some(serde_json::from_value(config).unwrap()));
-        assert_downstream(&filter).await;
+        assert_downstream(&filter);
     }
 
     #[tokio::test]
@@ -302,10 +301,7 @@ mod tests {
             "127.0.0.1:8080".parse().unwrap(),
             alloc_buffer(&expected),
         );
-        compress
-            .read(&mut read_context)
-            .await
-            .expect("should compress");
+        compress.read(&mut read_context).expect("should compress");
 
         assert_ne!(expected, &*read_context.contents);
         assert!(
@@ -324,7 +320,6 @@ mod tests {
 
         compress
             .write(&mut write_context)
-            .await
             .expect("should decompress");
 
         assert_eq!(expected, &*write_context.contents);
@@ -347,7 +342,6 @@ mod tests {
                 "127.0.0.1:8081".parse().unwrap(),
                 alloc_buffer(b"hello"),
             ))
-            .await
             .is_err());
 
         let compression = Compress::new(
@@ -368,7 +362,6 @@ mod tests {
                 "127.0.0.1:8080".parse().unwrap(),
                 alloc_buffer(b"hello"),
             ))
-            .await
             .is_err());
     }
 
@@ -391,7 +384,7 @@ mod tests {
             "127.0.0.1:8080".parse().unwrap(),
             alloc_buffer(b"hello"),
         );
-        compression.read(&mut read_context).await.unwrap();
+        compression.read(&mut read_context).unwrap();
         assert_eq!(b"hello", &*read_context.contents);
 
         let mut write_context = WriteContext::new(
@@ -400,7 +393,7 @@ mod tests {
             alloc_buffer(b"hello"),
         );
 
-        compression.write(&mut write_context).await.unwrap();
+        compression.write(&mut write_context).unwrap();
 
         assert_eq!(b"hello".to_vec(), &*write_context.contents)
     }
@@ -455,7 +448,7 @@ mod tests {
 
     /// assert compression work with decompress on read and compress on write
     /// Returns the original data packet, and the compressed version
-    async fn assert_downstream<F>(filter: &F)
+    fn assert_downstream<F>(filter: &F)
     where
         F: Filter + ?Sized,
     {
@@ -467,10 +460,7 @@ mod tests {
             alloc_buffer(&expected),
         );
 
-        filter
-            .write(&mut write_context)
-            .await
-            .expect("should compress");
+        filter.write(&mut write_context).expect("should compress");
 
         assert_ne!(expected, &*write_context.contents);
         assert!(
@@ -490,10 +480,7 @@ mod tests {
             write_context.contents,
         );
 
-        filter
-            .read(&mut read_context)
-            .await
-            .expect("should decompress");
+        filter.read(&mut read_context).expect("should decompress");
 
         assert_eq!(expected, &*read_context.contents);
     }

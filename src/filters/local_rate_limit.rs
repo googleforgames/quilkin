@@ -146,9 +146,8 @@ impl LocalRateLimit {
     }
 }
 
-#[async_trait::async_trait]
 impl Filter for LocalRateLimit {
-    async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         if self.acquire_token(&ctx.source) {
             Ok(())
         } else {
@@ -227,7 +226,7 @@ mod tests {
     }
 
     /// Send a packet to the filter and assert whether or not it was processed.
-    async fn read(r: &LocalRateLimit, address: &EndpointAddress, should_succeed: bool) {
+    fn read(r: &LocalRateLimit, address: &EndpointAddress, should_succeed: bool) {
         let endpoints = crate::net::cluster::ClusterMap::new_default(
             [crate::net::endpoint::Endpoint::new(
                 (Ipv4Addr::LOCALHOST, 8089).into(),
@@ -236,7 +235,7 @@ mod tests {
         );
 
         let mut context = ReadContext::new(endpoints.into(), address.clone(), alloc_buffer([9]));
-        let result = r.read(&mut context).await;
+        let result = r.read(&mut context);
 
         if should_succeed {
             result.unwrap();
@@ -312,10 +311,10 @@ period: 0
 
         let (address, _) = address_pair();
 
-        read(&r, &address, true).await;
-        read(&r, &address, true).await;
-        read(&r, &address, true).await;
-        read(&r, &address, false).await;
+        read(&r, &address, true);
+        read(&r, &address, true);
+        read(&r, &address, true);
+        read(&r, &address, false);
     }
 
     #[tokio::test]
@@ -328,10 +327,10 @@ period: 0
         let (address, _) = address_pair();
 
         // Check that other routes are not affected.
-        assert_write_no_change(&r).await;
+        assert_write_no_change(&r);
 
         // Check that we're rate limited.
-        read(&r, &address, false).await;
+        read(&r, &address, false);
     }
 
     #[tokio::test]
@@ -346,34 +345,34 @@ period: 0
         let (address1, address2) = address_pair();
 
         // Read until we exhaust tokens for both addresses.
-        read(&r, &address1, true).await;
-        read(&r, &address2, true).await;
-        read(&r, &address1, true).await;
-        read(&r, &address2, true).await;
+        read(&r, &address1, true);
+        read(&r, &address2, true);
+        read(&r, &address1, true);
+        read(&r, &address2, true);
 
         // Check that we've exhausted their tokens.
-        read(&r, &address1, false).await;
-        read(&r, &address2, false).await;
-        read(&r, &address1, false).await;
-        read(&r, &address2, false).await;
+        read(&r, &address1, false);
+        read(&r, &address2, false);
+        read(&r, &address1, false);
+        read(&r, &address2, false);
 
         // Advance time to refill tokens.
         time::advance(Duration::from_secs(2)).await;
 
         // Check that we are able to process packets again.
-        read(&r, &address1, true).await;
-        read(&r, &address2, true).await;
-        read(&r, &address1, true).await;
+        read(&r, &address1, true);
+        read(&r, &address2, true);
+        read(&r, &address1, true);
 
         // Advance time to to the end of the current window.
         time::advance(Duration::from_secs(1)).await;
 
         // Only the second address should have tokens left.
-        read(&r, &address1, false).await;
-        read(&r, &address2, true).await;
+        read(&r, &address1, false);
+        read(&r, &address2, true);
 
         // Check that other routes are not affected.
-        assert_write_no_change(&r).await;
+        assert_write_no_change(&r);
     }
 
     #[tokio::test]
@@ -390,17 +389,17 @@ period: 0
         let (address, _) = address_pair();
 
         // Acquire 1 token.
-        read(&r, &address, true).await;
+        read(&r, &address, true);
 
         // Advance to some time in the future after multiple token refills.
         time::advance(Duration::from_secs(10)).await;
 
         // Check that we still have the 2 tokens within a window.
-        read(&r, &address, true).await;
-        read(&r, &address, true).await;
-        read(&r, &address, false).await;
+        read(&r, &address, true);
+        read(&r, &address, true);
+        read(&r, &address, false);
 
         // Check that other routes are not affected.
-        assert_write_no_change(&r).await;
+        assert_write_no_change(&r);
     }
 }

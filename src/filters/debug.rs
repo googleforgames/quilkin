@@ -36,16 +36,15 @@ impl Debug {
     }
 }
 
-#[async_trait::async_trait]
 impl Filter for Debug {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         info!(id = ?self.config.id, source = ?&ctx.source, contents = ?String::from_utf8_lossy(&ctx.contents), "Read filter event");
         Ok(())
     }
 
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    async fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
+    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
         info!(
             id = ?self.config.id,
             source = ?&ctx.source,
@@ -98,7 +97,7 @@ mod tests {
     #[tokio::test]
     async fn read() {
         let df = Debug::new(None);
-        assert_filter_read_no_change(&df).await;
+        assert_filter_read_no_change(&df);
         assert!(logs_contain("Read filter event"));
     }
 
@@ -106,7 +105,7 @@ mod tests {
     #[tokio::test]
     async fn write() {
         let df = Debug::new(None);
-        assert_write_no_change(&df).await;
+        assert_write_no_change(&df);
         assert!(logs_contain("Write filter event"));
         assert!(logs_contain("quilkin::filters::debug")); // the given name to the the logger by tracing
     }

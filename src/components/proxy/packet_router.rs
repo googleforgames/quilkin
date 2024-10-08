@@ -55,7 +55,7 @@ pub struct DownstreamReceiveWorkerConfig {
 
 impl DownstreamReceiveWorkerConfig {
     #[inline]
-    pub(crate) async fn process_task(
+    pub(crate) fn process_task(
         packet: DownstreamPacket,
         worker_id: usize,
         config: &Arc<Config>,
@@ -70,7 +70,7 @@ impl DownstreamReceiveWorkerConfig {
         );
 
         let timer = metrics::processing_time(metrics::READ).start_timer();
-        match Self::process_downstream_received_packet(packet, config, sessions).await {
+        match Self::process_downstream_received_packet(packet, config, sessions) {
             Ok(()) => {
                 error_acc.maybe_send();
             }
@@ -88,7 +88,7 @@ impl DownstreamReceiveWorkerConfig {
 
     /// Processes a packet by running it through the filter chain.
     #[inline]
-    async fn process_downstream_received_packet(
+    fn process_downstream_received_packet(
         packet: DownstreamPacket,
         config: &Arc<Config>,
         sessions: &Arc<SessionPool>,
@@ -104,10 +104,7 @@ impl DownstreamReceiveWorkerConfig {
             packet.source.into(),
             packet.contents,
         );
-        filters
-            .read(&mut context)
-            .await
-            .map_err(PipelineError::Filter)?;
+        filters.read(&mut context).map_err(PipelineError::Filter)?;
 
         let ReadContext {
             destinations,
@@ -123,10 +120,10 @@ impl DownstreamReceiveWorkerConfig {
         for epa in destinations {
             let session_key = SessionKey {
                 source: packet.source,
-                dest: epa.to_socket_addr().await?,
+                dest: epa.to_socket_addr()?,
             };
 
-            sessions.send(session_key, contents.clone()).await?;
+            sessions.send(session_key, contents.clone())?;
         }
 
         Ok(())
@@ -146,7 +143,7 @@ pub async fn spawn_receivers(
     upstream_receiver: DownstreamReceiver,
     buffer_pool: Arc<crate::pool::BufferPool>,
     shutdown: crate::ShutdownRx,
-) -> crate::Result<Vec<tokio::sync::oneshot::Receiver<()>>> {
+) -> crate::Result<Vec<std::sync::mpsc::Receiver<()>>> {
     let (error_sender, mut error_receiver) = mpsc::channel(128);
 
     let port = crate::net::socket_port(&socket);

@@ -48,12 +48,11 @@ impl StaticFilter for Firewall {
     }
 }
 
-#[async_trait::async_trait]
 impl Filter for Firewall {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         for rule in &self.on_read {
-            if rule.contains(ctx.source.to_socket_addr().await?) {
+            if rule.contains(ctx.source.to_socket_addr()?) {
                 return match rule.action {
                     Action::Allow => {
                         debug!(
@@ -79,9 +78,9 @@ impl Filter for Firewall {
     }
 
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    async fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
+    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
         for rule in &self.on_write {
-            if rule.contains(ctx.source.to_socket_addr().await?) {
+            if rule.contains(ctx.source.to_socket_addr()?) {
                 return match rule.action {
                     Action::Allow => {
                         debug!(
@@ -136,7 +135,7 @@ mod tests {
             [Endpoint::new((Ipv4Addr::LOCALHOST, 8080).into())].into(),
         );
         let mut ctx = ReadContext::new(endpoints.into(), (local_ip, 80).into(), alloc_buffer([]));
-        assert!(firewall.read(&mut ctx).await.is_ok());
+        assert!(firewall.read(&mut ctx).is_ok());
 
         let endpoints = crate::net::cluster::ClusterMap::new_default(
             [Endpoint::new((Ipv4Addr::LOCALHOST, 8080).into())].into(),
@@ -145,7 +144,7 @@ mod tests {
         assert!(logs_contain("quilkin::filters::firewall")); // the given name to the the logger by tracing
         assert!(logs_contain("Allow"));
 
-        assert!(firewall.read(&mut ctx).await.is_err());
+        assert!(firewall.read(&mut ctx).is_err());
     }
 
     #[tokio::test]
@@ -166,13 +165,13 @@ mod tests {
             local_addr.clone(),
             alloc_buffer([]),
         );
-        assert!(firewall.write(&mut ctx).await.is_ok());
+        assert!(firewall.write(&mut ctx).is_ok());
 
         let mut ctx = WriteContext::new(
             ([192, 168, 77, 20], 80).into(),
             local_addr,
             alloc_buffer([]),
         );
-        assert!(firewall.write(&mut ctx).await.is_err());
+        assert!(firewall.write(&mut ctx).is_err());
     }
 }

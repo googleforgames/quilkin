@@ -54,7 +54,7 @@ on_write: DECOMPRESS
         })
         .await;
 
-    quilkin::test::map_to_localhost(&mut echo).await;
+    quilkin::test::map_to_localhost(&mut echo);
     let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
     server_config
         .clusters
@@ -130,7 +130,7 @@ async fn multiple_mutations() {
         })
         .await;
 
-    quilkin::test::map_to_localhost(&mut echo).await;
+    quilkin::test::map_to_localhost(&mut echo);
     let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
     server_config
         .clusters

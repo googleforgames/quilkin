@@ -81,7 +81,7 @@ impl Match {
     }
 }
 
-async fn match_filter<'config, 'ctx, Ctx, F>(
+fn match_filter<'config, 'ctx, Ctx>(
     config: &'config Option<ConfigInstance>,
     metrics: &'config Metrics,
     ctx: &'ctx mut Ctx,
@@ -89,11 +89,8 @@ async fn match_filter<'config, 'ctx, Ctx, F>(
         &'value Ctx,
         &'config metadata::Key,
     ) -> Option<&'value metadata::Value>,
-    and_then: impl Fn(&'ctx mut Ctx, &'config FilterInstance) -> F,
-) -> Result<(), FilterError>
-where
-    F: std::future::Future<Output = Result<(), FilterError>>,
-{
+    and_then: impl Fn(&'ctx mut Ctx, &'config FilterInstance) -> Result<(), FilterError>,
+) -> Result<(), FilterError> {
     match config {
         Some(config) => {
             let value =
@@ -103,7 +100,7 @@ where
                 Some((value, instance)) => {
                     tracing::trace!(key=%config.metadata_key, %value, filter=%instance.0, "Matched against branch");
                     metrics.packets_matched_total.inc();
-                    (and_then)(ctx, &instance.1).await
+                    (and_then)(ctx, &instance.1)
                 }
                 None => {
                     tracing::trace!(
@@ -112,7 +109,7 @@ where
                         "No match found, calling fallthrough"
                     );
                     metrics.packets_fallthrough_total.inc();
-                    (and_then)(ctx, &config.fallthrough.1).await
+                    (and_then)(ctx, &config.fallthrough.1)
                 }
             }
         }
@@ -120,10 +117,9 @@ where
     }
 }
 
-#[async_trait::async_trait]
 impl Filter for Match {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         tracing::trace!(metadata=?ctx.metadata);
         match_filter(
             &self.on_read_filters,
@@ -132,11 +128,10 @@ impl Filter for Match {
             |ctx, metadata_key| ctx.metadata.get(metadata_key),
             |ctx, instance| instance.filter().read(ctx),
         )
-        .await
     }
 
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    async fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
+    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
         match_filter(
             &self.on_write_filters,
             &self.metrics,
@@ -144,7 +139,6 @@ impl Filter for Match {
             |ctx, metadata_key| ctx.metadata.get(metadata_key),
             |ctx, instance| instance.filter().write(ctx),
         )
-        .await
     }
 }
 
@@ -194,7 +188,6 @@ mod tests {
                 "127.0.0.1:70".parse().unwrap(),
                 alloc_buffer(contents),
             ))
-            .await
             .unwrap();
 
         assert_eq!(0, filter.metrics.packets_fallthrough_total.get());
@@ -211,7 +204,7 @@ mod tests {
         );
         ctx.metadata.insert(key, "abc".into());
 
-        filter.read(&mut ctx).await.unwrap();
+        filter.read(&mut ctx).unwrap();
         assert_eq!(1, filter.metrics.packets_matched_total.get());
         assert_eq!(0, filter.metrics.packets_fallthrough_total.get());
 
@@ -225,7 +218,7 @@ mod tests {
         );
         ctx.metadata.insert(key, "xyz".into());
 
-        let result = filter.read(&mut ctx).await;
+        let result = filter.read(&mut ctx);
         assert!(result.is_err());
         assert_eq!(1, filter.metrics.packets_matched_total.get());
         assert_eq!(1, filter.metrics.packets_fallthrough_total.get());

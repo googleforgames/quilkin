@@ -37,9 +37,8 @@ impl LoadBalancer {
     }
 }
 
-#[async_trait::async_trait]
 impl Filter for LoadBalancer {
-    async fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
         self.endpoint_chooser.choose_endpoints(ctx);
         Ok(())
     }
@@ -65,7 +64,7 @@ mod tests {
         test::alloc_buffer,
     };
 
-    async fn get_response_addresses(
+    fn get_response_addresses(
         filter: &dyn Filter,
         input_addresses: &[EndpointAddress],
         source: EndpointAddress,
@@ -78,7 +77,7 @@ mod tests {
         let endpoints = crate::net::cluster::ClusterMap::new_default(endpoints);
         let mut context = ReadContext::new(endpoints.into(), source, alloc_buffer([]));
 
-        filter.read(&mut context).await.unwrap();
+        filter.read(&mut context).unwrap();
 
         context.destinations
     }
@@ -104,14 +103,11 @@ mod tests {
             assert_eq!(expected_sequence, {
                 let mut responses = Vec::new();
                 for _ in 0..addresses.len() {
-                    responses.push(
-                        get_response_addresses(
-                            &filter,
-                            &addresses,
-                            "127.0.0.1:8080".parse().unwrap(),
-                        )
-                        .await,
-                    );
+                    responses.push(get_response_addresses(
+                        &filter,
+                        &addresses,
+                        "127.0.0.1:8080".parse().unwrap(),
+                    ));
                 }
                 responses
             });
@@ -135,10 +131,11 @@ policy: RANDOM
         let mut result_sequences = vec![];
         for _ in 0..10 {
             for _ in 0..addresses.len() {
-                result_sequences.push(
-                    get_response_addresses(&filter, &addresses, "127.0.0.1:8080".parse().unwrap())
-                        .await,
-                );
+                result_sequences.push(get_response_addresses(
+                    &filter,
+                    &addresses,
+                    "127.0.0.1:8080".parse().unwrap(),
+                ));
             }
         }
 
@@ -178,10 +175,11 @@ policy: RANDOM
         let mut result_sequences = vec![];
         for _ in 0..10 {
             for _ in 0..addresses.len() {
-                result_sequences.push(
-                    get_response_addresses(&filter, &addresses, (Ipv4Addr::LOCALHOST, 8080).into())
-                        .await,
-                );
+                result_sequences.push(get_response_addresses(
+                    &filter,
+                    &addresses,
+                    (Ipv4Addr::LOCALHOST, 8080).into(),
+                ));
             }
         }
 
@@ -204,8 +202,7 @@ policy: RANDOM
                     &filter,
                     &addresses,
                     (Ipv4Addr::LOCALHOST, port).into()
-                )
-                .await;
+                );
                 addresses.len()
             ]);
         }
@@ -231,8 +228,7 @@ policy: RANDOM
                         &filter,
                         &addresses,
                         (ip, port).into()
-                    )
-                    .await;
+                    );
                     addresses.len()
                 ]);
             }

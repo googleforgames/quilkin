@@ -18,7 +18,7 @@
 #[cfg(not(target_os = "linux"))]
 macro_rules! uring_spawn {
     ($span:expr, $future:expr) => {{
-        let (tx, rx) = tokio::sync::oneshot::channel::<()>();
+        let (tx, rx) = std::sync::mpsc::channel::<()>();
         use tracing::Instrument as _;
 
         use tracing::instrument::WithSubscriber as _;
@@ -346,7 +346,7 @@ mod tests {
         let (mut rx, socket) = t.open_socket_and_recv_multiple_packets().await;
 
         let msg = "hello";
-        let addr = echo_addr.to_socket_addr().await.unwrap();
+        let addr = echo_addr.to_socket_addr().unwrap();
 
         socket.send_to(msg.as_bytes(), &addr).await.unwrap();
         assert_eq!(
