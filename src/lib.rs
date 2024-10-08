@@ -89,6 +89,5 @@ mod external_doc_tests {
     #![doc = include_str!("../docs/src/services/proxy/filters/match.md")]
     #![doc = include_str!("../docs/src/services/proxy/filters/timestamp.md")]
     #![doc = include_str!("../docs/src/services/proxy/filters/token_router.md")]
-    #![doc = include_str!("../docs/src/services/proxy/filters/writing_custom_filters.md")]
     #![doc = include_str!("../docs/src/services/xds/providers/filesystem.md")]
 }

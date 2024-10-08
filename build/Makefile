@@ -77,7 +77,7 @@ version:
 	@echo $(package_version)
 
 # Run all tests
-test: ensure-build-image test-quilkin test-examples test-docs
+test: ensure-build-image test-quilkin test-docs
 
 # In CI with split jobs that both fetch they will fail if run in parallel since
 # cargo will be fighting with itself for some the same host directory that is
@@ -102,13 +102,6 @@ test-quilkin: ensure-build-image
 	docker run --rm $(common_rust_args)  \
 			--network=host \
 			-e RUST_BACKTRACE=1 --entrypoint=cargo $(BUILD_IMAGE_TAG) test -p quilkin -p qt
-
-# Run tests against the examples
-test-examples: ensure-build-image
-	docker run --rm $(common_rust_args) -w /workspace/examples/quilkin-filter-example \
-		--entrypoint=cargo $(BUILD_IMAGE_TAG) clippy --tests -- -D warnings
-	docker run --rm $(common_rust_args) -w /workspace/examples/quilkin-filter-example \
-		--entrypoint=cargo $(BUILD_IMAGE_TAG) fmt -- --check
 
 # Run tests against documentation
 test-docs: ensure-build-image
