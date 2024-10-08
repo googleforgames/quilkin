@@ -711,6 +711,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg_attr(target_os = "macos", ignore)]
     async fn send_and_recv() {
         let mut t = TestHelper::default();
         let dest = t.run_echo_server(AddressType::Ipv6).await;

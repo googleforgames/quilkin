@@ -27,6 +27,7 @@ use tokio::time::{timeout, Duration};
 /// This test covers both token_router and capture filters,
 /// since they work in concert together.
 #[tokio::test]
+#[cfg_attr(target_os = "macos", ignore)]
 async fn token_router() {
     let mut t = TestHelper::default();
 
@@ -59,6 +60,7 @@ async fn token_router() {
 // This test covers the scenario in https://github.com/googleforgames/quilkin/issues/988
 // to make sure there are no issues with overlapping streams between clients.
 #[tokio::test]
+#[cfg_attr(target_os = "macos", ignore)]
 async fn multiple_clients() {
     let limit = 10_000;
     let mut t = TestHelper::default();

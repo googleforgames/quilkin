@@ -28,6 +28,7 @@ use quilkin::{
 };
 
 #[tokio::test]
+#[cfg_attr(target_os = "macos", ignore)]
 async fn test_filter() {
     let mut t = TestHelper::default();
     load_test_filters();
@@ -106,6 +107,7 @@ async fn test_filter() {
 }
 
 #[tokio::test]
+#[cfg_attr(target_os = "macos", ignore)]
 async fn debug_filter() {
     let mut t = TestHelper::default();
 

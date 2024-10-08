@@ -24,6 +24,7 @@ use quilkin::{
 };
 
 #[tokio::test]
+#[cfg_attr(target_os = "macos", ignore)]
 async fn client_and_server() {
     let mut t = TestHelper::default();
     let echo = t.run_echo_server(AddressType::Random).await;

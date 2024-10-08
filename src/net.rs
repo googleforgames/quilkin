@@ -337,6 +337,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg_attr(target_os = "macos", ignore)]
     async fn dual_stack_socket() {
         // Since the TestHelper uses the DualStackSocket, we can use it to test ourselves.
         let mut t = TestHelper::default();

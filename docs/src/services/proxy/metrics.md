@@ -63,7 +63,7 @@ The proxy exposes the following general metrics:
 
 * `quilkin_packet_jitter{event, asn, ip_prefix}`
 
-  The time between receiving new packets.
+  The time between receiving new packets (in nanoseconds).
 
 * `quilkin_errors_total{event, asn, ip_prefix}`
 
