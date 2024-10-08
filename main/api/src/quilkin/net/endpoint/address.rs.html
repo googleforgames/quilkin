@@ -492,7 +492,7 @@
 
     <span class="doccomment">/// Returns the socket address for the endpoint, resolving any DNS entries
     /// if present.
-    </span><span class="kw">pub async fn </span>to_socket_addr(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; std::io::Result&lt;SocketAddr&gt; {
+    </span><span class="kw">pub fn </span>to_socket_addr(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; std::io::Result&lt;SocketAddr&gt; {
         <span class="kw">static </span>DNS: Lazy&lt;TokioAsyncResolver&gt; =
             Lazy::new(|| TokioAsyncResolver::tokio_from_system_conf().unwrap());
 
@@ -505,9 +505,9 @@
                 <span class="kw">match </span>CACHE.get(name) {
                     <span class="prelude-val">Some</span>(ip) =&gt; <span class="kw-2">**</span>ip,
                     <span class="prelude-val">None </span>=&gt; {
-                        <span class="kw">let </span>set = DNS
-                            .lookup_ip(<span class="kw-2">&amp;**</span>name)
-                            .<span class="kw">await</span><span class="question-mark">?
+                        <span class="kw">let </span>handle = tokio::runtime::Handle::current();
+                        <span class="kw">let </span>set = handle
+                            .block_on(DNS.lookup_ip(<span class="kw-2">&amp;**</span>name))<span class="question-mark">?
                             </span>.iter()
                             .collect::&lt;std::collections::HashSet&lt;<span class="kw">_</span>&gt;&gt;();
 

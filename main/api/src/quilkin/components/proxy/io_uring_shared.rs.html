@@ -771,24 +771,6 @@
 <a href="#769" id="769">769</a>
 <a href="#770" id="770">770</a>
 <a href="#771" id="771">771</a>
-<a href="#772" id="772">772</a>
-<a href="#773" id="773">773</a>
-<a href="#774" id="774">774</a>
-<a href="#775" id="775">775</a>
-<a href="#776" id="776">776</a>
-<a href="#777" id="777">777</a>
-<a href="#778" id="778">778</a>
-<a href="#779" id="779">779</a>
-<a href="#780" id="780">780</a>
-<a href="#781" id="781">781</a>
-<a href="#782" id="782">782</a>
-<a href="#783" id="783">783</a>
-<a href="#784" id="784">784</a>
-<a href="#785" id="785">785</a>
-<a href="#786" id="786">786</a>
-<a href="#787" id="787">787</a>
-<a href="#788" id="788">788</a>
-<a href="#789" id="789">789</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
@@ -1043,16 +1025,18 @@
     Router {
         config: Arc&lt;<span class="kw">crate</span>::config::Config&gt;,
         sessions: Arc&lt;<span class="kw">crate</span>::components::proxy::SessionPool&gt;,
-        error_sender: <span class="kw">super</span>::error::ErrorSender,
-        <span class="doccomment">/// Receiver for upstream packets being sent to this downstream
-        </span>upstream_receiver: <span class="kw">crate</span>::components::proxy::sessions::DownstreamReceiver,
+        error_acc: <span class="kw">super</span>::error::ErrorAccumulator,
         worker_id: usize,
     },
     SessionPool {
         pool: Arc&lt;<span class="kw">crate</span>::components::proxy::SessionPool&gt;,
-        downstream_receiver: tokio::sync::mpsc::Receiver&lt;proxy::SendPacket&gt;,
         port: u16,
     },
+}
+
+<span class="kw">pub enum </span>PacketReceiver {
+    Router(<span class="kw">crate</span>::components::proxy::sessions::DownstreamReceiver),
+    SessionPool(tokio::sync::mpsc::Receiver&lt;proxy::SendPacket&gt;),
 }
 
 <span class="doccomment">/// Spawns worker tasks
@@ -1062,14 +1046,11 @@
 /// the io-uring loop when there are 1 or more packets available to be sent
 </span><span class="kw">fn </span>spawn_workers(
     rt: <span class="kw-2">&amp;</span>tokio::runtime::Runtime,
-    ctx: PacketProcessorCtx,
+    receiver: PacketReceiver,
     pending_sends: PendingSends,
-    packet_processed_event: EventFdWriter,
     <span class="kw-2">mut </span>shutdown_rx: <span class="kw">crate</span>::ShutdownRx,
     shutdown_event: EventFdWriter,
-) -&gt; tokio::sync::mpsc::Sender&lt;RecvPacket&gt; {
-    <span class="kw">let </span>(tx, <span class="kw-2">mut </span>rx) = tokio::sync::mpsc::channel::&lt;RecvPacket&gt;(<span class="number">1</span>);
-
+) {
     <span class="comment">// Spawn a task that just monitors the shutdown receiver to notify the io-uring loop to exit
     </span>rt.spawn(<span class="kw">async move </span>{
         <span class="comment">// The result is uninteresting, either a shutdown has been signalled, or all senders have been dropped
@@ -1078,45 +1059,8 @@
         shutdown_event.write(<span class="number">1</span>);
     });
 
-    <span class="kw">match </span>ctx {
-        PacketProcessorCtx::Router {
-            config,
-            sessions,
-            error_sender,
-            worker_id,
-            upstream_receiver,
-        } =&gt; {
-            rt.spawn(<span class="kw">async move </span>{
-                <span class="kw">let </span><span class="kw-2">mut </span>last_received_at = <span class="prelude-val">None</span>;
-
-                <span class="kw">let </span><span class="kw-2">mut </span>error_acc = <span class="kw">super</span>::error::ErrorAccumulator::new(error_sender);
-
-                <span class="kw">while let </span><span class="prelude-val">Some</span>(packet) = rx.recv().<span class="kw">await </span>{
-                    <span class="kw">let </span>received_at = UtcTimestamp::now();
-                    <span class="kw">if let </span><span class="prelude-val">Some</span>(last_received_at) = last_received_at {
-                        metrics::packet_jitter(metrics::READ, <span class="kw-2">&amp;</span>metrics::EMPTY)
-                            .set((received_at - last_received_at).nanos());
-                    }
-                    last_received_at = <span class="prelude-val">Some</span>(received_at);
-
-                    <span class="kw">let </span>ds_packet = proxy::packet_router::DownstreamPacket {
-                        contents: packet.buffer,
-                        source: packet.source,
-                    };
-
-                    <span class="kw">crate</span>::components::proxy::packet_router::DownstreamReceiveWorkerConfig::process_task(
-                        ds_packet,
-                        worker_id,
-                        <span class="kw-2">&amp;</span>config,
-                        <span class="kw-2">&amp;</span>sessions,
-                        <span class="kw-2">&amp;mut </span>error_acc,
-                    )
-                    .<span class="kw">await</span>;
-
-                    packet_processed_event.write(<span class="number">1</span>);
-                }
-            });
-
+    <span class="kw">match </span>receiver {
+        PacketReceiver::Router(upstream_receiver) =&gt; {
             rt.spawn(<span class="kw">async move </span>{
                 <span class="kw">while let </span><span class="prelude-val">Ok</span>(packet) = upstream_receiver.recv().<span class="kw">await </span>{
                     <span class="kw">let </span>packet = SendPacket {
@@ -1128,27 +1072,7 @@
                 }
             });
         }
-        PacketProcessorCtx::SessionPool {
-            pool,
-            port,
-            <span class="kw-2">mut </span>downstream_receiver,
-        } =&gt; {
-            rt.spawn(<span class="kw">async move </span>{
-                <span class="kw">let </span><span class="kw-2">mut </span>last_received_at = <span class="prelude-val">None</span>;
-
-                <span class="kw">while let </span><span class="prelude-val">Some</span>(packet) = rx.recv().<span class="kw">await </span>{
-                    pool.process_received_upstream_packet(
-                        packet.buffer,
-                        packet.source,
-                        port,
-                        <span class="kw-2">&amp;mut </span>last_received_at,
-                    )
-                    .<span class="kw">await</span>;
-
-                    packet_processed_event.write(<span class="number">1</span>);
-                }
-            });
-
+        PacketReceiver::SessionPool(<span class="kw-2">mut </span>downstream_receiver) =&gt; {
             rt.spawn(<span class="kw">async move </span>{
                 <span class="kw">while let </span><span class="prelude-val">Some</span>(packet) = downstream_receiver.recv().<span class="kw">await </span>{
                     <span class="kw">let </span>packet = SendPacket {
@@ -1161,8 +1085,52 @@
             });
         }
     }
+}
 
-    tx
+<span class="kw">fn </span>process_packet(
+    ctx: <span class="kw-2">&amp;mut </span>PacketProcessorCtx,
+    packet_processed_event: <span class="kw-2">&amp;</span>EventFdWriter,
+    packet: RecvPacket,
+    last_received_at: <span class="kw-2">&amp;mut </span><span class="prelude-ty">Option</span>&lt;UtcTimestamp&gt;,
+) {
+    <span class="kw">match </span>ctx {
+        PacketProcessorCtx::Router {
+            config,
+            sessions,
+            worker_id,
+            error_acc,
+        } =&gt; {
+            <span class="kw">let </span>received_at = UtcTimestamp::now();
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(last_received_at) = last_received_at {
+                metrics::packet_jitter(metrics::READ, <span class="kw-2">&amp;</span>metrics::EMPTY)
+                    .set((received_at - <span class="kw-2">*</span>last_received_at).nanos());
+            }
+            <span class="kw-2">*</span>last_received_at = <span class="prelude-val">Some</span>(received_at);
+
+            <span class="kw">let </span>ds_packet = proxy::packet_router::DownstreamPacket {
+                contents: packet.buffer,
+                source: packet.source,
+            };
+
+            <span class="kw">crate</span>::components::proxy::packet_router::DownstreamReceiveWorkerConfig::process_task(
+                ds_packet, <span class="kw-2">*</span>worker_id, config, sessions, error_acc,
+            );
+
+            packet_processed_event.write(<span class="number">1</span>);
+        }
+        PacketProcessorCtx::SessionPool { pool, port, .. } =&gt; {
+            <span class="kw">let </span><span class="kw-2">mut </span>last_received_at = <span class="prelude-val">None</span>;
+
+            pool.process_received_upstream_packet(
+                packet.buffer,
+                packet.source,
+                <span class="kw-2">*</span>port,
+                <span class="kw-2">&amp;mut </span>last_received_at,
+            );
+
+            packet_processed_event.write(<span class="number">1</span>);
+        }
+    }
 }
 
 <span class="attr">#[inline]
@@ -1175,8 +1143,6 @@
     </span>Recv { key: usize },
     <span class="doccomment">/// Packet sent
     </span>Send { key: usize },
-    <span class="doccomment">/// Recv packet processed
-    </span>RecvPacketProcessed,
     <span class="doccomment">/// One or more packets are ready to be sent
     </span>PendingsSends,
     <span class="doccomment">/// Loop shutdown requested
@@ -1334,12 +1300,13 @@
     <span class="kw">pub fn </span>spawn(
         <span class="self">self</span>,
         thread_name: String,
-        ctx: PacketProcessorCtx,
+        <span class="kw-2">mut </span>ctx: PacketProcessorCtx,
+        receiver: PacketReceiver,
         buffer_pool: Arc&lt;<span class="kw">crate</span>::pool::BufferPool&gt;,
         shutdown: <span class="kw">crate</span>::ShutdownRx,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;tokio::sync::oneshot::Receiver&lt;()&gt;, PipelineError&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;std::sync::mpsc::Receiver&lt;()&gt;, PipelineError&gt; {
         <span class="kw">let </span>dispatcher = tracing::dispatcher::get_default(|d| d.clone());
-        <span class="kw">let </span>(tx, rx) = tokio::sync::oneshot::channel();
+        <span class="kw">let </span>(tx, rx) = std::sync::mpsc::channel();
 
         <span class="kw">let </span>rt = <span class="self">self</span>.runtime;
         <span class="kw">let </span>socket = <span class="self">self</span>.socket;
@@ -1353,7 +1320,7 @@
         <span class="comment">// Used to notify the uring when a received packet has finished
         // processing and we can perform another recv, as we (currently) only
         // ever process a single packet at a time
-        </span><span class="kw">let </span><span class="kw-2">mut </span>process_event = EventFd::new()<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>process_event = EventFd::new()<span class="question-mark">?</span>;
         <span class="comment">// Used to notify the uring loop to shutdown
         </span><span class="kw">let </span><span class="kw-2">mut </span>shutdown_event = EventFd::new()<span class="question-mark">?</span>;
 
@@ -1380,11 +1347,10 @@
 
                 <span class="comment">// Spawn the worker tasks that process in an async context unlike
                 // our io-uring loop below
-                </span><span class="kw">let </span>process_packet_tx = spawn_workers(
+                </span>spawn_workers(
                     <span class="kw-2">&amp;</span>rt,
-                    ctx,
+                    receiver,
                     pending_sends.clone(),
-                    process_event.writer(),
                     shutdown,
                     shutdown_event.writer(),
                 );
@@ -1410,6 +1376,8 @@
 
                 <span class="comment">// Notify that we have set everything up
                 </span><span class="kw">let _ </span>= tx.send(());
+                <span class="kw">let </span><span class="kw-2">mut </span>last_received_at = <span class="prelude-val">None</span>;
+                <span class="kw">let </span>process_event_writer = process_event.writer();
 
                 <span class="comment">// The core io uring loop
                 </span><span class="lifetime">'io</span>: <span class="kw">loop </span>{
@@ -1451,17 +1419,13 @@
                                 }
 
                                 <span class="kw">let </span>packet = packet.finalize_recv(ret <span class="kw">as </span>usize);
-                                <span class="kw">if </span>process_packet_tx.blocking_send(packet).is_err() {
-                                    <span class="macro">unreachable!</span>(<span class="string">"packet process thread has a pending packet"</span>);
-                                }
-
-                                <span class="comment">// Queue the wait for the processing of the packet to finish
-                                </span>loop_ctx.push_with_token(
-                                    process_event.io_uring_entry(),
-                                    Token::RecvPacketProcessed,
+                                process_packet(
+                                    <span class="kw-2">&amp;mut </span>ctx,
+                                    <span class="kw-2">&amp;</span>process_event_writer,
+                                    packet,
+                                    <span class="kw-2">&amp;mut </span>last_received_at,
                                 );
-                            }
-                            Token::RecvPacketProcessed =&gt; {
+
                                 loop_ctx.enqueue_recv(buffer_pool.clone().alloc());
                             }
                             Token::PendingsSends =&gt; {

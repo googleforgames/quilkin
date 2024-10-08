@@ -654,7 +654,7 @@
         )<span class="question-mark">?</span>;
 
         <span class="kw">for </span>notification <span class="kw">in </span>worker_notifications {
-            <span class="kw">let _ </span>= notification.<span class="kw">await</span>;
+            <span class="kw">let _ </span>= notification.recv();
         }
 
         <span class="macro">tracing::info!</span>(<span class="string">"Quilkin is ready"</span>);

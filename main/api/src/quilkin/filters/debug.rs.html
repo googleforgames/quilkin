@@ -129,7 +129,6 @@
 <a href="#127" id="127">127</a>
 <a href="#128" id="128">128</a>
 <a href="#129" id="129">129</a>
-<a href="#130" id="130">130</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -168,16 +167,15 @@
     }
 }
 
-<span class="attr">#[async_trait::async_trait]
-</span><span class="kw">impl </span>Filter <span class="kw">for </span>Debug {
+<span class="kw">impl </span>Filter <span class="kw">for </span>Debug {
     <span class="attr">#[cfg_attr(feature = <span class="string">"instrument"</span>, tracing::instrument(skip(<span class="self">self</span>, ctx)))]
-    </span><span class="kw">async fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+    </span><span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="macro">info!</span>(id = <span class="question-mark">?</span><span class="self">self</span>.config.id, source = <span class="question-mark">?</span><span class="kw-2">&amp;</span>ctx.source, contents = <span class="question-mark">?</span>String::from_utf8_lossy(<span class="kw-2">&amp;</span>ctx.contents), <span class="string">"Read filter event"</span>);
         <span class="prelude-val">Ok</span>(())
     }
 
     <span class="attr">#[cfg_attr(feature = <span class="string">"instrument"</span>, tracing::instrument(skip(<span class="self">self</span>, ctx)))]
-    </span><span class="kw">async fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+    </span><span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="macro">info!</span>(
             id = <span class="question-mark">?</span><span class="self">self</span>.config.id,
             source = <span class="question-mark">?</span><span class="kw-2">&amp;</span>ctx.source,
@@ -230,7 +228,7 @@
     #[tokio::test]
     </span><span class="kw">async fn </span>read() {
         <span class="kw">let </span>df = Debug::new(<span class="prelude-val">None</span>);
-        assert_filter_read_no_change(<span class="kw-2">&amp;</span>df).<span class="kw">await</span>;
+        assert_filter_read_no_change(<span class="kw-2">&amp;</span>df);
         <span class="macro">assert!</span>(logs_contain(<span class="string">"Read filter event"</span>));
     }
 
@@ -238,7 +236,7 @@
     #[tokio::test]
     </span><span class="kw">async fn </span>write() {
         <span class="kw">let </span>df = Debug::new(<span class="prelude-val">None</span>);
-        assert_write_no_change(<span class="kw-2">&amp;</span>df).<span class="kw">await</span>;
+        assert_write_no_change(<span class="kw-2">&amp;</span>df);
         <span class="macro">assert!</span>(logs_contain(<span class="string">"Write filter event"</span>));
         <span class="macro">assert!</span>(logs_contain(<span class="string">"quilkin::filters::debug"</span>)); <span class="comment">// the given name to the the logger by tracing
     </span>}

@@ -208,13 +208,12 @@ sent to a downstream client.</p>
 </span>use quilkin::filters::prelude::*;
 
 /// Appends data to each packet
-#[async_trait::async_trait]
 impl Filter for Greet {
-    async fn read(&amp;self, ctx: &amp;mut ReadContext) -&gt; Result&lt;(), FilterError&gt; {
+    fn read(&amp;self, ctx: &amp;mut ReadContext) -&gt; Result&lt;(), FilterError&gt; {
         ctx.contents.extend_from_slice(b"Hello");
         Ok(())
     }
-    async fn write(&amp;self, ctx: &amp;mut WriteContext) -&gt; Result&lt;(), FilterError&gt; {
+    fn write(&amp;self, ctx: &amp;mut WriteContext) -&gt; Result&lt;(), FilterError&gt; {
         ctx.contents.extend_from_slice(b"Goodbye");
         Ok(())
     }
@@ -328,14 +327,13 @@ struct Greet {
     config: Config,
 }
 
-#[async_trait::async_trait]
 impl Filter for Greet {
-    async fn read(&amp;self, ctx: &amp;mut ReadContext) -&gt; Result&lt;(), FilterError&gt; {
+    fn read(&amp;self, ctx: &amp;mut ReadContext) -&gt; Result&lt;(), FilterError&gt; {
         ctx.contents
             .prepend_from_slice(format!("{} ", self.config.greeting).as_bytes());
         Ok(())
     }
-    async fn write(&amp;self, ctx: &amp;mut WriteContext) -&gt; Result&lt;(), FilterError&gt; {
+    fn write(&amp;self, ctx: &amp;mut WriteContext) -&gt; Result&lt;(), FilterError&gt; {
         ctx.contents
             .prepend_from_slice(format!("{} ", self.config.greeting).as_bytes());
         Ok(())

@@ -77,7 +77,7 @@
     <span class="kw">pub async fn </span>spawn(
         <span class="self">self</span>,
         shutdown: <span class="kw">crate</span>::ShutdownRx,
-    ) -&gt; eyre::Result&lt;tokio::sync::oneshot::Receiver&lt;()&gt;&gt; {
+    ) -&gt; eyre::Result&lt;std::sync::mpsc::Receiver&lt;()&gt;&gt; {
         <span class="kw">use </span><span class="kw">crate</span>::components::proxy::io_uring_shared;
 
         <span class="kw">let </span><span class="self">Self </span>{
@@ -100,10 +100,10 @@
                 io_uring_shared::PacketProcessorCtx::Router {
                     config,
                     sessions,
-                    error_sender,
-                    upstream_receiver,
+                    error_acc: <span class="kw">super</span>::<span class="kw">super</span>::error::ErrorAccumulator::new(error_sender),
                     worker_id,
                 },
+                io_uring_shared::PacketReceiver::Router(upstream_receiver),
                 buffer_pool,
                 shutdown,
             )

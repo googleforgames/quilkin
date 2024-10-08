@@ -341,8 +341,6 @@
 <a href="#339" id="339">339</a>
 <a href="#340" id="340">340</a>
 <a href="#341" id="341">341</a>
-<a href="#342" id="342">342</a>
-<a href="#343" id="343">343</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -413,9 +411,8 @@
     }
 }
 
-<span class="attr">#[async_trait::async_trait]
-</span><span class="kw">impl </span>Filter <span class="kw">for </span>TokenRouter {
-    <span class="kw">async fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+<span class="kw">impl </span>Filter <span class="kw">for </span>TokenRouter {
+    <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="self">self</span>.sync_read(ctx)
     }
 }
@@ -434,9 +431,8 @@
     }
 }
 
-<span class="attr">#[async_trait::async_trait]
-</span><span class="kw">impl </span>Filter <span class="kw">for </span>HashedTokenRouter {
-    <span class="kw">async fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+<span class="kw">impl </span>Filter <span class="kw">for </span>HashedTokenRouter {
+    <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="self">self</span>.<span class="number">0</span>.sync_read(ctx)
     }
 }
@@ -606,7 +602,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>ctx = new_ctx();
         ctx.metadata
             .insert(TOKEN_KEY.into(), Value::Bytes(<span class="string">b"123"</span>.to_vec().into()));
-        assert_read(<span class="kw-2">&amp;</span>filter, ctx).<span class="kw">await</span>;
+        assert_read(<span class="kw-2">&amp;</span>filter, ctx);
     }
 
     <span class="attr">#[tokio::test]
@@ -615,7 +611,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>ctx = new_ctx();
         ctx.metadata
             .insert(CAPTURED_BYTES.into(), Value::Bytes(<span class="string">b"123"</span>.to_vec().into()));
-        assert_read(<span class="kw-2">&amp;</span>filter, ctx).<span class="kw">await</span>;
+        assert_read(<span class="kw-2">&amp;</span>filter, ctx);
     }
 
     <span class="attr">#[tokio::test]
@@ -629,18 +625,18 @@
         <span class="kw">let </span><span class="kw-2">mut </span>ctx = new_ctx();
         ctx.metadata
             .insert(CAPTURED_BYTES.into(), Value::Bytes(<span class="string">b"123"</span>.to_vec().into()));
-        assert_read(<span class="kw-2">&amp;</span>filter, ctx).<span class="kw">await</span>;
+        assert_read(<span class="kw-2">&amp;</span>filter, ctx);
 
         <span class="comment">// invalid key
         </span><span class="kw">let </span><span class="kw-2">mut </span>ctx = new_ctx();
         ctx.metadata
             .insert(CAPTURED_BYTES.into(), Value::Bytes(<span class="string">b"567"</span>.to_vec().into()));
 
-        <span class="macro">assert!</span>(filter.read(<span class="kw-2">&amp;mut </span>ctx).<span class="kw">await</span>.is_err());
+        <span class="macro">assert!</span>(filter.read(<span class="kw-2">&amp;mut </span>ctx).is_err());
 
         <span class="comment">// no key
         </span><span class="kw">let </span><span class="kw-2">mut </span>ctx = new_ctx();
-        <span class="macro">assert!</span>(filter.read(<span class="kw-2">&amp;mut </span>ctx).<span class="kw">await</span>.is_err());
+        <span class="macro">assert!</span>(filter.read(<span class="kw-2">&amp;mut </span>ctx).is_err());
     }
 
     <span class="attr">#[tokio::test]
@@ -649,7 +645,7 @@
             metadata_key: CAPTURED_BYTES.into(),
         };
         <span class="kw">let </span>filter = TokenRouter::from_config(config.into());
-        assert_write_no_change(<span class="kw-2">&amp;</span>filter).<span class="kw">await</span>;
+        assert_write_no_change(<span class="kw-2">&amp;</span>filter);
     }
 
     <span class="kw">fn </span>new_ctx() -&gt; ReadContext {
@@ -677,11 +673,11 @@
         )
     }
 
-    <span class="kw">async fn </span>assert_read&lt;F&gt;(filter: <span class="kw-2">&amp;</span>F, <span class="kw-2">mut </span>ctx: ReadContext)
+    <span class="kw">fn </span>assert_read&lt;F&gt;(filter: <span class="kw-2">&amp;</span>F, <span class="kw-2">mut </span>ctx: ReadContext)
     <span class="kw">where
         </span>F: Filter + <span class="question-mark">?</span>Sized,
     {
-        filter.read(<span class="kw-2">&amp;mut </span>ctx).<span class="kw">await</span>.unwrap();
+        filter.read(<span class="kw-2">&amp;mut </span>ctx).unwrap();
 
         <span class="macro">assert_eq!</span>(<span class="string">b"hello"</span>, ctx.contents.as_ref());
     }

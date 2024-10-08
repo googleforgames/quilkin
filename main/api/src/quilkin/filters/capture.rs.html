@@ -257,8 +257,6 @@
 <a href="#255" id="255">255</a>
 <a href="#256" id="256">256</a>
 <a href="#257" id="257">257</a>
-<a href="#258" id="258">258</a>
-<a href="#259" id="259">259</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -317,10 +315,9 @@
     }
 }
 
-<span class="attr">#[async_trait::async_trait]
-</span><span class="kw">impl </span>Filter <span class="kw">for </span>Capture {
+<span class="kw">impl </span>Filter <span class="kw">for </span>Capture {
     <span class="attr">#[cfg_attr(feature = <span class="string">"instrument"</span>, tracing::instrument(skip(<span class="self">self</span>, ctx)))]
-    </span><span class="kw">async fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+    </span><span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="kw">let </span>capture = <span class="self">self</span>.capture.capture(<span class="kw-2">&amp;mut </span>ctx.contents);
         ctx.metadata.insert(
             <span class="self">self</span>.is_present_key,
@@ -370,7 +367,7 @@
             }
         });
         <span class="kw">let </span>filter = Capture::from_config(<span class="prelude-val">Some</span>(serde_json::from_value(config).unwrap()));
-        assert_end_strategy(<span class="kw-2">&amp;</span>filter, TOKEN_KEY.into(), <span class="bool-val">true</span>).<span class="kw">await</span>;
+        assert_end_strategy(<span class="kw-2">&amp;</span>filter, TOKEN_KEY.into(), <span class="bool-val">true</span>);
     }
 
     <span class="attr">#[tokio::test]
@@ -382,7 +379,7 @@
         });
 
         <span class="kw">let </span>filter = Capture::from_config(<span class="prelude-val">Some</span>(serde_json::from_value(config).unwrap()));
-        assert_end_strategy(<span class="kw-2">&amp;</span>filter, CAPTURED_BYTES.into(), <span class="bool-val">false</span>).<span class="kw">await</span>;
+        assert_end_strategy(<span class="kw-2">&amp;</span>filter, CAPTURED_BYTES.into(), <span class="bool-val">false</span>);
     }
 
     <span class="attr">#[test]
@@ -406,7 +403,7 @@
         };
 
         <span class="kw">let </span>filter = Capture::from_config(config.into());
-        assert_end_strategy(<span class="kw-2">&amp;</span>filter, TOKEN_KEY.into(), <span class="bool-val">true</span>).<span class="kw">await</span>;
+        assert_end_strategy(<span class="kw-2">&amp;</span>filter, TOKEN_KEY.into(), <span class="bool-val">true</span>);
     }
 
     <span class="attr">#[tokio::test]
@@ -428,8 +425,7 @@
                 (std::net::Ipv4Addr::LOCALHOST, <span class="number">80</span>).into(),
                 alloc_buffer(<span class="string">b"abc"</span>),
             ))
-            .<span class="kw">await
-            </span>.is_err());
+            .is_err());
     }
 
     <span class="attr">#[tokio::test]
@@ -442,7 +438,7 @@
             metadata_key: TOKEN_KEY.into(),
         };
         <span class="kw">let </span>filter = Capture::from_config(config.into());
-        assert_write_no_change(<span class="kw-2">&amp;</span>filter).<span class="kw">await</span>;
+        assert_write_no_change(<span class="kw-2">&amp;</span>filter);
     }
 
     <span class="attr">#[test]
@@ -493,7 +489,7 @@
         <span class="macro">assert_eq!</span>(<span class="string">b"hello"</span>, <span class="kw-2">&amp;*</span>contents);
     }
 
-    <span class="kw">async fn </span>assert_end_strategy&lt;F&gt;(filter: <span class="kw-2">&amp;</span>F, key: metadata::Key, remove: bool)
+    <span class="kw">fn </span>assert_end_strategy&lt;F&gt;(filter: <span class="kw-2">&amp;</span>F, key: metadata::Key, remove: bool)
     <span class="kw">where
         </span>F: Filter + <span class="question-mark">?</span>Sized,
     {
@@ -506,7 +502,7 @@
             alloc_buffer(<span class="string">b"helloabc"</span>),
         );
 
-        filter.read(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span>.unwrap();
+        filter.read(<span class="kw-2">&amp;mut </span>context).unwrap();
 
         <span class="kw">if </span>remove {
             <span class="macro">assert_eq!</span>(<span class="string">b"hello"</span>, <span class="kw-2">&amp;*</span>context.contents);

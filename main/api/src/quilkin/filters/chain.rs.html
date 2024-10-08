@@ -518,7 +518,6 @@
 <a href="#516" id="516">516</a>
 <a href="#517" id="517">517</a>
 <a href="#518" id="518">518</a>
-<a href="#519" id="519">519</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -793,9 +792,8 @@
     }
 }
 
-<span class="attr">#[async_trait::async_trait]
-</span><span class="kw">impl </span>Filter <span class="kw">for </span>FilterChain {
-    <span class="kw">async fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+<span class="kw">impl </span>Filter <span class="kw">for </span>FilterChain {
+    <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="kw">for </span>((id, instance), histogram) <span class="kw">in </span><span class="self">self
             </span>.filters
             .iter()
@@ -803,7 +801,7 @@
         {
             <span class="macro">tracing::trace!</span>(%id, <span class="string">"read filtering packet"</span>);
             <span class="kw">let </span>timer = histogram.start_timer();
-            <span class="kw">let </span>result = instance.filter().read(ctx).<span class="kw">await</span>;
+            <span class="kw">let </span>result = instance.filter().read(ctx);
             timer.stop_and_record();
             <span class="kw">match </span>result {
                 <span class="prelude-val">Ok</span>(()) =&gt; <span class="macro">tracing::trace!</span>(%id, <span class="string">"read passing packet"</span>),
@@ -829,7 +827,7 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">async fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+    <span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="kw">for </span>((id, instance), histogram) <span class="kw">in </span><span class="self">self
             </span>.filters
             .iter()
@@ -838,7 +836,7 @@
         {
             <span class="macro">tracing::trace!</span>(%id, <span class="string">"write filtering packet"</span>);
             <span class="kw">let </span>timer = histogram.start_timer();
-            <span class="kw">let </span>result = instance.filter().write(ctx).<span class="kw">await</span>;
+            <span class="kw">let </span>result = instance.filter().write(ctx);
             timer.stop_and_record();
             <span class="kw">match </span>result {
                 <span class="prelude-val">Ok</span>(()) =&gt; <span class="macro">tracing::trace!</span>(%id, <span class="string">"write passing packet"</span>),
@@ -910,7 +908,7 @@
             alloc_buffer(<span class="string">b"hello"</span>),
         );
 
-        config.filters.read(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span>.unwrap();
+        config.filters.read(<span class="kw-2">&amp;mut </span>context).unwrap();
         <span class="kw">let </span>expected = endpoints_fixture.clone();
 
         <span class="macro">assert_eq!</span>(<span class="kw-2">&amp;*</span>expected.endpoints(), <span class="kw-2">&amp;*</span>context.destinations);
@@ -933,7 +931,7 @@
             <span class="string">"127.0.0.1:70"</span>.parse().unwrap(),
             alloc_buffer(<span class="string">b"hello"</span>),
         );
-        config.filters.write(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span>.unwrap();
+        config.filters.write(<span class="kw-2">&amp;mut </span>context).unwrap();
 
         <span class="macro">assert_eq!</span>(
             <span class="string">"receive"</span>,
@@ -963,7 +961,7 @@
             alloc_buffer(<span class="string">b"hello"</span>),
         );
 
-        chain.read(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span>.unwrap();
+        chain.read(<span class="kw-2">&amp;mut </span>context).unwrap();
         <span class="kw">let </span>expected = endpoints_fixture.clone();
         <span class="macro">assert_eq!</span>(expected.endpoints(), context.destinations);
         <span class="macro">assert_eq!</span>(
@@ -986,7 +984,7 @@
             alloc_buffer(<span class="string">b"hello"</span>),
         );
 
-        chain.write(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span>.unwrap();
+        chain.write(<span class="kw-2">&amp;mut </span>context).unwrap();
         <span class="macro">assert_eq!</span>(
             <span class="string">"hello:our:127.0.0.1:80:127.0.0.1:70:our:127.0.0.1:80:127.0.0.1:70"</span>,
             std::str::from_utf8(<span class="kw-2">&amp;</span>context.contents).unwrap(),

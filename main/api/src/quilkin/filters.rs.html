@@ -230,8 +230,6 @@
 <a href="#228" id="228">228</a>
 <a href="#229" id="229">229</a>
 <a href="#230" id="230">230</a>
-<a href="#231" id="231">231</a>
-<a href="#232" id="232">232</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -317,13 +315,12 @@
 /// struct Greet;
 ///
 /// /// Prepends data on each packet
-/// #[async_trait::async_trait]
 /// impl Filter for Greet {
-///     async fn read(&amp;self, ctx: &amp;mut ReadContext) -&gt; Result&lt;(), FilterError&gt; {
+///     fn read(&amp;self, ctx: &amp;mut ReadContext) -&gt; Result&lt;(), FilterError&gt; {
 ///         ctx.contents.prepend_from_slice(b"Hello ");
 ///         Ok(())
 ///     }
-///     async fn write(&amp;self, ctx: &amp;mut WriteContext) -&gt; Result&lt;(), FilterError&gt; {
+///     fn write(&amp;self, ctx: &amp;mut WriteContext) -&gt; Result&lt;(), FilterError&gt; {
 ///         ctx.contents.prepend_from_slice(b"Goodbye ");
 ///         Ok(())
 ///     }
@@ -442,7 +439,6 @@
 ///   `write` implementation to execute.
 ///   * Labels
 ///     * `filter` The name of the filter being executed.
-</span><span class="attr">#[async_trait::async_trait]
 </span><span class="kw">pub trait </span>Filter: Send + Sync {
     <span class="doccomment">/// [`Filter::read`] is invoked when the proxy receives data from a
     /// downstream connection on the listening port.
@@ -450,7 +446,7 @@
     /// This function should return an `Some` if the packet processing should
     /// proceed. If the packet should be rejected, it will return [`None`]
     /// instead. By default, the context passes through unchanged.
-    </span><span class="kw">async fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+    </span><span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="prelude-val">Ok</span>(())
     }
 
@@ -460,7 +456,7 @@
     ///
     /// This function should return an `Some` if the packet processing should
     /// proceed. If the packet should be rejected, it will return [`None`]
-    </span><span class="kw">async fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+    </span><span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="prelude-val">Ok</span>(())
     }
 }

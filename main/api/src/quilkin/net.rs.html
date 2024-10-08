@@ -416,7 +416,7 @@
 </span><span class="attr">#[cfg(not(target_os = <span class="string">"linux"</span>))]
 </span><span class="macro">macro_rules! </span>uring_spawn {
     (<span class="macro-nonterminal">$span</span>:expr, <span class="macro-nonterminal">$future</span>:expr) =&gt; {{
-        <span class="kw">let </span>(tx, rx) = tokio::sync::oneshot::channel::&lt;()&gt;();
+        <span class="kw">let </span>(tx, rx) = std::sync::mpsc::channel::&lt;()&gt;();
         <span class="kw">use </span>tracing::Instrument <span class="kw">as _</span>;
 
         <span class="kw">use </span>tracing::instrument::WithSubscriber <span class="kw">as _</span>;
@@ -744,7 +744,7 @@
         <span class="kw">let </span>(<span class="kw-2">mut </span>rx, socket) = t.open_socket_and_recv_multiple_packets().<span class="kw">await</span>;
 
         <span class="kw">let </span>msg = <span class="string">"hello"</span>;
-        <span class="kw">let </span>addr = echo_addr.to_socket_addr().<span class="kw">await</span>.unwrap();
+        <span class="kw">let </span>addr = echo_addr.to_socket_addr().unwrap();
 
         socket.send_to(msg.as_bytes(), <span class="kw-2">&amp;</span>addr).<span class="kw">await</span>.unwrap();
         <span class="macro">assert_eq!</span>(

@@ -256,10 +256,6 @@
 <a href="#254" id="254">254</a>
 <a href="#255" id="255">255</a>
 <a href="#256" id="256">256</a>
-<a href="#257" id="257">257</a>
-<a href="#258" id="258">258</a>
-<a href="#259" id="259">259</a>
-<a href="#260" id="260">260</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC All Rights Reserved.
  *
@@ -299,9 +295,8 @@
     }
 }
 
-<span class="attr">#[async_trait::async_trait]
-</span><span class="kw">impl </span>Filter <span class="kw">for </span>LoadBalancer {
-    <span class="kw">async fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+<span class="kw">impl </span>Filter <span class="kw">for </span>LoadBalancer {
+    <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="self">self</span>.endpoint_chooser.choose_endpoints(ctx);
         <span class="prelude-val">Ok</span>(())
     }
@@ -327,7 +322,7 @@
         test::alloc_buffer,
     };
 
-    <span class="kw">async fn </span>get_response_addresses(
+    <span class="kw">fn </span>get_response_addresses(
         filter: <span class="kw-2">&amp;</span><span class="kw">dyn </span>Filter,
         input_addresses: <span class="kw-2">&amp;</span>[EndpointAddress],
         source: EndpointAddress,
@@ -340,7 +335,7 @@
         <span class="kw">let </span>endpoints = <span class="kw">crate</span>::net::cluster::ClusterMap::new_default(endpoints);
         <span class="kw">let </span><span class="kw-2">mut </span>context = ReadContext::new(endpoints.into(), source, alloc_buffer([]));
 
-        filter.read(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span>.unwrap();
+        filter.read(<span class="kw-2">&amp;mut </span>context).unwrap();
 
         context.destinations
     }
@@ -366,14 +361,11 @@
             <span class="macro">assert_eq!</span>(expected_sequence, {
                 <span class="kw">let </span><span class="kw-2">mut </span>responses = Vec::new();
                 <span class="kw">for _ in </span><span class="number">0</span>..addresses.len() {
-                    responses.push(
-                        get_response_addresses(
-                            <span class="kw-2">&amp;</span>filter,
-                            <span class="kw-2">&amp;</span>addresses,
-                            <span class="string">"127.0.0.1:8080"</span>.parse().unwrap(),
-                        )
-                        .<span class="kw">await</span>,
-                    );
+                    responses.push(get_response_addresses(
+                        <span class="kw-2">&amp;</span>filter,
+                        <span class="kw-2">&amp;</span>addresses,
+                        <span class="string">"127.0.0.1:8080"</span>.parse().unwrap(),
+                    ));
                 }
                 responses
             });
@@ -397,10 +389,11 @@ policy: RANDOM
         </span><span class="kw">let </span><span class="kw-2">mut </span>result_sequences = <span class="macro">vec!</span>[];
         <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">10 </span>{
             <span class="kw">for _ in </span><span class="number">0</span>..addresses.len() {
-                result_sequences.push(
-                    get_response_addresses(<span class="kw-2">&amp;</span>filter, <span class="kw-2">&amp;</span>addresses, <span class="string">"127.0.0.1:8080"</span>.parse().unwrap())
-                        .<span class="kw">await</span>,
-                );
+                result_sequences.push(get_response_addresses(
+                    <span class="kw-2">&amp;</span>filter,
+                    <span class="kw-2">&amp;</span>addresses,
+                    <span class="string">"127.0.0.1:8080"</span>.parse().unwrap(),
+                ));
             }
         }
 
@@ -440,10 +433,11 @@ policy: RANDOM
         </span><span class="kw">let </span><span class="kw-2">mut </span>result_sequences = <span class="macro">vec!</span>[];
         <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">10 </span>{
             <span class="kw">for _ in </span><span class="number">0</span>..addresses.len() {
-                result_sequences.push(
-                    get_response_addresses(<span class="kw-2">&amp;</span>filter, <span class="kw-2">&amp;</span>addresses, (Ipv4Addr::LOCALHOST, <span class="number">8080</span>).into())
-                        .<span class="kw">await</span>,
-                );
+                result_sequences.push(get_response_addresses(
+                    <span class="kw-2">&amp;</span>filter,
+                    <span class="kw-2">&amp;</span>addresses,
+                    (Ipv4Addr::LOCALHOST, <span class="number">8080</span>).into(),
+                ));
             }
         }
 
@@ -466,8 +460,7 @@ policy: RANDOM
                     <span class="kw-2">&amp;</span>filter,
                     <span class="kw-2">&amp;</span>addresses,
                     (Ipv4Addr::LOCALHOST, port).into()
-                )
-                .<span class="kw">await</span>;
+                );
                 addresses.len()
             ]);
         }
@@ -493,8 +486,7 @@ policy: RANDOM
                         <span class="kw-2">&amp;</span>filter,
                         <span class="kw-2">&amp;</span>addresses,
                         (ip, port).into()
-                    )
-                    .<span class="kw">await</span>;
+                    );
                     addresses.len()
                 ]);
             }

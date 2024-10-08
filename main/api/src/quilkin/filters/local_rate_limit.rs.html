@@ -405,7 +405,6 @@
 <a href="#403" id="403">403</a>
 <a href="#404" id="404">404</a>
 <a href="#405" id="405">405</a>
-<a href="#406" id="406">406</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
@@ -554,9 +553,8 @@
     </span>}
 }
 
-<span class="attr">#[async_trait::async_trait]
-</span><span class="kw">impl </span>Filter <span class="kw">for </span>LocalRateLimit {
-    <span class="kw">async fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+<span class="kw">impl </span>Filter <span class="kw">for </span>LocalRateLimit {
+    <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="kw">if </span><span class="self">self</span>.acquire_token(<span class="kw-2">&amp;</span>ctx.source) {
             <span class="prelude-val">Ok</span>(())
         } <span class="kw">else </span>{
@@ -635,7 +633,7 @@
     }
 
     <span class="doccomment">/// Send a packet to the filter and assert whether or not it was processed.
-    </span><span class="kw">async fn </span>read(r: <span class="kw-2">&amp;</span>LocalRateLimit, address: <span class="kw-2">&amp;</span>EndpointAddress, should_succeed: bool) {
+    </span><span class="kw">fn </span>read(r: <span class="kw-2">&amp;</span>LocalRateLimit, address: <span class="kw-2">&amp;</span>EndpointAddress, should_succeed: bool) {
         <span class="kw">let </span>endpoints = <span class="kw">crate</span>::net::cluster::ClusterMap::new_default(
             [<span class="kw">crate</span>::net::endpoint::Endpoint::new(
                 (Ipv4Addr::LOCALHOST, <span class="number">8089</span>).into(),
@@ -644,7 +642,7 @@
         );
 
         <span class="kw">let </span><span class="kw-2">mut </span>context = ReadContext::new(endpoints.into(), address.clone(), alloc_buffer([<span class="number">9</span>]));
-        <span class="kw">let </span>result = r.read(<span class="kw-2">&amp;mut </span>context).<span class="kw">await</span>;
+        <span class="kw">let </span>result = r.read(<span class="kw-2">&amp;mut </span>context);
 
         <span class="kw">if </span>should_succeed {
             result.unwrap();
@@ -720,10 +718,10 @@ period: 0
 
         <span class="kw">let </span>(address, <span class="kw">_</span>) = address_pair();
 
-        read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address, <span class="bool-val">true</span>).<span class="kw">await</span>;
-        read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address, <span class="bool-val">true</span>).<span class="kw">await</span>;
-        read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address, <span class="bool-val">true</span>).<span class="kw">await</span>;
-        read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address, <span class="bool-val">false</span>).<span class="kw">await</span>;
+        read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address, <span class="bool-val">true</span>);
+        read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address, <span class="bool-val">true</span>);
+        read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address, <span class="bool-val">true</span>);
+        read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address, <span class="bool-val">false</span>);
     }
 
     <span class="attr">#[tokio::test]
@@ -736,10 +734,10 @@ period: 0
         <span class="kw">let </span>(address, <span class="kw">_</span>) = address_pair();
 
         <span class="comment">// Check that other routes are not affected.
-        </span>assert_write_no_change(<span class="kw-2">&amp;</span>r).<span class="kw">await</span>;
+        </span>assert_write_no_change(<span class="kw-2">&amp;</span>r);
 
         <span class="comment">// Check that we're rate limited.
-        </span>read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address, <span class="bool-val">false</span>).<span class="kw">await</span>;
+        </span>read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address, <span class="bool-val">false</span>);
     }
 
     <span class="attr">#[tokio::test]
@@ -754,34 +752,34 @@ period: 0
         <span class="kw">let </span>(address1, address2) = address_pair();
 
         <span class="comment">// Read until we exhaust tokens for both addresses.
-        </span>read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address1, <span class="bool-val">true</span>).<span class="kw">await</span>;
-        read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address2, <span class="bool-val">true</span>).<span class="kw">await</span>;
-        read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address1, <span class="bool-val">true</span>).<span class="kw">await</span>;
-        read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address2, <span class="bool-val">true</span>).<span class="kw">await</span>;
+        </span>read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address1, <span class="bool-val">true</span>);
+        read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address2, <span class="bool-val">true</span>);
+        read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address1, <span class="bool-val">true</span>);
+        read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address2, <span class="bool-val">true</span>);
 
         <span class="comment">// Check that we've exhausted their tokens.
-        </span>read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address1, <span class="bool-val">false</span>).<span class="kw">await</span>;
-        read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address2, <span class="bool-val">false</span>).<span class="kw">await</span>;
-        read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address1, <span class="bool-val">false</span>).<span class="kw">await</span>;
-        read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address2, <span class="bool-val">false</span>).<span class="kw">await</span>;
+        </span>read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address1, <span class="bool-val">false</span>);
+        read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address2, <span class="bool-val">false</span>);
+        read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address1, <span class="bool-val">false</span>);
+        read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address2, <span class="bool-val">false</span>);
 
         <span class="comment">// Advance time to refill tokens.
         </span>time::advance(Duration::from_secs(<span class="number">2</span>)).<span class="kw">await</span>;
 
         <span class="comment">// Check that we are able to process packets again.
-        </span>read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address1, <span class="bool-val">true</span>).<span class="kw">await</span>;
-        read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address2, <span class="bool-val">true</span>).<span class="kw">await</span>;
-        read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address1, <span class="bool-val">true</span>).<span class="kw">await</span>;
+        </span>read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address1, <span class="bool-val">true</span>);
+        read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address2, <span class="bool-val">true</span>);
+        read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address1, <span class="bool-val">true</span>);
 
         <span class="comment">// Advance time to to the end of the current window.
         </span>time::advance(Duration::from_secs(<span class="number">1</span>)).<span class="kw">await</span>;
 
         <span class="comment">// Only the second address should have tokens left.
-        </span>read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address1, <span class="bool-val">false</span>).<span class="kw">await</span>;
-        read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address2, <span class="bool-val">true</span>).<span class="kw">await</span>;
+        </span>read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address1, <span class="bool-val">false</span>);
+        read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address2, <span class="bool-val">true</span>);
 
         <span class="comment">// Check that other routes are not affected.
-        </span>assert_write_no_change(<span class="kw-2">&amp;</span>r).<span class="kw">await</span>;
+        </span>assert_write_no_change(<span class="kw-2">&amp;</span>r);
     }
 
     <span class="attr">#[tokio::test]
@@ -798,18 +796,18 @@ period: 0
         <span class="kw">let </span>(address, <span class="kw">_</span>) = address_pair();
 
         <span class="comment">// Acquire 1 token.
-        </span>read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address, <span class="bool-val">true</span>).<span class="kw">await</span>;
+        </span>read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address, <span class="bool-val">true</span>);
 
         <span class="comment">// Advance to some time in the future after multiple token refills.
         </span>time::advance(Duration::from_secs(<span class="number">10</span>)).<span class="kw">await</span>;
 
         <span class="comment">// Check that we still have the 2 tokens within a window.
-        </span>read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address, <span class="bool-val">true</span>).<span class="kw">await</span>;
-        read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address, <span class="bool-val">true</span>).<span class="kw">await</span>;
-        read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address, <span class="bool-val">false</span>).<span class="kw">await</span>;
+        </span>read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address, <span class="bool-val">true</span>);
+        read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address, <span class="bool-val">true</span>);
+        read(<span class="kw-2">&amp;</span>r, <span class="kw-2">&amp;</span>address, <span class="bool-val">false</span>);
 
         <span class="comment">// Check that other routes are not affected.
-        </span>assert_write_no_change(<span class="kw-2">&amp;</span>r).<span class="kw">await</span>;
+        </span>assert_write_no_change(<span class="kw-2">&amp;</span>r);
     }
 }
 </code></pre></div></section></main></body></html>
