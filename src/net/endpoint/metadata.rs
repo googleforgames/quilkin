@@ -21,12 +21,10 @@ pub mod build {
     pub const GIT_COMMIT_HASH: Option<&str> = option_env!("GIT_COMMIT_HASH");
 }
 
-use std::{collections::HashMap, convert::TryFrom};
-
 pub use symbol::{Key, Reference, Symbol};
 
 /// Shared state between [`Filter`][crate::filters::Filter]s during processing for a single packet.
-pub type DynamicMetadata = HashMap<Key, Value>;
+pub type DynamicMetadata = gxhash::HashMap<Key, Value>;
 
 pub const KEY: &str = "quilkin.dev";
 

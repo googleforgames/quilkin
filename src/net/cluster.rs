@@ -15,7 +15,7 @@
  */
 
 use std::{
-    collections::{hash_map::RandomState, BTreeSet},
+    collections::BTreeSet,
     fmt,
     sync::atomic::{AtomicU64, AtomicUsize, Ordering::Relaxed},
 };
@@ -27,6 +27,7 @@ use serde::{Deserialize, Serialize};
 use crate::net::endpoint::{Endpoint, EndpointAddress, Locality};
 
 const SUBSYSTEM: &str = "cluster";
+const HASH_SEED: i64 = 0xdeadbeef;
 
 pub use crate::generated::quilkin::config::v1alpha1 as proto;
 
@@ -60,7 +61,7 @@ pub(crate) fn active_endpoints() -> &'static prometheus::IntGauge {
     &ACTIVE_ENDPOINTS
 }
 
-pub type TokenAddressMap = std::collections::BTreeMap<u64, BTreeSet<EndpointAddress>>;
+pub type TokenAddressMap = gxhash::HashMap<u64, gxhash::HashSet<EndpointAddress>>;
 
 #[derive(Copy, Clone)]
 pub struct Token(u64);
@@ -68,7 +69,7 @@ pub struct Token(u64);
 impl Token {
     #[inline]
     pub fn new(token: &[u8]) -> Self {
-        Self(seahash::hash(token))
+        Self(gxhash::gxhash64(token, HASH_SEED))
     }
 }
 
@@ -123,7 +124,7 @@ impl EndpointSet {
     pub fn new(endpoints: BTreeSet<Endpoint>) -> Self {
         let mut this = Self {
             endpoints,
-            token_map: TokenAddressMap::new(),
+            token_map: <_>::default(),
             hash: 0,
             version: 0,
         };
@@ -141,7 +142,7 @@ impl EndpointSet {
     pub fn with_version(endpoints: BTreeSet<Endpoint>, hash: EndpointSetVersion) -> Self {
         let mut this = Self {
             endpoints,
-            token_map: TokenAddressMap::new(),
+            token_map: <_>::default(),
             hash: hash.number(),
             version: 1,
         };
@@ -177,14 +178,14 @@ impl EndpointSet {
     #[inline]
     pub fn update(&mut self) -> TokenAddressMap {
         use std::hash::{Hash, Hasher};
-        let mut hasher = seahash::SeaHasher::with_seeds(0, 1, 2, 3);
-        let mut token_map = TokenAddressMap::new();
+        let mut hasher = gxhash::GxHasher::with_seed(HASH_SEED);
+        let mut token_map = TokenAddressMap::default();
 
         for ep in &self.endpoints {
             ep.hash(&mut hasher);
 
             for tok in &ep.metadata.known.tokens {
-                let hash = seahash::hash(tok);
+                let hash = gxhash::gxhash64(tok, HASH_SEED);
                 token_map
                     .entry(hash)
                     .or_default()
@@ -200,12 +201,12 @@ impl EndpointSet {
     /// Creates a map of tokens -> address for the current set
     #[inline]
     pub fn build_token_map(&mut self) -> TokenAddressMap {
-        let mut token_map = TokenAddressMap::new();
+        let mut token_map = TokenAddressMap::default();
 
         // This is only called on proxies, so calculate a token map
         for ep in &self.endpoints {
             for tok in &ep.metadata.known.tokens {
-                let hash = seahash::hash(tok);
+                let hash = gxhash::gxhash64(tok, HASH_SEED);
                 token_map
                     .entry(hash)
                     .or_default()
@@ -257,7 +258,7 @@ impl EndpointSet {
 }
 
 /// Represents a full snapshot of all clusters.
-pub struct ClusterMap<S = RandomState> {
+pub struct ClusterMap<S = gxhash::GxBuildHasher> {
     map: DashMap<Option<Locality>, EndpointSet, S>,
     token_map: DashMap<u64, Vec<EndpointAddress>>,
     num_endpoints: AtomicUsize,
@@ -268,7 +269,7 @@ type DashMapRef<'inner, S> = dashmap::mapref::one::Ref<'inner, Option<Locality>,
 type DashMapRefMut<'inner, S> =
     dashmap::mapref::one::RefMut<'inner, Option<Locality>, EndpointSet, S>;
 
-impl ClusterMap<RandomState> {
+impl ClusterMap {
     pub fn new() -> Self {
         Self::default()
     }

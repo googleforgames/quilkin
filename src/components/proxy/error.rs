@@ -105,17 +105,7 @@ impl Hash for PipelineError {
     }
 }
 
-pub struct SeahashBuilder;
-
-impl std::hash::BuildHasher for SeahashBuilder {
-    type Hasher = seahash::SeaHasher;
-
-    fn build_hasher(&self) -> Self::Hasher {
-        seahash::SeaHasher::new()
-    }
-}
-
-pub type ErrorMap = std::collections::HashMap<PipelineError, u64, SeahashBuilder>;
+pub type ErrorMap = gxhash::HashMap<PipelineError, u64>;
 
 pub type ErrorSender = tokio::sync::mpsc::Sender<ErrorMap>;
 //pub type ErrorReceiver = tokio::sync::mpsc::Receiver<ErrorMap>;
@@ -140,7 +130,7 @@ pub struct ErrorAccumulator {
 impl ErrorAccumulator {
     pub fn new(tx: ErrorSender) -> Self {
         Self {
-            map: ErrorMap::with_hasher(SeahashBuilder),
+            map: <_>::default(),
             tx,
             oldest: Instant::now(),
         }
@@ -160,7 +150,7 @@ impl ErrorAccumulator {
         };
 
         #[allow(clippy::mutable_key_type)]
-        let map = std::mem::replace(&mut self.map, ErrorMap::with_hasher(SeahashBuilder));
+        let map = std::mem::take(&mut self.map);
         permit.send(map);
         true
     }

@@ -234,7 +234,7 @@ impl Config {
                         crate::net::cluster::proto::FilterChain::try_from(&*self.filters.load())?,
                     );
                     let any = resource.try_encode()?;
-                    let version = seahash::hash(&any.value);
+                    let version = gxhash::gxhash64(&any.value, 0xdeadbeef);
 
                     let vstr = version.to_string();
 
