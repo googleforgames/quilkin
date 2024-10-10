@@ -187,6 +187,7 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                 cs
             } else {
                 let Some(cs) = client_tracker.get_state(type_url) else {
+                    tracing::warn!(kind = type_url, "No client state found for resource");
                     return Ok(None);
                 };
 
@@ -199,6 +200,7 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                 .map_err(|error| tonic::Status::internal(error.to_string()))?;
 
             if req.resources.is_empty() && req.removed.is_empty() {
+                tracing::warn!(kind = type_url, "Empty resources received and no resources to remove");
                 return Ok(None);
             }
 
