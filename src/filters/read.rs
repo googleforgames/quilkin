@@ -50,7 +50,7 @@ impl ReadContext {
             destinations: Vec::new(),
             source,
             contents,
-            metadata: DynamicMetadata::new(),
+            metadata: <_>::default(),
         }
     }
 }

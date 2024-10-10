@@ -19,6 +19,8 @@ ARG RUST_TOOLCHAIN
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH \
+    CARGO_TERM_COLOR=always \
+    RUSTFLAGS="-C target-feature=+aes,+vaes,+avx2" \
     LC_ALL=C.UTF-8 \
     LANG=C.UTF-8
 

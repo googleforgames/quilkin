@@ -169,7 +169,7 @@ pub async fn spawn_receivers(
         let mut log_task = tokio::time::interval(std::time::Duration::from_secs(5));
 
         #[allow(clippy::mutable_key_type)]
-        let mut pipeline_errors = super::error::ErrorMap::with_hasher(super::error::SeahashBuilder);
+        let mut pipeline_errors = super::error::ErrorMap::default();
 
         #[allow(clippy::mutable_key_type)]
         fn report(errors: &mut super::error::ErrorMap) {
