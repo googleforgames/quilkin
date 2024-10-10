@@ -20,7 +20,7 @@ ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH \
     CARGO_TERM_COLOR=always \
-    RUSTFLAGS="-C target-feature=+aes,+vaes,+avx2,+mmx,+sse4.2,+sse4a,ssse3,+bmi2,+fma,+rdrand,+sha,+adx,+f16c" \
+    RUSTFLAGS="-C target-feature=+aes,+vaes,+avx2,+mmx,+sse4.2,+sse4a,ssse3,+bmi2" \
     LC_ALL=C.UTF-8 \
     LANG=C.UTF-8
 
