@@ -160,7 +160,7 @@ io-uring = { version = "0.6", default-features = false }
 libc = "0.2"
 slab = "0.4"
 sys-info = "0.9.1"
-pprof = { version = "0.13.0", features = ["prost", "prost-codec"] }
+pprof = { version = "0.13.0", features = ["prost", "prost-codec"], package = "pprof2" }
 
 [dev-dependencies]
 divan = "0.1.2"
