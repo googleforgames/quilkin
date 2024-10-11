@@ -1,7 +1,7 @@
-#![cfg(target_pointer_width = "99")]
+#![cfg(target_pointer_width = "64")]
 
 use divan::Bencher;
-use quilkin::net::cluster::ClusterMap;
+use quilkin::{net::cluster::ClusterMap, xds::Resource};
 
 mod shared;
 
@@ -16,21 +16,20 @@ mod serde {
 
     fn serialize_to_protobuf(cm: &ClusterMap) -> Vec<Any> {
         let mut resources = Vec::new();
-        let resource_type = quilkin::net::xds::ResourceType::Cluster;
 
         for cluster in cm.iter() {
             resources.push(
-                resource_type
-                    .encode_to_any(&Cluster {
-                        locality: cluster.key().clone().map(From::from),
-                        endpoints: cluster
-                            .endpoints
-                            .iter()
-                            .map(TryFrom::try_from)
-                            .collect::<Result<_, _>>()
-                            .unwrap(),
-                    })
-                    .unwrap(),
+                Resource::Cluster(Cluster {
+                    locality: cluster.key().clone().map(From::from),
+                    endpoints: cluster
+                        .endpoints
+                        .iter()
+                        .map(TryFrom::try_from)
+                        .collect::<Result<_, _>>()
+                        .unwrap(),
+                })
+                .try_encode()
+                .unwrap(),
             );
         }
 
@@ -41,9 +40,9 @@ mod serde {
         let cm = ClusterMap::default();
 
         for any in pv {
-            let c = quilkin::net::xds::Resource::try_from(any).unwrap();
+            let c = quilkin::xds::Resource::try_decode(any).unwrap();
 
-            let quilkin::net::xds::Resource::Cluster(cluster) = c else {
+            let quilkin::xds::Resource::Cluster(cluster) = c else {
                 unreachable!()
             };
             cm.insert(

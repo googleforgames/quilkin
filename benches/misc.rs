@@ -1,8 +1,10 @@
-#![cfg(target_pointer_width = "99")]
+#![cfg(target_pointer_width = "64")]
 
 use divan::Bencher;
 use prost_types::{value::Kind, Value};
-use quilkin::net::cluster::proto::Endpoint as ProtoEndpoint;
+use rand::SeedableRng;
+
+use quilkin::{net::cluster::proto::Endpoint as ProtoEndpoint, xds::Resource};
 
 mod shared;
 
@@ -146,16 +148,13 @@ trait GenResource: Default {
     fn generate(&mut self, slim: bool) -> prost_types::Any;
 }
 
-use quilkin::net::xds::{Resource, ResourceType};
-use rand::SeedableRng;
-
 #[derive(Default)]
 struct Listener {
     _counter: usize,
 }
 
 impl GenResource for Listener {
-    fn generate(&mut self, slim: bool) -> prost_types::Any {
+    fn generate(&mut self, _slim: bool) -> prost_types::Any {
         use quilkin::filters::{self, StaticFilter};
         let filters = [
             quilkin::config::Filter {
@@ -186,32 +185,17 @@ impl GenResource for Listener {
             },
         ];
 
-        if slim {
-            ResourceType::FilterChain.encode_to_any(&quilkin::net::cluster::proto::FilterChain {
-                filters: filters
-                    .into_iter()
-                    .map(|f| quilkin::net::cluster::proto::Filter {
-                        name: f.name,
-                        label: f.label,
-                        config: f.config.map(|c| c.to_string()),
-                    })
-                    .collect(),
-            })
-        } else {
-            ResourceType::Listener.encode_to_any(&quilkin::net::xds::listener::Listener {
-                filter_chains: vec![
-                    quilkin::generated::envoy::config::listener::v3::FilterChain {
-                        filters: filters
-                            .into_iter()
-                            .map(TryFrom::try_from)
-                            .collect::<Result<_, quilkin::filters::CreationError>>()
-                            .unwrap(),
-                        ..Default::default()
-                    },
-                ],
-                ..Default::default()
-            })
-        }
+        Resource::FilterChain(quilkin::net::cluster::proto::FilterChain {
+            filters: filters
+                .into_iter()
+                .map(|f| quilkin::net::cluster::proto::Filter {
+                    name: f.name,
+                    label: f.label,
+                    config: f.config.map(|c| c.to_string()),
+                })
+                .collect(),
+        })
+        .try_encode()
         .unwrap()
     }
 }
@@ -242,27 +226,24 @@ impl GenResource for Cluster {
                 .collect(),
         };
 
-        ResourceType::Cluster.encode_to_any(&msg).unwrap()
+        Resource::Cluster(msg).try_encode().unwrap()
     }
 }
 
 // From Config::apply
 fn deserialize(a: prost_types::Any) {
-    match Resource::try_from(a).unwrap() {
-        Resource::Listener(mut listener) => {
-            let chain: quilkin::filters::FilterChain = if listener.filter_chains.is_empty() {
+    match Resource::try_decode(a).unwrap() {
+        Resource::Listener(_) => {
+            todo!()
+        }
+        Resource::FilterChain(fc) => {
+            let chain: quilkin::filters::FilterChain = if fc.filters.is_empty() {
                 Default::default()
             } else {
-                quilkin::filters::FilterChain::try_create_fallible(
-                    listener.filter_chains.swap_remove(0).filters,
-                )
-                .unwrap()
+                quilkin::filters::FilterChain::try_create_fallible(fc.filters).unwrap()
             };
 
             drop(chain);
-        }
-        Resource::FilterChain(_fc) => {
-            unimplemented!("should not be used")
         }
         Resource::Datacenter(dc) => {
             let _host: std::net::IpAddr = dc.host.parse().unwrap();
@@ -285,9 +266,9 @@ fn deserialize(a: prost_types::Any) {
 }
 
 fn deserialize_faster(a: prost_types::Any) {
-    match Resource::try_from(a).unwrap() {
-        Resource::Listener(_listener) => {
-            unimplemented!("should not be used");
+    match Resource::try_decode(a).unwrap() {
+        Resource::Listener(_) => {
+            unimplemented!()
         }
         Resource::FilterChain(fc) => {
             quilkin::filters::FilterChain::try_create_fallible(fc.filters).unwrap();
