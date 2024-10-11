@@ -233,6 +233,9 @@ impl GenResource for Cluster {
 // From Config::apply
 fn deserialize(a: prost_types::Any) {
     match Resource::try_decode(a).unwrap() {
+        Resource::Listener(_) => {
+            todo!()
+        }
         Resource::FilterChain(fc) => {
             let chain: quilkin::filters::FilterChain = if fc.filters.is_empty() {
                 Default::default()
@@ -264,6 +267,9 @@ fn deserialize(a: prost_types::Any) {
 
 fn deserialize_faster(a: prost_types::Any) {
     match Resource::try_decode(a).unwrap() {
+        Resource::Listener(_) => {
+            unimplemented!()
+        }
         Resource::FilterChain(fc) => {
             quilkin::filters::FilterChain::try_create_fallible(fc.filters).unwrap();
         }
