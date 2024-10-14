@@ -14,9 +14,6 @@
  * limitations under the License.
  */
 
-use dashmap::mapref::entry::Entry as DashMapEntry;
-use dashmap::mapref::one::{Ref, RefMut};
-use dashmap::DashMap;
 use tracing::warn;
 
 use std::hash::Hash;
@@ -25,7 +22,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::oneshot::{channel, Receiver, Sender};
 
-pub use dashmap::try_result::TryResult;
+type HashMap<K, V, S = gxhash::GxBuildHasher> = papaya::HashMap<K, V, S>;
 
 // Clippy isn't recognizing that these imports are used conditionally.
 #[allow(unused_imports)]
@@ -92,7 +89,7 @@ impl<V> std::ops::Deref for Value<V> {
 
 /// Map contains the hash map implementation.
 struct Map<K, V> {
-    inner: DashMap<K, Value<V>>,
+    inner: HashMap<K, Value<V>, gxhash::GxBuildHasher>,
     ttl: Duration,
     clock: Clock,
     shutdown_tx: Option<Sender<()>>,
@@ -132,15 +129,19 @@ where
     V: Send + Sync + 'static,
 {
     pub fn new(ttl: Duration, poll_interval: Duration) -> Self {
-        Self::initialize(DashMap::new(), ttl, poll_interval)
+        Self::initialize(<_>::default(), ttl, poll_interval)
     }
 
     #[allow(dead_code)]
     pub fn with_capacity(ttl: Duration, poll_interval: Duration, capacity: usize) -> Self {
-        Self::initialize(DashMap::with_capacity(capacity), ttl, poll_interval)
+        Self::initialize(
+            HashMap::with_capacity_and_hasher(capacity, <_>::default()),
+            ttl,
+            poll_interval,
+        )
     }
 
-    fn initialize(inner: DashMap<K, Value<V>>, ttl: Duration, poll_interval: Duration) -> Self {
+    fn initialize(inner: HashMap<K, Value<V>>, ttl: Duration, poll_interval: Duration) -> Self {
         let (shutdown_tx, shutdown_rx) = channel();
         let map = TtlMap(Arc::new(Map {
             inner,
@@ -165,41 +166,38 @@ where
     }
 }
 
-#[allow(dead_code)]
+impl<K, V> TtlMap<K, V>
+where
+    K: Hash + Eq + Send + Sync + 'static,
+    V: Send + Sync + Clone,
+{
+    /// Returns a reference to value corresponding to key.
+    pub fn get(&self, key: &K) -> Option<V> {
+        let pin = self.0.inner.pin();
+        let value = pin.get(key);
+        if let Some(value) = value {
+            value.update_expiration(self.0.ttl);
+        }
+
+        value.map(|value| value.value.clone())
+    }
+}
+
 impl<K, V> TtlMap<K, V>
 where
     K: Hash + Eq + Send + Sync + 'static,
     V: Send + Sync,
 {
     /// Returns a reference to value corresponding to key.
-    pub fn get(&self, key: &K) -> Option<Ref<K, Value<V>>> {
-        let value = self.0.inner.get(key);
-        if let Some(ref value) = value {
-            value.update_expiration(self.0.ttl)
-        }
-
-        value
-    }
-
-    /// Returns a reference to value corresponding to key.
-    pub fn try_get(&self, key: &K) -> TryResult<Ref<K, Value<V>>> {
-        let value = self.0.inner.try_get(key);
-        if let TryResult::Present(ref value) = value {
-            value.update_expiration(self.0.ttl)
-        }
-
-        value
-    }
-
-    /// Returns a mutable reference to value corresponding to key.
-    /// The value will be reset to expire at the configured TTL after the time of retrieval.
-    pub fn get_mut(&self, key: &K) -> Option<RefMut<K, Value<V>>> {
-        let value = self.0.inner.get_mut(key);
-        if let Some(ref value) = value {
+    pub fn get_by_ref<F>(&self, key: &K, and_then: impl FnOnce(&V) -> F) -> Option<F> {
+        let pin = self.0.inner.pin();
+        let value = pin.get(key);
+        if let Some(value) = value {
             value.update_expiration(self.0.ttl);
+            Some((and_then)(value))
+        } else {
+            None
         }
-
-        value
     }
 
     /// Returns the number of entries currently in the map.
@@ -219,41 +217,32 @@ where
 
     /// Returns true if the map contains a value for the specified key.
     pub fn contains_key(&self, key: &K) -> bool {
-        self.0.inner.contains_key(key)
+        self.0.inner.pin().contains_key(key)
     }
 
     /// Inserts a key-value pair into the map.
     /// The value will be set to expire at the configured TTL after the time of insertion.
     /// If a previous value existed for this key, that value is returned.
-    pub fn insert(&self, key: K, value: V) -> Option<V> {
+    pub fn insert(&self, key: K, value: V) {
         self.0
             .inner
-            .insert(key, Value::new(value, self.0.ttl, self.0.clock.clone()))
-            .map(|value| value.value)
+            .pin()
+            .insert(key, Value::new(value, self.0.ttl, self.0.clock.clone()));
     }
 
     /// Removes a key-value pair from the map.
     pub fn remove(&self, key: K) -> bool {
-        self.0.inner.remove(&key).is_some()
+        self.0.inner.pin().remove(&key).is_some()
     }
 
-    /// Returns an entry for in-place updates of the specified key-value pair.
-    /// Note: This acquires a write lock on the map's shard that corresponds
-    /// to the entry.
-    pub fn entry(&self, key: K) -> Entry<K, Value<V>> {
-        let ttl = self.0.ttl;
-        match self.0.inner.entry(key) {
-            inner @ DashMapEntry::Occupied(_) => Entry::Occupied(OccupiedEntry {
-                inner,
-                ttl,
-                clock: self.0.clock.clone(),
-            }),
-            inner @ DashMapEntry::Vacant(_) => Entry::Vacant(VacantEntry {
-                inner,
-                ttl,
-                clock: self.0.clock.clone(),
-            }),
-        }
+    /// Removes a key-value pair from the map.
+    #[cfg(test)]
+    pub fn remove_force_drop(&self, key: K) -> bool {
+        use papaya::Guard;
+        let guard = self.0.inner.guard();
+        let removed = self.0.inner.remove(&key, &guard).is_some();
+        guard.flush();
+        removed
     }
 }
 
@@ -280,87 +269,6 @@ where
         const DEFAULT_TIMEOUT_SECONDS: Duration = Duration::from_secs(60);
         const DEFAULT_EXPIRY_POLL_INTERVAL: Duration = Duration::from_secs(60);
         Self::new(DEFAULT_TIMEOUT_SECONDS, DEFAULT_EXPIRY_POLL_INTERVAL)
-    }
-}
-
-/// A view into an occupied entry in the map.
-pub struct OccupiedEntry<'a, K, V> {
-    inner: DashMapEntry<'a, K, V>,
-    ttl: Duration,
-    clock: Clock,
-}
-
-/// A view into a vacant entry in the map.
-pub struct VacantEntry<'a, K, V> {
-    inner: DashMapEntry<'a, K, V>,
-    ttl: Duration,
-    clock: Clock,
-}
-
-/// A view into an entry in the map.
-/// It may either be [`VacantEntry`] or [`OccupiedEntry`]
-pub enum Entry<'a, K, V> {
-    Occupied(OccupiedEntry<'a, K, V>),
-    Vacant(VacantEntry<'a, K, V>),
-}
-
-impl<'a, K, V> OccupiedEntry<'a, K, Value<V>>
-where
-    K: Eq + Hash,
-{
-    /// Returns a reference to the entry's value.
-    /// The value will be reset to expire at the configured TTL after the time of retrieval.
-    pub fn get(&self) -> &Value<V> {
-        match &self.inner {
-            DashMapEntry::Occupied(entry) => {
-                let value = entry.get();
-                value.update_expiration(self.ttl);
-                value
-            }
-            _ => unreachable!("BUG: entry type should be occupied"),
-        }
-    }
-
-    #[allow(dead_code)]
-    /// Returns a mutable reference to the entry's value.
-    /// The value will be reset to expire at the configured TTL after the time of retrieval.
-    pub fn get_mut(&mut self) -> &mut Value<V> {
-        match &mut self.inner {
-            DashMapEntry::Occupied(entry) => {
-                let value = entry.get_mut();
-                value.update_expiration(self.ttl);
-                value
-            }
-            _ => unreachable!("BUG: entry type should be occupied"),
-        }
-    }
-
-    #[allow(dead_code)]
-    /// Replace the entry's value with a new value, returning the old value.
-    /// The value will be set to expire at the configured TTL after the time of insertion.
-    pub fn insert(&mut self, value: V) -> Value<V> {
-        match &mut self.inner {
-            DashMapEntry::Occupied(entry) => {
-                entry.insert(Value::new(value, self.ttl, self.clock.clone()))
-            }
-            _ => unreachable!("BUG: entry type should be occupied"),
-        }
-    }
-}
-
-impl<'a, K, V> VacantEntry<'a, K, Value<V>>
-where
-    K: Eq + Hash,
-{
-    /// Set an entry's value.
-    /// The value will be set to expire at the configured TTL after the time of insertion.
-    pub fn insert(self, value: V) -> RefMut<'a, K, Value<V>> {
-        match self.inner {
-            DashMapEntry::Vacant(entry) => {
-                entry.insert(Value::new(value, self.ttl, self.clock.clone()))
-            }
-            _ => unreachable!("BUG: entry type should be vacant"),
-        }
     }
 }
 
@@ -401,21 +309,13 @@ where
         return;
     };
 
-    // Take a read lock first and check if there is at least 1 item to remove.
-    let has_expired_keys = map
-        .inner
+    let pin = map.inner.pin();
+    let expired_keys = pin
         .iter()
-        .filter(|entry| entry.value().expiration_secs() <= now_secs)
-        .take(1)
-        .next()
-        .is_some();
+        .filter(|(_, value)| value.expiration_secs() <= now_secs);
 
-    // If we have work to do then, take a write lock.
-    if has_expired_keys {
-        // Go over the whole map in case anything expired
-        // since acquiring the write lock.
-        map.inner
-            .retain(|_, value| value.expiration_secs() > now_secs);
+    for (key, _) in expired_keys {
+        map.inner.pin().remove(key);
     }
 }
 
@@ -512,8 +412,8 @@ mod tests {
         map.insert(one.clone(), 1);
         map.insert(two.clone(), 2);
 
-        assert_eq!(map.get(&one).unwrap().value, 1);
-        assert_eq!(map.get(&two).unwrap().value, 2);
+        assert_eq!(map.get(&one).unwrap(), 1);
+        assert_eq!(map.get(&two).unwrap(), 2);
     }
 
     #[tokio::test]
@@ -527,15 +427,17 @@ mod tests {
             Duration::from_secs(10),
             Duration::from_millis(10),
         );
-        map.insert(one.clone(), 1);
 
-        let exp1 = map.get(&one).unwrap().expiration_secs();
+        map.insert(one.clone(), 1);
+        let exp1 = map.0.inner.pin().get(&one).unwrap().expiration_secs();
 
         time::advance(Duration::from_secs(2)).await;
-        let exp2 = map.get(&one).unwrap().expiration_secs();
+        let _ = map.get(&one).unwrap();
+        let exp2 = map.0.inner.pin().get(&one).unwrap().expiration_secs();
 
         time::advance(Duration::from_secs(3)).await;
-        let exp3 = map.get(&one).unwrap().expiration_secs();
+        let _ = map.get(&one).unwrap();
+        let exp3 = map.0.inner.pin().get(&one).unwrap().expiration_secs();
 
         assert!(exp1 < exp2);
         assert_eq!(2, exp2 - exp1);
@@ -561,177 +463,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn entry_occupied_insert_and_get() {
-        let (one, _) = address_pair();
-
-        let map = TtlMap::<EndpointAddress, usize>::new(
-            Duration::from_secs(10),
-            Duration::from_millis(10),
-        );
-        map.insert(one.clone(), 1);
-
-        match map.entry(one.clone()) {
-            Entry::Occupied(mut entry) => {
-                assert_eq!(entry.get().value, 1);
-                entry.insert(5);
-            }
-            _ => unreachable!("expected occupied entry"),
-        }
-
-        assert_eq!(map.get(&one).unwrap().value, 5);
-    }
-
-    #[tokio::test]
-    async fn entry_occupied_get_mut() {
-        let (one, _) = address_pair();
-
-        let map = TtlMap::<EndpointAddress, usize>::new(
-            Duration::from_secs(10),
-            Duration::from_millis(10),
-        );
-        map.insert(one.clone(), 1);
-
-        match map.entry(one.clone()) {
-            Entry::Occupied(mut entry) => {
-                entry.get_mut().value = 5;
-            }
-            _ => unreachable!("expected occupied entry"),
-        }
-
-        assert_eq!(map.get(&one).unwrap().value, 5);
-    }
-
-    #[tokio::test]
-    async fn entry_vacant_insert() {
-        let (one, _) = address_pair();
-
-        let map = TtlMap::<EndpointAddress, usize>::new(
-            Duration::from_secs(10),
-            Duration::from_millis(10),
-        );
-
-        match map.entry(one.clone()) {
-            Entry::Vacant(entry) => {
-                let mut e = entry.insert(1);
-                assert_eq!(e.value, 1);
-                e.value = 5;
-            }
-            _ => unreachable!("expected occupied entry"),
-        }
-
-        assert_eq!(map.get(&one).unwrap().value, 5);
-    }
-
-    #[tokio::test]
-    async fn entry_occupied_get_expiration() {
-        // Test that when we get a value via OccupiedEntry, we update its expiration.
-        time::pause();
-
-        let (one, _) = address_pair();
-
-        let map = TtlMap::<EndpointAddress, usize>::new(
-            Duration::from_secs(10),
-            Duration::from_millis(10),
-        );
-        map.insert(one.clone(), 1);
-
-        let exp1 = map.get(&one).unwrap().expiration_secs();
-
-        time::advance(Duration::from_secs(2)).await;
-
-        let exp2 = match map.entry(one.clone()) {
-            Entry::Occupied(entry) => entry.get().expiration_secs(),
-            _ => unreachable!("expected occupied entry"),
-        };
-
-        assert!(exp1 < exp2);
-        assert_eq!(2, exp2 - exp1);
-    }
-
-    #[tokio::test]
-    async fn entry_occupied_get_mut_expiration() {
-        // Test that when we get_mut a value via OccupiedEntry, we update its expiration.
-        time::pause();
-
-        let (one, _) = address_pair();
-
-        let map = TtlMap::<EndpointAddress, usize>::new(
-            Duration::from_secs(10),
-            Duration::from_millis(10),
-        );
-        map.insert(one.clone(), 1);
-
-        let exp1 = map.get(&one).unwrap().expiration_secs();
-
-        time::advance(Duration::from_secs(2)).await;
-
-        let exp2 = match map.entry(one) {
-            Entry::Occupied(mut entry) => entry.get_mut().expiration_secs(),
-            _ => unreachable!("expected occupied entry"),
-        };
-
-        assert!(exp1 < exp2);
-        assert_eq!(2, exp2 - exp1);
-    }
-
-    #[tokio::test]
-    async fn entry_occupied_insert_expiration() {
-        // Test that when we replace a value via OccupiedEntry, we update its expiration.
-        time::pause();
-
-        let (one, _) = address_pair();
-
-        let map = TtlMap::<EndpointAddress, usize>::new(
-            Duration::from_secs(10),
-            Duration::from_millis(10),
-        );
-        map.insert(one.clone(), 1);
-
-        let exp1 = map.get(&one).unwrap().expiration_secs();
-
-        time::advance(Duration::from_secs(2)).await;
-
-        let old_exp1 = match map.entry(one.clone()) {
-            Entry::Occupied(mut entry) => entry.insert(9).expiration_secs(),
-            _ => unreachable!("expected occupied entry"),
-        };
-
-        let exp2 = map.get(&one).unwrap().expiration_secs();
-
-        assert_eq!(exp1, old_exp1);
-        assert!(exp1 < exp2);
-        assert_eq!(2, exp2 - exp1);
-    }
-
-    #[tokio::test]
-    async fn entry_occupied_vacant_expiration() {
-        // Test that when we insert a value via VacantEntry, we update its expiration.
-        time::pause();
-
-        let (one, _) = address_pair();
-
-        let map = TtlMap::<EndpointAddress, usize>::new(
-            Duration::from_secs(10),
-            Duration::from_millis(10),
-        );
-
-        let exp1 = match map.entry(one.clone()) {
-            Entry::Vacant(entry) => entry.insert(9).expiration_secs(),
-            _ => unreachable!("expected vacant entry"),
-        };
-
-        time::advance(Duration::from_secs(2)).await;
-
-        let exp2 = map.get(&one).unwrap().expiration_secs();
-
-        // Initial expiration should be set at our configured ttl.
-        assert_eq!(10, exp1);
-
-        assert!(exp1 < exp2);
-        assert_eq!(2, exp2 - exp1);
-    }
-
-    #[tokio::test]
     async fn expiration_ttl() {
         // Test that when we expire entries at our configured ttl.
         time::pause();
@@ -741,10 +472,9 @@ mod tests {
         let ttl = Duration::from_secs(12);
         let map = TtlMap::<EndpointAddress, usize>::new(ttl, Duration::from_millis(10));
 
-        let exp = match map.entry(one) {
-            Entry::Vacant(entry) => entry.insert(9).expiration_secs(),
-            _ => unreachable!("expected vacant entry"),
-        };
+        assert!(map.0.inner.pin().get(&one).is_none());
+        map.insert(one.clone(), 9);
+        let exp = map.0.inner.pin().get(&one).unwrap().expiration_secs();
 
         // Check that it expires at our configured TTL.
         assert_eq!(12, exp);

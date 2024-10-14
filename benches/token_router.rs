@@ -14,8 +14,8 @@ fn token_router(b: Bencher, token_kind: &str) {
     let cm = std::sync::Arc::new(gc.cm);
 
     // Calculate the amount of bytes for all the tokens
-    for eps in cm.iter() {
-        for ep in &eps.value().endpoints {
+    for eps in cm.pin().values() {
+        for ep in &eps.endpoints {
             for tok in &ep.metadata.known.tokens {
                 tokens.push(tok.clone());
             }

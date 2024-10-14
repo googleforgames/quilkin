@@ -297,10 +297,10 @@ impl Config {
                         });
                     }
                     DatacenterConfig::NonAgent { datacenters } => {
-                        for entry in datacenters.read().iter() {
-                            let host = entry.key().to_string();
-                            let qcmp_port = entry.qcmp_port;
-                            let version = format!("{}-{qcmp_port}", entry.icao_code);
+                        for (key, value) in datacenters.read().pin().iter() {
+                            let host = key.to_string();
+                            let qcmp_port = value.qcmp_port;
+                            let version = format!("{}-{qcmp_port}", value.icao_code);
 
                             if client_state.version_matches(&host, &version) {
                                 continue;
@@ -309,7 +309,7 @@ impl Config {
                             let resource = crate::xds::Resource::Datacenter(
                                 crate::net::cluster::proto::Datacenter {
                                     qcmp_port: qcmp_port as _,
-                                    icao_code: entry.icao_code.to_string(),
+                                    icao_code: value.icao_code.to_string(),
                                     host: host.clone(),
                                 },
                             );
@@ -330,7 +330,7 @@ impl Config {
                                 let Ok(addr) = key.parse() else {
                                     continue;
                                 };
-                                if dc.get(&addr).is_none() {
+                                if dc.pin().get(&addr).is_none() {
                                     removed.insert(key.clone());
                                 }
                             }
@@ -366,8 +366,8 @@ impl Config {
                     };
 
                     if client_state.subscribed.is_empty() {
-                        for cluster in self.clusters.read().iter() {
-                            push(cluster.key(), cluster.value())?;
+                        for (key, value) in self.clusters.read().pin().iter() {
+                            push(key, value)?;
                         }
                     } else {
                         for locality in client_state.subscribed.iter().filter_map(|name| {
@@ -377,8 +377,8 @@ impl Config {
                                 name.parse().ok().map(Some)
                             }
                         }) {
-                            if let Some(cluster) = self.clusters.read().get(&locality) {
-                                push(cluster.key(), cluster.value())?;
+                            if let Some(value) = self.clusters.read().pin().get(&locality) {
+                                push(&locality, value)?;
                             }
                         }
                     };
@@ -387,7 +387,7 @@ impl Config {
                     // is when ClusterMap::update_unlocated_endpoints is called to move the None
                     // locality endpoints to another one, so we just detect that case manually
                     if client_state.versions.contains_key("")
-                        && self.clusters.read().get(&None).is_none()
+                        && self.clusters.read().pin().get(&None).is_none()
                     {
                         removed.insert("".into());
                     }
@@ -593,16 +593,15 @@ impl Config {
 
 #[derive(Default, Debug, Deserialize, Serialize)]
 pub struct DatacenterMap {
-    map: dashmap::DashMap<IpAddr, Datacenter>,
+    map: papaya::HashMap<IpAddr, Datacenter, gxhash::GxBuildHasher>,
     version: AtomicU64,
 }
 
 impl DatacenterMap {
     #[inline]
-    pub fn insert(&self, ip: IpAddr, datacenter: Datacenter) -> Option<Datacenter> {
-        let old = self.map.insert(ip, datacenter);
+    pub fn insert(&self, ip: IpAddr, datacenter: Datacenter) {
+        self.map.pin().insert(ip, datacenter);
         self.version.fetch_add(1, Relaxed);
-        old
     }
 
     #[inline]
@@ -621,13 +620,10 @@ impl DatacenterMap {
     }
 
     #[inline]
-    pub fn get(&self, key: &IpAddr) -> Option<dashmap::mapref::one::Ref<IpAddr, Datacenter>> {
-        self.map.get(key)
-    }
-
-    #[inline]
-    pub fn iter(&self) -> dashmap::iter::Iter<IpAddr, Datacenter> {
-        self.map.iter()
+    pub fn pin(
+        &self,
+    ) -> papaya::HashMapRef<IpAddr, Datacenter, gxhash::GxBuildHasher, seize::LocalGuard> {
+        self.map.pin()
     }
 }
 
@@ -676,8 +672,8 @@ impl PartialEq for DatacenterMap {
             return false;
         }
 
-        for a in self.iter() {
-            match rhs.get(a.key()).filter(|b| *a.value() == **b) {
+        for (key, value) in self.pin().iter() {
+            match rhs.pin().get(key).filter(|b| *value == **b) {
                 Some(_) => {}
                 None => return false,
             }

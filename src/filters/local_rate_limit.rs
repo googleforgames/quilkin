@@ -20,11 +20,7 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    collections::ttl::{Entry, TtlMap},
-    filters::prelude::*,
-    net::endpoint::EndpointAddress,
-};
+use crate::{collections::ttl::TtlMap, filters::prelude::*, net::endpoint::EndpointAddress};
 
 use crate::generated::quilkin::filters::local_rate_limit::v1alpha1 as proto;
 
@@ -50,8 +46,8 @@ const SESSION_EXPIRY_POLL_INTERVAL: Duration = Duration::from_secs(60);
 /// number of packet handling workers).
 #[derive(Debug)]
 struct Bucket {
-    counter: Arc<AtomicUsize>,
-    window_start_time_secs: Arc<AtomicU64>,
+    counter: AtomicUsize,
+    window_start_time_secs: AtomicU64,
 }
 
 /// A filter that implements rate limiting on packets based on the token-bucket
@@ -61,7 +57,7 @@ struct Bucket {
 /// flow through the filter untouched.
 pub struct LocalRateLimit {
     /// Tracks rate limiting state per source address.
-    state: TtlMap<EndpointAddress, Bucket>,
+    state: TtlMap<EndpointAddress, Arc<Bucket>>,
     /// Filter configuration.
     config: Config,
 }
@@ -95,10 +91,10 @@ impl LocalRateLimit {
         }
 
         if let Some(bucket) = self.state.get(address) {
-            let prev_count = bucket.value.counter.fetch_add(1, Ordering::Relaxed);
+            let prev_count = bucket.counter.fetch_add(1, Ordering::Relaxed);
 
             let now_secs = self.state.now_relative_secs();
-            let window_start_secs = bucket.value.window_start_time_secs.load(Ordering::Relaxed);
+            let window_start_secs = bucket.window_start_time_secs.load(Ordering::Relaxed);
 
             let elapsed_secs = now_secs - window_start_secs;
             let start_new_window = elapsed_secs > self.config.period as u64;
@@ -115,9 +111,8 @@ impl LocalRateLimit {
             if start_new_window {
                 // Current time window has ended, so we can reset the counter and
                 // start a new time window instead.
-                bucket.value.counter.store(1, Ordering::Relaxed);
+                bucket.counter.store(1, Ordering::Relaxed);
                 bucket
-                    .value
                     .window_start_time_secs
                     .store(now_secs, Ordering::Relaxed);
             }
@@ -125,21 +120,23 @@ impl LocalRateLimit {
             return true;
         }
 
-        match self.state.entry(address.clone()) {
-            Entry::Occupied(entry) => {
+        match self.state.get(address) {
+            Some(value) => {
                 // It is possible that some other task has added the item since we
                 // checked for it. If so, only increment the counter - no need to
                 // update the window start time since the window has just started.
-                let bucket = entry.get();
-                bucket.value.counter.fetch_add(1, Ordering::Relaxed);
+                value.counter.fetch_add(1, Ordering::Relaxed);
             }
-            Entry::Vacant(entry) => {
+            None => {
                 // New entry, set both the time stamp and
                 let now_secs = self.state.now_relative_secs();
-                entry.insert(Bucket {
-                    counter: Arc::new(AtomicUsize::new(1)),
-                    window_start_time_secs: Arc::new(AtomicU64::new(now_secs)),
-                });
+                self.state.insert(
+                    address.clone(),
+                    Arc::new(Bucket {
+                        counter: AtomicUsize::new(1),
+                        window_start_time_secs: AtomicU64::new(now_secs),
+                    }),
+                );
             }
         };
 

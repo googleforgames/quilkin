@@ -20,8 +20,8 @@ use std::{
     sync::atomic::{AtomicU64, AtomicUsize, Ordering::Relaxed},
 };
 
-use dashmap::DashMap;
 use once_cell::sync::Lazy;
+use papaya::HashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::net::endpoint::{Endpoint, EndpointAddress, Locality};
@@ -259,14 +259,11 @@ impl EndpointSet {
 
 /// Represents a full snapshot of all clusters.
 pub struct ClusterMap<S = gxhash::GxBuildHasher> {
-    map: DashMap<Option<Locality>, EndpointSet, S>,
-    token_map: DashMap<u64, Vec<EndpointAddress>>,
+    map: papaya::HashMap<Option<Locality>, EndpointSet, S>,
+    token_map: papaya::HashMap<u64, Vec<EndpointAddress>, S>,
     num_endpoints: AtomicUsize,
     version: AtomicU64,
 }
-
-type DashMapRef<'inner> = dashmap::mapref::one::Ref<'inner, Option<Locality>, EndpointSet>;
-type DashMapRefMut<'inner> = dashmap::mapref::one::RefMut<'inner, Option<Locality>, EndpointSet>;
 
 impl ClusterMap {
     pub fn new() -> Self {
@@ -293,7 +290,7 @@ where
 {
     pub fn benchmarking(capacity: usize, hasher: S) -> Self {
         Self {
-            map: DashMap::with_capacity_and_hasher(capacity, hasher),
+            map: papaya::HashMap::with_capacity_and_hasher(capacity, hasher),
             ..Self::default()
         }
     }
@@ -305,8 +302,8 @@ where
 
     pub fn apply(&self, locality: Option<Locality>, cluster: EndpointSet) {
         let new_len = cluster.len();
-        if let Some(mut current) = self.map.get_mut(&locality) {
-            let current = current.value_mut();
+        if let Some(current) = self.map.pin().get(&locality) {
+            let mut current = current.clone();
 
             let (old_len, token_map_diff) = current.replace(cluster);
 
@@ -316,22 +313,24 @@ where
                 self.num_endpoints.fetch_sub(old_len - new_len, Relaxed);
             }
 
+            self.map.pin().insert(locality, current);
             self.version.fetch_add(1, Relaxed);
 
             for (token_hash, addrs) in token_map_diff {
                 if let Some(addrs) = addrs {
-                    self.token_map.insert(token_hash, addrs);
+                    self.token_map.pin().insert(token_hash, addrs);
                 } else {
-                    self.token_map.remove(&token_hash);
+                    self.token_map.pin().remove(&token_hash);
                 }
             }
         } else {
             for (token_hash, addrs) in &cluster.token_map {
                 self.token_map
+                    .pin()
                     .insert(*token_hash, addrs.iter().cloned().collect());
             }
 
-            self.map.insert(locality, cluster);
+            self.map.pin().insert(locality, cluster);
             self.num_endpoints.fetch_add(new_len, Relaxed);
             self.version.fetch_add(1, Relaxed);
         }
@@ -347,20 +346,9 @@ where
         self.map.is_empty()
     }
 
-    pub fn get(&self, key: &Option<Locality>) -> Option<DashMapRef> {
-        self.map.get(key)
-    }
-
-    pub fn get_mut(&self, key: &Option<Locality>) -> Option<DashMapRefMut> {
-        self.map.get_mut(key)
-    }
-
-    pub fn get_default(&self) -> Option<DashMapRef> {
-        self.get(&None)
-    }
-
-    pub fn get_default_mut(&self) -> Option<DashMapRefMut> {
-        self.get_mut(&None)
+    #[inline]
+    pub fn pin(&self) -> papaya::HashMapRef<Option<Locality>, EndpointSet, S, seize::LocalGuard> {
+        self.map.pin()
     }
 
     #[inline]
@@ -370,11 +358,12 @@ where
 
     #[inline]
     pub fn remove_endpoint(&self, needle: &Endpoint) -> bool {
-        for mut entry in self.map.iter_mut() {
-            let set = entry.value_mut();
-
-            if set.endpoints.remove(needle) {
-                set.update();
+        for (key, value) in self.map.pin().iter() {
+            if value.endpoints.contains(needle) {
+                let mut value = value.clone();
+                value.endpoints.remove(needle);
+                value.update();
+                self.map.pin().insert(key.clone(), value);
                 self.num_endpoints.fetch_sub(1, Relaxed);
                 self.version.fetch_add(1, Relaxed);
                 return true;
@@ -386,22 +375,20 @@ where
 
     #[inline]
     pub fn remove_endpoint_if(&self, closure: impl Fn(&Endpoint) -> bool) -> bool {
-        for mut entry in self.map.iter_mut() {
-            let set = entry.value_mut();
-            if let Some(endpoint) = set
+        for (key, value) in self.map.pin().iter() {
+            if let Some(endpoint) = value
                 .endpoints
                 .iter()
                 .find(|endpoint| (closure)(endpoint))
                 .cloned()
             {
-                // This will always be true, but....
-                let removed = set.endpoints.remove(&endpoint);
-                if removed {
-                    set.update();
-                    self.num_endpoints.fetch_sub(1, Relaxed);
-                    self.version.fetch_add(1, Relaxed);
-                }
-                return removed;
+                let mut value = value.clone();
+                value.endpoints.remove(&endpoint);
+                value.update();
+                self.map.pin().insert(key.clone(), value);
+                self.num_endpoints.fetch_sub(1, Relaxed);
+                self.version.fetch_add(1, Relaxed);
+                return true;
             }
         }
 
@@ -409,22 +396,12 @@ where
     }
 
     #[inline]
-    pub fn iter(&self) -> dashmap::iter::Iter<Option<Locality>, EndpointSet, S> {
-        self.map.iter()
-    }
-
-    pub fn entry(
-        &self,
-        key: Option<Locality>,
-    ) -> dashmap::mapref::entry::Entry<Option<Locality>, EndpointSet> {
-        self.map.entry(key)
-    }
-
-    #[inline]
     pub fn replace(&self, locality: Option<Locality>, endpoint: Endpoint) -> Option<Endpoint> {
-        if let Some(mut set) = self.map.get_mut(&locality) {
+        if let Some(set) = self.map.pin().get(&locality) {
+            let mut set = set.clone();
             let replaced = set.endpoints.replace(endpoint);
             set.update();
+            self.map.pin().insert(locality, set);
             self.version.fetch_add(1, Relaxed);
 
             if replaced.is_none() {
@@ -442,16 +419,16 @@ where
     pub fn endpoints(&self) -> Vec<Endpoint> {
         let mut endpoints = Vec::with_capacity(self.num_of_endpoints());
 
-        for set in self.map.iter() {
-            endpoints.extend(set.value().endpoints.iter().cloned());
+        for (_, value) in self.map.pin().iter() {
+            endpoints.extend(value.endpoints.iter().cloned());
         }
 
         endpoints
     }
 
     pub fn nth_endpoint(&self, mut index: usize) -> Option<Endpoint> {
-        for set in self.iter() {
-            let set = &set.value().endpoints;
+        for (_, value) in self.map.pin().iter() {
+            let set = &value.endpoints;
             if index < set.len() {
                 return set.iter().nth(index).cloned();
             } else {
@@ -465,8 +442,8 @@ where
     pub fn filter_endpoints(&self, f: impl Fn(&Endpoint) -> bool) -> Vec<Endpoint> {
         let mut endpoints = Vec::new();
 
-        for set in self.iter() {
-            for endpoint in set.endpoints.iter().filter(|e| (f)(e)) {
+        for (_, value) in self.map.pin().iter() {
+            for endpoint in value.endpoints.iter().filter(|e| (f)(e)) {
                 endpoints.push(endpoint.clone());
             }
         }
@@ -486,29 +463,28 @@ where
 
     #[inline]
     pub fn update_unlocated_endpoints(&self, locality: Locality) {
-        if let Some((_, set)) = self.map.remove(&None) {
+        if let Some(set) = self.map.pin().remove(&None).cloned() {
             self.version.fetch_add(1, Relaxed);
-            if let Some(replaced) = self.map.insert(Some(locality), set) {
+            if let Some(replaced) = self.map.pin().insert(Some(locality), set) {
                 self.num_endpoints.fetch_sub(replaced.len(), Relaxed);
             }
         }
     }
 
     #[inline]
-    pub fn remove_locality(&self, locality: &Option<Locality>) -> Option<EndpointSet> {
-        let ret = self.map.remove(locality).map(|(_k, v)| v);
-        if let Some(ret) = &ret {
+    pub fn remove_locality(&self, locality: &Option<Locality>) {
+        if let Some(ret) = self.map.pin().remove(locality) {
             self.version.fetch_add(1, Relaxed);
             self.num_endpoints.fetch_sub(ret.len(), Relaxed);
         }
-
-        ret
     }
 
     pub fn addresses_for_token(&self, token: Token) -> Vec<EndpointAddress> {
         self.token_map
+            .pin()
             .get(&token.0)
-            .map_or(Vec::new(), |addrs| addrs.value().to_vec())
+            .cloned()
+            .unwrap_or_default()
     }
 }
 
@@ -546,7 +522,7 @@ where
 {
     fn default() -> Self {
         Self {
-            map: <DashMap<Option<Locality>, EndpointSet, S>>::default(),
+            map: <HashMap<Option<Locality>, EndpointSet, S>>::default(),
             token_map: Default::default(),
             version: <_>::default(),
             num_endpoints: <_>::default(),
@@ -567,10 +543,12 @@ where
     S: Default + std::hash::BuildHasher + Clone,
 {
     fn eq(&self, rhs: &Self) -> bool {
-        for a in self.iter() {
+        for (key, value) in self.map.pin().iter() {
             match rhs
-                .get(a.key())
-                .filter(|b| a.value().endpoints == b.endpoints)
+                .map
+                .pin()
+                .get(key)
+                .filter(|b| value.endpoints == b.endpoints)
             {
                 Some(_) => {}
                 None => return false,
@@ -650,10 +628,9 @@ impl Serialize for ClusterMap {
         S: serde::Serializer,
     {
         self.map
+            .pin()
             .iter()
-            .map(|entry| {
-                EndpointWithLocality::from((entry.key().clone(), entry.value().endpoints.clone()))
-            })
+            .map(|(key, value)| EndpointWithLocality::from((key.clone(), value.endpoints.clone())))
             .collect::<Vec<_>>()
             .serialize(ser)
     }
@@ -664,7 +641,7 @@ where
     S: Default + std::hash::BuildHasher + Clone,
 {
     fn from(cmd: ClusterMapDeser) -> Self {
-        let map = DashMap::from_iter(cmd.endpoints.into_iter().map(
+        let map = HashMap::from_iter(cmd.endpoints.into_iter().map(
             |EndpointWithLocality {
                  locality,
                  endpoints,
@@ -675,17 +652,19 @@ where
     }
 }
 
-impl<S> From<DashMap<Option<Locality>, EndpointSet, S>> for ClusterMap<S>
+impl<S> From<HashMap<Option<Locality>, EndpointSet, S>> for ClusterMap<S>
 where
     S: Default + std::hash::BuildHasher + Clone,
 {
-    fn from(map: DashMap<Option<Locality>, EndpointSet, S>) -> Self {
-        let num_endpoints = AtomicUsize::new(map.iter().map(|kv| kv.value().len()).sum());
+    fn from(map: HashMap<Option<Locality>, EndpointSet, S>) -> Self {
+        let num_endpoints = AtomicUsize::new(map.pin().iter().map(|(_, value)| value.len()).sum());
 
-        let token_map = DashMap::<u64, Vec<EndpointAddress>>::default();
-        for es in &map {
-            for (token_hash, addrs) in &es.value().token_map {
-                token_map.insert(*token_hash, addrs.iter().cloned().collect());
+        let token_map = HashMap::<u64, Vec<EndpointAddress>, S>::default();
+        for value in map.pin().values() {
+            for (token_hash, addrs) in &value.token_map {
+                token_map
+                    .pin()
+                    .insert(*token_hash, addrs.iter().cloned().collect());
             }
         }
 
@@ -726,13 +705,15 @@ mod tests {
         cluster1.insert(Some(nl1.clone()), [endpoint.clone()].into());
         cluster1.insert(Some(de1.clone()), [endpoint.clone()].into());
 
-        assert_eq!(cluster1.get(&Some(nl1.clone())).unwrap().len(), 1);
+        assert_eq!(cluster1.pin().get(&Some(nl1.clone())).unwrap().len(), 1);
         assert!(cluster1
+            .pin()
             .get(&Some(nl1.clone()))
             .unwrap()
             .contains(&endpoint));
-        assert_eq!(cluster1.get(&Some(de1.clone())).unwrap().len(), 1);
+        assert_eq!(cluster1.pin().get(&Some(de1.clone())).unwrap().len(), 1);
         assert!(cluster1
+            .pin()
             .get(&Some(de1.clone()))
             .unwrap()
             .contains(&endpoint));
@@ -741,16 +722,13 @@ mod tests {
 
         cluster1.insert(Some(de1.clone()), [endpoint.clone()].into());
 
-        assert_eq!(cluster1.get(&Some(nl1.clone())).unwrap().len(), 1);
-        assert_eq!(cluster1.get(&Some(de1.clone())).unwrap().len(), 1);
-        assert!(cluster1
-            .get(&Some(de1.clone()))
-            .unwrap()
-            .contains(&endpoint));
+        assert_eq!(cluster1.pin().get(&Some(nl1.clone())).unwrap().len(), 1);
+        assert_eq!(cluster1.pin().get(&Some(de1.clone())).unwrap().len(), 1);
+        assert!(dbg!(cluster1.pin().get(&Some(de1.clone())).unwrap()).contains(&endpoint));
 
         cluster1.insert(Some(de1.clone()), <_>::default());
 
-        assert_eq!(cluster1.get(&Some(nl1.clone())).unwrap().len(), 1);
-        assert!(cluster1.get(&Some(de1.clone())).unwrap().is_empty());
+        assert_eq!(cluster1.pin().get(&Some(nl1.clone())).unwrap().len(), 1);
+        assert!(cluster1.pin().get(&Some(de1.clone())).unwrap().is_empty());
     }
 }
