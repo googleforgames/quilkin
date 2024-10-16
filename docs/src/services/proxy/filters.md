@@ -14,8 +14,7 @@ As an example, say we would like to perform the following steps in our processin
 * Do not forward (drop) the packet if its compressed length is over 512 bytes.
 
 We would create a filter corresponding to each step either by leveraging any [existing filters](#built-in-filters)
-that do what we want or [writing one ourselves](./filters/writing_custom_filters.md) and connect them to form the
-following filter chain:
+that do what we want or and connect them to form the following filter chain:
 
 ```bash
 append | compress | drop
