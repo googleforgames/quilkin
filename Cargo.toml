@@ -38,11 +38,18 @@ categories = ["game-development", "network-programming"]
 edition.workspace = true
 exclude = ["docs", "build", "examples", "image"]
 
+[profile.lto]
+inherits = "release"
+opt-level = 3
+codegen-units = 1
+lto = "fat"
+
 [features]
 default = []
 instrument = []
 mimalloc = ["dep:mimalloc"]
 heap-stats = ["dep:crossbeam-utils"]
+
 
 [lints]
 workspace = true
