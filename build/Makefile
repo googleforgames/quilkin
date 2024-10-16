@@ -54,7 +54,7 @@ kube_mount_args := -v $(kubeconfig_path):/root/.kube -v $(helm_config):/root/.co
 minikube_args := --network=host -v ~/.minikube:$(HOME)/.minikube
 gcloud_mount_args := -v $(build_path)/.config/gcloud:/root/.config/gcloud
 
-cargo_build_x86_64_linux := build --release --target x86_64-unknown-linux-gnu
+cargo_build_x86_64_linux := build --profile=lto --target x86_64-unknown-linux-gnu
 cargo_build_x86_64_apple := build --release --target x86_64-apple-darwin
 cargo_build_aarch64-apple := build --release --target aarch64-apple-darwin
 cargo_build_x86_64_windows := build --release --target x86_64-pc-windows-gnu
@@ -140,7 +140,7 @@ gen-protobuf: ensure-build-image
 # Build an archive all binaries
 binary-archive: ensure-build-image build-licence-report build-all-binaries
 	docker run --rm $(common_rust_args) -w $(CARGO_TARGET_DIR) \
-			--entrypoint=bash $(BUILD_IMAGE_TAG) -c 'cp ../../license.html . && zip ../../quilkin-$(package_version).zip ./*/release/quilkin ./*/release/quilkin.exe ./license.html'
+			--entrypoint=bash $(BUILD_IMAGE_TAG) -c 'cp ../../license.html . && zip ../../quilkin-$(package_version).zip ./*/lto/quilkin ./*/lto/quilkin.exe ./license.html'
 
 # Build binary for x86_64-unknown-linux-gnu.
 # Use BUILD_LOCAL=1 to build through local cargo rather than through the build container.
@@ -188,9 +188,9 @@ build-image: ensure-build-image build-licence-report build-linux-binary
 build-image:
 	-mkdir -p "$(project_path)/target/image/"
 ifdef BUILD_LOCAL
-	cp "$(project_path)/target/x86_64-unknown-linux-gnu/release/quilkin" "$(project_path)/target/image/"
+	cp "$(project_path)/target/x86_64-unknown-linux-gnu/lto/quilkin" "$(project_path)/target/image/"
 else
-	cp "$(project_path)/target/build-image/x86_64-unknown-linux-gnu/release/quilkin" "$(project_path)/target/image/"
+	cp "$(project_path)/target/build-image/x86_64-unknown-linux-gnu/lto/quilkin" "$(project_path)/target/image/"
 endif
 	docker run --rm $(common_rust_args) \
 		--entrypoint=bash $(BUILD_IMAGE_TAG) -c './image/archive_dependencies.sh'
