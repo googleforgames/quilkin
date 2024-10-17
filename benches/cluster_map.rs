@@ -17,10 +17,10 @@ mod serde {
     fn serialize_to_protobuf(cm: &ClusterMap) -> Vec<Any> {
         let mut resources = Vec::new();
 
-        for cluster in cm.iter() {
+        for (key, cluster) in cm.pin().iter() {
             resources.push(
                 Resource::Cluster(Cluster {
-                    locality: cluster.key().clone().map(From::from),
+                    locality: key.clone().map(From::from),
                     endpoints: cluster
                         .endpoints
                         .iter()
@@ -110,12 +110,7 @@ mod ops {
     use shared::{gen_cluster_map, GenCluster};
 
     fn compute_hash<const S: u64>(gc: &GenCluster) -> usize {
-        let mut total_endpoints = 0;
-
-        for kv in gc.cm.iter() {
-            total_endpoints += kv.endpoints.len();
-        }
-
+        let total_endpoints = gc.cm.pin().values().map(|v| v.endpoints.len()).sum();
         assert_eq!(total_endpoints, gc.total_endpoints);
         total_endpoints
     }

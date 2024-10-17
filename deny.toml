@@ -57,6 +57,7 @@ version = 2
 allow = ["Apache-2.0", "MIT", "ISC", "BSD-3-Clause"]
 exceptions = [
     { crate = "adler32", allow = ["Zlib"] },
+    { crate = "atomic-wait", allow = ["BSD-2-Clause"] },
     # This license should not really be used for code, but here we are
     { crate = "notify", allow = ["CC0-1.0"] },
     { crate = "ring", allow = ["OpenSSL"] },

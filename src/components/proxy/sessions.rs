@@ -220,12 +220,14 @@ impl SessionPool {
     ) -> Result<(Option<MetricsIpNetEntry>, UpstreamSender), super::PipelineError> {
         tracing::trace!(source=%key.source, dest=%key.dest, "SessionPool::get");
         // If we already have a session for the key pairing, return that session.
-        if let Some(entry) = self.session_map.get(&key) {
+        if let Some((asn_info, upstream_sender)) = self.session_map.get_by_ref(&key, |value| {
+            (
+                value.asn_info.as_ref().map(MetricsIpNetEntry::from),
+                value.upstream_sender.clone(),
+            )
+        }) {
             tracing::trace!("returning existing session");
-            return Ok((
-                entry.asn_info.as_ref().map(MetricsIpNetEntry::from),
-                entry.upstream_sender.clone(),
-            ));
+            return Ok((asn_info, upstream_sender));
         }
 
         // If there's a socket_set available, it means there are sockets
@@ -629,8 +631,12 @@ mod tests {
         let _socket1 = pool.get(key1).unwrap();
         let _socket2 = pool.get(key2).unwrap();
         assert_ne!(
-            pool.session_map.get(&key1).unwrap().socket_port,
-            pool.session_map.get(&key2).unwrap().socket_port
+            pool.session_map
+                .get_by_ref(&key1, |v| v.socket_port)
+                .unwrap(),
+            pool.session_map
+                .get_by_ref(&key2, |v| v.socket_port)
+                .unwrap()
         );
 
         assert!(pool.drop_session(key1).await);
@@ -655,8 +661,12 @@ mod tests {
         let _socket2 = pool.get(key2).unwrap();
 
         assert_eq!(
-            pool.session_map.get(&key1).unwrap().socket_port,
-            pool.session_map.get(&key2).unwrap().socket_port
+            pool.session_map
+                .get_by_ref(&key1, |v| v.socket_port)
+                .unwrap(),
+            pool.session_map
+                .get_by_ref(&key2, |v| v.socket_port)
+                .unwrap()
         );
     }
 

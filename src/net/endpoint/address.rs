@@ -71,7 +71,7 @@ impl EndpointAddress {
                     Lazy::new(<_>::default);
 
                 match CACHE.get(name) {
-                    Some(ip) => **ip,
+                    Some(ip) => ip,
                     None => {
                         let handle = tokio::runtime::Handle::current();
                         let set = handle
