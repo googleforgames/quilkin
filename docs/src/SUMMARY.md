@@ -26,7 +26,6 @@
         - [Pass](./services/proxy/filters/pass.md)
         - [Timestamp](./services/proxy/filters/timestamp.md)
         - [Token Router](./services/proxy/filters/token_router.md)
-        - [Writing Custom Filters](./services/proxy/filters/writing_custom_filters.md)
     - [Control Message Protocol](./services/proxy/qcmp.md)
     - [Metrics](./services/proxy/metrics.md)
 
