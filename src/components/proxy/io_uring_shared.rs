@@ -158,8 +158,10 @@ enum LoopPacketInner {
 /// referential pointers that need to stay pinned until the I/O is complete
 #[repr(C)]
 struct LoopPacket {
+    // needs to b mmsghdr etc
     msghdr: libc::msghdr,
     addr: libc::sockaddr_storage,
+    control: libc::cmsghdr,
     packet: Option<LoopPacketInner>,
     io_vec: libc::iovec,
 }
@@ -170,6 +172,7 @@ impl LoopPacket {
         Self {
             // SAFETY: msghdr is POD
             msghdr: unsafe { std::mem::zeroed() },
+            control: unsafe { std::mem::zeroed() },
             packet: None,
             io_vec: libc::iovec {
                 iov_base: std::ptr::null_mut(),
@@ -187,6 +190,9 @@ impl LoopPacket {
                 // For receives, the length of the buffer is the total capacity
                 self.io_vec.iov_base = recv.buffer.as_mut_ptr().cast();
                 self.io_vec.iov_len = recv.buffer.capacity();
+
+                self.msghdr.msg_control = std::ptr::addr_of_mut!(self.control) as *mut _;
+                self.msghdr.msg_controllen = std::mem::size_of_val(&self.control);
             }
             LoopPacketInner::Send(send) => {
                 // For sends, the length of the buffer is the actual number of initialized bytes,
@@ -223,14 +229,26 @@ impl LoopPacket {
         };
 
         // SAFETY: we're initialising it with correctly sized data
-        let mut source = unsafe {
-            SockAddr::new(
-                self.addr,
-                std::mem::size_of::<libc::sockaddr_storage>() as _,
+        let (source, stride) = unsafe {
+            let mut stride = self.msghdr.msg_namelen as usize;
+
+            let mut hdr = libc::CMSG_FIRSTHDR(&self.msghdr);
+
+            while !hdr.is_null() {
+                stride = (*hdr).cmsg_len;
+                hdr = libc::CMSG_NXTHDR(&self.msghdr, hdr);
+            }
+
+            (
+                SockAddr::new(
+                    self.addr,
+                    std::mem::size_of::<libc::sockaddr_storage>() as _,
+                ),
+                stride,
             )
-        }
-        .as_socket()
-        .unwrap();
+        };
+
+        let mut source = source.as_socket().unwrap();
         source.set_ip(source.ip().to_canonical());
 
         recv.source = source;
