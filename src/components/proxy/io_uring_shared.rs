@@ -526,7 +526,7 @@ impl IoUringLoop {
 
     pub fn spawn(
         self,
-        thread_name: String,
+        _thread_name: String,
         mut ctx: PacketProcessorCtx,
         receiver: PacketReceiver,
         buffer_pool: Arc<crate::pool::BufferPool>,
@@ -551,156 +551,150 @@ impl IoUringLoop {
         // Used to notify the uring loop to shutdown
         let mut shutdown_event = EventFd::new()?;
 
-        std::thread::Builder::new()
-            .name(thread_name)
-            .spawn(move || {
-                let _guard = tracing::dispatcher::set_default(&dispatcher);
+        rayon::spawn(move || {
+            let _guard = tracing::dispatcher::set_default(&dispatcher);
 
-                let tokens = slab::Slab::with_capacity(concurrent_sends + 1 + 1 + 1);
-                let loop_packets = slab::Slab::with_capacity(concurrent_sends + 1);
+            let tokens = slab::Slab::with_capacity(concurrent_sends + 1 + 1 + 1);
+            let loop_packets = slab::Slab::with_capacity(concurrent_sends + 1);
 
-                // Create an eventfd to notify the uring thread (this one) of
-                // pending sends
-                let pending_sends = PendingSends::new(pending_sends_event.writer());
-                // Just double buffer the pending writes for simplicity
-                let mut double_pending_sends = Vec::new();
+            // Create an eventfd to notify the uring thread (this one) of
+            // pending sends
+            let pending_sends = PendingSends::new(pending_sends_event.writer());
+            // Just double buffer the pending writes for simplicity
+            let mut double_pending_sends = Vec::new();
 
-                // When sending packets, this is the direction used when updating metrics
-                let send_dir = if matches!(ctx, PacketProcessorCtx::Router { .. }) {
-                    metrics::WRITE
-                } else {
-                    metrics::READ
-                };
+            // When sending packets, this is the direction used when updating metrics
+            let send_dir = if matches!(ctx, PacketProcessorCtx::Router { .. }) {
+                metrics::WRITE
+            } else {
+                metrics::READ
+            };
 
-                // Spawn the worker tasks that process in an async context unlike
-                // our io-uring loop below
-                spawn_workers(
-                    &rt,
-                    receiver,
-                    pending_sends.clone(),
-                    shutdown,
-                    shutdown_event.writer(),
-                );
+            // Spawn the worker tasks that process in an async context unlike
+            // our io-uring loop below
+            spawn_workers(
+                &rt,
+                receiver,
+                pending_sends.clone(),
+                shutdown,
+                shutdown_event.writer(),
+            );
 
-                let (submitter, sq, mut cq) = ring.split();
+            let (submitter, sq, mut cq) = ring.split();
 
-                let mut loop_ctx = LoopCtx {
-                    sq,
-                    socket_fd: socket.raw_fd(),
-                    backlog: Default::default(),
-                    loop_packets,
-                    tokens,
-                };
+            let mut loop_ctx = LoopCtx {
+                sq,
+                socket_fd: socket.raw_fd(),
+                backlog: Default::default(),
+                loop_packets,
+                tokens,
+            };
 
-                loop_ctx.enqueue_recv(buffer_pool.clone().alloc());
-                loop_ctx
-                    .push_with_token(pending_sends_event.io_uring_entry(), Token::PendingsSends);
-                loop_ctx.push_with_token(shutdown_event.io_uring_entry(), Token::Shutdown);
+            loop_ctx.enqueue_recv(buffer_pool.clone().alloc());
+            loop_ctx.push_with_token(pending_sends_event.io_uring_entry(), Token::PendingsSends);
+            loop_ctx.push_with_token(shutdown_event.io_uring_entry(), Token::Shutdown);
 
-                // Sync always needs to be called when entries have been pushed
-                // onto the submission queue for the loop to actually function (ie, similar to await on futures)
-                loop_ctx.sync();
+            // Sync always needs to be called when entries have been pushed
+            // onto the submission queue for the loop to actually function (ie, similar to await on futures)
+            loop_ctx.sync();
 
-                // Notify that we have set everything up
-                let _ = tx.send(());
-                let mut last_received_at = None;
-                let process_event_writer = process_event.writer();
+            // Notify that we have set everything up
+            let _ = tx.send(());
+            let mut last_received_at = None;
+            let process_event_writer = process_event.writer();
 
-                // The core io uring loop
-                'io: loop {
-                    match submitter.submit_and_wait(1) {
-                        Ok(_) => {}
-                        Err(ref err) if err.raw_os_error() == Some(libc::EBUSY) => {}
-                        Err(ref err) if err.raw_os_error() == Some(libc::EINTR) => {
-                            continue;
-                        }
-                        Err(error) => {
-                            tracing::error!(%error, "io-uring submit_and_wait failed");
-                            return;
-                        }
+            // The core io uring loop
+            'io: loop {
+                match submitter.submit_and_wait(1) {
+                    Ok(_) => {}
+                    Err(ref err) if err.raw_os_error() == Some(libc::EBUSY) => {}
+                    Err(ref err) if err.raw_os_error() == Some(libc::EINTR) => {
+                        continue;
                     }
-                    cq.sync();
-
-                    if let Err(error) = loop_ctx.process_backlog(&submitter) {
-                        tracing::error!(%error, "failed to process io-uring backlog");
+                    Err(error) => {
+                        tracing::error!(%error, "io-uring submit_and_wait failed");
                         return;
                     }
+                }
+                cq.sync();
 
-                    // Now actually process all of the completed io requests
-                    for cqe in &mut cq {
-                        let ret = cqe.result();
-                        let token_index = cqe.user_data() as usize;
+                if let Err(error) = loop_ctx.process_backlog(&submitter) {
+                    tracing::error!(%error, "failed to process io-uring backlog");
+                    return;
+                }
 
-                        let token = loop_ctx.remove(token_index);
-                        match token {
-                            Token::Recv { key } => {
-                                // Pop the packet regardless of whether we failed or not so that
-                                // we don't consume a buffer slot forever
-                                let packet = loop_ctx.pop_packet(key);
+                // Now actually process all of the completed io requests
+                for cqe in &mut cq {
+                    let ret = cqe.result();
+                    let token_index = cqe.user_data() as usize;
 
-                                if ret < 0 {
-                                    let error = std::io::Error::from_raw_os_error(-ret);
-                                    tracing::error!(%error, "error receiving packet");
-                                    loop_ctx.enqueue_recv(buffer_pool.clone().alloc());
-                                    continue;
-                                }
+                    let token = loop_ctx.remove(token_index);
+                    match token {
+                        Token::Recv { key } => {
+                            // Pop the packet regardless of whether we failed or not so that
+                            // we don't consume a buffer slot forever
+                            let packet = loop_ctx.pop_packet(key);
 
-                                let packet = packet.finalize_recv(ret as usize);
-                                process_packet(
-                                    &mut ctx,
-                                    &process_event_writer,
-                                    packet,
-                                    &mut last_received_at,
-                                );
-
+                            if ret < 0 {
+                                let error = std::io::Error::from_raw_os_error(-ret);
+                                tracing::error!(%error, "error receiving packet");
                                 loop_ctx.enqueue_recv(buffer_pool.clone().alloc());
+                                continue;
                             }
-                            Token::PendingsSends => {
-                                double_pending_sends = pending_sends.swap(double_pending_sends);
-                                loop_ctx.push_with_token(
-                                    pending_sends_event.io_uring_entry(),
-                                    Token::PendingsSends,
-                                );
 
-                                for pending in
-                                    double_pending_sends.drain(0..double_pending_sends.len())
-                                {
-                                    loop_ctx.enqueue_send(pending);
-                                }
-                            }
-                            Token::Send { key } => {
-                                let packet = loop_ctx.pop_packet(key).finalize_send();
-                                let asn_info = packet.asn_info.as_ref().into();
+                            let packet = packet.finalize_recv(ret as usize);
+                            process_packet(
+                                &mut ctx,
+                                &process_event_writer,
+                                packet,
+                                &mut last_received_at,
+                            );
 
-                                if ret < 0 {
-                                    let source =
-                                        std::io::Error::from_raw_os_error(-ret).to_string();
-                                    metrics::errors_total(send_dir, &source, &asn_info).inc();
-                                    metrics::packets_dropped_total(send_dir, &source, &asn_info)
-                                        .inc();
-                                } else if ret as usize != packet.buffer.len() {
-                                    metrics::packets_total(send_dir, &asn_info).inc();
-                                    metrics::errors_total(
-                                        send_dir,
-                                        "sent bytes != packet length",
-                                        &asn_info,
-                                    )
-                                    .inc();
-                                } else {
-                                    metrics::packets_total(send_dir, &asn_info).inc();
-                                    metrics::bytes_total(send_dir, &asn_info).inc_by(ret as u64);
-                                }
-                            }
-                            Token::Shutdown => {
-                                tracing::info!("io-uring loop shutdown requested");
-                                break 'io;
+                            loop_ctx.enqueue_recv(buffer_pool.clone().alloc());
+                        }
+                        Token::PendingsSends => {
+                            double_pending_sends = pending_sends.swap(double_pending_sends);
+                            loop_ctx.push_with_token(
+                                pending_sends_event.io_uring_entry(),
+                                Token::PendingsSends,
+                            );
+
+                            for pending in double_pending_sends.drain(0..double_pending_sends.len())
+                            {
+                                loop_ctx.enqueue_send(pending);
                             }
                         }
-                    }
+                        Token::Send { key } => {
+                            let packet = loop_ctx.pop_packet(key).finalize_send();
+                            let asn_info = packet.asn_info.as_ref().into();
 
-                    loop_ctx.sync();
+                            if ret < 0 {
+                                let source = std::io::Error::from_raw_os_error(-ret).to_string();
+                                metrics::errors_total(send_dir, &source, &asn_info).inc();
+                                metrics::packets_dropped_total(send_dir, &source, &asn_info).inc();
+                            } else if ret as usize != packet.buffer.len() {
+                                metrics::packets_total(send_dir, &asn_info).inc();
+                                metrics::errors_total(
+                                    send_dir,
+                                    "sent bytes != packet length",
+                                    &asn_info,
+                                )
+                                .inc();
+                            } else {
+                                metrics::packets_total(send_dir, &asn_info).inc();
+                                metrics::bytes_total(send_dir, &asn_info).inc_by(ret as u64);
+                            }
+                        }
+                        Token::Shutdown => {
+                            tracing::info!("io-uring loop shutdown requested");
+                            break 'io;
+                        }
+                    }
                 }
-            })?;
+
+                loop_ctx.sync();
+            }
+        });
 
         Ok(rx)
     }

@@ -157,6 +157,7 @@ cfg-if = "1.0.0"
 libflate = "2.0.0"
 form_urlencoded = "1.2.1"
 gxhash = "3.4.1"
+rayon = "1.10.0"
 
 [dependencies.hyper-util]
 version = "0.1"
