@@ -70,41 +70,34 @@ pub use self::{
     write::WriteContext,
 };
 
+use crate::test::TestFilter;
+
 pub use self::chain::FilterChain;
+
+#[enum_dispatch::enum_dispatch(Filter)]
+pub enum FilterKind {
+    Capture,
+    Compress,
+    Concatenate,
+    Debug,
+    Drop,
+    Firewall,
+    LoadBalancer,
+    LocalRateLimit,
+    Pass,
+    Match,
+    Timestamp,
+    TokenRouter,
+    HashedTokenRouter,
+    TestFilter,
+}
 
 /// Statically safe version of [`Filter`], if you're writing a Rust filter, you
 /// should implement [`StaticFilter`] in addition to [`Filter`], as
 /// [`StaticFilter`] guarantees all of the required properties through the type
 /// system, allowing Quilkin take care of the virtual table boilerplate
 /// automatically at compile-time.
-/// ```
-/// use quilkin::filters::prelude::*;
-///
-/// struct Greet;
-///
-/// /// Prepends data on each packet
-/// impl Filter for Greet {
-///     fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
-///         ctx.contents.prepend_from_slice(b"Hello ");
-///         Ok(())
-///     }
-///     fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
-///         ctx.contents.prepend_from_slice(b"Goodbye ");
-///         Ok(())
-///     }
-/// }
-///
-/// impl StaticFilter for Greet {
-///     const NAME: &'static str = "greet.v1";
-///     type Configuration = ();
-///     type BinaryConfiguration = ();
-///
-///     fn try_from_config(_: Option<Self::Configuration>) -> Result<Self, CreationError> {
-///         Ok(Self)
-///     }
-/// }
-/// ```
-pub trait StaticFilter: Filter + Sized
+pub trait StaticFilter: Filter + Sized + Into<FilterKind>
 // This where clause simply states that `Configuration`'s and
 // `BinaryConfiguration`'s `Error` types are compatible with `filters::Error`.
 where
@@ -207,6 +200,7 @@ where
 ///   `write` implementation to execute.
 ///   * Labels
 ///     * `filter` The name of the filter being executed.
+#[enum_dispatch::enum_dispatch]
 pub trait Filter: Send + Sync {
     /// [`Filter::read`] is invoked when the proxy receives data from a
     /// downstream connection on the listening port.
