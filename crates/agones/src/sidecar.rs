@@ -106,7 +106,7 @@ clusters:
         template.volumes = Some(vec![Volume {
             name: mount_name,
             config_map: Some(ConfigMapVolumeSource {
-                name: Some(config_map.name_unchecked()),
+                name: config_map.name_unchecked(),
                 ..Default::default()
             }),
             ..Default::default()

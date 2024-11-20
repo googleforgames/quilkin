@@ -265,9 +265,8 @@ pub struct ClusterMap<S = gxhash::GxBuildHasher> {
     version: AtomicU64,
 }
 
-type DashMapRef<'inner, S> = dashmap::mapref::one::Ref<'inner, Option<Locality>, EndpointSet, S>;
-type DashMapRefMut<'inner, S> =
-    dashmap::mapref::one::RefMut<'inner, Option<Locality>, EndpointSet, S>;
+type DashMapRef<'inner> = dashmap::mapref::one::Ref<'inner, Option<Locality>, EndpointSet>;
+type DashMapRefMut<'inner> = dashmap::mapref::one::RefMut<'inner, Option<Locality>, EndpointSet>;
 
 impl ClusterMap {
     pub fn new() -> Self {
@@ -348,19 +347,19 @@ where
         self.map.is_empty()
     }
 
-    pub fn get(&self, key: &Option<Locality>) -> Option<DashMapRef<S>> {
+    pub fn get(&self, key: &Option<Locality>) -> Option<DashMapRef> {
         self.map.get(key)
     }
 
-    pub fn get_mut(&self, key: &Option<Locality>) -> Option<DashMapRefMut<S>> {
+    pub fn get_mut(&self, key: &Option<Locality>) -> Option<DashMapRefMut> {
         self.map.get_mut(key)
     }
 
-    pub fn get_default(&self) -> Option<DashMapRef<S>> {
+    pub fn get_default(&self) -> Option<DashMapRef> {
         self.get(&None)
     }
 
-    pub fn get_default_mut(&self) -> Option<DashMapRefMut<S>> {
+    pub fn get_default_mut(&self) -> Option<DashMapRefMut> {
         self.get_mut(&None)
     }
 
@@ -417,7 +416,7 @@ where
     pub fn entry(
         &self,
         key: Option<Locality>,
-    ) -> dashmap::mapref::entry::Entry<Option<Locality>, EndpointSet, S> {
+    ) -> dashmap::mapref::entry::Entry<Option<Locality>, EndpointSet> {
         self.map.entry(key)
     }
 

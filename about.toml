@@ -25,6 +25,7 @@ accepted = [
     "MPL-2.0",
     "NOASSERTION",
     "Unicode-DFS-2016",
+    "Unicode-3.0",
     "Zlib",
 ]
 workarounds = ["ring", "xxhash-rust"]

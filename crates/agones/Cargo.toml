@@ -33,6 +33,6 @@ futures.workspace = true
 k8s-openapi.workspace = true
 kube = { workspace = true, features = ["openssl-tls", "client", "derive", "runtime"] }
 quilkin = { path = "../../" }
-serial_test = "2.0.0"
+serial_test = "3.2.0"
 tokio.workspace = true
 tracing.workspace = true
