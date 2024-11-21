@@ -134,7 +134,7 @@ trace_test!(uring_receiver, {
     // Drop the socket, otherwise it can
     drop(ws);
 
-    let _ = ready.recv().unwrap();
+    ready.recv().unwrap();
 
     let msg = "hello-downstream";
     tracing::debug!("sending packet");
@@ -185,7 +185,7 @@ trace_test!(
         .unwrap();
 
         for wn in workers {
-            let _ = wn.recv().unwrap();
+            wn.recv().unwrap();
         }
 
         let socket = std::sync::Arc::new(sb.client());
