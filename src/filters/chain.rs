@@ -425,11 +425,11 @@ mod tests {
         let chain = FilterChain::new(vec![
             (
                 TestFilter::NAME.into(),
-                FilterInstance::new(serde_json::json!(null), Box::new(TestFilter)),
+                FilterInstance::new(serde_json::json!(null), TestFilter.into()),
             ),
             (
                 TestFilter::NAME.into(),
-                FilterInstance::new(serde_json::json!(null), Box::new(TestFilter)),
+                FilterInstance::new(serde_json::json!(null), TestFilter.into()),
             ),
         ])
         .unwrap();
@@ -477,41 +477,19 @@ mod tests {
 
     #[test]
     fn get_configs() {
-        struct TestFilter2;
-        impl Filter for TestFilter2 {}
-
-        let filter_chain = FilterChain::new(vec![
-            (
-                "TestFilter".into(),
-                FilterInstance::new(serde_json::json!(null), Box::new(TestFilter)),
-            ),
-            (
-                "TestFilter2".into(),
-                FilterInstance::new(
-                    serde_json::json!({ "k1": "v1", "k2": 2 }),
-                    Box::new(TestFilter2),
-                ),
-            ),
-        ])
+        let filter_chain = FilterChain::new(vec![(
+            "TestFilter".into(),
+            FilterInstance::new(serde_json::json!(null), TestFilter.into()),
+        )])
         .unwrap();
 
         let configs = filter_chain.iter().collect::<Vec<_>>();
         assert_eq!(
-            vec![
-                crate::config::Filter {
-                    name: "TestFilter".into(),
-                    label: None,
-                    config: None,
-                },
-                crate::config::Filter {
-                    name: "TestFilter2".into(),
-                    label: None,
-                    config: Some(serde_json::json!({
-                        "k1": "v1",
-                        "k2": 2
-                    }))
-                },
-            ],
+            vec![crate::config::Filter {
+                name: "TestFilter".into(),
+                label: None,
+                config: None,
+            },],
             configs
         )
     }

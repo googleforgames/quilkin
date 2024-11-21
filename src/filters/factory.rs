@@ -18,7 +18,7 @@ use std::sync::Arc;
 
 use crate::{
     config::ConfigType,
-    filters::{CreationError, Filter, StaticFilter},
+    filters::{CreationError, FilterKind, StaticFilter},
 };
 
 /// An owned pointer to a dynamic [`FilterFactory`] instance.
@@ -35,12 +35,12 @@ struct FilterInstanceData {
     /// The configuration used to create the filter.
     pub label: Option<String>,
     /// The created filter.
-    pub filter: Box<dyn Filter>,
+    pub filter: FilterKind,
 }
 
 impl FilterInstance {
     /// Constructs a [`FilterInstance`].
-    pub fn new(config: serde_json::Value, filter: Box<dyn Filter>) -> Self {
+    pub fn new(config: serde_json::Value, filter: FilterKind) -> Self {
         Self(Arc::new(FilterInstanceData {
             config,
             label: None,
@@ -56,12 +56,12 @@ impl FilterInstance {
         self.0.label.as_deref()
     }
 
-    pub fn filter(&self) -> &dyn Filter {
-        &*self.0.filter
+    pub fn filter(&self) -> &FilterKind {
+        &self.0.filter
     }
 }
 
-/// Provides the name and creation function for a given [`Filter`].
+/// Provides the name and creation function for a given [`crate::filters::Filter`].
 ///
 pub trait FilterFactory: Sync + Send {
     /// name returns the configuration name for the Filter
@@ -77,7 +77,7 @@ pub trait FilterFactory: Sync + Send {
     ///     `quilkin.filters.debug_filter.v1alpha1.Debug`
     fn name(&self) -> &'static str;
 
-    /// Returns the schema for the configuration of the [`Filter`].
+    /// Returns the schema for the configuration of the [`crate::filters::Filter`].
     fn config_schema(&self) -> schemars::schema::RootSchema;
 
     /// Returns a filter based on the provided arguments.
@@ -129,7 +129,7 @@ where
 
         Ok(FilterInstance::new(
             config_json,
-            Box::from(F::try_from_config(config)?),
+            F::try_from_config(config)?.into(),
         ))
     }
 
