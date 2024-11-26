@@ -38,7 +38,7 @@ impl LoadBalancer {
 }
 
 impl Filter for LoadBalancer {
-    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    fn read(&self, ctx: &mut ReadContext<'_>) -> Result<(), FilterError> {
         self.endpoint_chooser.choose_endpoints(ctx);
         Ok(())
     }
@@ -75,11 +75,14 @@ mod tests {
             .map(Endpoint::new)
             .collect::<std::collections::BTreeSet<_>>();
         let endpoints = crate::net::cluster::ClusterMap::new_default(endpoints);
-        let mut context = ReadContext::new(endpoints.into(), source, alloc_buffer([]));
+        let mut dest = Vec::new();
+        {
+            let mut context =
+                ReadContext::new(endpoints.into(), source, alloc_buffer([]), &mut dest);
+            filter.read(&mut context).unwrap();
+        }
 
-        filter.read(&mut context).unwrap();
-
-        context.destinations
+        dest
     }
 
     #[tokio::test]

@@ -87,7 +87,7 @@ impl TryFrom<Config> for Timestamp {
 }
 
 impl Filter for Timestamp {
-    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    fn read(&self, ctx: &mut ReadContext<'_>) -> Result<(), FilterError> {
         self.observe(&ctx.metadata, Direction::Read);
         Ok(())
     }
@@ -157,10 +157,12 @@ mod tests {
     async fn basic() {
         const TIMESTAMP_KEY: &str = "BASIC";
         let filter = Timestamp::from_config(Config::new(TIMESTAMP_KEY).into());
+        let mut dest = Vec::new();
         let mut ctx = ReadContext::new(
             <_>::default(),
             (std::net::Ipv4Addr::UNSPECIFIED, 0).into(),
             alloc_buffer(b"hello"),
+            &mut dest,
         );
         ctx.metadata.insert(
             TIMESTAMP_KEY.into(),
@@ -188,10 +190,12 @@ mod tests {
         );
         let timestamp = Timestamp::from_config(Config::new(TIMESTAMP_KEY).into());
         let source = (std::net::Ipv4Addr::UNSPECIFIED, 0);
+        let mut dest = Vec::new();
         let mut ctx = ReadContext::new(
             <_>::default(),
             source.into(),
             alloc_buffer([0, 0, 0, 0, 99, 81, 55, 181]),
+            &mut dest,
         );
 
         capture.read(&mut ctx).unwrap();

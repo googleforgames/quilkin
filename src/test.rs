@@ -370,7 +370,9 @@ where
         .unwrap()]));
     let source = "127.0.0.1:90".parse().unwrap();
     let contents = b"hello";
-    let mut context = ReadContext::new(endpoints.clone(), source, alloc_buffer(contents));
+    let mut dest = Vec::new();
+    let mut context =
+        ReadContext::new(endpoints.clone(), source, alloc_buffer(contents), &mut dest);
 
     filter.read(&mut context).unwrap();
     assert!(context.destinations.is_empty());

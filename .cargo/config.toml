@@ -1,0 +1,4 @@
+[target.'cfg(all())']
+rustflags = [
+    "-Ctarget-feature=+aes,+avx2",
+]

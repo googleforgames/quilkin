@@ -119,7 +119,7 @@ fn match_filter<'config, 'ctx, Ctx>(
 
 impl Filter for Match {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    fn read(&self, ctx: &mut ReadContext<'_>) -> Result<(), FilterError> {
         tracing::trace!(metadata=?ctx.metadata);
         match_filter(
             &self.on_read_filters,
@@ -197,10 +197,12 @@ mod tests {
         let endpoints = crate::net::cluster::ClusterMap::new_default(
             [Endpoint::new("127.0.0.1:81".parse().unwrap())].into(),
         );
+        let mut dest = Vec::new();
         let mut ctx = ReadContext::new(
             endpoints.into(),
             ([127, 0, 0, 1], 7000).into(),
             alloc_buffer(contents),
+            &mut dest,
         );
         ctx.metadata.insert(key, "abc".into());
 
@@ -211,10 +213,12 @@ mod tests {
         let endpoints = crate::net::cluster::ClusterMap::new_default(
             [Endpoint::new("127.0.0.1:81".parse().unwrap())].into(),
         );
+        let mut dest = Vec::new();
         let mut ctx = ReadContext::new(
             endpoints.into(),
             ([127, 0, 0, 1], 7000).into(),
             alloc_buffer(contents),
+            &mut dest,
         );
         ctx.metadata.insert(key, "xyz".into());
 

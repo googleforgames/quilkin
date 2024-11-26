@@ -61,6 +61,7 @@ impl DownstreamReceiveWorkerConfig {
         config: &Arc<Config>,
         sessions: &Arc<SessionPool>,
         error_acc: &mut super::error::ErrorAccumulator,
+        destinations: &mut Vec<crate::net::EndpointAddress>,
     ) {
         tracing::trace!(
             id = worker_id,
@@ -70,7 +71,7 @@ impl DownstreamReceiveWorkerConfig {
         );
 
         let timer = metrics::processing_time(metrics::READ).start_timer();
-        match Self::process_downstream_received_packet(packet, config, sessions) {
+        match Self::process_downstream_received_packet(packet, config, sessions, destinations) {
             Ok(()) => {
                 error_acc.maybe_send();
             }
@@ -92,6 +93,7 @@ impl DownstreamReceiveWorkerConfig {
         packet: DownstreamPacket,
         config: &Arc<Config>,
         sessions: &Arc<SessionPool>,
+        destinations: &mut Vec<crate::net::EndpointAddress>,
     ) -> Result<(), PipelineError> {
         if !config.clusters.read().has_endpoints() {
             tracing::trace!("no upstream endpoints");
@@ -103,21 +105,18 @@ impl DownstreamReceiveWorkerConfig {
             config.clusters.clone_value(),
             packet.source.into(),
             packet.contents,
+            destinations,
         );
         filters.read(&mut context).map_err(PipelineError::Filter)?;
 
-        let ReadContext {
-            destinations,
-            contents,
-            ..
-        } = context;
+        let ReadContext { contents, .. } = context;
 
         // Similar to bytes::BytesMut::freeze, we turn the mutable pool buffer
         // into an immutable one with its own internal arc so it can be cloned
         // cheaply and returned to the pool once all references are dropped
         let contents = contents.freeze();
 
-        for epa in destinations {
+        for epa in destinations.drain(0..) {
             let session_key = SessionKey {
                 source: packet.source,
                 dest: epa.to_socket_addr()?,

@@ -45,6 +45,7 @@ impl super::DownstreamReceiveWorkerConfig {
                     sessions,
                     error_acc: super::super::error::ErrorAccumulator::new(error_sender),
                     worker_id,
+                    destinations: Vec::with_capacity(1),
                 },
                 io_uring_shared::PacketReceiver::Router(upstream_receiver),
                 buffer_pool,

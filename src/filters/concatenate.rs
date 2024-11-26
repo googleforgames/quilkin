@@ -43,7 +43,7 @@ impl Concatenate {
 }
 
 impl Filter for Concatenate {
-    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    fn read(&self, ctx: &mut ReadContext<'_>) -> Result<(), FilterError> {
         match self.on_read {
             Strategy::Append => {
                 ctx.contents.extend_from_slice(&self.bytes);

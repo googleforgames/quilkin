@@ -208,7 +208,7 @@ pub trait Filter: Send + Sync {
     /// This function should return an `Some` if the packet processing should
     /// proceed. If the packet should be rejected, it will return [`None`]
     /// instead. By default, the context passes through unchanged.
-    fn read(&self, _: &mut ReadContext) -> Result<(), FilterError> {
+    fn read(&self, _: &mut ReadContext<'_>) -> Result<(), FilterError> {
         Ok(())
     }
 

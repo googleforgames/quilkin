@@ -74,7 +74,7 @@ mod tests {
     struct TestFilter {}
 
     impl Filter for TestFilter {
-        fn read(&self, _: &mut ReadContext) -> Result<(), FilterError> {
+        fn read(&self, _: &mut ReadContext<'_>) -> Result<(), FilterError> {
             Err(FilterError::Custom("test error"))
         }
 
@@ -105,11 +105,13 @@ mod tests {
         let endpoint = Endpoint::new(addr.clone());
 
         let endpoints = crate::net::cluster::ClusterMap::new_default([endpoint.clone()].into());
+        let mut dest = Vec::new();
         assert!(filter
             .read(&mut ReadContext::new(
                 endpoints.into(),
                 addr.clone(),
                 alloc_buffer([]),
+                &mut dest,
             ))
             .is_ok());
         assert!(filter

@@ -108,6 +108,7 @@ impl super::DownstreamReceiveWorkerConfig {
 
             let mut error_acc =
                 crate::components::proxy::error::ErrorAccumulator::new(error_sender);
+            let mut destinations = Vec::with_capacity(1);
 
             loop {
                 // Initialize a buffer for the UDP packet. We use the maximum size of a UDP
@@ -131,7 +132,14 @@ impl super::DownstreamReceiveWorkerConfig {
                         }
                         last_received_at = Some(received_at);
 
-                        Self::process_task(packet, worker_id, &config, &sessions, &mut error_acc);
+                        Self::process_task(
+                            packet,
+                            worker_id,
+                            &config,
+                            &sessions,
+                            &mut error_acc,
+                            &mut destinations,
+                        );
                     }
                     Err(error) => {
                         tracing::error!(%error, "error receiving packet");
