@@ -1,0 +1,1 @@
+searchState.loadedDescShard("quilkin_macros", 0, "Includes generated Protobuf definitions from <code>tonic</code>.")

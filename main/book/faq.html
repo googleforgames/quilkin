@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html lang="en" class="light" dir="ltr">
+<html lang="en" class="light sidebar-visible" dir="ltr">
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
@@ -7,7 +7,7 @@
 
 
         <!-- Custom HTML head -->
-        
+
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff">
@@ -30,15 +30,17 @@
 
         <!-- Custom theme stylesheets -->
 
-    </head>
-    <body class="sidebar-visible no-js">
-    <div id="body-container">
+
         <!-- Provide site root to javascript -->
         <script>
             var path_to_root = "";
             var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
         </script>
-
+        <!-- Start loading toc.js asap -->
+        <script src="toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
             try {
@@ -60,19 +62,16 @@
             var theme;
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
-            var html = document.querySelector('html');
+            const html = document.documentElement;
             html.classList.remove('light')
             html.classList.add(theme);
-            var body = document.querySelector('body');
-            body.classList.remove('no-js')
-            body.classList.add('js');
+            html.classList.add("js");
         </script>
 
         <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
 
         <!-- Hide / unhide sidebar before it is displayed -->
         <script>
-            var body = document.querySelector('body');
             var sidebar = null;
             var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
             if (document.body.clientWidth >= 1080) {
@@ -82,45 +81,25 @@
                 sidebar = 'hidden';
             }
             sidebar_toggle.checked = sidebar === 'visible';
-            body.classList.remove('sidebar-visible');
-            body.classList.add("sidebar-" + sidebar);
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">Introduction</a></li><li class="chapter-item expanded affix "><a href="installation.html">Installation</a></li><li class="chapter-item expanded affix "><a href="faq.html" class="active">FAQ</a></li><li class="chapter-item expanded affix "><li class="part-title">Quickstart Guides</li><li class="chapter-item expanded "><a href="deployment/quickstarts/netcat.html"><strong aria-hidden="true">1.</strong> Netcat</a></li><li class="chapter-item expanded "><a href="deployment/quickstarts/agones-xonotic-sidecar.html"><strong aria-hidden="true">2.</strong> Agones + Xonotic (Sidecar)</a></li><li class="chapter-item expanded "><a href="deployment/quickstarts/agones-xonotic-xds.html"><strong aria-hidden="true">3.</strong> Agones + Xonotic (xDS)</a></li><li class="chapter-item expanded "><a href="deployment/quickstarts/agones-xonotic-relay.html"><strong aria-hidden="true">4.</strong> Agones + Xonotic (Relay)</a></li><li class="chapter-item expanded affix "><li class="part-title">Services</li><li class="chapter-item expanded "><a href="services/proxy.html"><strong aria-hidden="true">5.</strong> Proxy</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="services/proxy/configuration.html"><strong aria-hidden="true">5.1.</strong> Configuration File</a></li><li class="chapter-item expanded "><a href="services/proxy/filters.html"><strong aria-hidden="true">5.2.</strong> Filters</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="services/proxy/filters/capture.html"><strong aria-hidden="true">5.2.1.</strong> Capture</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/compress.html"><strong aria-hidden="true">5.2.2.</strong> Compress</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/concatenate.html"><strong aria-hidden="true">5.2.3.</strong> Concatenate</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/debug.html"><strong aria-hidden="true">5.2.4.</strong> Debug</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/drop.html"><strong aria-hidden="true">5.2.5.</strong> Drop</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/firewall.html"><strong aria-hidden="true">5.2.6.</strong> Firewall</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/load_balancer.html"><strong aria-hidden="true">5.2.7.</strong> Load Balancer</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/local_rate_limit.html"><strong aria-hidden="true">5.2.8.</strong> Local Rate Limit</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/match.html"><strong aria-hidden="true">5.2.9.</strong> Match</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/pass.html"><strong aria-hidden="true">5.2.10.</strong> Pass</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/timestamp.html"><strong aria-hidden="true">5.2.11.</strong> Timestamp</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/token_router.html"><strong aria-hidden="true">5.2.12.</strong> Token Router</a></li><li class="chapter-item expanded "><a href="services/proxy/filters/writing_custom_filters.html"><strong aria-hidden="true">5.2.13.</strong> Writing Custom Filters</a></li></ol></li><li class="chapter-item expanded "><a href="services/proxy/qcmp.html"><strong aria-hidden="true">5.3.</strong> Control Message Protocol</a></li><li class="chapter-item expanded "><a href="services/proxy/metrics.html"><strong aria-hidden="true">5.4.</strong> Metrics</a></li></ol></li><li class="chapter-item expanded "><li class="spacer"></li><li class="chapter-item expanded "><a href="services/xds.html"><strong aria-hidden="true">6.</strong> Control Plane</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="services/xds/metrics.html"><strong aria-hidden="true">6.1.</strong> Metrics</a></li><li class="chapter-item expanded "><div><strong aria-hidden="true">6.2.</strong> Providers</div></li><li><ol class="section"><li class="chapter-item expanded "><a href="services/xds/providers/agones.html"><strong aria-hidden="true">6.2.1.</strong> Agones</a></li><li class="chapter-item expanded "><a href="services/xds/providers/filesystem.html"><strong aria-hidden="true">6.2.2.</strong> Filesystem</a></li></ol></li><li class="chapter-item expanded "><a href="services/xds/proto/index.html"><strong aria-hidden="true">6.3.</strong> Protobuf Reference</a></li></ol></li><li class="chapter-item expanded "><li class="spacer"></li><li class="chapter-item expanded "><a href="services/relay.html"><strong aria-hidden="true">7.</strong> Relay</a></li><li><ol class="section"><li class="chapter-item expanded "><div><strong aria-hidden="true">7.1.</strong> Metrics</div></li><li class="chapter-item expanded "><a href="services/agent.html"><strong aria-hidden="true">7.2.</strong> Agents</a></li></ol></li><li class="chapter-item expanded "><li class="part-title">SDKs</li><li class="chapter-item expanded "><a href="sdks/unreal-engine.html"><strong aria-hidden="true">8.</strong> Unreal Engine</a></li><li class="chapter-item expanded affix "><li class="part-title">Deployment</li><li class="chapter-item expanded "><a href="deployment/admin.html"><strong aria-hidden="true">9.</strong> Administration</a></li><li class="chapter-item expanded "><a href="deployment/examples.html"><strong aria-hidden="true">10.</strong> Architecture Examples</a></li><li class="chapter-item expanded affix "><li class="part-title">Third Party</li><li class="chapter-item expanded "><a href="third-party/presentations.html"><strong aria-hidden="true">11.</strong> Videos and Presentations</a></li></ol>
-            </div>
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
             </div>
         </nav>
 
-        <!-- Track and set sidebar scroll position -->
-        <script>
-            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
-            sidebarScrollbox.addEventListener('click', function(e) {
-                if (e.target.tagName === 'A') {
-                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
-                }
-            }, { passive: true });
-            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
-            sessionStorage.removeItem('sidebar-scroll');
-            if (sidebarScrollTop) {
-                // preserve sidebar scroll position when navigating via links within sidebar
-                sidebarScrollbox.scrollTop = sidebarScrollTop;
-            } else {
-                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
-                var activeSection = document.querySelector('#sidebar .active');
-                if (activeSection) {
-                    activeSection.scrollIntoView({ block: 'center' });
-                }
-            }
-        </script>
-
         <div id="page-wrapper" class="page-wrapper">
 
             <div class="page">
-                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar-hover-placeholder"></div>
                 <div id="menu-bar" class="menu-bar sticky">
                     <div class="left-buttons">
                         <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">

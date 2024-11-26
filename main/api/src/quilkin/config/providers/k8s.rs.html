@@ -1,6 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/config/providers/k8s.rs`."><title>k8s.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="quilkin" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.1 (7cf61ebde 2024-03-27)" data-channel="1.77.1" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
-            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
-    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../quilkin/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/config/providers/k8s.rs`."><title>k8s.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-c5d6553a23f1e5a6.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="quilkin" data-themes="" data-resource-suffix="" data-rustdoc-version="1.81.0 (eeb90cda1 2024-09-04)" data-channel="1.81.0" data-search-js="search-d234aafac6c221dd.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-d2fab2bf619172d3.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -195,6 +193,33 @@
 <a href="#193" id="193">193</a>
 <a href="#194" id="194">194</a>
 <a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
@@ -217,7 +242,7 @@
 
 <span class="kw">use </span>futures::Stream;
 <span class="kw">use </span>k8s_openapi::api::core::v1::ConfigMap;
-<span class="kw">use </span>kube::runtime::watcher::Event;
+<span class="kw">use </span>kube::{core::DeserializeGuard, runtime::watcher::Event};
 
 <span class="kw">use </span>agones::GameServer;
 
@@ -228,7 +253,7 @@
     namespace: <span class="kw">impl </span>AsRef&lt;str&gt;,
     config: Arc&lt;<span class="kw">crate</span>::Config&gt;,
 ) -&gt; <span class="kw">impl </span>Stream&lt;Item = <span class="kw">crate</span>::Result&lt;(), eyre::Error&gt;&gt; {
-    <span class="macro">async_stream::stream! </span>{
+    <span class="macro">async_stream::stream!</span> {
         <span class="kw">let </span><span class="kw-2">mut </span>cmap = <span class="prelude-val">None</span>;
         <span class="kw">for await </span>event <span class="kw">in </span>configmap_events(client, namespace) {
             <span class="macro">tracing::trace!</span>(<span class="string">"new configmap event"</span>);
@@ -301,10 +326,13 @@
 <span class="kw">fn </span>gameserver_events(
     client: kube::Client,
     namespace: <span class="kw">impl </span>AsRef&lt;str&gt;,
-) -&gt; <span class="kw">impl </span>Stream&lt;Item = <span class="prelude-ty">Result</span>&lt;Event&lt;GameServer&gt;, kube::runtime::watcher::Error&gt;&gt; {
+) -&gt; <span class="kw">impl </span>Stream&lt;Item = <span class="prelude-ty">Result</span>&lt;Event&lt;DeserializeGuard&lt;GameServer&gt;&gt;, kube::runtime::watcher::Error&gt;&gt;
+{
     <span class="kw">let </span>gameservers_namespace = namespace.as_ref();
-    <span class="kw">let </span>gameservers: kube::Api&lt;GameServer&gt; = kube::Api::namespaced(client, gameservers_namespace);
-    <span class="kw">let </span>gs_writer = kube::runtime::reflector::store::Writer::&lt;GameServer&gt;::default();
+    <span class="kw">let </span>gameservers: kube::Api&lt;DeserializeGuard&lt;GameServer&gt;&gt; =
+        kube::Api::namespaced(client, gameservers_namespace);
+    <span class="kw">let </span>gs_writer =
+        kube::runtime::reflector::store::Writer::&lt;DeserializeGuard&lt;GameServer&gt;&gt;::default();
     <span class="kw">let </span><span class="kw-2">mut </span>config = kube::runtime::watcher::Config::default()
         <span class="comment">// Default timeout is 5 minutes, far too slow for us to react.
         </span>.timeout(<span class="number">15</span>)
@@ -325,13 +353,21 @@
     locality: <span class="prelude-ty">Option</span>&lt;Locality&gt;,
     address_selector: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::config::AddressSelector&gt;,
 ) -&gt; <span class="kw">impl </span>Stream&lt;Item = <span class="kw">crate</span>::Result&lt;(), eyre::Error&gt;&gt; {
-    <span class="macro">async_stream::stream! </span>{
+    <span class="macro">async_stream::stream!</span> {
         <span class="kw">let </span><span class="kw-2">mut </span>servers = BTreeSet::new();
 
         <span class="kw">for await </span>event <span class="kw">in </span>gameserver_events(client, namespace) {
             <span class="kw">let </span>ads = address_selector.as_ref();
             <span class="kw">match </span>event<span class="question-mark">? </span>{
-                Event::Apply(server) =&gt; {
+                Event::Apply(result) =&gt; {
+                    <span class="kw">let </span>server = <span class="kw">match </span>result.<span class="number">0 </span>{
+                        <span class="prelude-val">Ok</span>(server) =&gt; server,
+                        <span class="prelude-val">Err</span>(error) =&gt; {
+                            <span class="macro">tracing::debug!</span>(%error, <span class="string">"couldn't decode gameserver event"</span>);
+                            <span class="kw">continue</span>;
+                        }
+                    };
+
                     <span class="macro">tracing::debug!</span>(<span class="string">"received applied event from k8s"</span>);
                     <span class="kw">if </span>!server.is_allocated() {
                         <span class="kw">yield </span><span class="prelude-val">Ok</span>(());
@@ -348,7 +384,15 @@
                         .replace(locality.clone(), endpoint);
                 }
                 Event::Init =&gt; {},
-                Event::InitApply(server) =&gt; {
+                Event::InitApply(result) =&gt; {
+                    <span class="kw">let </span>server = <span class="kw">match </span>result.<span class="number">0 </span>{
+                        <span class="prelude-val">Ok</span>(server) =&gt; server,
+                        <span class="prelude-val">Err</span>(error) =&gt; {
+                            <span class="macro">tracing::debug!</span>(%error, <span class="string">"couldn't decode gameserver event"</span>);
+                            <span class="kw">continue</span>;
+                        }
+                    };
+
                     <span class="kw">if </span>server.is_allocated() {
                         <span class="kw">if let </span><span class="prelude-val">Some</span>(ep) = server.endpoint(ads) {
                             servers.insert(ep);
@@ -365,7 +409,15 @@
 
                     config.clusters.write().insert(locality.clone(), std::mem::take(<span class="kw-2">&amp;mut </span>servers));
                 }
-                Event::Delete(server) =&gt; {
+                Event::Delete(result) =&gt; {
+                    <span class="kw">let </span>server = <span class="kw">match </span>result.<span class="number">0 </span>{
+                        <span class="prelude-val">Ok</span>(server) =&gt; server,
+                        <span class="prelude-val">Err</span>(error) =&gt; {
+                            <span class="macro">tracing::debug!</span>(%error, <span class="string">"couldn't decode gameserver event"</span>);
+                            <span class="kw">continue</span>;
+                        }
+                    };
+
                     <span class="macro">tracing::debug!</span>(<span class="string">"received delete event from k8s"</span>);
                     <span class="kw">let </span>found = <span class="kw">if let </span><span class="prelude-val">Some</span>(endpoint) = server.endpoint(ads) {
                         config.clusters.write().remove_endpoint(<span class="kw-2">&amp;</span>endpoint)
