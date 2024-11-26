@@ -28,7 +28,7 @@ use crate::filters::ReadContext;
 /// EndpointChooser chooses from a set of endpoints that a proxy is connected to.
 pub trait EndpointChooser: Send + Sync {
     /// choose_endpoints asks for the next endpoint(s) to use.
-    fn choose_endpoints(&self, endpoints: &mut ReadContext);
+    fn choose_endpoints(&self, endpoints: &mut ReadContext<'_>);
 }
 
 /// RoundRobinEndpointChooser chooses endpoints in round-robin order.
@@ -45,15 +45,16 @@ impl RoundRobinEndpointChooser {
 }
 
 impl EndpointChooser for RoundRobinEndpointChooser {
-    fn choose_endpoints(&self, ctx: &mut ReadContext) {
+    fn choose_endpoints(&self, ctx: &mut ReadContext<'_>) {
         let count = self.next_endpoint.fetch_add(1, Ordering::Relaxed);
         // Note: The index is guaranteed to be in range.
-        ctx.destinations = vec![ctx
-            .endpoints
-            .nth_endpoint(count % ctx.endpoints.num_of_endpoints())
-            .unwrap()
-            .address
-            .clone()];
+        ctx.destinations.push(
+            ctx.endpoints
+                .nth_endpoint(count % ctx.endpoints.num_of_endpoints())
+                .unwrap()
+                .address
+                .clone(),
+        );
     }
 }
 
@@ -61,10 +62,11 @@ impl EndpointChooser for RoundRobinEndpointChooser {
 pub struct RandomEndpointChooser;
 
 impl EndpointChooser for RandomEndpointChooser {
-    fn choose_endpoints(&self, ctx: &mut ReadContext) {
+    fn choose_endpoints(&self, ctx: &mut ReadContext<'_>) {
         // The index is guaranteed to be in range.
         let index = thread_rng().gen_range(0..ctx.endpoints.num_of_endpoints());
-        ctx.destinations = vec![ctx.endpoints.nth_endpoint(index).unwrap().address.clone()];
+        ctx.destinations
+            .push(ctx.endpoints.nth_endpoint(index).unwrap().address.clone());
     }
 }
 
@@ -72,14 +74,15 @@ impl EndpointChooser for RandomEndpointChooser {
 pub struct HashEndpointChooser;
 
 impl EndpointChooser for HashEndpointChooser {
-    fn choose_endpoints(&self, ctx: &mut ReadContext) {
+    fn choose_endpoints(&self, ctx: &mut ReadContext<'_>) {
         let mut hasher = DefaultHasher::new();
         ctx.source.hash(&mut hasher);
-        ctx.destinations = vec![ctx
-            .endpoints
-            .nth_endpoint(hasher.finish() as usize % ctx.endpoints.num_of_endpoints())
-            .unwrap()
-            .address
-            .clone()];
+        ctx.destinations.push(
+            ctx.endpoints
+                .nth_endpoint(hasher.finish() as usize % ctx.endpoints.num_of_endpoints())
+                .unwrap()
+                .address
+                .clone(),
+        );
     }
 }

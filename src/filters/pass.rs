@@ -31,7 +31,7 @@ impl Pass {
 
 impl Filter for Pass {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip_all))]
-    fn read(&self, _: &mut ReadContext) -> Result<(), FilterError> {
+    fn read(&self, _: &mut ReadContext<'_>) -> Result<(), FilterError> {
         Ok(())
     }
 

@@ -28,11 +28,11 @@ use crate::{
 
 /// The input arguments to [`Filter::read`].
 #[non_exhaustive]
-pub struct ReadContext {
+pub struct ReadContext<'ctx> {
     /// The upstream endpoints that the packet will be forwarded to.
     pub endpoints: Arc<ClusterMap>,
     /// The upstream endpoints that the packet will be forwarded to.
-    pub destinations: Vec<EndpointAddress>,
+    pub destinations: &'ctx mut Vec<EndpointAddress>,
     /// The source of the received packet.
     pub source: EndpointAddress,
     /// Contents of the received packet.
@@ -41,13 +41,18 @@ pub struct ReadContext {
     pub metadata: DynamicMetadata,
 }
 
-impl ReadContext {
+impl<'ctx> ReadContext<'ctx> {
     /// Creates a new [`ReadContext`].
     #[inline]
-    pub fn new(endpoints: Arc<ClusterMap>, source: EndpointAddress, contents: PoolBuffer) -> Self {
+    pub fn new(
+        endpoints: Arc<ClusterMap>,
+        source: EndpointAddress,
+        contents: PoolBuffer,
+        destinations: &'ctx mut Vec<EndpointAddress>,
+    ) -> Self {
         Self {
             endpoints,
-            destinations: Vec::new(),
+            destinations,
             source,
             contents,
             metadata: <_>::default(),

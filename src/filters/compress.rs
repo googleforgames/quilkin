@@ -56,7 +56,7 @@ impl Compress {
 
 impl Filter for Compress {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    fn read(&self, ctx: &mut ReadContext<'_>) -> Result<(), FilterError> {
         let original_size = ctx.contents.len();
 
         match self.on_read {
@@ -296,10 +296,12 @@ mod tests {
         let endpoints = crate::net::cluster::ClusterMap::new_default(
             [Endpoint::new("127.0.0.1:81".parse().unwrap())].into(),
         );
+        let mut dest = Vec::new();
         let mut read_context = ReadContext::new(
             endpoints.into(),
             "127.0.0.1:8080".parse().unwrap(),
             alloc_buffer(&expected),
+            &mut dest,
         );
         compress.read(&mut read_context).expect("should compress");
 
@@ -356,11 +358,13 @@ mod tests {
         let endpoints = crate::net::cluster::ClusterMap::new_default(
             [Endpoint::new("127.0.0.1:81".parse().unwrap())].into(),
         );
+        let mut dest = Vec::new();
         assert!(compression
             .read(&mut ReadContext::new(
                 endpoints.into(),
                 "127.0.0.1:8080".parse().unwrap(),
                 alloc_buffer(b"hello"),
+                &mut dest,
             ))
             .is_err());
     }
@@ -379,10 +383,12 @@ mod tests {
         let endpoints = crate::net::cluster::ClusterMap::new_default(
             [Endpoint::new("127.0.0.1:81".parse().unwrap())].into(),
         );
+        let mut dest = Vec::new();
         let mut read_context = ReadContext::new(
             endpoints.into(),
             "127.0.0.1:8080".parse().unwrap(),
             alloc_buffer(b"hello"),
+            &mut dest,
         );
         compression.read(&mut read_context).unwrap();
         assert_eq!(b"hello", &*read_context.contents);
@@ -474,10 +480,12 @@ mod tests {
         let endpoints = crate::net::cluster::ClusterMap::new_default(
             [Endpoint::new("127.0.0.1:81".parse().unwrap())].into(),
         );
+        let mut dest = Vec::new();
         let mut read_context = ReadContext::new(
             endpoints.into(),
             "127.0.0.1:8080".parse().unwrap(),
             write_context.contents,
+            &mut dest,
         );
 
         filter.read(&mut read_context).expect("should decompress");

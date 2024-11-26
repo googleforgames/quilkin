@@ -58,7 +58,7 @@ impl Capture {
 
 impl Filter for Capture {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    fn read(&self, ctx: &mut ReadContext<'_>) -> Result<(), FilterError> {
         let capture = self.capture.capture(&mut ctx.contents);
         ctx.metadata.insert(
             self.is_present_key,
@@ -160,11 +160,13 @@ mod tests {
         let endpoints = crate::net::cluster::ClusterMap::new_default(
             [Endpoint::new("127.0.0.1:81".parse().unwrap())].into(),
         );
+        let mut dest = Vec::new();
         assert!(filter
             .read(&mut ReadContext::new(
                 endpoints.into(),
                 (std::net::Ipv4Addr::LOCALHOST, 80).into(),
                 alloc_buffer(b"abc"),
+                &mut dest,
             ))
             .is_err());
     }
@@ -237,10 +239,12 @@ mod tests {
         let endpoints = crate::net::cluster::ClusterMap::new_default(
             [Endpoint::new("127.0.0.1:81".parse().unwrap())].into(),
         );
+        let mut dest = Vec::new();
         let mut context = ReadContext::new(
             endpoints.into(),
             "127.0.0.1:80".parse().unwrap(),
             alloc_buffer(b"helloabc"),
+            &mut dest,
         );
 
         filter.read(&mut context).unwrap();
