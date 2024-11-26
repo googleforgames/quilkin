@@ -310,7 +310,7 @@ mod tests {
         assert_write_no_change(&filter);
     }
 
-    fn new_ctx<'ctx>(dest: &'ctx mut Vec<crate::net::EndpointAddress>) -> ReadContext<'ctx> {
+    fn new_ctx(dest: &mut Vec<crate::net::EndpointAddress>) -> ReadContext<'_> {
         let endpoint1 = Endpoint::with_metadata(
             "127.0.0.1:80".parse().unwrap(),
             Metadata {

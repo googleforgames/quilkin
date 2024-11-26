@@ -507,7 +507,7 @@ where
 
     pub fn addresses_for_token(&self, token: Token, addrs: &mut Vec<EndpointAddress>) {
         if let Some(ma) = self.token_map.get(&token.0) {
-            addrs.extend(ma.value().into_iter().cloned());
+            addrs.extend(ma.value().iter().cloned());
         }
     }
 }
