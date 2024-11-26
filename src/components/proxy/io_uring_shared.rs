@@ -254,6 +254,7 @@ pub enum PacketProcessorCtx {
         sessions: Arc<crate::components::proxy::SessionPool>,
         error_acc: super::error::ErrorAccumulator,
         worker_id: usize,
+        destinations: Vec<crate::net::EndpointAddress>,
     },
     SessionPool {
         pool: Arc<crate::components::proxy::SessionPool>,
@@ -326,6 +327,7 @@ fn process_packet(
             sessions,
             worker_id,
             error_acc,
+            destinations,
         } => {
             let received_at = UtcTimestamp::now();
             if let Some(last_received_at) = last_received_at {
@@ -340,7 +342,12 @@ fn process_packet(
             };
 
             crate::components::proxy::packet_router::DownstreamReceiveWorkerConfig::process_task(
-                ds_packet, *worker_id, config, sessions, error_acc,
+                ds_packet,
+                *worker_id,
+                config,
+                sessions,
+                error_acc,
+                destinations,
             );
 
             packet_processed_event.write(1);

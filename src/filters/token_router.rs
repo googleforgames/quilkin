@@ -286,6 +286,7 @@ mod tests {
         ctx.metadata
             .insert(CAPTURED_BYTES.into(), Value::Bytes(b"123".to_vec().into()));
         assert_read(&filter, ctx);
+        dest.clear();
 
         // invalid key
         let mut ctx = new_ctx(&mut dest);
@@ -293,6 +294,7 @@ mod tests {
             .insert(CAPTURED_BYTES.into(), Value::Bytes(b"567".to_vec().into()));
 
         assert!(filter.read(&mut ctx).is_err());
+        dest.clear();
 
         // no key
         let mut ctx = new_ctx(&mut dest);
