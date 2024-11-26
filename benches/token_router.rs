@@ -31,22 +31,31 @@ fn token_router(b: Bencher, token_kind: &str) {
         use rand::seq::SliceRandom as _;
         let tok = tokens.choose(&mut rand).unwrap();
 
-        let mut rc = quilkin::filters::ReadContext::new(
-            cm.clone(),
-            quilkin::net::EndpointAddress::LOCALHOST,
-            pool.clone().alloc(),
-        );
-        rc.metadata.insert(
+        let mut metadata = quilkin::net::endpoint::DynamicMetadata::default();
+        metadata.insert(
             quilkin::net::endpoint::metadata::Key::from_static(
                 quilkin::filters::capture::CAPTURED_BYTES,
             ),
             quilkin::net::endpoint::metadata::Value::Bytes((*tok).clone().into()),
         );
 
-        rc
+        (
+            cm.clone(),
+            pool.clone().alloc(),
+            Vec::with_capacity(1),
+            metadata,
+        )
     })
     .counter(divan::counter::BytesCount::new(total_token_size))
-    .bench_local_values(|mut rc| {
+    .bench_local_values(|(cm, buffer, mut dest, metadata)| {
+        let mut rc = quilkin::filters::ReadContext {
+            endpoints: cm,
+            destinations: &mut dest,
+            source: quilkin::net::EndpointAddress::LOCALHOST,
+            contents: buffer,
+            metadata,
+        };
+
         let _ = divan::black_box(filter.sync_read(&mut rc));
     })
 }

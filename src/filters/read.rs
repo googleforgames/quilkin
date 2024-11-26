@@ -27,7 +27,6 @@ use crate::{
 };
 
 /// The input arguments to [`Filter::read`].
-#[non_exhaustive]
 pub struct ReadContext<'ctx> {
     /// The upstream endpoints that the packet will be forwarded to.
     pub endpoints: Arc<ClusterMap>,
