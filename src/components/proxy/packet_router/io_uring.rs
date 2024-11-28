@@ -14,18 +14,18 @@
  *  limitations under the License.
  */
 
+use crate::components::proxy;
 use eyre::Context as _;
 
 impl super::DownstreamReceiveWorkerConfig {
     pub async fn spawn(
         self,
-        shutdown: crate::ShutdownRx,
-    ) -> eyre::Result<std::sync::mpsc::Receiver<()>> {
+        pending_sends: (proxy::PendingSends, proxy::PacketSendReceiver),
+    ) -> eyre::Result<()> {
         use crate::components::proxy::io_uring_shared;
 
         let Self {
             worker_id,
-            upstream_receiver,
             port,
             config,
             sessions,
@@ -45,10 +45,10 @@ impl super::DownstreamReceiveWorkerConfig {
                     sessions,
                     error_acc: super::super::error::ErrorAccumulator::new(error_sender),
                     worker_id,
+                    destinations: Vec::with_capacity(1),
                 },
-                io_uring_shared::PacketReceiver::Router(upstream_receiver),
+                pending_sends,
                 buffer_pool,
-                shutdown,
             )
             .context("failed to spawn io-uring loop")
     }

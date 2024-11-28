@@ -50,7 +50,7 @@ impl StaticFilter for Firewall {
 
 impl Filter for Firewall {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    fn read(&self, ctx: &mut ReadContext<'_>) -> Result<(), FilterError> {
         for rule in &self.on_read {
             if rule.contains(ctx.source.to_socket_addr()?) {
                 return match rule.action {
@@ -134,13 +134,25 @@ mod tests {
         let endpoints = crate::net::cluster::ClusterMap::new_default(
             [Endpoint::new((Ipv4Addr::LOCALHOST, 8080).into())].into(),
         );
-        let mut ctx = ReadContext::new(endpoints.into(), (local_ip, 80).into(), alloc_buffer([]));
+        let mut dest = Vec::new();
+        let mut ctx = ReadContext::new(
+            endpoints.into(),
+            (local_ip, 80).into(),
+            alloc_buffer([]),
+            &mut dest,
+        );
         assert!(firewall.read(&mut ctx).is_ok());
 
         let endpoints = crate::net::cluster::ClusterMap::new_default(
             [Endpoint::new((Ipv4Addr::LOCALHOST, 8080).into())].into(),
         );
-        let mut ctx = ReadContext::new(endpoints.into(), (local_ip, 2000).into(), alloc_buffer([]));
+        let mut dest = Vec::new();
+        let mut ctx = ReadContext::new(
+            endpoints.into(),
+            (local_ip, 2000).into(),
+            alloc_buffer([]),
+            &mut dest,
+        );
         assert!(logs_contain("quilkin::filters::firewall")); // the given name to the the logger by tracing
         assert!(logs_contain("Allow"));
 

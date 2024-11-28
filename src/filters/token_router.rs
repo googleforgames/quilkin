@@ -33,12 +33,12 @@ pub struct TokenRouter {
 impl TokenRouter {
     /// Non-async version of [`Filter::read`], as this filter does no actual async
     /// operations. Used in benchmarking.
-    pub fn sync_read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    pub fn sync_read(&self, ctx: &mut ReadContext<'_>) -> Result<(), FilterError> {
         match ctx.metadata.get(&self.config.metadata_key) {
             Some(metadata::Value::Bytes(token)) => {
                 let tok = crate::net::cluster::Token::new(token);
 
-                ctx.destinations = ctx.endpoints.addresses_for_token(tok);
+                ctx.endpoints.addresses_for_token(tok, ctx.destinations);
 
                 if ctx.destinations.is_empty() {
                     Err(FilterError::TokenRouter(RouterError::NoEndpointMatch {
@@ -69,7 +69,7 @@ impl StaticFilter for TokenRouter {
 }
 
 impl Filter for TokenRouter {
-    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    fn read(&self, ctx: &mut ReadContext<'_>) -> Result<(), FilterError> {
         self.sync_read(ctx)
     }
 }
@@ -89,7 +89,7 @@ impl StaticFilter for HashedTokenRouter {
 }
 
 impl Filter for HashedTokenRouter {
-    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    fn read(&self, ctx: &mut ReadContext<'_>) -> Result<(), FilterError> {
         self.0.sync_read(ctx)
     }
 }
@@ -256,7 +256,8 @@ mod tests {
             }
             .into(),
         );
-        let mut ctx = new_ctx();
+        let mut dest = Vec::new();
+        let mut ctx = new_ctx(&mut dest);
         ctx.metadata
             .insert(TOKEN_KEY.into(), Value::Bytes(b"123".to_vec().into()));
         assert_read(&filter, ctx);
@@ -265,7 +266,8 @@ mod tests {
     #[tokio::test]
     async fn factory_empty_config() {
         let filter = TokenRouter::from_config(None);
-        let mut ctx = new_ctx();
+        let mut dest = Vec::new();
+        let mut ctx = new_ctx(&mut dest);
         ctx.metadata
             .insert(CAPTURED_BYTES.into(), Value::Bytes(b"123".to_vec().into()));
         assert_read(&filter, ctx);
@@ -278,21 +280,24 @@ mod tests {
             metadata_key: CAPTURED_BYTES.into(),
         };
         let filter = TokenRouter::from_config(config.into());
+        let mut dest = Vec::new();
 
-        let mut ctx = new_ctx();
+        let mut ctx = new_ctx(&mut dest);
         ctx.metadata
             .insert(CAPTURED_BYTES.into(), Value::Bytes(b"123".to_vec().into()));
         assert_read(&filter, ctx);
+        dest.clear();
 
         // invalid key
-        let mut ctx = new_ctx();
+        let mut ctx = new_ctx(&mut dest);
         ctx.metadata
             .insert(CAPTURED_BYTES.into(), Value::Bytes(b"567".to_vec().into()));
 
         assert!(filter.read(&mut ctx).is_err());
+        dest.clear();
 
         // no key
-        let mut ctx = new_ctx();
+        let mut ctx = new_ctx(&mut dest);
         assert!(filter.read(&mut ctx).is_err());
     }
 
@@ -305,7 +310,7 @@ mod tests {
         assert_write_no_change(&filter);
     }
 
-    fn new_ctx() -> ReadContext {
+    fn new_ctx(dest: &mut Vec<crate::net::EndpointAddress>) -> ReadContext<'_> {
         let endpoint1 = Endpoint::with_metadata(
             "127.0.0.1:80".parse().unwrap(),
             Metadata {
@@ -327,10 +332,11 @@ mod tests {
             endpoints.into(),
             "127.0.0.1:100".parse().unwrap(),
             pool.alloc_slice(b"hello"),
+            dest,
         )
     }
 
-    fn assert_read<F>(filter: &F, mut ctx: ReadContext)
+    fn assert_read<F>(filter: &F, mut ctx: ReadContext<'_>)
     where
         F: Filter + ?Sized,
     {

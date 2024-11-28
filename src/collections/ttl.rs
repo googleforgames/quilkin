@@ -52,11 +52,13 @@ impl<V> Value<V> {
     /// Get the expiration time for this value. The returned value is the
     /// number of seconds relative to some reference point (e.g UNIX_EPOCH), based
     /// on the clock being used.
+    #[inline]
     fn expiration_secs(&self) -> u64 {
         self.expires_at.load(Ordering::Relaxed)
     }
 
     /// Update the value's expiration time to (now + TTL).
+    #[inline]
     fn update_expiration(&self, ttl: Duration) {
         match self.clock.compute_expiration_secs(ttl) {
             Ok(new_expiration_time) => {
@@ -161,6 +163,7 @@ where
     /// Returns the current time as the number of seconds relative to some initial
     /// reference point (e.g UNIX_EPOCH), based on the clock implementation being used.
     /// In tests, this will be driven by [`tokio::time`]
+    #[inline]
     pub(crate) fn now_relative_secs(&self) -> u64 {
         self.0.clock.now_relative_secs().unwrap_or_default()
     }
@@ -243,6 +246,12 @@ where
         let removed = self.0.inner.remove(&key, &guard).is_some();
         guard.flush();
         removed
+    }
+
+    /// Removes all entries from the map
+    #[inline]
+    pub fn clear(&self) {
+        self.0.inner.clear();
     }
 }
 

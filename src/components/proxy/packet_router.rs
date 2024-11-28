@@ -14,10 +14,7 @@
  *  limitations under the License.
  */
 
-use super::{
-    sessions::{DownstreamReceiver, SessionKey},
-    PipelineError, SessionPool,
-};
+use super::{sessions::SessionKey, PipelineError, SessionPool};
 use crate::{
     filters::{Filter as _, ReadContext},
     metrics,
@@ -44,8 +41,6 @@ pub(crate) struct DownstreamPacket {
 pub struct DownstreamReceiveWorkerConfig {
     /// ID of the worker.
     pub worker_id: usize,
-    /// Socket with reused port from which the worker receives packets.
-    pub upstream_receiver: DownstreamReceiver,
     pub port: u16,
     pub config: Arc<Config>,
     pub sessions: Arc<SessionPool>,
@@ -61,6 +56,7 @@ impl DownstreamReceiveWorkerConfig {
         config: &Arc<Config>,
         sessions: &Arc<SessionPool>,
         error_acc: &mut super::error::ErrorAccumulator,
+        destinations: &mut Vec<crate::net::EndpointAddress>,
     ) {
         tracing::trace!(
             id = worker_id,
@@ -70,7 +66,7 @@ impl DownstreamReceiveWorkerConfig {
         );
 
         let timer = metrics::processing_time(metrics::READ).start_timer();
-        match Self::process_downstream_received_packet(packet, config, sessions) {
+        match Self::process_downstream_received_packet(packet, config, sessions, destinations) {
             Ok(()) => {
                 error_acc.maybe_send();
             }
@@ -92,6 +88,7 @@ impl DownstreamReceiveWorkerConfig {
         packet: DownstreamPacket,
         config: &Arc<Config>,
         sessions: &Arc<SessionPool>,
+        destinations: &mut Vec<crate::net::EndpointAddress>,
     ) -> Result<(), PipelineError> {
         if !config.clusters.read().has_endpoints() {
             tracing::trace!("no upstream endpoints");
@@ -103,21 +100,18 @@ impl DownstreamReceiveWorkerConfig {
             config.clusters.clone_value(),
             packet.source.into(),
             packet.contents,
+            destinations,
         );
         filters.read(&mut context).map_err(PipelineError::Filter)?;
 
-        let ReadContext {
-            destinations,
-            contents,
-            ..
-        } = context;
+        let ReadContext { contents, .. } = context;
 
         // Similar to bytes::BytesMut::freeze, we turn the mutable pool buffer
         // into an immutable one with its own internal arc so it can be cloned
         // cheaply and returned to the pool once all references are dropped
         let contents = contents.freeze();
 
-        for epa in destinations {
+        for epa in destinations.drain(0..) {
             let session_key = SessionKey {
                 source: packet.source,
                 dest: epa.to_socket_addr()?,
@@ -138,21 +132,17 @@ impl DownstreamReceiveWorkerConfig {
 pub async fn spawn_receivers(
     config: Arc<Config>,
     socket: socket2::Socket,
-    num_workers: usize,
+    worker_sends: Vec<(super::PendingSends, super::PacketSendReceiver)>,
     sessions: &Arc<SessionPool>,
-    upstream_receiver: DownstreamReceiver,
     buffer_pool: Arc<crate::pool::BufferPool>,
-    shutdown: crate::ShutdownRx,
-) -> crate::Result<Vec<std::sync::mpsc::Receiver<()>>> {
+) -> crate::Result<()> {
     let (error_sender, mut error_receiver) = mpsc::channel(128);
 
     let port = crate::net::socket_port(&socket);
 
-    let mut worker_notifications = Vec::with_capacity(num_workers);
-    for worker_id in 0..num_workers {
+    for (worker_id, ws) in worker_sends.into_iter().enumerate() {
         let worker = DownstreamReceiveWorkerConfig {
             worker_id,
-            upstream_receiver: upstream_receiver.clone(),
             port,
             config: config.clone(),
             sessions: sessions.clone(),
@@ -160,7 +150,7 @@ pub async fn spawn_receivers(
             buffer_pool: buffer_pool.clone(),
         };
 
-        worker_notifications.push(worker.spawn(shutdown.clone()).await?);
+        worker.spawn(ws).await?;
     }
 
     drop(error_sender);
@@ -198,5 +188,5 @@ pub async fn spawn_receivers(
         }
     });
 
-    Ok(worker_notifications)
+    Ok(())
 }

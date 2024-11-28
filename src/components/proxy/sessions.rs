@@ -18,38 +18,38 @@ use std::{
     collections::{HashMap, HashSet},
     fmt,
     net::SocketAddr,
-    sync::Arc,
+    sync::{atomic, Arc},
     time::Duration,
 };
 
-use tokio::{sync::mpsc, time::Instant};
+use tokio::time::Instant;
 
 use crate::{
-    components::proxy::{PipelineError, SendPacket},
+    components::proxy::SendPacket,
     config::Config,
     filters::Filter,
     metrics,
     net::maxmind_db::{IpNetEntry, MetricsIpNetEntry},
     pool::{BufferPool, FrozenPoolBuffer, PoolBuffer},
     time::UtcTimestamp,
-    Loggable, ShutdownRx,
+    Loggable,
 };
 
 use parking_lot::RwLock;
+
+use super::PendingSends;
 
 pub(crate) mod inner_metrics;
 
 pub type SessionMap = crate::collections::ttl::TtlMap<SessionKey, Session>;
 
-#[cfg(target_os = "linux")]
-mod io_uring;
-#[cfg(not(target_os = "linux"))]
-mod reference;
-
-type UpstreamSender = mpsc::Sender<super::SendPacket>;
-
-type DownstreamSender = async_channel::Sender<super::SendPacket>;
-pub type DownstreamReceiver = async_channel::Receiver<super::SendPacket>;
+cfg_if::cfg_if! {
+    if #[cfg(target_os = "linux")] {
+        mod io_uring;
+    } else {
+        mod reference;
+    }
+}
 
 #[derive(PartialEq, Eq, Hash)]
 pub enum SessionError {
@@ -90,13 +90,13 @@ impl fmt::Debug for SessionError {
 /// Traffic from different gameservers is then demuxed using their address to
 /// send back to the original client.
 pub struct SessionPool {
-    ports_to_sockets: RwLock<HashMap<u16, UpstreamSender>>,
+    ports_to_sockets: RwLock<HashMap<u16, PendingSends>>,
     storage: Arc<RwLock<SocketStorage>>,
     session_map: SessionMap,
-    downstream_sender: DownstreamSender,
     buffer_pool: Arc<BufferPool>,
-    shutdown_rx: ShutdownRx,
     config: Arc<Config>,
+    downstream_sends: Vec<PendingSends>,
+    downstream_index: atomic::AtomicUsize,
 }
 
 /// The wrapper struct responsible for holding all of the socket related mappings.
@@ -114,21 +114,20 @@ impl SessionPool {
     /// to release their sockets back to the parent.
     pub fn new(
         config: Arc<Config>,
-        downstream_sender: DownstreamSender,
+        downstream_sends: Vec<PendingSends>,
         buffer_pool: Arc<BufferPool>,
-        shutdown_rx: ShutdownRx,
     ) -> Arc<Self> {
         const SESSION_TIMEOUT_SECONDS: Duration = Duration::from_secs(60);
         const SESSION_EXPIRY_POLL_INTERVAL: Duration = Duration::from_secs(60);
 
         Arc::new(Self {
             config,
-            downstream_sender,
-            shutdown_rx,
             ports_to_sockets: <_>::default(),
             storage: <_>::default(),
             session_map: SessionMap::new(SESSION_TIMEOUT_SECONDS, SESSION_EXPIRY_POLL_INTERVAL),
             buffer_pool,
+            downstream_sends,
+            downstream_index: atomic::AtomicUsize::new(0),
         })
     }
 
@@ -136,7 +135,7 @@ impl SessionPool {
     fn create_new_session_from_new_socket<'pool>(
         self: &'pool Arc<Self>,
         key: SessionKey,
-    ) -> Result<(Option<MetricsIpNetEntry>, UpstreamSender), super::PipelineError> {
+    ) -> Result<(Option<MetricsIpNetEntry>, PendingSends), super::PipelineError> {
         tracing::trace!(source=%key.source, dest=%key.dest, "creating new socket for session");
         let raw_socket = crate::net::raw_socket_with_reuse(0)?;
         let port = raw_socket
@@ -144,19 +143,15 @@ impl SessionPool {
             .as_socket()
             .ok_or(SessionError::SocketAddressUnavailable)?
             .port();
-        let (downstream_sender, downstream_receiver) = mpsc::channel::<super::SendPacket>(15);
 
-        let initialised = self
-            .clone()
-            .spawn_session(raw_socket, port, downstream_receiver)?;
-        initialised
-            .recv()
-            .map_err(|_err| PipelineError::ChannelClosed)?;
+        let (pending_sends, srecv) = super::PendingSends::new(15)?;
+        self.clone()
+            .spawn_session(raw_socket, port, (pending_sends.clone(), srecv))?;
 
         self.ports_to_sockets
             .write()
-            .insert(port, downstream_sender.clone());
-        self.create_session_from_existing_socket(key, downstream_sender, port)
+            .insert(port, pending_sends.clone());
+        self.create_session_from_existing_socket(key, pending_sends, port)
     }
 
     pub(crate) fn process_received_upstream_packet(
@@ -192,7 +187,6 @@ impl SessionPool {
             let _timer = metrics::processing_time(metrics::WRITE).start_timer();
             Self::process_recv_packet(
                 self.config.clone(),
-                &self.downstream_sender,
                 recv_addr,
                 downstream_addr,
                 asn_info,
@@ -200,13 +194,25 @@ impl SessionPool {
             )
         };
 
-        if let Err((asn_info, error)) = result {
-            error.log();
-            let label = format!("proxy::Session::process_recv_packet: {error}");
-            let asn_metric_info = asn_info.as_ref().into();
+        match result {
+            Ok(packet) => {
+                let index = self
+                    .downstream_index
+                    .fetch_add(1, atomic::Ordering::Relaxed)
+                    % self.downstream_sends.len();
+                // SAFETY: we've ensured it's within bounds via the %
+                unsafe {
+                    self.downstream_sends.get_unchecked(index).push(packet);
+                }
+            }
+            Err((asn_info, error)) => {
+                error.log();
+                let label = format!("proxy::Session::process_recv_packet: {error}");
+                let asn_metric_info = asn_info.as_ref().into();
 
-            metrics::packets_dropped_total(metrics::WRITE, &label, &asn_metric_info).inc();
-            metrics::errors_total(metrics::WRITE, &label, &asn_metric_info).inc();
+                metrics::packets_dropped_total(metrics::WRITE, &label, &asn_metric_info).inc();
+                metrics::errors_total(metrics::WRITE, &label, &asn_metric_info).inc();
+            }
         }
     }
 
@@ -217,7 +223,7 @@ impl SessionPool {
     pub fn get<'pool>(
         self: &'pool Arc<Self>,
         key @ SessionKey { dest, .. }: SessionKey,
-    ) -> Result<(Option<MetricsIpNetEntry>, UpstreamSender), super::PipelineError> {
+    ) -> Result<(Option<MetricsIpNetEntry>, PendingSends), super::PipelineError> {
         tracing::trace!(source=%key.source, dest=%key.dest, "SessionPool::get");
         // If we already have a session for the key pairing, return that session.
         if let Some((asn_info, upstream_sender)) = self.session_map.get_by_ref(&key, |value| {
@@ -227,7 +233,10 @@ impl SessionPool {
             )
         }) {
             tracing::trace!("returning existing session");
-            return Ok((asn_info, upstream_sender));
+            return Ok((
+                entry.asn_info.as_ref().map(MetricsIpNetEntry::from),
+                entry.pending_sends.clone(),
+            ));
         }
 
         // If there's a socket_set available, it means there are sockets
@@ -280,9 +289,9 @@ impl SessionPool {
     fn create_session_from_existing_socket<'session>(
         self: &'session Arc<Self>,
         key: SessionKey,
-        upstream_sender: UpstreamSender,
+        pending_sends: PendingSends,
         socket_port: u16,
-    ) -> Result<(Option<MetricsIpNetEntry>, UpstreamSender), super::PipelineError> {
+    ) -> Result<(Option<MetricsIpNetEntry>, PendingSends), super::PipelineError> {
         tracing::trace!(source=%key.source, dest=%key.dest, "reusing socket for session");
         let asn_info = {
             let mut storage = self.storage.write();
@@ -315,7 +324,7 @@ impl SessionPool {
 
         let session = Session::new(
             key,
-            upstream_sender.clone(),
+            pending_sends.clone(),
             socket_port,
             self.clone(),
             asn_info,
@@ -323,18 +332,17 @@ impl SessionPool {
         tracing::trace!("inserting session into map");
         self.session_map.insert(key, session);
         tracing::trace!("session inserted");
-        Ok((asn_metrics_info, upstream_sender))
+        Ok((asn_metrics_info, pending_sends))
     }
 
     /// process_recv_packet processes a packet that is received by this session.
     fn process_recv_packet(
         config: Arc<crate::Config>,
-        downstream_sender: &DownstreamSender,
         source: SocketAddr,
         dest: SocketAddr,
         asn_info: Option<MetricsIpNetEntry>,
         packet: PoolBuffer,
-    ) -> Result<(), (Option<MetricsIpNetEntry>, Error)> {
+    ) -> Result<SendPacket, (Option<MetricsIpNetEntry>, Error)> {
         tracing::trace!(%source, %dest, length = packet.len(), "received packet from upstream");
 
         let mut context = crate::filters::WriteContext::new(source.into(), dest.into(), packet);
@@ -343,21 +351,11 @@ impl SessionPool {
             return Err((asn_info, err.into()));
         }
 
-        let packet = context.contents.freeze();
-        tracing::trace!(%source, %dest, length = packet.len(), "sending packet downstream");
-        downstream_sender
-            .try_send(SendPacket {
-                data: packet,
-                destination: dest,
-                asn_info,
-            })
-            .map_err(|error| match error {
-                async_channel::TrySendError::Closed(packet) => {
-                    (packet.asn_info, Error::ChannelClosed)
-                }
-                async_channel::TrySendError::Full(packet) => (packet.asn_info, Error::ChannelFull),
-            })?;
-        Ok(())
+        Ok(SendPacket {
+            data: context.contents.freeze(),
+            destination: dest.into(),
+            asn_info,
+        })
     }
 
     /// Returns a map of active sessions.
@@ -366,25 +364,30 @@ impl SessionPool {
     }
 
     /// Sends packet data to the appropiate session based on its `key`.
+    #[inline]
     pub fn send(
         self: &Arc<Self>,
         key: SessionKey,
         packet: FrozenPoolBuffer,
     ) -> Result<(), super::PipelineError> {
-        use tokio::sync::mpsc::error::TrySendError;
+        self.send_inner(key, packet)?;
+        Ok(())
+    }
 
+    #[inline]
+    fn send_inner(
+        self: &Arc<Self>,
+        key: SessionKey,
+        packet: FrozenPoolBuffer,
+    ) -> Result<PendingSends, super::PipelineError> {
         let (asn_info, sender) = self.get(key)?;
 
-        sender
-            .try_send(crate::components::proxy::SendPacket {
-                data: packet,
-                asn_info,
-                destination: key.dest,
-            })
-            .map_err(|error| match error {
-                TrySendError::Closed(_) => super::PipelineError::ChannelClosed,
-                TrySendError::Full(_) => super::PipelineError::ChannelFull,
-            })
+        sender.push(SendPacket {
+            destination: key.dest.into(),
+            data: packet,
+            asn_info,
+        });
+        Ok(sender)
     }
 
     /// Returns whether the pool contains any sockets allocated to a destination.
@@ -407,7 +410,7 @@ impl SessionPool {
     }
 
     /// Handles the logic of releasing a socket back into the pool.
-    async fn release_socket(
+    fn release_socket(
         self: Arc<Self>,
         SessionKey {
             ref source,
@@ -442,11 +445,28 @@ impl SessionPool {
         storage.destination_to_sources.remove(&(*dest, port));
         tracing::trace!("socket released");
     }
+
+    /// Closes all active sessions, and all downstream listeners
+    pub(crate) fn shutdown(self: Arc<Self>, wait: bool) {
+        // Disable downstream listeners first so sessions aren't spawned while
+        // we are trying to reap the active sessions
+        for downstream_listener in &self.downstream_sends {
+            downstream_listener.shutdown_receiver();
+        }
+
+        if wait && !self.session_map.is_empty() {
+            tracing::info!(sessions=%self.session_map.len(), "waiting for active sessions to expire");
+            self.session_map.clear();
+        }
+    }
 }
 
 impl Drop for SessionPool {
     fn drop(&mut self) {
-        drop(std::mem::take(&mut self.session_map));
+        let map = std::mem::take(&mut self.session_map);
+        std::thread::spawn(move || {
+            drop(map);
+        });
     }
 }
 
@@ -458,8 +478,8 @@ pub struct Session {
     key: SessionKey,
     /// The socket port of the session.
     socket_port: u16,
-    /// The socket of the session.
-    upstream_sender: UpstreamSender,
+    /// The queue of packets being sent to the upstream (server)
+    pending_sends: PendingSends,
     /// The GeoIP information of the source.
     asn_info: Option<IpNetEntry>,
     /// The socket pool of the session.
@@ -469,14 +489,14 @@ pub struct Session {
 impl Session {
     pub fn new(
         key: SessionKey,
-        upstream_sender: UpstreamSender,
+        pending_sends: PendingSends,
         socket_port: u16,
         pool: Arc<SessionPool>,
         asn_info: Option<IpNetEntry>,
     ) -> Self {
         let s = Self {
             key,
-            upstream_sender,
+            pending_sends,
             pool,
             socket_port,
             asn_info,
@@ -505,17 +525,18 @@ impl Session {
         inner_metrics::active_sessions(self.asn_info.as_ref())
     }
 
-    fn async_drop(&mut self) -> impl std::future::Future<Output = ()> {
+    fn release(&mut self) {
         self.active_session_metric().dec();
         inner_metrics::duration_secs().observe(self.created_at.elapsed().as_secs() as f64);
         tracing::debug!(source = %self.key.source, dest_address = %self.key.dest, "Session closed");
-        SessionPool::release_socket(self.pool.clone(), self.key, self.socket_port)
+        self.pending_sends.shutdown_receiver();
+        SessionPool::release_socket(self.pool.clone(), self.key, self.socket_port);
     }
 }
 
 impl Drop for Session {
     fn drop(&mut self) {
-        tokio::spawn(self.async_drop());
+        self.release()
     }
 }
 
@@ -534,10 +555,6 @@ impl From<(SocketAddr, SocketAddr)> for SessionKey {
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("downstream channel closed")]
-    ChannelClosed,
-    #[error("downstream channel full")]
-    ChannelFull,
     #[error("filter {0}")]
     Filter(#[from] crate::filters::FilterError),
 }
@@ -552,30 +569,24 @@ impl Loggable for Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        test::{alloc_buffer, available_addr, AddressType, TestHelper},
-        ShutdownTx,
-    };
+    use crate::test::{alloc_buffer, available_addr, AddressType, TestHelper};
     use std::sync::Arc;
 
-    async fn new_pool() -> (Arc<SessionPool>, ShutdownTx, DownstreamReceiver) {
-        let (tx, rx) = crate::make_shutdown_channel(crate::ShutdownKind::Testing);
-        let (sender, receiver) = async_channel::unbounded();
+    async fn new_pool() -> (Arc<SessionPool>, PendingSends) {
+        let (pending_sends, _srecv) = PendingSends::new(1).unwrap();
         (
             SessionPool::new(
                 Arc::new(Config::default_agent()),
-                sender,
+                vec![pending_sends.clone()],
                 Arc::new(BufferPool::default()),
-                rx,
             ),
-            tx,
-            receiver,
+            pending_sends,
         )
     }
 
     #[tokio::test]
     async fn insert_and_release_multiple_sockets() {
-        let (pool, _sender, _receiver) = new_pool().await;
+        let (pool, _receiver) = new_pool().await;
         let key1 = (
             (std::net::Ipv4Addr::LOCALHOST, 8080u16).into(),
             (std::net::Ipv4Addr::UNSPECIFIED, 8080u16).into(),
@@ -600,7 +611,7 @@ mod tests {
 
     #[tokio::test]
     async fn same_address_uses_different_sockets() {
-        let (pool, _sender, _receiver) = new_pool().await;
+        let (pool, _receiver) = new_pool().await;
         let key1 = (
             (std::net::Ipv4Addr::LOCALHOST, 8080u16).into(),
             (std::net::Ipv4Addr::UNSPECIFIED, 8080u16).into(),
@@ -629,7 +640,7 @@ mod tests {
 
     #[tokio::test]
     async fn different_addresses_uses_same_socket() {
-        let (pool, _sender, _receiver) = new_pool().await;
+        let (pool, _receiver) = new_pool().await;
         let key1 = (
             (std::net::Ipv4Addr::LOCALHOST, 8080u16).into(),
             (std::net::Ipv4Addr::UNSPECIFIED, 8080u16).into(),
@@ -656,7 +667,7 @@ mod tests {
 
     #[tokio::test]
     async fn spawn_safe_same_destination() {
-        let (pool, _sender, _receiver) = new_pool().await;
+        let (pool, _receiver) = new_pool().await;
         let key1 = (
             (std::net::Ipv4Addr::LOCALHOST, 8080u16).into(),
             (std::net::Ipv4Addr::UNSPECIFIED, 8080u16).into(),
@@ -681,7 +692,7 @@ mod tests {
 
     #[tokio::test]
     async fn spawn_safe_different_destination() {
-        let (pool, _sender, _receiver) = new_pool().await;
+        let (pool, _receiver) = new_pool().await;
         let key1 = (
             (std::net::Ipv4Addr::LOCALHOST, 8080u16).into(),
             (std::net::Ipv4Addr::UNSPECIFIED, 8080u16).into(),
@@ -715,18 +726,14 @@ mod tests {
         let socket = tokio::net::UdpSocket::bind(source).await.unwrap();
         let mut source = socket.local_addr().unwrap();
         crate::test::map_addr_to_localhost(&mut source);
-        let (pool, _sender, receiver) = new_pool().await;
+        let (pool, _pending_sends) = new_pool().await;
 
         let key: SessionKey = (source, dest).into();
         let msg = b"helloworld";
 
-        pool.send(key, alloc_buffer(msg).freeze()).unwrap();
+        let pending = pool.send_inner(key, alloc_buffer(msg).freeze()).unwrap();
+        let pending = pending.swap(Vec::new());
 
-        let packet = tokio::time::timeout(std::time::Duration::from_secs(1), receiver.recv())
-            .await
-            .unwrap()
-            .unwrap();
-
-        assert_eq!(msg, &*packet.data);
+        assert_eq!(msg, &*pending[0].data);
     }
 }

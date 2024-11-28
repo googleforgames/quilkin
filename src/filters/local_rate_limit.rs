@@ -145,7 +145,7 @@ impl LocalRateLimit {
 }
 
 impl Filter for LocalRateLimit {
-    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    fn read(&self, ctx: &mut ReadContext<'_>) -> Result<(), FilterError> {
         if self.acquire_token(&ctx.source) {
             Ok(())
         } else {
@@ -232,7 +232,13 @@ mod tests {
             .into(),
         );
 
-        let mut context = ReadContext::new(endpoints.into(), address.clone(), alloc_buffer([9]));
+        let mut dest = Vec::new();
+        let mut context = ReadContext::new(
+            endpoints.into(),
+            address.clone(),
+            alloc_buffer([9]),
+            &mut dest,
+        );
         let result = r.read(&mut context);
 
         if should_succeed {

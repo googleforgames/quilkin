@@ -479,12 +479,10 @@ where
         }
     }
 
-    pub fn addresses_for_token(&self, token: Token) -> Vec<EndpointAddress> {
-        self.token_map
-            .pin()
-            .get(&token.0)
-            .cloned()
-            .unwrap_or_default()
+    pub fn addresses_for_token(&self, token: Token, addrs: &mut Vec<EndpointAddress>) {
+        if let Some(ma) = self.token_map.get(&token.0) {
+            addrs.extend(ma.value().iter().cloned());
+        }
     }
 }
 

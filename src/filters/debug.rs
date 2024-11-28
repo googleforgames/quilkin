@@ -38,7 +38,7 @@ impl Debug {
 
 impl Filter for Debug {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    fn read(&self, ctx: &mut ReadContext<'_>) -> Result<(), FilterError> {
         info!(id = ?self.config.id, source = ?&ctx.source, contents = ?String::from_utf8_lossy(&ctx.contents), "Read filter event");
         Ok(())
     }

@@ -273,7 +273,7 @@ impl schemars::JsonSchema for FilterChain {
 }
 
 impl Filter for FilterChain {
-    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    fn read(&self, ctx: &mut ReadContext<'_>) -> Result<(), FilterError> {
         for ((id, instance), histogram) in self
             .filters
             .iter()
@@ -296,12 +296,8 @@ impl Filter for FilterChain {
         // has rejected, and the destinations is empty, we passthrough to all.
         // Which mimics the old behaviour while avoid clones in most cases.
         if ctx.destinations.is_empty() {
-            ctx.destinations = ctx
-                .endpoints
-                .endpoints()
-                .into_iter()
-                .map(|ep| ep.address)
-                .collect();
+            ctx.destinations
+                .extend(ctx.endpoints.endpoints().into_iter().map(|ep| ep.address));
         }
 
         Ok(())
@@ -382,10 +378,12 @@ mod tests {
         crate::test::load_test_filters();
         let config = TestConfig::new();
         let endpoints_fixture = endpoints();
+        let mut dest = Vec::new();
         let mut context = ReadContext::new(
             endpoints_fixture.clone(),
             "127.0.0.1:70".parse().unwrap(),
             alloc_buffer(b"hello"),
+            &mut dest,
         );
 
         config.filters.read(&mut context).unwrap();
@@ -435,22 +433,24 @@ mod tests {
         .unwrap();
 
         let endpoints_fixture = endpoints();
-        let mut context = ReadContext::new(
-            endpoints_fixture.clone(),
-            "127.0.0.1:70".parse().unwrap(),
-            alloc_buffer(b"hello"),
-        );
+        let mut dest = Vec::new();
 
-        chain.read(&mut context).unwrap();
+        let (contents, metadata) = {
+            let mut context = ReadContext::new(
+                endpoints_fixture.clone(),
+                "127.0.0.1:70".parse().unwrap(),
+                alloc_buffer(b"hello"),
+                &mut dest,
+            );
+            chain.read(&mut context).unwrap();
+            (context.contents, context.metadata)
+        };
         let expected = endpoints_fixture.clone();
-        assert_eq!(expected.endpoints(), context.destinations);
-        assert_eq!(
-            b"hello:odr:127.0.0.1:70:odr:127.0.0.1:70",
-            &*context.contents
-        );
+        assert_eq!(expected.endpoints(), dest);
+        assert_eq!(b"hello:odr:127.0.0.1:70:odr:127.0.0.1:70", &*contents);
         assert_eq!(
             "receive:receive",
-            context.metadata[&"downstream".into()].as_string().unwrap()
+            metadata[&"downstream".into()].as_string().unwrap()
         );
 
         let mut context = WriteContext::new(
