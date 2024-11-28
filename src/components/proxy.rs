@@ -18,8 +18,79 @@ mod error;
 pub mod packet_router;
 mod sessions;
 
-#[cfg(target_os = "linux")]
-pub(crate) mod io_uring_shared;
+cfg_if::cfg_if! {
+    if #[cfg(target_os = "linux")] {
+        pub(crate) mod io_uring_shared;
+        pub(crate) type PacketSendReceiver = io_uring_shared::EventFd;
+        pub(crate) type PacketSendSender = io_uring_shared::EventFdWriter;
+    } else {
+        pub(crate) type PacketSendReceiver = tokio::sync::watch::Receiver<bool>;
+        pub(crate) type PacketSendSender = tokio::sync::watch::Sender<bool>;
+    }
+}
+
+/// A simple packet queue that signals when a packet is pushed
+///
+/// For io_uring this notifies an eventfd that will be processed on the next
+/// completion loop
+#[derive(Clone)]
+pub struct PendingSends {
+    packets: Arc<parking_lot::Mutex<Vec<SendPacket>>>,
+    notify: PacketSendSender,
+}
+
+impl PendingSends {
+    pub fn new(capacity: usize) -> std::io::Result<(Self, PacketSendReceiver)> {
+        #[cfg(target_os = "linux")]
+        let (notify, rx) = {
+            let rx = io_uring_shared::EventFd::new()?;
+            (rx.writer(), rx)
+        };
+        #[cfg(not(target_os = "linux"))]
+        let (notify, rx) = tokio::sync::watch::channel(true);
+
+        Ok((
+            Self {
+                packets: Arc::new(parking_lot::Mutex::new(Vec::with_capacity(capacity))),
+                notify,
+            },
+            rx,
+        ))
+    }
+
+    #[inline]
+    pub(crate) fn capacity(&self) -> usize {
+        self.packets.lock().capacity()
+    }
+
+    /// Pushes a packet onto the queue to be sent, signalling a sender that
+    /// it's available
+    #[inline]
+    pub(crate) fn push(&self, packet: SendPacket) {
+        self.packets.lock().push(packet);
+        #[cfg(target_os = "linux")]
+        self.notify.write(1);
+        #[cfg(not(target_os = "linux"))]
+        let _ = self.notify.send(true);
+    }
+
+    /// Called to shutdown the consumer side of the sends (ie the io loop that is
+    /// actually dequing and sending packets)
+    #[inline]
+    pub(crate) fn shutdown_receiver(&self) {
+        #[cfg(target_os = "linux")]
+        self.notify.write(0xdeadbeef);
+        #[cfg(not(target_os = "linux"))]
+        let _ = self.notify.send(false);
+    }
+
+    /// Swaps the current queue with an empty one so we only lock for a pointer swap
+    #[inline]
+    pub fn swap(&self, mut swap: Vec<SendPacket>) -> Vec<SendPacket> {
+        swap.clear();
+        std::mem::replace(&mut self.packets.lock(), swap)
+    }
+}
 
 use super::RunArgs;
 pub use error::{ErrorMap, PipelineError};
@@ -33,8 +104,11 @@ use std::{
 };
 
 pub struct SendPacket {
-    pub destination: SocketAddr,
+    /// The destination address of the packet
+    pub destination: socket2::SockAddr,
+    /// The packet data being sent
     pub data: crate::pool::FrozenPoolBuffer,
+    /// The asn info for the sender, used for metrics
     pub asn_info: Option<crate::net::maxmind_db::MetricsIpNetEntry>,
 }
 
@@ -208,18 +282,6 @@ impl Proxy {
              ));
         }
 
-        let id = config.id.load();
-        let num_workers = self.num_workers.get();
-
-        let (upstream_sender, upstream_receiver) = async_channel::bounded(250);
-        let buffer_pool = Arc::new(crate::pool::BufferPool::new(num_workers, 64 * 1024));
-        let sessions = SessionPool::new(
-            config.clone(),
-            upstream_sender,
-            buffer_pool.clone(),
-            shutdown_rx.clone(),
-        );
-
         #[allow(clippy::type_complexity)]
         const SUBS: &[(&str, &[(&str, Vec<String>)])] = &[
             (
@@ -246,6 +308,8 @@ impl Proxy {
                 let check: Arc<AtomicBool> = <_>::default();
                 *lock = Some(check.clone());
             }
+
+            let id = config.id.load();
 
             std::thread::Builder::new()
                 .name("proxy-subscription".into())
@@ -291,14 +355,25 @@ impl Proxy {
                 .expect("failed to spawn proxy-subscription thread");
         }
 
-        let worker_notifications = packet_router::spawn_receivers(
+        let num_workers = self.num_workers.get();
+        let buffer_pool = Arc::new(crate::pool::BufferPool::new(num_workers, 2 * 1024));
+
+        let mut worker_sends = Vec::with_capacity(num_workers);
+        let mut session_sends = Vec::with_capacity(num_workers);
+        for _ in 0..num_workers {
+            let psends = PendingSends::new(15)?;
+            session_sends.push(psends.0.clone());
+            worker_sends.push(psends);
+        }
+
+        let sessions = SessionPool::new(config.clone(), session_sends, buffer_pool.clone());
+
+        packet_router::spawn_receivers(
             config.clone(),
             self.socket,
-            num_workers,
+            worker_sends,
             &sessions,
-            upstream_receiver,
             buffer_pool,
-            shutdown_rx.clone(),
         )
         .await?;
 
@@ -310,10 +385,6 @@ impl Proxy {
             crate::net::phoenix::Phoenix::new(crate::codec::qcmp::QcmpMeasurement::new()?),
         )?;
 
-        for notification in worker_notifications {
-            let _ = notification.recv();
-        }
-
         tracing::info!("Quilkin is ready");
         if let Some(initialized) = initialized {
             let _ = initialized.send(());
@@ -324,17 +395,7 @@ impl Proxy {
             .await
             .map_err(|error| eyre::eyre!(error))?;
 
-        if *shutdown_rx.borrow() == crate::ShutdownKind::Normal {
-            tracing::info!(sessions=%sessions.sessions().len(), "waiting for active sessions to expire");
-
-            let interval = std::time::Duration::from_millis(100);
-
-            while sessions.sessions().is_not_empty() {
-                tokio::time::sleep(interval).await;
-                tracing::debug!(sessions=%sessions.sessions().len(), "sessions still active");
-            }
-            tracing::info!("all sessions expired");
-        }
+        sessions.shutdown(*shutdown_rx.borrow() == crate::ShutdownKind::Normal);
 
         Ok(())
     }
