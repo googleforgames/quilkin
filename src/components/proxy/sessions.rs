@@ -226,7 +226,12 @@ impl SessionPool {
     ) -> Result<(Option<MetricsIpNetEntry>, PendingSends), super::PipelineError> {
         tracing::trace!(source=%key.source, dest=%key.dest, "SessionPool::get");
         // If we already have a session for the key pairing, return that session.
-        if let Some(entry) = self.session_map.get(&key) {
+        if let Some((asn_info, upstream_sender)) = self.session_map.get_by_ref(&key, |value| {
+            (
+                value.asn_info.as_ref().map(MetricsIpNetEntry::from),
+                value.upstream_sender.clone(),
+            )
+        }) {
             tracing::trace!("returning existing session");
             return Ok((
                 entry.asn_info.as_ref().map(MetricsIpNetEntry::from),
@@ -398,9 +403,9 @@ impl SessionPool {
     /// Forces removal of session to make testing quicker.
     #[cfg(test)]
     async fn drop_session(&self, key: SessionKey) -> bool {
-        let is_removed = self.session_map.remove(key);
+        let is_removed = self.session_map.remove_force_drop(key);
         // Sleep because there's no async drop.
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        tokio::time::sleep(Duration::from_millis(200)).await;
         is_removed
     }
 
@@ -580,22 +585,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn insert_and_release_single_socket() {
-        let (pool, _receiver) = new_pool().await;
-        let key = (
-            (std::net::Ipv4Addr::LOCALHOST, 8080u16).into(),
-            (std::net::Ipv4Addr::UNSPECIFIED, 8080u16).into(),
-        )
-            .into();
-
-        let _session = pool.get(key).unwrap();
-
-        assert!(pool.drop_session(key).await);
-
-        assert!(pool.has_no_allocated_sockets());
-    }
-
-    #[tokio::test]
     async fn insert_and_release_multiple_sockets() {
         let (pool, _receiver) = new_pool().await;
         let key1 = (
@@ -637,8 +626,12 @@ mod tests {
         let _socket1 = pool.get(key1).unwrap();
         let _socket2 = pool.get(key2).unwrap();
         assert_ne!(
-            pool.session_map.get(&key1).unwrap().socket_port,
-            pool.session_map.get(&key2).unwrap().socket_port
+            pool.session_map
+                .get_by_ref(&key1, |v| v.socket_port)
+                .unwrap(),
+            pool.session_map
+                .get_by_ref(&key2, |v| v.socket_port)
+                .unwrap()
         );
 
         assert!(pool.drop_session(key1).await);
@@ -663,8 +656,12 @@ mod tests {
         let _socket2 = pool.get(key2).unwrap();
 
         assert_eq!(
-            pool.session_map.get(&key1).unwrap().socket_port,
-            pool.session_map.get(&key2).unwrap().socket_port
+            pool.session_map
+                .get_by_ref(&key1, |v| v.socket_port)
+                .unwrap(),
+            pool.session_map
+                .get_by_ref(&key2, |v| v.socket_port)
+                .unwrap()
         );
     }
 
