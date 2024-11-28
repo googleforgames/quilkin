@@ -783,6 +783,15 @@
 <a href="#783" id="783">783</a>
 <a href="#784" id="784">784</a>
 <a href="#785" id="785">785</a>
+<a href="#786" id="786">786</a>
+<a href="#787" id="787">787</a>
+<a href="#788" id="788">788</a>
+<a href="#789" id="789">789</a>
+<a href="#790" id="790">790</a>
+<a href="#791" id="791">791</a>
+<a href="#792" id="792">792</a>
+<a href="#793" id="793">793</a>
+<a href="#794" id="794">794</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
@@ -840,11 +849,13 @@
     <span class="doccomment">/// Get the expiration time for this value. The returned value is the
     /// number of seconds relative to some reference point (e.g UNIX_EPOCH), based
     /// on the clock being used.
+    </span><span class="attr">#[inline]
     </span><span class="kw">fn </span>expiration_secs(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
         <span class="self">self</span>.expires_at.load(Ordering::Relaxed)
     }
 
     <span class="doccomment">/// Update the value's expiration time to (now + TTL).
+    </span><span class="attr">#[inline]
     </span><span class="kw">fn </span>update_expiration(<span class="kw-2">&amp;</span><span class="self">self</span>, ttl: Duration) {
         <span class="kw">match </span><span class="self">self</span>.clock.compute_expiration_secs(ttl) {
             <span class="prelude-val">Ok</span>(new_expiration_time) =&gt; {
@@ -945,6 +956,7 @@
     <span class="doccomment">/// Returns the current time as the number of seconds relative to some initial
     /// reference point (e.g UNIX_EPOCH), based on the clock implementation being used.
     /// In tests, this will be driven by [`tokio::time`]
+    </span><span class="attr">#[inline]
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>now_relative_secs(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
         <span class="self">self</span>.<span class="number">0</span>.clock.now_relative_secs().unwrap_or_default()
     }
@@ -1020,6 +1032,12 @@
     <span class="doccomment">/// Removes a key-value pair from the map.
     </span><span class="kw">pub fn </span>remove(<span class="kw-2">&amp;</span><span class="self">self</span>, key: K) -&gt; bool {
         <span class="self">self</span>.<span class="number">0</span>.inner.remove(<span class="kw-2">&amp;</span>key).is_some()
+    }
+
+    <span class="doccomment">/// Removes all entries from the map
+    </span><span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>clear(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+        <span class="self">self</span>.<span class="number">0</span>.inner.clear();
     }
 
     <span class="doccomment">/// Returns an entry for in-place updates of the specified key-value pair.

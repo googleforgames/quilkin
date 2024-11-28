@@ -190,15 +190,6 @@
 <a href="#190" id="190">190</a>
 <a href="#191" id="191">191</a>
 <a href="#192" id="192">192</a>
-<a href="#193" id="193">193</a>
-<a href="#194" id="194">194</a>
-<a href="#195" id="195">195</a>
-<a href="#196" id="196">196</a>
-<a href="#197" id="197">197</a>
-<a href="#198" id="198">198</a>
-<a href="#199" id="199">199</a>
-<a href="#200" id="200">200</a>
-<a href="#201" id="201">201</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
@@ -215,10 +206,7 @@
  *  limitations under the License.
  */
 
-</span><span class="kw">use super</span>::{
-    sessions::{DownstreamReceiver, SessionKey},
-    PipelineError, SessionPool,
-};
+</span><span class="kw">use super</span>::{sessions::SessionKey, PipelineError, SessionPool};
 <span class="kw">use crate</span>::{
     filters::{Filter <span class="kw">as _</span>, ReadContext},
     metrics,
@@ -245,8 +233,6 @@
 </span><span class="kw">pub struct </span>DownstreamReceiveWorkerConfig {
     <span class="doccomment">/// ID of the worker.
     </span><span class="kw">pub </span>worker_id: usize,
-    <span class="doccomment">/// Socket with reused port from which the worker receives packets.
-    </span><span class="kw">pub </span>upstream_receiver: DownstreamReceiver,
     <span class="kw">pub </span>port: u16,
     <span class="kw">pub </span>config: Arc&lt;Config&gt;,
     <span class="kw">pub </span>sessions: Arc&lt;SessionPool&gt;,
@@ -338,21 +324,17 @@
 </span><span class="kw">pub async fn </span>spawn_receivers(
     config: Arc&lt;Config&gt;,
     socket: socket2::Socket,
-    num_workers: usize,
+    worker_sends: Vec&lt;(<span class="kw">super</span>::PendingSends, <span class="kw">super</span>::PacketSendReceiver)&gt;,
     sessions: <span class="kw-2">&amp;</span>Arc&lt;SessionPool&gt;,
-    upstream_receiver: DownstreamReceiver,
     buffer_pool: Arc&lt;<span class="kw">crate</span>::pool::BufferPool&gt;,
-    shutdown: <span class="kw">crate</span>::ShutdownRx,
-) -&gt; <span class="kw">crate</span>::Result&lt;Vec&lt;std::sync::mpsc::Receiver&lt;()&gt;&gt;&gt; {
+) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
     <span class="kw">let </span>(error_sender, <span class="kw-2">mut </span>error_receiver) = mpsc::channel(<span class="number">128</span>);
 
     <span class="kw">let </span>port = <span class="kw">crate</span>::net::socket_port(<span class="kw-2">&amp;</span>socket);
 
-    <span class="kw">let </span><span class="kw-2">mut </span>worker_notifications = Vec::with_capacity(num_workers);
-    <span class="kw">for </span>worker_id <span class="kw">in </span><span class="number">0</span>..num_workers {
+    <span class="kw">for </span>(worker_id, ws) <span class="kw">in </span>worker_sends.into_iter().enumerate() {
         <span class="kw">let </span>worker = DownstreamReceiveWorkerConfig {
             worker_id,
-            upstream_receiver: upstream_receiver.clone(),
             port,
             config: config.clone(),
             sessions: sessions.clone(),
@@ -360,7 +342,7 @@
             buffer_pool: buffer_pool.clone(),
         };
 
-        worker_notifications.push(worker.spawn(shutdown.clone()).<span class="kw">await</span><span class="question-mark">?</span>);
+        worker.spawn(ws).<span class="kw">await</span><span class="question-mark">?</span>;
     }
 
     drop(error_sender);
@@ -398,6 +380,6 @@
         }
     });
 
-    <span class="prelude-val">Ok</span>(worker_notifications)
+    <span class="prelude-val">Ok</span>(())
 }
 </code></pre></div></section></main></body></html>

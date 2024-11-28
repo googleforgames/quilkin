@@ -53,7 +53,6 @@
 <a href="#53" id="53">53</a>
 <a href="#54" id="54">54</a>
 <a href="#55" id="55">55</a>
-<a href="#56" id="56">56</a>
 </pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
@@ -70,18 +69,18 @@
  *  limitations under the License.
  */
 
-</span><span class="kw">use </span>eyre::Context <span class="kw">as _</span>;
+</span><span class="kw">use </span><span class="kw">crate</span>::components::proxy;
+<span class="kw">use </span>eyre::Context <span class="kw">as _</span>;
 
 <span class="kw">impl </span><span class="kw">super</span>::DownstreamReceiveWorkerConfig {
     <span class="kw">pub async fn </span>spawn(
         <span class="self">self</span>,
-        shutdown: <span class="kw">crate</span>::ShutdownRx,
-    ) -&gt; eyre::Result&lt;std::sync::mpsc::Receiver&lt;()&gt;&gt; {
+        pending_sends: (proxy::PendingSends, proxy::PacketSendReceiver),
+    ) -&gt; eyre::Result&lt;()&gt; {
         <span class="kw">use </span><span class="kw">crate</span>::components::proxy::io_uring_shared;
 
         <span class="kw">let </span><span class="self">Self </span>{
             worker_id,
-            upstream_receiver,
             port,
             config,
             sessions,
@@ -103,9 +102,8 @@
                     worker_id,
                     destinations: Vec::with_capacity(<span class="number">1</span>),
                 },
-                io_uring_shared::PacketReceiver::Router(upstream_receiver),
+                pending_sends,
                 buffer_pool,
-                shutdown,
             )
             .context(<span class="string">"failed to spawn io-uring loop"</span>)
     }
