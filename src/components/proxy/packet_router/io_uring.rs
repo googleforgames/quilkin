@@ -18,7 +18,7 @@ use crate::components::proxy;
 use eyre::Context as _;
 
 impl super::DownstreamReceiveWorkerConfig {
-    pub(crate) async fn spawn(
+    pub async fn spawn(
         self,
         pending_sends: (proxy::PendingSends, proxy::PacketSendReceiver),
     ) -> eyre::Result<()> {

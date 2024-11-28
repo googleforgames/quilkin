@@ -40,7 +40,7 @@ pub struct PendingSends {
 }
 
 impl PendingSends {
-    pub(crate) fn new(capacity: usize) -> std::io::Result<(Self, PacketSendReceiver)> {
+    pub fn new(capacity: usize) -> std::io::Result<(Self, PacketSendReceiver)> {
         #[cfg(target_os = "linux")]
         let (notify, rx) = {
             let rx = io_uring_shared::EventFd::new()?;

@@ -143,18 +143,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "async-channel"
-version = "2.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "89b47800b0be77592da0afd425cc03468052844aff33b84e33cc696f64e77b6a"
-dependencies = [
- "concurrent-queue",
- "event-listener-strategy",
- "futures-core",
- "pin-project-lite",
-]
-
-[[package]]
 name = "async-stream"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2434,7 +2422,6 @@ dependencies = [
 name = "qt"
 version = "0.1.0"
 dependencies = [
- "async-channel",
  "once_cell",
  "quilkin",
  "rand",
@@ -2457,7 +2444,6 @@ name = "quilkin"
 version = "0.10.0-dev"
 dependencies = [
  "arc-swap",
- "async-channel",
  "async-stream",
  "async-trait",
  "base64 0.22.1",

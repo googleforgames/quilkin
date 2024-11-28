@@ -37,7 +37,7 @@ use std::{
 ///
 /// We use eventfd to signal to io uring loops from async tasks, it is essentially
 /// the equivalent of a signalling 64 bit cross-process atomic
-pub(crate) struct EventFd {
+pub struct EventFd {
     fd: std::os::fd::OwnedFd,
     val: u64,
 }

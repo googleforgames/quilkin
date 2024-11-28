@@ -87,7 +87,6 @@ quilkin-proto.workspace = true
 
 # Crates.io
 arc-swap.workspace = true
-async-channel.workspace = true
 async-stream.workspace = true
 base64.workspace = true
 base64-serde = "0.8.0"
@@ -194,7 +193,6 @@ edition = "2021"
 
 [workspace.dependencies]
 arc-swap = { version = "1.7.1", features = ["serde"] }
-async-channel = "2.3.1"
 async-stream = "0.3.6"
 base64 = "0.22.1"
 cached = { version = "0.54", default-features = false }

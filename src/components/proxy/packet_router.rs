@@ -129,7 +129,7 @@ impl DownstreamReceiveWorkerConfig {
 /// This function also spawns the set of worker tasks responsible for consuming packets
 /// off the aforementioned queue and processing them through the filter chain and session
 /// pipeline.
-pub(crate) async fn spawn_receivers(
+pub async fn spawn_receivers(
     config: Arc<Config>,
     socket: socket2::Socket,
     worker_sends: Vec<(super::PendingSends, super::PacketSendReceiver)>,
