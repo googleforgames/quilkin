@@ -21,10 +21,9 @@
 //! enough that it doesn't make sense to share the same code
 
 use crate::{
-    components::proxy::{self, PipelineError},
+    components::proxy::{self, PendingSends, PipelineError, SendPacket},
     metrics,
-    net::maxmind_db::MetricsIpNetEntry,
-    pool::{FrozenPoolBuffer, PoolBuffer},
+    pool::PoolBuffer,
     time::UtcTimestamp,
 };
 use io_uring::{squeue::Entry, types::Fd};
@@ -41,25 +40,6 @@ use std::{
 pub(crate) struct EventFd {
     fd: std::os::fd::OwnedFd,
     val: u64,
-}
-
-#[derive(Clone)]
-pub(crate) struct EventFdWriter {
-    fd: i32,
-}
-
-impl EventFdWriter {
-    #[inline]
-    pub(crate) fn write(&self, val: u64) {
-        // SAFETY: we have a valid descriptor, and most of the errors that apply
-        // to the general write call that eventfd_write wraps are not applicable
-        //
-        // Note that while the docs state eventfd_write is glibc, it is implemented
-        // on musl as well, but really is just a write with 8 bytes
-        unsafe {
-            libc::eventfd_write(self.fd, val);
-        }
-    }
 }
 
 impl EventFd {
@@ -102,48 +82,30 @@ impl EventFd {
     }
 }
 
+#[derive(Clone)]
+pub(crate) struct EventFdWriter {
+    fd: i32,
+}
+
+impl EventFdWriter {
+    #[inline]
+    pub(crate) fn write(&self, val: u64) {
+        // SAFETY: we have a valid descriptor, and most of the errors that apply
+        // to the general write call that eventfd_write wraps are not applicable
+        //
+        // Note that while the docs state eventfd_write is glibc, it is implemented
+        // on musl as well, but really is just a write with 8 bytes
+        unsafe {
+            libc::eventfd_write(self.fd, val);
+        }
+    }
+}
+
 struct RecvPacket {
     /// The buffer filled with data during recv_from
     buffer: PoolBuffer,
     /// The IP of the sender
     source: std::net::SocketAddr,
-}
-
-struct SendPacket {
-    /// The destination address of the packet
-    destination: SockAddr,
-    /// The packet data being sent
-    buffer: FrozenPoolBuffer,
-    /// The asn info for the sender, used for metrics
-    asn_info: Option<MetricsIpNetEntry>,
-}
-
-/// A simple double buffer for queing packets that need to be sent, each enqueue
-/// notifies an eventfd that sends are available
-#[derive(Clone)]
-struct PendingSends {
-    packets: Arc<parking_lot::Mutex<Vec<SendPacket>>>,
-    notify: EventFdWriter,
-}
-
-impl PendingSends {
-    pub fn new(notify: EventFdWriter) -> Self {
-        Self {
-            packets: Default::default(),
-            notify,
-        }
-    }
-
-    #[inline]
-    pub fn push(&self, packet: SendPacket) {
-        self.packets.lock().push(packet);
-        self.notify.write(1);
-    }
-
-    #[inline]
-    pub fn swap(&self, swap: Vec<SendPacket>) -> Vec<SendPacket> {
-        std::mem::replace(&mut self.packets.lock(), swap)
-    }
 }
 
 enum LoopPacketInner {
@@ -192,8 +154,8 @@ impl LoopPacket {
                 // For sends, the length of the buffer is the actual number of initialized bytes,
                 // and note that iov_base is a *mut even though for sends the buffer is not actually
                 // mutated
-                self.io_vec.iov_base = send.buffer.as_ptr() as *mut u8 as *mut _;
-                self.io_vec.iov_len = send.buffer.len();
+                self.io_vec.iov_base = send.data.as_ptr() as *mut u8 as *mut _;
+                self.io_vec.iov_len = send.data.len();
 
                 // SAFETY: both pointers are valid at this point, with the same size
                 unsafe {
@@ -262,62 +224,8 @@ pub enum PacketProcessorCtx {
     },
 }
 
-pub enum PacketReceiver {
-    Router(crate::components::proxy::sessions::DownstreamReceiver),
-    SessionPool(tokio::sync::mpsc::Receiver<proxy::SendPacket>),
-}
-
-/// Spawns worker tasks
-///
-/// One task processes received packets, notifying the io-uring loop when a
-/// packet finishes processing, the other receives packets to send and notifies
-/// the io-uring loop when there are 1 or more packets available to be sent
-fn spawn_workers(
-    rt: &tokio::runtime::Runtime,
-    receiver: PacketReceiver,
-    pending_sends: PendingSends,
-    mut shutdown_rx: crate::ShutdownRx,
-    shutdown_event: EventFdWriter,
-) {
-    // Spawn a task that just monitors the shutdown receiver to notify the io-uring loop to exit
-    rt.spawn(async move {
-        // The result is uninteresting, either a shutdown has been signalled, or all senders have been dropped
-        // which equates to the same thing
-        let _ = shutdown_rx.changed().await;
-        shutdown_event.write(1);
-    });
-
-    match receiver {
-        PacketReceiver::Router(upstream_receiver) => {
-            rt.spawn(async move {
-                while let Ok(packet) = upstream_receiver.recv().await {
-                    let packet = SendPacket {
-                        destination: packet.destination.into(),
-                        buffer: packet.data,
-                        asn_info: packet.asn_info,
-                    };
-                    pending_sends.push(packet);
-                }
-            });
-        }
-        PacketReceiver::SessionPool(mut downstream_receiver) => {
-            rt.spawn(async move {
-                while let Some(packet) = downstream_receiver.recv().await {
-                    let packet = SendPacket {
-                        destination: packet.destination.into(),
-                        buffer: packet.data,
-                        asn_info: packet.asn_info,
-                    };
-                    pending_sends.push(packet);
-                }
-            });
-        }
-    }
-}
-
 fn process_packet(
     ctx: &mut PacketProcessorCtx,
-    packet_processed_event: &EventFdWriter,
     packet: RecvPacket,
     last_received_at: &mut Option<UtcTimestamp>,
 ) {
@@ -349,8 +257,6 @@ fn process_packet(
                 error_acc,
                 destinations,
             );
-
-            packet_processed_event.write(1);
         }
         PacketProcessorCtx::SessionPool { pool, port, .. } => {
             let mut last_received_at = None;
@@ -361,8 +267,6 @@ fn process_packet(
                 *port,
                 &mut last_received_at,
             );
-
-            packet_processed_event.write(1);
         }
     }
 }
@@ -377,10 +281,8 @@ enum Token {
     Recv { key: usize },
     /// Packet sent
     Send { key: usize },
-    /// One or more packets are ready to be sent
+    /// One or more packets are ready to be sent OR shutdown of the loop is requested
     PendingsSends,
-    /// Loop shutdown requested
-    Shutdown,
 }
 
 struct LoopCtx<'uring> {
@@ -508,7 +410,6 @@ impl<'uring> LoopCtx<'uring> {
 }
 
 pub struct IoUringLoop {
-    runtime: tokio::runtime::Runtime,
     socket: crate::net::DualStackLocalSocket,
     concurrent_sends: usize,
 }
@@ -518,14 +419,7 @@ impl IoUringLoop {
         concurrent_sends: u16,
         socket: crate::net::DualStackLocalSocket,
     ) -> Result<Self, PipelineError> {
-        let runtime = tokio::runtime::Builder::new_multi_thread()
-            .enable_all()
-            .max_blocking_threads(1)
-            .worker_threads(3)
-            .build()?;
-
         Ok(Self {
-            runtime,
             concurrent_sends: concurrent_sends as _,
             socket,
         })
@@ -535,42 +429,29 @@ impl IoUringLoop {
         self,
         thread_name: String,
         mut ctx: PacketProcessorCtx,
-        receiver: PacketReceiver,
+        pending_sends: (PendingSends, EventFd),
         buffer_pool: Arc<crate::pool::BufferPool>,
-        shutdown: crate::ShutdownRx,
-    ) -> Result<std::sync::mpsc::Receiver<()>, PipelineError> {
+    ) -> Result<(), PipelineError> {
         let dispatcher = tracing::dispatcher::get_default(|d| d.clone());
-        let (tx, rx) = std::sync::mpsc::channel();
 
-        let rt = self.runtime;
         let socket = self.socket;
         let concurrent_sends = self.concurrent_sends;
 
         let mut ring = io_uring::IoUring::new((concurrent_sends + 3) as _)?;
 
-        // Used to notify the uring loop when 1 or more packets have been queued
-        // up to be sent to a remote address
-        let mut pending_sends_event = EventFd::new()?;
-        // Used to notify the uring when a received packet has finished
-        // processing and we can perform another recv, as we (currently) only
-        // ever process a single packet at a time
-        let process_event = EventFd::new()?;
-        // Used to notify the uring loop to shutdown
-        let mut shutdown_event = EventFd::new()?;
+        let mut pending_sends_event = pending_sends.1;
+        let pending_sends = pending_sends.0;
 
         std::thread::Builder::new()
             .name(thread_name)
             .spawn(move || {
                 let _guard = tracing::dispatcher::set_default(&dispatcher);
 
-                let tokens = slab::Slab::with_capacity(concurrent_sends + 1 + 1 + 1);
+                let tokens = slab::Slab::with_capacity(concurrent_sends + 1 + 1);
                 let loop_packets = slab::Slab::with_capacity(concurrent_sends + 1);
 
-                // Create an eventfd to notify the uring thread (this one) of
-                // pending sends
-                let pending_sends = PendingSends::new(pending_sends_event.writer());
                 // Just double buffer the pending writes for simplicity
-                let mut double_pending_sends = Vec::new();
+                let mut double_pending_sends = Vec::with_capacity(pending_sends.capacity());
 
                 // When sending packets, this is the direction used when updating metrics
                 let send_dir = if matches!(ctx, PacketProcessorCtx::Router { .. }) {
@@ -578,16 +459,6 @@ impl IoUringLoop {
                 } else {
                     metrics::READ
                 };
-
-                // Spawn the worker tasks that process in an async context unlike
-                // our io-uring loop below
-                spawn_workers(
-                    &rt,
-                    receiver,
-                    pending_sends.clone(),
-                    shutdown,
-                    shutdown_event.writer(),
-                );
 
                 let (submitter, sq, mut cq) = ring.split();
 
@@ -602,16 +473,12 @@ impl IoUringLoop {
                 loop_ctx.enqueue_recv(buffer_pool.clone().alloc());
                 loop_ctx
                     .push_with_token(pending_sends_event.io_uring_entry(), Token::PendingsSends);
-                loop_ctx.push_with_token(shutdown_event.io_uring_entry(), Token::Shutdown);
 
                 // Sync always needs to be called when entries have been pushed
                 // onto the submission queue for the loop to actually function (ie, similar to await on futures)
                 loop_ctx.sync();
 
-                // Notify that we have set everything up
-                let _ = tx.send(());
                 let mut last_received_at = None;
-                let process_event_writer = process_event.writer();
 
                 // The core io uring loop
                 'io: loop {
@@ -653,26 +520,26 @@ impl IoUringLoop {
                                 }
 
                                 let packet = packet.finalize_recv(ret as usize);
-                                process_packet(
-                                    &mut ctx,
-                                    &process_event_writer,
-                                    packet,
-                                    &mut last_received_at,
-                                );
+                                process_packet(&mut ctx, packet, &mut last_received_at);
 
                                 loop_ctx.enqueue_recv(buffer_pool.clone().alloc());
                             }
                             Token::PendingsSends => {
-                                double_pending_sends = pending_sends.swap(double_pending_sends);
-                                loop_ctx.push_with_token(
-                                    pending_sends_event.io_uring_entry(),
-                                    Token::PendingsSends,
-                                );
+                                if pending_sends_event.val < 0xdeadbeef {
+                                    double_pending_sends = pending_sends.swap(double_pending_sends);
+                                    loop_ctx.push_with_token(
+                                        pending_sends_event.io_uring_entry(),
+                                        Token::PendingsSends,
+                                    );
 
-                                for pending in
-                                    double_pending_sends.drain(0..double_pending_sends.len())
-                                {
-                                    loop_ctx.enqueue_send(pending);
+                                    for pending in
+                                        double_pending_sends.drain(0..double_pending_sends.len())
+                                    {
+                                        loop_ctx.enqueue_send(pending);
+                                    }
+                                } else {
+                                    tracing::info!("io-uring loop shutdown requested");
+                                    break 'io;
                                 }
                             }
                             Token::Send { key } => {
@@ -685,7 +552,7 @@ impl IoUringLoop {
                                     metrics::errors_total(send_dir, &source, &asn_info).inc();
                                     metrics::packets_dropped_total(send_dir, &source, &asn_info)
                                         .inc();
-                                } else if ret as usize != packet.buffer.len() {
+                                } else if ret as usize != packet.data.len() {
                                     metrics::packets_total(send_dir, &asn_info).inc();
                                     metrics::errors_total(
                                         send_dir,
@@ -698,10 +565,6 @@ impl IoUringLoop {
                                     metrics::bytes_total(send_dir, &asn_info).inc_by(ret as u64);
                                 }
                             }
-                            Token::Shutdown => {
-                                tracing::info!("io-uring loop shutdown requested");
-                                break 'io;
-                            }
                         }
                     }
 
@@ -709,7 +572,7 @@ impl IoUringLoop {
                 }
             })?;
 
-        Ok(rx)
+        Ok(())
     }
 }
 

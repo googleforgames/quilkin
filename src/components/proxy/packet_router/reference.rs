@@ -16,14 +16,15 @@
 
 //! The reference implementation is used for non-Linux targets
 
+use crate::components::proxy;
+
 impl super::DownstreamReceiveWorkerConfig {
     pub async fn spawn(
         self,
-        _shutdown: crate::ShutdownRx,
-    ) -> eyre::Result<std::sync::mpsc::Receiver<()>> {
+        pending_sends: (proxy::PendingSends, proxy::PacketSendReceiver),
+    ) -> eyre::Result<()> {
         let Self {
             worker_id,
-            upstream_receiver,
             port,
             config,
             sessions,
@@ -31,10 +32,9 @@ impl super::DownstreamReceiveWorkerConfig {
             buffer_pool,
         } = self;
 
-        let (tx, rx) = std::sync::mpsc::channel();
-
         let thread_span =
             uring_span!(tracing::debug_span!("receiver", id = worker_id).or_current());
+        let (tx, mut rx) = tokio::sync::oneshot::channel();
 
         let worker = uring_spawn!(thread_span, async move {
             let mut last_received_at = None;
@@ -46,56 +46,49 @@ impl super::DownstreamReceiveWorkerConfig {
             let send_socket = socket.clone();
 
             let inner_task = async move {
-                let _ = tx.send(());
+                let (pending_sends, mut sends_rx) = pending_sends;
+                let mut sends_double_buffer = Vec::with_capacity(pending_sends.capacity());
 
-                loop {
-                    tokio::select! {
-                        result = upstream_receiver.recv() => {
-                            match result {
-                                Err(error) => {
-                                    tracing::trace!(%error, "error receiving packet");
-                                    crate::metrics::errors_total(
-                                        crate::metrics::WRITE,
-                                        &error.to_string(),
-                                        &crate::metrics::EMPTY,
-                                        )
-                                        .inc();
-                                }
-                                Ok(crate::components::proxy::SendPacket {
-                                    destination,
-                                    asn_info,
-                                    data,
-                                }) => {
-                                    let (result, _) = send_socket.send_to(data, destination).await;
-                                    let asn_info = asn_info.as_ref().into();
-                                    match result {
-                                        Ok(size) => {
-                                            crate::metrics::packets_total(crate::metrics::WRITE, &asn_info)
-                                                .inc();
-                                            crate::metrics::bytes_total(crate::metrics::WRITE, &asn_info)
-                                                .inc_by(size as u64);
-                                        }
-                                        Err(error) => {
-                                            let source = error.to_string();
-                                            crate::metrics::errors_total(
-                                                crate::metrics::WRITE,
-                                                &source,
-                                                &asn_info,
-                                                )
-                                                .inc();
-                                            crate::metrics::packets_dropped_total(
-                                                crate::metrics::WRITE,
-                                                &source,
-                                                &asn_info,
-                                                )
-                                                .inc();
-                                        }
-                                    }
-                                }
+                while sends_rx.changed().await.is_ok() {
+                    if !*sends_rx.borrow() {
+                        tracing::trace!("io loop shutdown requested");
+                        break;
+                    }
+
+                    sends_double_buffer = pending_sends.swap(sends_double_buffer);
+
+                    for packet in sends_double_buffer.drain(..sends_double_buffer.len()) {
+                        let (result, _) = send_socket
+                            .send_to(packet.data, packet.destination.as_socket().unwrap())
+                            .await;
+                        let asn_info = packet.asn_info.as_ref().into();
+                        match result {
+                            Ok(size) => {
+                                crate::metrics::packets_total(crate::metrics::WRITE, &asn_info)
+                                    .inc();
+                                crate::metrics::bytes_total(crate::metrics::WRITE, &asn_info)
+                                    .inc_by(size as u64);
+                            }
+                            Err(error) => {
+                                let source = error.to_string();
+                                crate::metrics::errors_total(
+                                    crate::metrics::WRITE,
+                                    &source,
+                                    &asn_info,
+                                )
+                                .inc();
+                                crate::metrics::packets_dropped_total(
+                                    crate::metrics::WRITE,
+                                    &source,
+                                    &asn_info,
+                                )
+                                .inc();
                             }
                         }
                     }
                 }
+
+                let _ = tx.send(());
             };
 
             cfg_if::cfg_if! {
@@ -115,34 +108,42 @@ impl super::DownstreamReceiveWorkerConfig {
                 // packet, which is the maximum value of 16 a bit integer.
                 let buffer = buffer_pool.clone().alloc();
 
-                let (result, contents) = socket.recv_from(buffer).await;
-                let received_at = crate::time::UtcTimestamp::now();
+                tokio::select! {
+                    received = socket.recv_from(buffer) => {
+                        let received_at = crate::time::UtcTimestamp::now();
+                        let (result, buffer) = received;
 
-                match result {
-                    Ok((_size, mut source)) => {
-                        source.set_ip(source.ip().to_canonical());
-                        let packet = super::DownstreamPacket { contents, source };
+                        match result {
+                            Ok((_size, mut source)) => {
+                                source.set_ip(source.ip().to_canonical());
+                                let packet = super::DownstreamPacket { contents: buffer, source };
 
-                        if let Some(last_received_at) = last_received_at {
-                            crate::metrics::packet_jitter(
-                                crate::metrics::READ,
-                                &crate::metrics::EMPTY,
-                            )
-                            .set((received_at - last_received_at).nanos());
+                                if let Some(last_received_at) = last_received_at {
+                                    crate::metrics::packet_jitter(
+                                        crate::metrics::READ,
+                                        &crate::metrics::EMPTY,
+                                    )
+                                    .set((received_at - last_received_at).nanos());
+                                }
+                                last_received_at = Some(received_at);
+
+                                Self::process_task(
+                                    packet,
+                                    worker_id,
+                                    &config,
+                                    &sessions,
+                                    &mut error_acc,
+                                    &mut destinations,
+                                );
+                            }
+                            Err(error) => {
+                                tracing::error!(%error, "error receiving packet");
+                                return;
+                            }
                         }
-                        last_received_at = Some(received_at);
-
-                        Self::process_task(
-                            packet,
-                            worker_id,
-                            &config,
-                            &sessions,
-                            &mut error_acc,
-                            &mut destinations,
-                        );
                     }
-                    Err(error) => {
-                        tracing::error!(%error, "error receiving packet");
+                    _ = &mut rx => {
+                        tracing::debug!("Closing downstream socket loop, shutdown requested");
                         return;
                     }
                 }
@@ -151,6 +152,6 @@ impl super::DownstreamReceiveWorkerConfig {
 
         use eyre::WrapErr as _;
         worker.recv().context("failed to spawn receiver task")?;
-        Ok(rx)
+        Ok(())
     }
 }
