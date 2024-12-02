@@ -24,13 +24,13 @@ use crate::{
     components::proxy::{self, PendingSends, PipelineError, SendPacket},
     metrics,
     pool::PoolBuffer,
-    time::UtcTimestamp,
 };
 use io_uring::{squeue::Entry, types::Fd};
 use socket2::SockAddr;
 use std::{
     os::fd::{AsRawFd, FromRawFd},
     sync::Arc,
+    time::Instant,
 };
 
 /// A simple wrapper around [eventfd](https://man7.org/linux/man-pages/man2/eventfd.2.html)
@@ -227,7 +227,8 @@ pub enum PacketProcessorCtx {
 fn process_packet(
     ctx: &mut PacketProcessorCtx,
     packet: RecvPacket,
-    last_received_at: &mut Option<UtcTimestamp>,
+    last_received_at: &mut Option<Instant>,
+    processing_time: &prometheus::local::LocalHistogram,
 ) {
     match ctx {
         PacketProcessorCtx::Router {
@@ -237,10 +238,10 @@ fn process_packet(
             error_acc,
             destinations,
         } => {
-            let received_at = UtcTimestamp::now();
+            let received_at = Instant::now();
             if let Some(last_received_at) = last_received_at {
                 metrics::packet_jitter(metrics::READ, &metrics::EMPTY)
-                    .set((received_at - *last_received_at).nanos());
+                    .set((received_at - *last_received_at).as_nanos() as _);
             }
             *last_received_at = Some(received_at);
 
@@ -256,6 +257,7 @@ fn process_packet(
                 sessions,
                 error_acc,
                 destinations,
+                processing_time,
             );
         }
         PacketProcessorCtx::SessionPool { pool, port, .. } => {
@@ -453,6 +455,8 @@ impl IoUringLoop {
                 // Just double buffer the pending writes for simplicity
                 let mut double_pending_sends = Vec::with_capacity(pending_sends.capacity());
 
+                let processing_metrics = metrics::ProcessingMetrics::new();
+
                 // When sending packets, this is the direction used when updating metrics
                 let send_dir = if matches!(ctx, PacketProcessorCtx::Router { .. }) {
                     metrics::WRITE
@@ -478,6 +482,8 @@ impl IoUringLoop {
                 // onto the submission queue for the loop to actually function (ie, similar to await on futures)
                 loop_ctx.sync();
 
+                const FLUSH_INTERVAL: std::time::Duration = std::time::Duration::from_secs(15);
+                let mut time_since_flush = std::time::Duration::default();
                 let mut last_received_at = None;
 
                 // The core io uring loop
@@ -520,7 +526,24 @@ impl IoUringLoop {
                                 }
 
                                 let packet = packet.finalize_recv(ret as usize);
-                                process_packet(&mut ctx, packet, &mut last_received_at);
+                                let old_received_at = last_received_at;
+                                process_packet(
+                                    &mut ctx,
+                                    packet,
+                                    &mut last_received_at,
+                                    &processing_metrics.read_processing_time,
+                                );
+
+                                if let (Some(old_received_at), Some(last_received_at)) =
+                                    (&old_received_at, &last_received_at)
+                                {
+                                    time_since_flush += *last_received_at - *old_received_at;
+
+                                    if time_since_flush >= FLUSH_INTERVAL {
+                                        time_since_flush = <_>::default();
+                                        processing_metrics.flush();
+                                    }
+                                }
 
                                 loop_ctx.enqueue_recv(buffer_pool.clone().alloc());
                             }

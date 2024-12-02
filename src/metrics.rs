@@ -17,8 +17,8 @@
 use crate::net::maxmind_db::MetricsIpNetEntry;
 use once_cell::sync::Lazy;
 use prometheus::{
-    core::Collector, Histogram, HistogramOpts, HistogramVec, IntCounter, IntCounterVec, IntGauge,
-    IntGaugeVec, Opts, Registry, DEFAULT_BUCKETS,
+    core::Collector, local::LocalHistogram, Histogram, HistogramOpts, HistogramVec, IntCounter,
+    IntCounterVec, IntGauge, IntGaugeVec, Opts, Registry, DEFAULT_BUCKETS,
 };
 
 pub use prometheus::Result;
@@ -281,6 +281,24 @@ pub trait CollectorExt: Collector + Clone + Sized + 'static {
 }
 
 impl<C: Collector + Clone + 'static> CollectorExt for C {}
+
+/// A local instance of all of the metrics related to packet processing.
+pub struct ProcessingMetrics {
+    pub read_processing_time: LocalHistogram,
+}
+
+impl ProcessingMetrics {
+    pub fn new() -> Self {
+        Self {
+            read_processing_time: processing_time(READ).local(),
+        }
+    }
+
+    #[inline]
+    pub fn flush(&self) {
+        self.read_processing_time.flush();
+    }
+}
 
 #[cfg(test)]
 mod test {

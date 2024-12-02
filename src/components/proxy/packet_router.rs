@@ -57,6 +57,7 @@ impl DownstreamReceiveWorkerConfig {
         sessions: &Arc<SessionPool>,
         error_acc: &mut super::error::ErrorAccumulator,
         destinations: &mut Vec<crate::net::EndpointAddress>,
+        processing_time: &prometheus::local::LocalHistogram,
     ) {
         tracing::trace!(
             id = worker_id,
@@ -65,7 +66,7 @@ impl DownstreamReceiveWorkerConfig {
             "received packet from downstream"
         );
 
-        let timer = metrics::processing_time(metrics::READ).start_timer();
+        let timer = processing_time.start_timer();
         match Self::process_downstream_received_packet(packet, config, sessions, destinations) {
             Ok(()) => {
                 error_acc.maybe_send();
