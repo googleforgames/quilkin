@@ -171,7 +171,7 @@ pub struct IpNetEntry {
     pub prefix: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct MetricsIpNetEntry {
     pub prefix: String,
     pub id: u64,

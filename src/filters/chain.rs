@@ -14,27 +14,10 @@
  * limitations under the License.
  */
 
-use prometheus::{exponential_buckets, Histogram};
-
 use crate::{
     config::Filter as FilterConfig,
     filters::{prelude::*, FilterRegistry},
-    metrics::{histogram_opts, CollectorExt},
 };
-
-const FILTER_LABEL: &str = "filter";
-
-/// Start the histogram bucket at an eighth of a millisecond, as we bucketed the full filter
-/// chain processing starting at a quarter of a millisecond, so we we will want finer granularity
-/// here.
-const BUCKET_START: f64 = 0.000125;
-
-const BUCKET_FACTOR: f64 = 2.5;
-
-/// At an exponential factor of 2.5 (BUCKET_FACTOR), 11 iterations gets us to just over half a
-/// second. Any processing that occurs over half a second is far too long, so we end
-/// the bucketing there as we don't care about granularity past this value.
-const BUCKET_COUNT: usize = 11;
 
 /// A chain of [`Filter`]s to be executed in order.
 ///
@@ -45,50 +28,11 @@ const BUCKET_COUNT: usize = 11;
 #[derive(Clone, Default)]
 pub struct FilterChain {
     filters: Vec<(String, FilterInstance)>,
-    filter_read_duration_seconds: Vec<Histogram>,
-    filter_write_duration_seconds: Vec<Histogram>,
 }
 
 impl FilterChain {
     pub fn new(filters: Vec<(String, FilterInstance)>) -> Result<Self, CreationError> {
-        let subsystem = "filter";
-
-        Ok(Self {
-            filter_read_duration_seconds: filters
-                .iter()
-                .map(|(name, _)| {
-                    Histogram::with_opts(
-                        histogram_opts(
-                            "read_duration_seconds",
-                            subsystem,
-                            "Seconds taken to execute a given filter's `read`.",
-                            Some(
-                                exponential_buckets(BUCKET_START, BUCKET_FACTOR, BUCKET_COUNT)
-                                    .unwrap(),
-                            ),
-                        )
-                        .const_label(FILTER_LABEL, name),
-                    )
-                    .and_then(|histogram| histogram.register_if_not_exists())
-                })
-                .collect::<Result<_, prometheus::Error>>()?,
-            filter_write_duration_seconds: filters
-                .iter()
-                .map(|(name, _)| {
-                    Histogram::with_opts(
-                        histogram_opts(
-                            "write_duration_seconds",
-                            subsystem,
-                            "Seconds taken to execute a given filter's `write`.",
-                            Some(exponential_buckets(0.000125, 2.5, 11).unwrap()),
-                        )
-                        .const_label(FILTER_LABEL, name),
-                    )
-                    .and_then(|histogram| histogram.register_if_not_exists())
-                })
-                .collect::<Result<_, prometheus::Error>>()?,
-            filters,
-        })
+        Ok(Self { filters })
     }
 
     #[inline]
@@ -274,15 +218,9 @@ impl schemars::JsonSchema for FilterChain {
 
 impl Filter for FilterChain {
     fn read(&self, ctx: &mut ReadContext<'_>) -> Result<(), FilterError> {
-        for ((id, instance), histogram) in self
-            .filters
-            .iter()
-            .zip(self.filter_read_duration_seconds.iter())
-        {
+        for (id, instance) in self.filters.iter() {
             tracing::trace!(%id, "read filtering packet");
-            let timer = histogram.start_timer();
             let result = instance.filter().read(ctx);
-            timer.stop_and_record();
             match result {
                 Ok(()) => tracing::trace!(%id, "read passing packet"),
                 Err(error) => {
@@ -304,16 +242,9 @@ impl Filter for FilterChain {
     }
 
     fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
-        for ((id, instance), histogram) in self
-            .filters
-            .iter()
-            .rev()
-            .zip(self.filter_write_duration_seconds.iter().rev())
-        {
+        for (id, instance) in self.filters.iter().rev() {
             tracing::trace!(%id, "write filtering packet");
-            let timer = histogram.start_timer();
             let result = instance.filter().write(ctx);
-            timer.stop_and_record();
             match result {
                 Ok(()) => tracing::trace!(%id, "write passing packet"),
                 Err(error) => {

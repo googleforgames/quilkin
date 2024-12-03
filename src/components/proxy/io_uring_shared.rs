@@ -455,7 +455,7 @@ impl IoUringLoop {
                 // Just double buffer the pending writes for simplicity
                 let mut double_pending_sends = Vec::with_capacity(pending_sends.capacity());
 
-                let processing_metrics = metrics::ProcessingMetrics::new();
+                let mut processing_metrics = metrics::ProcessingMetrics::new();
 
                 // When sending packets, this is the direction used when updating metrics
                 let send_dir = if matches!(ctx, PacketProcessorCtx::Router { .. }) {
@@ -567,7 +567,8 @@ impl IoUringLoop {
                             }
                             Token::Send { key } => {
                                 let packet = loop_ctx.pop_packet(key).finalize_send();
-                                let asn_info = packet.asn_info.as_ref().into();
+                                let ip_metrics_entry = packet.asn_info;
+                                let asn_info = ip_metrics_entry.as_ref().into();
 
                                 if ret < 0 {
                                     let source =
@@ -576,16 +577,25 @@ impl IoUringLoop {
                                     metrics::packets_dropped_total(send_dir, &source, &asn_info)
                                         .inc();
                                 } else if ret as usize != packet.data.len() {
-                                    metrics::packets_total(send_dir, &asn_info).inc();
                                     metrics::errors_total(
                                         send_dir,
                                         "sent bytes != packet length",
                                         &asn_info,
                                     )
                                     .inc();
+                                    *processing_metrics
+                                        .packets_total
+                                        .entry((send_dir, ip_metrics_entry))
+                                        .or_default() += 1;
                                 } else {
-                                    metrics::packets_total(send_dir, &asn_info).inc();
-                                    metrics::bytes_total(send_dir, &asn_info).inc_by(ret as u64);
+                                    *processing_metrics
+                                        .packets_total
+                                        .entry((send_dir, ip_metrics_entry.clone()))
+                                        .or_default() += 1;
+                                    *processing_metrics
+                                        .bytes_total
+                                        .entry((send_dir, ip_metrics_entry))
+                                        .or_default() += ret as usize;
                                 }
                             }
                         }
