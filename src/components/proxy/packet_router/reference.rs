@@ -102,7 +102,7 @@ impl super::DownstreamReceiveWorkerConfig {
             let mut error_acc =
                 crate::components::proxy::error::ErrorAccumulator::new(error_sender);
             let mut destinations = Vec::with_capacity(1);
-            let processing_metrics = crate::metrics::ProcessingMetrics::new();
+            let mut processing_metrics = crate::metrics::ProcessingMetrics::new();
 
             loop {
                 // Initialize a buffer for the UDP packet. We use the maximum size of a UDP
