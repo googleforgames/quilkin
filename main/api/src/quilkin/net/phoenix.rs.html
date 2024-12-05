@@ -1026,7 +1026,7 @@
                                                 .serve_connection(conn, svc)
                                                 .<span class="kw">await
                                             </span>{
-                                                <span class="macro">tracing::warn!</span>(
+                                                <span class="macro">tracing::error!</span>(
                                                     <span class="string">"failed to reponse to phoenix request: {err}"
                                                 </span>);
                                             }
@@ -1216,7 +1216,7 @@
                         count += <span class="number">1</span>;
                     }
                     <span class="prelude-val">Err</span>(error) =&gt; {
-                        <span class="macro">tracing::warn!</span>(%address, %error, <span class="string">"error measuring distance"</span>);
+                        <span class="macro">tracing::debug!</span>(%address, %error, <span class="string">"error measuring distance"</span>);
                         node.increase_error_estimate();
                     }
                 }
