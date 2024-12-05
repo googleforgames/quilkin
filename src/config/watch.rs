@@ -136,13 +136,13 @@ pub struct ReadGuard<'inner, T: Watchable + std::fmt::Debug> {
     marker: Marker,
 }
 
-impl<'inner, T: Watchable + std::fmt::Debug> Drop for ReadGuard<'inner, T> {
+impl<T: Watchable + std::fmt::Debug> Drop for ReadGuard<'_, T> {
     fn drop(&mut self) {
         debug_assert!(!self.inner.has_changed(self.marker));
     }
 }
 
-impl<'inner, T: Watchable + std::fmt::Debug> std::ops::Deref for ReadGuard<'inner, T> {
+impl<T: Watchable + std::fmt::Debug> std::ops::Deref for ReadGuard<'_, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -155,13 +155,13 @@ pub struct WatchGuard<'inner, T: Watchable + std::fmt::Debug> {
     marker: Marker,
 }
 
-impl<'inner, T: Watchable + std::fmt::Debug> Drop for WatchGuard<'inner, T> {
+impl<T: Watchable + std::fmt::Debug> Drop for WatchGuard<'_, T> {
     fn drop(&mut self) {
         self.inner.check_for_changes(self.marker);
     }
 }
 
-impl<'inner, T: Watchable + std::fmt::Debug> std::ops::Deref for WatchGuard<'inner, T> {
+impl<T: Watchable + std::fmt::Debug> std::ops::Deref for WatchGuard<'_, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {

@@ -313,7 +313,7 @@ pub enum Entry<'a, K, V> {
     Vacant(VacantEntry<'a, K, V>),
 }
 
-impl<'a, K, V> OccupiedEntry<'a, K, Value<V>>
+impl<K, V> OccupiedEntry<'_, K, Value<V>>
 where
     K: Eq + Hash,
 {

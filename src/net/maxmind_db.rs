@@ -53,10 +53,11 @@ impl std::str::FromStr for Source {
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         if let Ok(url) = input.parse() {
             Ok(Self::Url { url })
-        } else if let Ok(path) = input.parse() {
-            Ok(Self::File { path })
         } else {
-            Err(eyre::eyre!("'{}' is not a valid URL or path", input))
+            // Clippy says this parse is guarenteed to succeed.
+            Ok(Self::File {
+                path: input.parse().unwrap(),
+            })
         }
     }
 }
