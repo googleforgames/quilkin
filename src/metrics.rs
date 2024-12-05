@@ -83,7 +83,7 @@ pub struct AsnInfo<'a> {
     prefix: &'a str,
 }
 
-impl<'a> AsnInfo<'a> {
+impl AsnInfo<'_> {
     #[inline]
     fn asn_str(&self) -> &str {
         // SAFETY: we only write ASCII in itoa

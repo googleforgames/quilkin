@@ -224,7 +224,7 @@ impl<'de> Deserialize<'de> for PortRange {
     {
         struct PortRangeVisitor;
 
-        impl<'de> Visitor<'de> for PortRangeVisitor {
+        impl Visitor<'_> for PortRangeVisitor {
             type Value = PortRange;
 
             fn expecting(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
@@ -344,7 +344,7 @@ mod tests {
         let yaml = "
 on_read:
   - action: ALLOW
-    sources: 
+    sources:
        - 192.168.51.0/24
     ports:
        - 10
