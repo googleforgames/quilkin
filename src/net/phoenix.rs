@@ -127,7 +127,7 @@ pub fn spawn<M: Clone + Measurement + Sync + Send + 'static>(
                                                 .serve_connection(conn, svc)
                                                 .await
                                             {
-                                                tracing::warn!(
+                                                tracing::error!(
                                                     "failed to reponse to phoenix request: {err}"
                                                 );
                                             }
@@ -317,7 +317,7 @@ impl<M: Measurement + 'static> Phoenix<M> {
                         count += 1;
                     }
                     Err(error) => {
-                        tracing::warn!(%address, %error, "error measuring distance");
+                        tracing::debug!(%address, %error, "error measuring distance");
                         node.increase_error_estimate();
                     }
                 }
