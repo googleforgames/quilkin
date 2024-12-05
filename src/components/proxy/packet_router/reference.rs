@@ -37,7 +37,7 @@ impl super::DownstreamReceiveWorkerConfig {
         let (tx, mut rx) = tokio::sync::oneshot::channel();
 
         let worker = uring_spawn!(thread_span, async move {
-            let mut last_received_at = None;
+            let mut last_received_at: Option<std::time::Instant> = None;
             let socket = crate::net::DualStackLocalSocket::new(port)
                 .unwrap()
                 .make_refcnt();
@@ -102,6 +102,7 @@ impl super::DownstreamReceiveWorkerConfig {
             let mut error_acc =
                 crate::components::proxy::error::ErrorAccumulator::new(error_sender);
             let mut destinations = Vec::with_capacity(1);
+            let mut processing_metrics = crate::metrics::ProcessingMetrics::new();
 
             loop {
                 // Initialize a buffer for the UDP packet. We use the maximum size of a UDP
@@ -110,7 +111,7 @@ impl super::DownstreamReceiveWorkerConfig {
 
                 tokio::select! {
                     received = socket.recv_from(buffer) => {
-                        let received_at = crate::time::UtcTimestamp::now();
+                        let received_at = std::time::Instant::now();
                         let (result, buffer) = received;
 
                         match result {
@@ -123,7 +124,7 @@ impl super::DownstreamReceiveWorkerConfig {
                                         crate::metrics::READ,
                                         &crate::metrics::EMPTY,
                                     )
-                                    .set((received_at - last_received_at).nanos());
+                                    .set((received_at - last_received_at).as_nanos() as _);
                                 }
                                 last_received_at = Some(received_at);
 
@@ -134,7 +135,10 @@ impl super::DownstreamReceiveWorkerConfig {
                                     &sessions,
                                     &mut error_acc,
                                     &mut destinations,
+                                    &processing_metrics.read_processing_time,
                                 );
+
+                                processing_metrics.flush();
                             }
                             Err(error) => {
                                 tracing::error!(%error, "error receiving packet");

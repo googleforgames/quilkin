@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
+use std::collections::HashMap;
+
 use crate::net::maxmind_db::MetricsIpNetEntry;
 use once_cell::sync::Lazy;
 use prometheus::{
-    core::Collector, Histogram, HistogramOpts, HistogramVec, IntCounter, IntCounterVec, IntGauge,
-    IntGaugeVec, Opts, Registry, DEFAULT_BUCKETS,
+    core::Collector, local::LocalHistogram, Histogram, HistogramOpts, HistogramVec, IntCounter,
+    IntCounterVec, IntGauge, IntGaugeVec, Opts, Registry, DEFAULT_BUCKETS,
 };
-
-pub use prometheus::Result;
 
 /// "event" is used as a label for Metrics that can apply to both Filter
 /// `read` and `write` executions.
@@ -58,7 +58,7 @@ pub(crate) const BUCKET_FACTOR: f64 = 2.0;
 /// care about granularity past 1 second.
 pub(crate) const BUCKET_COUNT: usize = 13;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Direction {
     Read,
     Write,
@@ -269,18 +269,35 @@ pub fn register<T: Collector + Sized + Clone + 'static>(collector: T) -> T {
         .unwrap()
 }
 
-pub trait CollectorExt: Collector + Clone + Sized + 'static {
-    /// Registers the current metric collector with the provided registry
-    /// if not already registered.
-    fn register_if_not_exists(self) -> Result<Self> {
-        match registry().register(Box::from(self.clone())) {
-            Ok(_) | Err(prometheus::Error::AlreadyReg) => Ok(self),
-            Err(err) => Err(err),
+/// A local instance of all of the metrics related to packet processing.
+pub struct ProcessingMetrics {
+    pub read_processing_time: LocalHistogram,
+    pub packets_total: HashMap<(Direction, Option<MetricsIpNetEntry>), usize>,
+    pub bytes_total: HashMap<(Direction, Option<MetricsIpNetEntry>), usize>,
+}
+
+impl ProcessingMetrics {
+    pub fn new() -> Self {
+        Self {
+            read_processing_time: processing_time(READ).local(),
+            packets_total: <_>::default(),
+            bytes_total: <_>::default(),
+        }
+    }
+
+    #[inline]
+    pub fn flush(&mut self) {
+        self.read_processing_time.flush();
+
+        for ((send_dir, asn_info), amount) in self.packets_total.drain() {
+            packets_total(send_dir, &asn_info.as_ref().into()).inc_by(amount as _);
+        }
+
+        for ((send_dir, asn_info), amount) in self.bytes_total.drain() {
+            bytes_total(send_dir, &asn_info.as_ref().into()).inc_by(amount as _);
         }
     }
 }
-
-impl<C: Collector + Clone + 'static> CollectorExt for C {}
 
 #[cfg(test)]
 mod test {

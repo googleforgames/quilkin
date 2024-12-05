@@ -57,6 +57,7 @@ impl DownstreamReceiveWorkerConfig {
         sessions: &Arc<SessionPool>,
         error_acc: &mut super::error::ErrorAccumulator,
         destinations: &mut Vec<crate::net::EndpointAddress>,
+        processing_time: &prometheus::local::LocalHistogram,
     ) {
         tracing::trace!(
             id = worker_id,
@@ -65,21 +66,26 @@ impl DownstreamReceiveWorkerConfig {
             "received packet from downstream"
         );
 
-        let timer = metrics::processing_time(metrics::READ).start_timer();
-        match Self::process_downstream_received_packet(packet, config, sessions, destinations) {
-            Ok(()) => {
-                error_acc.maybe_send();
-            }
-            Err(error) => {
-                let discriminant = error.discriminant();
-                metrics::errors_total(metrics::READ, discriminant, &metrics::EMPTY).inc();
-                metrics::packets_dropped_total(metrics::READ, discriminant, &metrics::EMPTY).inc();
+        processing_time.observe_closure_duration(
+            || match Self::process_downstream_received_packet(
+                packet,
+                config,
+                sessions,
+                destinations,
+            ) {
+                Ok(()) => {
+                    error_acc.maybe_send();
+                }
+                Err(error) => {
+                    let discriminant = error.discriminant();
+                    metrics::errors_total(metrics::READ, discriminant, &metrics::EMPTY).inc();
+                    metrics::packets_dropped_total(metrics::READ, discriminant, &metrics::EMPTY)
+                        .inc();
 
-                error_acc.push_error(error);
-            }
-        }
-
-        timer.stop_and_record();
+                    error_acc.push_error(error);
+                }
+            },
+        );
     }
 
     /// Processes a packet by running it through the filter chain.
