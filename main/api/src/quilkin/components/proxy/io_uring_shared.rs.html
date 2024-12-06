@@ -639,7 +639,10 @@
 <a href="#638" id="638">638</a>
 <a href="#639" id="639">639</a>
 <a href="#640" id="640">640</a>
-<a href="#641" id="641">641</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#641" id="641">641</a>
+<a href="#642" id="642">642</a>
+<a href="#643" id="643">643</a>
+<a href="#644" id="644">644</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -1086,6 +1089,7 @@
         std::thread::Builder::new()
             .name(thread_name)
             .spawn(<span class="kw">move </span>|| {
+                <span class="kw">crate</span>::metrics::game_traffic_tasks().inc();
                 <span class="kw">let </span>_guard = tracing::dispatcher::set_default(<span class="kw-2">&amp;</span>dispatcher);
 
                 <span class="kw">let </span>tokens = slab::Slab::with_capacity(concurrent_sends + <span class="number">1 </span>+ <span class="number">1</span>);
@@ -1131,14 +1135,14 @@
                         }
                         <span class="prelude-val">Err</span>(error) =&gt; {
                             <span class="macro">tracing::error!</span>(%error, <span class="string">"io-uring submit_and_wait failed"</span>);
-                            <span class="kw">return</span>;
+                            <span class="kw">break </span><span class="lifetime">'io</span>;
                         }
                     }
                     cq.sync();
 
                     <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = loop_ctx.process_backlog(<span class="kw-2">&amp;</span>submitter) {
                         <span class="macro">tracing::error!</span>(%error, <span class="string">"failed to process io-uring backlog"</span>);
-                        <span class="kw">return</span>;
+                        <span class="kw">break </span><span class="lifetime">'io</span>;
                     }
 
                     <span class="comment">// Now actually process all of the completed io requests
@@ -1211,6 +1215,8 @@
 
                     loop_ctx.sync();
                 }
+
+                <span class="kw">crate</span>::metrics::game_traffic_task_closed().inc();
             })<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(())

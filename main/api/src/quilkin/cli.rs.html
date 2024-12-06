@@ -280,7 +280,9 @@
 <a href="#279" id="279">279</a>
 <a href="#280" id="280">280</a>
 <a href="#281" id="281">281</a>
-<a href="#282" id="282">282</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -505,6 +507,7 @@
         <span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)]
         </span><span class="kw">let </span><span class="kw-2">mut </span>sig_term_fut = signal::unix::signal(signal::unix::SignalKind::terminate())<span class="question-mark">?</span>;
 
+        <span class="kw">crate</span>::metrics::shutdown_initiated().set(<span class="bool-val">false </span><span class="kw">as _</span>);
         tokio::spawn(<span class="kw">async move </span>{
             <span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)]
             </span><span class="kw">let </span>sig_term = sig_term_fut.recv();
@@ -516,6 +519,7 @@
                 <span class="kw">_ </span>= sig_term =&gt; <span class="string">"SIGTERM"</span>,
             };
 
+            <span class="kw">crate</span>::metrics::shutdown_initiated().set(<span class="bool-val">true </span><span class="kw">as _</span>);
             <span class="macro">tracing::info!</span>(%signal, <span class="string">"shutting down from signal"</span>);
             <span class="comment">// Don't unwrap in order to ensure that we execute
             // any subsequent shutdown tasks.
