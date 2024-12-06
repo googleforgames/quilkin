@@ -445,6 +445,7 @@ impl IoUringLoop {
         std::thread::Builder::new()
             .name(thread_name)
             .spawn(move || {
+                crate::metrics::game_traffic_tasks().inc();
                 let _guard = tracing::dispatcher::set_default(&dispatcher);
 
                 let tokens = slab::Slab::with_capacity(concurrent_sends + 1 + 1);
@@ -490,14 +491,14 @@ impl IoUringLoop {
                         }
                         Err(error) => {
                             tracing::error!(%error, "io-uring submit_and_wait failed");
-                            return;
+                            break 'io;
                         }
                     }
                     cq.sync();
 
                     if let Err(error) = loop_ctx.process_backlog(&submitter) {
                         tracing::error!(%error, "failed to process io-uring backlog");
-                        return;
+                        break 'io;
                     }
 
                     // Now actually process all of the completed io requests
@@ -570,6 +571,8 @@ impl IoUringLoop {
 
                     loop_ctx.sync();
                 }
+
+                crate::metrics::game_traffic_task_closed().inc();
             })?;
 
         Ok(())

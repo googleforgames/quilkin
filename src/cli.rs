@@ -223,6 +223,7 @@ impl Cli {
         #[cfg(target_os = "linux")]
         let mut sig_term_fut = signal::unix::signal(signal::unix::SignalKind::terminate())?;
 
+        crate::metrics::shutdown_initiated().set(false as _);
         tokio::spawn(async move {
             #[cfg(target_os = "linux")]
             let sig_term = sig_term_fut.recv();
@@ -234,6 +235,7 @@ impl Cli {
                 _ = sig_term => "SIGTERM",
             };
 
+            crate::metrics::shutdown_initiated().set(true as _);
             tracing::info!(%signal, "shutting down from signal");
             // Don't unwrap in order to ensure that we execute
             // any subsequent shutdown tasks.
