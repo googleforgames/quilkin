@@ -37,6 +37,11 @@
   
     - [Concatenate.Strategy](#quilkin-filters-concatenate-v1alpha1-Concatenate-Strategy)
   
+- [quilkin/filters/decryptor/v1alpha1/decryptor.proto](#quilkin_filters_decryptor_v1alpha1_decryptor-proto)
+    - [Decryptor](#quilkin-filters-decryptor-v1alpha1-Decryptor)
+  
+    - [Decryptor.Mode](#quilkin-filters-decryptor-v1alpha1-Decryptor-Mode)
+  
 - [quilkin/filters/debug/v1alpha1/debug.proto](#quilkin_filters_debug_v1alpha1_debug-proto)
     - [Debug](#quilkin-filters-debug-v1alpha1-Debug)
   
@@ -497,6 +502,51 @@ of xDS servers to connect to in the relay itself.
 | DoNothing | 0 |  |
 | Append | 1 |  |
 | Prepend | 2 |  |
+
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="quilkin_filters_decryptor_v1alpha1_decryptor-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## quilkin/filters/decryptor/v1alpha1/decryptor.proto
+
+
+
+<a name="quilkin-filters-decryptor-v1alpha1-Decryptor"></a>
+
+### Decryptor
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| key | [bytes](#bytes) |  |  |
+| mode | [Decryptor.Mode](#quilkin-filters-decryptor-v1alpha1-Decryptor-Mode) |  |  |
+| data_key | [google.protobuf.StringValue](#google-protobuf-StringValue) |  |  |
+| nonce_key | [google.protobuf.StringValue](#google-protobuf-StringValue) |  |  |
+
+
+
+
+
+ 
+
+
+<a name="quilkin-filters-decryptor-v1alpha1-Decryptor-Mode"></a>
+
+### Decryptor.Mode
+
+
+| Name | Number | Description |
+| ---- | ------ | ----------- |
+| Destination | 0 |  |
 
 
  
