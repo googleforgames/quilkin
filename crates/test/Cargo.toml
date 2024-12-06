@@ -24,6 +24,7 @@ publish = false
 workspace = true
 
 [dependencies]
+async-channel.workspace = true
 once_cell.workspace = true
 quilkin.workspace = true
 rand.workspace = true

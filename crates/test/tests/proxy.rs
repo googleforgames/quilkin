@@ -1,5 +1,5 @@
 use qt::*;
-use quilkin::{components::proxy, test::TestConfig};
+use quilkin::test::TestConfig;
 use tracing::Instrument as _;
 
 trace_test!(server, {
@@ -87,7 +87,8 @@ trace_test!(uring_receiver, {
 
     let (mut packet_rx, endpoint) = sb.server("server");
 
-    let (error_sender, mut error_receiver) = tokio::sync::mpsc::channel::<proxy::ErrorMap>(20);
+    let (error_sender, mut error_receiver) =
+        tokio::sync::mpsc::channel::<quilkin::components::proxy::ErrorMap>(20);
 
     tokio::task::spawn(
         async move {
@@ -104,31 +105,36 @@ trace_test!(uring_receiver, {
     config
         .clusters
         .modify(|clusters| clusters.insert_default([endpoint.into()].into()));
+    let (tx, rx) = async_channel::unbounded();
+    let (_shutdown_tx, shutdown_rx) =
+        quilkin::make_shutdown_channel(quilkin::ShutdownKind::Testing);
 
     let socket = sb.client();
     let (ws, addr) = sb.socket();
 
-    let pending_sends = proxy::PendingSends::new(1).unwrap();
-
     // we'll test a single DownstreamReceiveWorkerConfig
-    proxy::packet_router::DownstreamReceiveWorkerConfig {
+    let ready = quilkin::components::proxy::packet_router::DownstreamReceiveWorkerConfig {
         worker_id: 1,
         port: addr.port(),
+        upstream_receiver: rx.clone(),
         config: config.clone(),
         error_sender,
         buffer_pool: quilkin::test::BUFFER_POOL.clone(),
-        sessions: proxy::SessionPool::new(
+        sessions: quilkin::components::proxy::SessionPool::new(
             config,
-            vec![pending_sends.0.clone()],
+            tx,
             BUFFER_POOL.clone(),
+            shutdown_rx.clone(),
         ),
     }
-    .spawn(pending_sends)
+    .spawn(shutdown_rx)
     .await
     .expect("failed to spawn task");
 
     // Drop the socket, otherwise it can
     drop(ws);
+
+    ready.recv().unwrap();
 
     let msg = "hello-downstream";
     tracing::debug!("sending packet");
@@ -152,32 +158,35 @@ trace_test!(
             .clusters
             .modify(|clusters| clusters.insert_default([endpoint.into()].into()));
 
-        let pending_sends: Vec<_> = [
-            proxy::PendingSends::new(1).unwrap(),
-            proxy::PendingSends::new(1).unwrap(),
-            proxy::PendingSends::new(1).unwrap(),
-        ]
-        .into_iter()
-        .collect();
+        let (tx, rx) = async_channel::unbounded();
+        let (_shutdown_tx, shutdown_rx) =
+            quilkin::make_shutdown_channel(quilkin::ShutdownKind::Testing);
 
-        let sessions = proxy::SessionPool::new(
+        let sessions = quilkin::components::proxy::SessionPool::new(
             config.clone(),
-            pending_sends.iter().map(|ps| ps.0.clone()).collect(),
+            tx,
             BUFFER_POOL.clone(),
+            shutdown_rx.clone(),
         );
 
         const WORKER_COUNT: usize = 3;
 
         let (socket, addr) = sb.socket();
-        proxy::packet_router::spawn_receivers(
+        let workers = quilkin::components::proxy::packet_router::spawn_receivers(
             config,
             socket,
-            pending_sends,
+            WORKER_COUNT,
             &sessions,
+            rx,
             BUFFER_POOL.clone(),
+            shutdown_rx,
         )
         .await
         .unwrap();
+
+        for wn in workers {
+            wn.recv().unwrap();
+        }
 
         let socket = std::sync::Arc::new(sb.client());
         let msg = "recv-from";

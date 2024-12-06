@@ -14,7 +14,6 @@
  *  limitations under the License.
  */
 
-use crate::components::proxy;
 use std::sync::Arc;
 
 static SESSION_COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
@@ -24,9 +23,9 @@ impl super::SessionPool {
         self: Arc<Self>,
         raw_socket: socket2::Socket,
         port: u16,
-        pending_sends: (proxy::PendingSends, proxy::io_uring_shared::EventFd),
-    ) -> Result<(), proxy::PipelineError> {
-        use proxy::io_uring_shared;
+        downstream_receiver: tokio::sync::mpsc::Receiver<crate::components::proxy::SendPacket>,
+    ) -> Result<std::sync::mpsc::Receiver<()>, crate::components::proxy::PipelineError> {
+        use crate::components::proxy::io_uring_shared;
 
         let pool = self;
         let id = SESSION_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -37,12 +36,14 @@ impl super::SessionPool {
             crate::net::DualStackLocalSocket::from_raw(raw_socket),
         )?;
         let buffer_pool = pool.buffer_pool.clone();
+        let shutdown = pool.shutdown_rx.clone();
 
         io_loop.spawn(
             format!("session-{id}"),
             io_uring_shared::PacketProcessorCtx::SessionPool { pool, port },
-            pending_sends,
+            io_uring_shared::PacketReceiver::SessionPool(downstream_receiver),
             buffer_pool,
+            shutdown,
         )
     }
 }
