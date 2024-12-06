@@ -135,6 +135,97 @@ impl<'a> From<Option<&'a MetricsIpNetEntry>> for AsnInfo<'a> {
     }
 }
 
+pub(crate) fn shutdown_initiated() -> &'static IntGauge {
+    static SHUTDOWN_INITATED: Lazy<IntGauge> = Lazy::new(|| {
+        prometheus::register_int_gauge_with_registry! {
+            prometheus::opts! {
+                "shutdown_initiated",
+                "Shutdown process has been started",
+            },
+            registry(),
+        }
+        .unwrap()
+    });
+
+    &SHUTDOWN_INITATED
+}
+
+pub(crate) fn game_traffic_tasks() -> &'static IntCounter {
+    static GAME_TRAFFIC_TASKS: Lazy<IntCounter> = Lazy::new(|| {
+        prometheus::register_int_counter_with_registry! {
+            prometheus::opts! {
+                "game_traffic_tasks",
+                "The amount of game traffic tasks that have spawned",
+            },
+            registry(),
+        }
+        .unwrap()
+    });
+
+    &GAME_TRAFFIC_TASKS
+}
+
+pub(crate) fn game_traffic_task_closed() -> &'static IntCounter {
+    static GAME_TRAFFIC_TASK_CLOSED: Lazy<IntCounter> = Lazy::new(|| {
+        prometheus::register_int_counter_with_registry! {
+            prometheus::opts! {
+                "game_traffic_task_closed",
+                "The amount of game traffic tasks that have shutdown",
+            },
+            registry(),
+        }
+        .unwrap()
+    });
+
+    &GAME_TRAFFIC_TASK_CLOSED
+}
+
+pub(crate) fn phoenix_requests() -> &'static IntCounter {
+    static PHOENIX_REQUESTS: Lazy<IntCounter> = Lazy::new(|| {
+        prometheus::register_int_counter_with_registry! {
+            prometheus::opts! {
+                "phoenix_requests",
+                "The amount of phoenix requests",
+            },
+            registry(),
+        }
+        .unwrap()
+    });
+
+    &PHOENIX_REQUESTS
+}
+
+pub(crate) fn phoenix_task_closed() -> &'static IntGauge {
+    static PHOENIX_TASK_CLOSED: Lazy<IntGauge> = Lazy::new(|| {
+        prometheus::register_int_gauge_with_registry! {
+            prometheus::opts! {
+                "phoenix_task_closed",
+                "Whether the phoenix task has shutdown",
+            },
+            registry(),
+        }
+        .unwrap()
+    });
+
+    &PHOENIX_TASK_CLOSED
+}
+
+pub(crate) fn phoenix_server_errors(error: &str) -> IntCounter {
+    static PHOENIX_SERVER_ERRORS: Lazy<IntCounterVec> = Lazy::new(|| {
+        prometheus::register_int_counter_vec_with_registry! {
+            prometheus::opts! {
+                "phoenix_server_errors",
+                "The amount of errors attempting to spawn the phoenix HTTP server",
+            },
+            &["error"],
+            registry(),
+        }
+        .unwrap()
+    });
+
+    PHOENIX_SERVER_ERRORS.with_label_values(&[error])
+}
+
 pub(crate) fn processing_time(direction: Direction) -> Histogram {
     static PROCESSING_TIME: Lazy<HistogramVec> = Lazy::new(|| {
         prometheus::register_histogram_vec_with_registry! {

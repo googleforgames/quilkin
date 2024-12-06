@@ -37,6 +37,7 @@ impl super::DownstreamReceiveWorkerConfig {
         let (tx, mut rx) = tokio::sync::oneshot::channel();
 
         let worker = uring_spawn!(thread_span, async move {
+            crate::metrics::game_traffic_tasks().inc();
             let mut last_received_at = None;
             let socket = crate::net::DualStackLocalSocket::new(port)
                 .unwrap()
@@ -143,6 +144,7 @@ impl super::DownstreamReceiveWorkerConfig {
                         }
                     }
                     _ = &mut rx => {
+                        crate::metrics::game_traffic_task_closed().inc();
                         tracing::debug!("Closing downstream socket loop, shutdown requested");
                         return;
                     }

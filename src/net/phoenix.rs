@@ -107,6 +107,7 @@ pub fn spawn<M: Clone + Measurement + Sync + Send + 'static>(
                                                             "application/json",
                                                         );
 
+                                                    crate::metrics::phoenix_requests().inc();
                                                     tracing::trace!("serving phoenix request");
                                                     Ok::<_, std::convert::Infallible>(
                                                         Response::builder()
@@ -127,13 +128,16 @@ pub fn spawn<M: Clone + Measurement + Sync + Send + 'static>(
                                                 .serve_connection(conn, svc)
                                                 .await
                                             {
+                                                let error_display = err.to_string();
+                                                crate::metrics::phoenix_server_errors(&error_display).inc();
                                                 tracing::error!(
-                                                    "failed to reponse to phoenix request: {err}"
+                                                    "failed to respond to phoenix request: {error_display}"
                                                 );
                                             }
                                         });
                                     }
                                     _ = &mut srx => {
+                                        crate::metrics::phoenix_task_closed().set(true as _);
                                         tracing::info!("shutting down phoenix HTTP service");
                                         break;
                                     }
