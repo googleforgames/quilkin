@@ -23,7 +23,7 @@ targets = [
 all-features = true
 
 [advisories]
-ignore = ["RUSTSEC-2024-0384"]
+ignore = ["RUSTSEC-2024-0384", { id = "RUSTSEC-2024-0421", reason = "transitive dependency, updated but not released https://github.com/hickory-dns/hickory-dns/pull/2564" }]
 
 [bans]
 deny = [

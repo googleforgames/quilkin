@@ -539,7 +539,13 @@ impl IoUringLoop {
                                         loop_ctx.enqueue_send(pending);
                                     }
                                 } else {
-                                    tracing::info!("io-uring loop shutdown requested");
+                                    if matches!(ctx, PacketProcessorCtx::Router { .. }) {
+                                        tracing::info!(
+                                            "downstream io-uring loop shutdown requested"
+                                        );
+                                    } else {
+                                        tracing::info!("session io-uring loop shutdown requested");
+                                    }
                                     break 'io;
                                 }
                             }

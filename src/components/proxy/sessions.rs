@@ -524,7 +524,6 @@ impl Session {
         self.active_session_metric().dec();
         inner_metrics::duration_secs().observe(self.created_at.elapsed().as_secs() as f64);
         tracing::debug!(source = %self.key.source, dest_address = %self.key.dest, "Session closed");
-        self.pending_sends.shutdown_receiver();
         SessionPool::release_socket(self.pool.clone(), self.key, self.socket_port);
     }
 }
