@@ -739,8 +739,7 @@
 <a href="#738" id="738">738</a>
 <a href="#739" id="739">739</a>
 <a href="#740" id="740">740</a>
-<a href="#741" id="741">741</a>
-<a href="#742" id="742">742</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#741" id="741">741</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -1266,7 +1265,6 @@
         <span class="self">self</span>.active_session_metric().dec();
         inner_metrics::duration_secs().observe(<span class="self">self</span>.created_at.elapsed().as_secs() <span class="kw">as </span>f64);
         <span class="macro">tracing::debug!</span>(source = %<span class="self">self</span>.key.source, dest_address = %<span class="self">self</span>.key.dest, <span class="string">"Session closed"</span>);
-        <span class="self">self</span>.pending_sends.shutdown_receiver();
         SessionPool::release_socket(<span class="self">self</span>.pool.clone(), <span class="self">self</span>.key, <span class="self">self</span>.socket_port);
     }
 }

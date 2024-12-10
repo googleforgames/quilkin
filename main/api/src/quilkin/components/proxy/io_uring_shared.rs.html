@@ -642,7 +642,13 @@
 <a href="#641" id="641">641</a>
 <a href="#642" id="642">642</a>
 <a href="#643" id="643">643</a>
-<a href="#644" id="644">644</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#644" id="644">644</a>
+<a href="#645" id="645">645</a>
+<a href="#646" id="646">646</a>
+<a href="#647" id="647">647</a>
+<a href="#648" id="648">648</a>
+<a href="#649" id="649">649</a>
+<a href="#650" id="650">650</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -1183,7 +1189,13 @@
                                         loop_ctx.enqueue_send(pending);
                                     }
                                 } <span class="kw">else </span>{
-                                    <span class="macro">tracing::info!</span>(<span class="string">"io-uring loop shutdown requested"</span>);
+                                    <span class="kw">if </span><span class="macro">matches!</span>(ctx, PacketProcessorCtx::Router { .. }) {
+                                        <span class="macro">tracing::info!</span>(
+                                            <span class="string">"downstream io-uring loop shutdown requested"
+                                        </span>);
+                                    } <span class="kw">else </span>{
+                                        <span class="macro">tracing::info!</span>(<span class="string">"session io-uring loop shutdown requested"</span>);
+                                    }
                                     <span class="kw">break </span><span class="lifetime">'io</span>;
                                 }
                             }
