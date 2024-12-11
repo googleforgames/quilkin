@@ -209,7 +209,7 @@ knows of rather than those that it is connected to (see <a href="#session-metric
 </li>
 <li>
 <p><code>quilkin_bytes_total{event, asn, ip_prefix}</code></p>
-<p>The total number of bytes sent or recieved</p>
+<p>The total number of bytes sent or received</p>
 <ul>
 <li>The <code>event</code> label is either:
 <ul>
@@ -238,6 +238,14 @@ knows of rather than those that it is connected to (see <a href="#session-metric
 <li>
 <p><code>quilkin_errors_total{event, asn, ip_prefix}</code></p>
 <p>The total number of errors encountered while reading a packet from the upstream endpoint.</p>
+</li>
+<li>
+<p><code>quilkin_game_traffic_tasks</code></p>
+<p>The amount of game traffic tasks that have spawned</p>
+</li>
+<li>
+<p><code>quilkin_game_traffic_task_closed</code></p>
+<p>The amount of game traffic tasks that have shutdown</p>
 </li>
 </ul>
 <h2 id="session-metrics"><a class="header" href="#session-metrics">Session Metrics</a></h2>

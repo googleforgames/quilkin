@@ -244,6 +244,21 @@ more accurately represent the location of any datacentre.</p>
 request to the QCMP port.</p>
 <p>The returned data is a JSON object with each key being the ICAO code for the
 datacentre, and the value being the latency in nanoseconds.</p>
+<h2 id="metrics"><a class="header" href="#metrics">Metrics</a></h2>
+<ul>
+<li>
+<p><code>quilkin_phoenix_requests</code></p>
+<p>The amount of phoenix (latency) requests</p>
+</li>
+<li>
+<p><code>quilkin_phoenix_task_closed</code></p>
+<p>Whether the phoenix latency measurement task has shutdown</p>
+</li>
+<li>
+<p><code>quilkin_phoenix_server_errors</code></p>
+<p>The amount of errors attempting to spawn the phoenix HTTP server</p>
+</li>
+</ul>
 
                     </main>
 

@@ -230,7 +230,7 @@ your local machine through <a href="installation.html#cargo">Cargo</a>.</p>
 <dl>
   <dt><strong>Source / Method</strong></dt>
   <dd>
-<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.10.0-dev-e2019ba
+<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.10.0-dev-00345be
 </code></pre>
   </dd>
   <dt><strong>Notes</strong></dt>
@@ -2239,6 +2239,21 @@ more accurately represent the location of any datacentre.</p>
 request to the QCMP port.</p>
 <p>The returned data is a JSON object with each key being the ICAO code for the
 datacentre, and the value being the latency in nanoseconds.</p>
+<h2 id="metrics-4"><a class="header" href="#metrics-4">Metrics</a></h2>
+<ul>
+<li>
+<p><code>quilkin_phoenix_requests</code></p>
+<p>The amount of phoenix (latency) requests</p>
+</li>
+<li>
+<p><code>quilkin_phoenix_task_closed</code></p>
+<p>Whether the phoenix latency measurement task has shutdown</p>
+</li>
+<li>
+<p><code>quilkin_phoenix_server_errors</code></p>
+<p>The amount of errors attempting to spawn the phoenix HTTP server</p>
+</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="proxy-metrics"><a class="header" href="#proxy-metrics">Proxy Metrics</a></h1>
 <p>The following are metrics that Quilkin provides while in Proxy Mode.</p>
 <h1 id="asn-maxmind-information"><a class="header" href="#asn-maxmind-information">ASN Maxmind Information</a></h1>
@@ -2296,7 +2311,7 @@ knows of rather than those that it is connected to (see <a href="services/proxy/
 </li>
 <li>
 <p><code>quilkin_bytes_total{event, asn, ip_prefix}</code></p>
-<p>The total number of bytes sent or recieved</p>
+<p>The total number of bytes sent or received</p>
 <ul>
 <li>The <code>event</code> label is either:
 <ul>
@@ -2325,6 +2340,14 @@ knows of rather than those that it is connected to (see <a href="services/proxy/
 <li>
 <p><code>quilkin_errors_total{event, asn, ip_prefix}</code></p>
 <p>The total number of errors encountered while reading a packet from the upstream endpoint.</p>
+</li>
+<li>
+<p><code>quilkin_game_traffic_tasks</code></p>
+<p>The amount of game traffic tasks that have spawned</p>
+</li>
+<li>
+<p><code>quilkin_game_traffic_task_closed</code></p>
+<p>The amount of game traffic tasks that have shutdown</p>
 </li>
 </ul>
 <h2 id="session-metrics"><a class="header" href="#session-metrics">Session Metrics</a></h2>
@@ -3352,7 +3375,7 @@ that new proxies that have yet to get configuration information from an <a href=
 until they are fully populated.</p>
 <h4 id="xds-provider-mode-1"><a class="header" href="#xds-provider-mode-1">xDS Provider Mode</a></h4>
 <p>Will return an HTTP status of 200 when all health checks pass.</p>
-<h3 id="metrics-4"><a class="header" href="#metrics-4">/metrics</a></h3>
+<h3 id="metrics-5"><a class="header" href="#metrics-5">/metrics</a></h3>
 <p>Outputs <a href="https://prometheus.io/">Prometheus</a> formatted metrics for this instance.</p>
 <p>See the <a href="deployment/../services/proxy/metrics.html">Proxy Metrics</a> documentation for what proxy metrics are available.</p>
 <p>See the <a href="deployment/../services/xds/metrics.html">xDS Metrics</a> documentation for what xDS metrics are available.</p>
@@ -3373,7 +3396,11 @@ until they are fully populated.</p>
 </li>
 <li>
 <p><code>quilkin_extant_allocation_count</code> (Gauge)</p>
-<p>The current number of extant allocations"</p>
+<p>The current number of extant allocations</p>
+</li>
+<li>
+<p><code>quilkin_shutdown_initiated</code></p>
+<p>Shutdown process has been started</p>
 </li>
 </ul>
 <h3 id="debugpprofprofile"><a class="header" href="#debugpprofprofile">/debug/pprof/profile</a></h3>
