@@ -49,7 +49,7 @@ The proxy exposes the following general metrics:
 
 * `quilkin_bytes_total{event, asn, ip_prefix}`
 
-   The total number of bytes sent or recieved
+   The total number of bytes sent or received
   * The `event` label is either:
     * `read`: when the proxy receives data from a downstream connection on the listening port.
     * `write`: when the proxy sends data to a downstream connection via the listening port.
@@ -68,6 +68,14 @@ The proxy exposes the following general metrics:
 * `quilkin_errors_total{event, asn, ip_prefix}`
 
   The total number of errors encountered while reading a packet from the upstream endpoint.
+
+* `quilkin_game_traffic_tasks`
+
+  The amount of game traffic tasks that have spawned
+
+* `quilkin_game_traffic_task_closed`
+   
+  The amount of game traffic tasks that have shutdown
 
 ## Session Metrics
 

@@ -102,3 +102,17 @@ request to the QCMP port.
 
 The returned data is a JSON object with each key being the ICAO code for the
 datacentre, and the value being the latency in nanoseconds.
+
+## Metrics
+
+* `quilkin_phoenix_requests`
+
+  The amount of phoenix (latency) requests
+
+* `quilkin_phoenix_task_closed`
+
+  Whether the phoenix latency measurement task has shutdown
+  
+* `quilkin_phoenix_server_errors`
+
+  The amount of errors attempting to spawn the phoenix HTTP server
