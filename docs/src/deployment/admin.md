@@ -103,7 +103,11 @@ Quilkin exposes the following metrics on heap allocations, which are useful for 
 
  * `quilkin_extant_allocation_count` (Gauge)
 
-    The current number of extant allocations"
+    The current number of extant allocations
+
+* `quilkin_shutdown_initiated`
+
+    Shutdown process has been started
 
 ### /debug/pprof/profile
 
