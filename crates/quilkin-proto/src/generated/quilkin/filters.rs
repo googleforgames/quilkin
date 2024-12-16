@@ -2,6 +2,7 @@ pub mod capture;
 pub mod compress;
 pub mod concatenate;
 pub mod debug;
+pub mod decryptor;
 pub mod drop;
 pub mod firewall;
 pub mod load_balancer;

@@ -157,6 +157,7 @@ libflate = "2.1.0"
 form_urlencoded = "1.2.1"
 enum_dispatch = "0.3.13"
 gxhash = "3.4.1"
+chacha20 = { version = "0.9.1", features = ["std"] }
 
 [dependencies.hyper-util]
 version = "0.1"
