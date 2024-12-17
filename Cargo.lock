@@ -2091,15 +2091,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "nmap-service-probes"
-version = "0.1.0"
-dependencies = [
- "pretty_assertions",
- "thiserror 2.0.3",
- "winnow",
-]
-
-[[package]]
 name = "notify"
 version = "7.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2626,6 +2617,7 @@ dependencies = [
  "prost-types",
  "quilkin-macros",
  "quilkin-proto",
+ "quilkin-xdp",
  "quilkin-xds",
  "rand",
  "regex",
@@ -4227,15 +4219,6 @@ name = "windows_x86_64_msvc"
 version = "0.52.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
-
-[[package]]
-name = "winnow"
-version = "0.6.22"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "39281189af81c07ec09db316b302a3e67bf9bd7cbf6c820b50e35fee9c2fa980"
-dependencies = [
- "memchr",
-]
 
 [[package]]
 name = "winreg"
