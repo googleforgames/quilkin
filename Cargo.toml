@@ -82,7 +82,8 @@ test = false
 [dependencies]
 # Local
 quilkin-macros = { version = "0.10.0-dev", path = "./crates/macros" }
-quilkin-xds = {version = "0.10.0-dev",path = "crates/xds" }
+quilkin-xdp = { version = "0.1.0", path = "crates/xdp" }
+quilkin-xds = {version = "0.10.0-dev", path = "crates/xds" }
 quilkin-proto.workspace = true
 
 # Crates.io
@@ -185,7 +186,16 @@ xxhash-rust = { version = "0.8", features = ["xxh3"] }
 debug = true
 
 [workspace]
-members = [".", "crates/*"]
+members = [
+    ".",
+    "crates/agones",
+    "crates/macros",
+    "crates/proto-gen",
+    "crates/quilkin-proto",
+    "crates/test",
+    "crates/xdp",
+    "crates/xds",
+]
 
 [workspace.package]
 license = "Apache-2.0"
