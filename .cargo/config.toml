@@ -1,4 +1,4 @@
-[target.'cfg(all())']
+[target.'cfg(target_arch = "x86_64")']
 rustflags = [
     "-Ctarget-feature=+aes,+avx2",
 ]
