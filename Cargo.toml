@@ -82,7 +82,7 @@ test = false
 [dependencies]
 # Local
 quilkin-macros = { version = "0.10.0-dev", path = "./crates/macros" }
-quilkin-xdp = { version = "0.1.0", path = "crates/xdp" }
+#quilkin-xdp = { version = "0.1.0", path = "crates/xdp" }
 quilkin-xds = {version = "0.10.0-dev", path = "crates/xds" }
 quilkin-proto.workspace = true
 
