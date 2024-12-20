@@ -82,7 +82,6 @@ test = false
 [dependencies]
 # Local
 quilkin-macros = { version = "0.10.0-dev", path = "./crates/macros" }
-#quilkin-xdp = { version = "0.1.0", path = "crates/xdp" }
 quilkin-xds = {version = "0.10.0-dev", path = "crates/xds" }
 quilkin-proto.workspace = true
 
@@ -166,9 +165,10 @@ features = ["client", "client-legacy"]
 [target.'cfg(target_os = "linux")'.dependencies]
 io-uring = { version = "0.7", default-features = false }
 libc = "0.2"
+pprof = { version = "0.13.0", features = ["prost", "prost-codec"], package = "pprof2" }
+quilkin-xdp = { version = "0.1.0", path = "crates/xdp" }
 slab = "0.4"
 sys-info = "0.9.1"
-pprof = { version = "0.13.0", features = ["prost", "prost-codec"], package = "pprof2" }
 
 [dev-dependencies]
 divan = "0.1.15"

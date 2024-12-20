@@ -2617,6 +2617,7 @@ dependencies = [
  "prost-types",
  "quilkin-macros",
  "quilkin-proto",
+ "quilkin-xdp",
  "quilkin-xds",
  "rand",
  "regex",
@@ -4244,7 +4245,6 @@ checksum = "1e9df38ee2d2c3c5948ea468a8406ff0db0b29ae1ffde1bcf20ef305bcc95c51"
 [[package]]
 name = "xdp"
 version = "0.0.1"
-source = "git+https://github.com/Jake-Shadle/xdp?branch=impl#2c66b1abd3709194aa2a8eb97d02c6434679cacd"
 dependencies = [
  "libc",
  "memmap2",
