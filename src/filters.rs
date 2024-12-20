@@ -25,7 +25,7 @@ mod set;
 mod write;
 
 pub mod capture;
-//pub mod compress;
+pub mod compress;
 pub mod concatenate;
 pub mod debug;
 pub mod drop;
@@ -51,7 +51,7 @@ pub mod prelude {
 #[doc(inline)]
 pub use self::{
     capture::Capture,
-    //compress::Compress,
+    compress::Compress,
     concatenate::Concatenate,
     debug::Debug,
     drop::Drop,
@@ -77,7 +77,7 @@ pub use self::chain::FilterChain;
 #[enum_dispatch::enum_dispatch(Filter)]
 pub enum FilterKind {
     Capture,
-    //Compress,
+    Compress,
     Concatenate,
     Debug,
     Drop,
@@ -179,12 +179,15 @@ where
     }
 }
 
-pub trait Packet {
+pub trait Packet: Sized {
     fn as_slice(&self) -> &[u8];
+    fn as_mut_slice(&mut self) -> &mut [u8];
+    fn set_len(&mut self, len: usize);
     fn remove_head(&mut self, length: usize);
     fn remove_tail(&mut self, length: usize);
     fn extend_head(&mut self, bytes: &[u8]);
     fn extend_tail(&mut self, bytes: &[u8]);
+    fn alloc_sized(&self, size: usize) -> Option<Self>;
 }
 
 /// Trait for routing and manipulating packets.

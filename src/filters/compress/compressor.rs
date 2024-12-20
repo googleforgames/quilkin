@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-use crate::pool::{BufferPool, PoolBuffer};
+use crate::filters::Packet;
 use parking_lot::Mutex;
-use std::{io, sync::Arc};
+use std::io;
 
 use lz4_flex::block;
 use snap::raw;
@@ -30,78 +30,97 @@ pub enum Compressor {
 }
 
 impl Compressor {
-    pub fn encode(&self, pool: Arc<BufferPool>, contents: &mut PoolBuffer) -> io::Result<()> {
+    pub fn encode<P: Packet>(&self, contents: &P) -> io::Result<P> {
+        let input = contents.as_slice();
         let encoded = match self {
             Self::Snappy(imp) => {
-                let size = raw::max_compress_len(contents.len());
-                let mut encoded = pool.alloc_sized(size);
+                let size = raw::max_compress_len(input.len());
+                let mut encoded = contents.alloc_sized(size).ok_or_else(|| {
+                    std::io::Error::new(
+                        std::io::ErrorKind::OutOfMemory,
+                        "failed to allocate buffer for compress output",
+                    )
+                })?;
 
                 let mut encoder = imp.encoder();
 
-                let res = encoder.compress(contents, encoded.as_mut_slice(0..size));
+                let res = encoder.compress(input, &mut encoded.as_mut_slice()[..dbg!(size)]);
                 imp.absorb(encoder);
 
-                let compressed = res?;
-                encoded.truncate(compressed);
+                encoded.set_len(res?);
                 encoded
             }
             Self::Lz4 => {
-                let size = block::get_maximum_output_size(contents.len()) + 3;
-                let mut encoded = pool.alloc_sized(size);
+                let size = block::get_maximum_output_size(input.len()) + 3;
+                let mut encoded = contents.alloc_sized(size).ok_or_else(|| {
+                    std::io::Error::new(
+                        std::io::ErrorKind::OutOfMemory,
+                        "failed to allocate buffer for compress output",
+                    )
+                })?;
 
-                let slen = size::write(encoded.as_mut_slice(0..size), contents.len() as u16);
+                let slen = size::write(encoded.as_mut_slice(), input.len() as u16);
 
-                let compressed = block::compress_into(contents, encoded.as_mut_slice(slen..size))
+                let compressed =
+                    block::compress_into(input, &mut encoded.as_mut_slice()[slen..size]).map_err(
+                        |_e| {
+                            // This should be impossible
+                            io::Error::new(
+                                io::ErrorKind::OutOfMemory,
+                                "not enough space allocated for compressed output",
+                            )
+                        },
+                    )?;
+
+                encoded.set_len(compressed + slen);
+                encoded
+            }
+        };
+
+        Ok(encoded)
+    }
+
+    pub fn decode<P: Packet>(&self, contents: &P) -> io::Result<P> {
+        let input = contents.as_slice();
+        let decoded = match self {
+            Self::Snappy(_imp) => {
+                let size = raw::decompress_len(input)?;
+                let mut decoded = contents.alloc_sized(size).ok_or_else(|| {
+                    std::io::Error::new(
+                        std::io::ErrorKind::OutOfMemory,
+                        "failed to allocate buffer for decompress output",
+                    )
+                })?;
+
+                let decompressed = raw::Decoder::new().decompress(input, decoded.as_mut_slice())?;
+
+                decoded.set_len(decompressed);
+                decoded
+            }
+            Self::Lz4 => {
+                let (size, slen) = size::read(input);
+                let mut decoded = contents.alloc_sized(size as _).ok_or_else(|| {
+                    std::io::Error::new(
+                        std::io::ErrorKind::OutOfMemory,
+                        "failed to allocate buffer for decompress output",
+                    )
+                })?;
+
+                let decompressed = block::decompress_into(&input[slen..], decoded.as_mut_slice())
                     .map_err(|_e| {
                     // This should be impossible
                     io::Error::new(
                         io::ErrorKind::OutOfMemory,
-                        "not enough space allocated for compressed output",
+                        "not enough space allocated for decompressed output",
                     )
                 })?;
 
-                encoded.truncate(compressed + slen);
-                encoded
-            }
-        };
-
-        *contents = encoded;
-        Ok(())
-    }
-
-    pub fn decode(&self, pool: Arc<BufferPool>, contents: &mut PoolBuffer) -> io::Result<()> {
-        let decoded = match self {
-            Self::Snappy(_imp) => {
-                let size = raw::decompress_len(contents)?;
-                let mut decoded = pool.alloc_sized(size);
-
-                let decompressed =
-                    raw::Decoder::new().decompress(contents, decoded.as_mut_slice(0..size))?;
-
-                decoded.truncate(decompressed);
-                decoded
-            }
-            Self::Lz4 => {
-                let (size, slen) = size::read(contents);
-                let mut decoded = pool.alloc_sized(size as _);
-
-                let decompressed =
-                    block::decompress_into(&contents[slen..], decoded.as_mut_slice(0..size as _))
-                        .map_err(|_e| {
-                        // This should be impossible
-                        io::Error::new(
-                            io::ErrorKind::OutOfMemory,
-                            "not enough space allocated for decompressed output",
-                        )
-                    })?;
-
-                decoded.truncate(decompressed);
+                decoded.set_len(decompressed);
                 decoded
             }
         };
 
-        *contents = decoded;
-        Ok(())
+        Ok(decoded)
     }
 }
 

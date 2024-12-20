@@ -46,7 +46,7 @@ impl FilterSet {
         Self::with(
             [
                 filters::Capture::factory(),
-                //filters::Compress::factory(),
+                filters::Compress::factory(),
                 filters::Concatenate::factory(),
                 filters::Debug::factory(),
                 filters::Drop::factory(),
