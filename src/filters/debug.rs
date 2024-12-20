@@ -38,18 +38,18 @@ impl Debug {
 
 impl Filter for Debug {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn read(&self, ctx: &mut ReadContext<'_>) -> Result<(), FilterError> {
-        info!(id = ?self.config.id, source = ?&ctx.source, contents = ?String::from_utf8_lossy(&ctx.contents), "Read filter event");
+    fn read<P: Packet>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
+        info!(id = ?self.config.id, source = ?&ctx.source, contents = ?String::from_utf8_lossy(&ctx.contents.as_slice()), "Read filter event");
         Ok(())
     }
 
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
+    fn write<P: Packet>(&self, ctx: &mut WriteContext<P>) -> Result<(), FilterError> {
         info!(
             id = ?self.config.id,
             source = ?&ctx.source,
             dest = ?&ctx.dest,
-            contents = ?String::from_utf8_lossy(&ctx.contents), "Write filter event"
+            contents = ?String::from_utf8_lossy(&ctx.contents.as_slice()), "Write filter event"
         );
         Ok(())
     }

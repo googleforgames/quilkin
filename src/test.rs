@@ -99,7 +99,7 @@ fn get_address(address_type: AddressType, socket: &DualStackLocalSocket) -> Sock
 pub struct TestFilter;
 
 impl Filter for TestFilter {
-    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    fn read<P: Packet>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
         // append values on each run
         ctx.metadata
             .entry("downstream".into())
@@ -107,11 +107,11 @@ impl Filter for TestFilter {
             .or_insert_with(|| Value::String("receive".into()));
 
         ctx.contents
-            .extend_from_slice(format!(":odr:{}", ctx.source).as_bytes());
+            .extend_tail(format!(":odr:{}", ctx.source).as_bytes());
         Ok(())
     }
 
-    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
+    fn write<P: Packet>(&self, ctx: &mut WriteContext<P>) -> Result<(), FilterError> {
         // append values on each run
         ctx.metadata
             .entry("upstream".into())
@@ -119,7 +119,7 @@ impl Filter for TestFilter {
             .or_insert_with(|| Value::String("receive".to_string()));
 
         ctx.contents
-            .extend_from_slice(format!(":our:{}:{}", ctx.source, ctx.dest).as_bytes());
+            .extend_tail(format!(":our:{}:{}", ctx.source, ctx.dest).as_bytes());
         Ok(())
     }
 }
@@ -371,12 +371,11 @@ where
     let source = "127.0.0.1:90".parse().unwrap();
     let contents = b"hello";
     let mut dest = Vec::new();
-    let mut context =
-        ReadContext::new(endpoints.clone(), source, alloc_buffer(contents), &mut dest);
+    let mut context = ReadContext::new(&endpoints, source, alloc_buffer(contents), &mut dest);
 
     filter.read(&mut context).unwrap();
     assert!(context.destinations.is_empty());
-    assert_eq!(endpoints, context.endpoints);
+    assert_eq!(endpoints.as_ref(), context.endpoints);
     assert_eq!(contents, &*context.contents);
 }
 

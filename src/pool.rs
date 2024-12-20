@@ -270,6 +270,33 @@ impl Drop for PoolBuffer {
     }
 }
 
+impl crate::filters::Packet for PoolBuffer {
+    #[inline]
+    fn as_slice(&self) -> &[u8] {
+        self.as_ref()
+    }
+
+    #[inline]
+    fn remove_head(&mut self, length: usize) {
+        self.split_prefix(length);
+    }
+
+    #[inline]
+    fn remove_tail(&mut self, length: usize) {
+        self.split_suffix(length);
+    }
+
+    #[inline]
+    fn extend_head(&mut self, bytes: &[u8]) {
+        self.prepend_from_slice(bytes);
+    }
+
+    #[inline]
+    fn extend_tail(&mut self, bytes: &[u8]) {
+        self.extend_from_slice(bytes);
+    }
+}
+
 #[derive(Clone)]
 pub struct FrozenPoolBuffer {
     inner: Arc<PoolBuffer>,

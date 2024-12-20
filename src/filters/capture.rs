@@ -20,7 +20,7 @@ mod regex;
 
 use crate::generated::quilkin::filters::capture::v1alpha1 as proto;
 
-use crate::{filters::prelude::*, net::endpoint::metadata, pool::PoolBuffer};
+use crate::{filters::prelude::*, net::endpoint::metadata};
 
 /// The default key under which the [`Capture`] filter puts the
 /// byte slices it extracts from each packet.
@@ -37,7 +37,7 @@ pub use self::{
 pub trait CaptureStrategy {
     /// Capture packet data from the contents, and optionally returns a value if
     /// anything was captured.
-    fn capture(&self, contents: &mut PoolBuffer) -> Option<metadata::Value>;
+    fn capture(&self, contents: &[u8]) -> Option<(metadata::Value, isize)>;
 }
 
 pub struct Capture {
@@ -58,16 +58,25 @@ impl Capture {
 
 impl Filter for Capture {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn read(&self, ctx: &mut ReadContext<'_>) -> Result<(), FilterError> {
-        let capture = self.capture.capture(&mut ctx.contents);
+    fn read<P: Packet>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
+        let capture = self.capture.capture(ctx.contents.as_slice());
         ctx.metadata.insert(
             self.is_present_key,
             metadata::Value::Bool(capture.is_some()),
         );
 
-        if let Some(value) = capture {
+        if let Some((value, remove)) = capture {
             tracing::trace!(key=%self.metadata_key, %value, "captured value");
             ctx.metadata.insert(self.metadata_key, value);
+
+            if remove != 0 {
+                if remove < 0 {
+                    ctx.contents.remove_head(remove.abs() as _);
+                } else {
+                    ctx.contents.remove_tail(remove as _);
+                }
+            }
+
             Ok(())
         } else {
             tracing::trace!(key = %self.metadata_key, "No value captured");
@@ -163,7 +172,7 @@ mod tests {
         let mut dest = Vec::new();
         assert!(filter
             .read(&mut ReadContext::new(
-                endpoints.into(),
+                &endpoints,
                 (std::net::Ipv4Addr::LOCALHOST, 80).into(),
                 alloc_buffer(b"abc"),
                 &mut dest,
@@ -190,7 +199,7 @@ mod tests {
             pattern: ::regex::bytes::Regex::new(".{3}$").unwrap(),
         };
         let mut contents = alloc_buffer(b"helloabc");
-        let result = end.capture(&mut contents).unwrap();
+        let result = end.capture(&mut contents).unwrap().0;
         assert_eq!(Value::Bytes(b"abc".to_vec().into()), result);
         assert_eq!(b"helloabc", &*contents);
     }
@@ -202,14 +211,17 @@ mod tests {
             remove: false,
         };
         let mut contents = alloc_buffer(b"helloabc");
-        let result = end.capture(&mut contents).unwrap();
+        let (result, remove) = end.capture(&mut contents).unwrap();
         assert_eq!(Value::Bytes(b"abc".to_vec().into()), result);
+        assert_eq!(remove, 0);
         assert_eq!(b"helloabc", &*contents);
 
         end.remove = true;
 
-        let result = end.capture(&mut contents).unwrap();
+        let (result, remove) = end.capture(&mut contents).unwrap();
         assert_eq!(Value::Bytes(b"abc".to_vec().into()), result);
+        assert_eq!(remove, 3);
+        contents.remove_tail(remove as _);
         assert_eq!(b"hello", &*contents);
     }
 
@@ -221,14 +233,17 @@ mod tests {
         };
         let mut contents = alloc_buffer(b"abchello");
 
-        let result = beg.capture(&mut contents);
-        assert_eq!(Some(Value::Bytes(b"abc".to_vec().into())), result);
+        let (result, remove) = beg.capture(&mut contents).unwrap();
+        assert_eq!(Value::Bytes(b"abc".to_vec().into()), result);
+        assert_eq!(remove, 0);
         assert_eq!(b"abchello", &*contents);
 
         beg.remove = true;
 
-        let result = beg.capture(&mut contents);
-        assert_eq!(Some(Value::Bytes(b"abc".to_vec().into())), result);
+        let (result, remove) = beg.capture(&mut contents).unwrap();
+        assert_eq!(Value::Bytes(b"abc".to_vec().into()), result);
+        assert_eq!(remove, -3);
+        contents.remove_head(remove.abs() as _);
         assert_eq!(b"hello", &*contents);
     }
 
@@ -241,7 +256,7 @@ mod tests {
         );
         let mut dest = Vec::new();
         let mut context = ReadContext::new(
-            endpoints.into(),
+            &endpoints,
             "127.0.0.1:80".parse().unwrap(),
             alloc_buffer(b"helloabc"),
             &mut dest,

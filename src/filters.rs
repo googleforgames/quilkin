@@ -25,7 +25,7 @@ mod set;
 mod write;
 
 pub mod capture;
-pub mod compress;
+//pub mod compress;
 pub mod concatenate;
 pub mod debug;
 pub mod drop;
@@ -43,7 +43,7 @@ pub mod token_router;
 pub mod prelude {
     pub use super::{
         ConvertProtoConfigError, CreateFilterArgs, CreationError, Filter, FilterError,
-        FilterInstance, ReadContext, StaticFilter, WriteContext,
+        FilterInstance, Packet, ReadContext, StaticFilter, WriteContext,
     };
 }
 
@@ -51,7 +51,7 @@ pub mod prelude {
 #[doc(inline)]
 pub use self::{
     capture::Capture,
-    compress::Compress,
+    //compress::Compress,
     concatenate::Concatenate,
     debug::Debug,
     drop::Drop,
@@ -77,7 +77,7 @@ pub use self::chain::FilterChain;
 #[enum_dispatch::enum_dispatch(Filter)]
 pub enum FilterKind {
     Capture,
-    Compress,
+    //Compress,
     Concatenate,
     Debug,
     Drop,
@@ -179,6 +179,14 @@ where
     }
 }
 
+pub trait Packet {
+    fn as_slice(&self) -> &[u8];
+    fn remove_head(&mut self, length: usize);
+    fn remove_tail(&mut self, length: usize);
+    fn extend_head(&mut self, bytes: &[u8]);
+    fn extend_tail(&mut self, bytes: &[u8]);
+}
+
 /// Trait for routing and manipulating packets.
 ///
 /// An implementation of [`Filter`] provides a `read` and a `write` method. Both
@@ -208,7 +216,7 @@ pub trait Filter: Send + Sync {
     /// This function should return an `Some` if the packet processing should
     /// proceed. If the packet should be rejected, it will return [`None`]
     /// instead. By default, the context passes through unchanged.
-    fn read(&self, _: &mut ReadContext<'_>) -> Result<(), FilterError> {
+    fn read<P: Packet>(&self, _: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
         Ok(())
     }
 
@@ -218,7 +226,7 @@ pub trait Filter: Send + Sync {
     ///
     /// This function should return an `Some` if the packet processing should
     /// proceed. If the packet should be rejected, it will return [`None`]
-    fn write(&self, _: &mut WriteContext) -> Result<(), FilterError> {
+    fn write<P: Packet>(&self, _: &mut WriteContext<P>) -> Result<(), FilterError> {
         Ok(())
     }
 }
