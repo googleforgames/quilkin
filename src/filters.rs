@@ -25,7 +25,7 @@ mod set;
 mod write;
 
 pub mod capture;
-pub mod compress;
+//pub mod compress;
 pub mod concatenate;
 pub mod debug;
 pub mod drop;
@@ -51,7 +51,7 @@ pub mod prelude {
 #[doc(inline)]
 pub use self::{
     capture::Capture,
-    compress::Compress,
+    //compress::Compress,
     concatenate::Concatenate,
     debug::Debug,
     drop::Drop,
@@ -78,7 +78,7 @@ pub use crate::components::proxy::packet_router::{Packet, PacketMut};
 #[enum_dispatch::enum_dispatch(Filter)]
 pub enum FilterKind {
     Capture,
-    Compress,
+    //Compress,
     Concatenate,
     Debug,
     Drop,
@@ -178,6 +178,14 @@ where
                 .transpose()?,
         })
     }
+}
+
+pub trait Packet {
+    fn as_slice(&self) -> &[u8];
+    fn remove_head(&mut self, length: usize);
+    fn remove_tail(&mut self, length: usize);
+    fn extend_head(&mut self, bytes: &[u8]);
+    fn extend_tail(&mut self, bytes: &[u8]);
 }
 
 /// Trait for routing and manipulating packets.
