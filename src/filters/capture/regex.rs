@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-use crate::{net::endpoint::metadata::Value, pool::PoolBuffer};
+use crate::net::endpoint::metadata::Value;
 
 /// Capture from the start of the packet.
 #[derive(serde::Serialize, serde::Deserialize, Debug, schemars::JsonSchema)]
@@ -26,7 +26,7 @@ pub struct Regex {
 }
 
 impl super::CaptureStrategy for Regex {
-    fn capture(&self, contents: &mut PoolBuffer) -> Option<Value> {
+    fn capture(&self, contents: &[u8]) -> Option<(Value, isize)> {
         let matches = self
             .pattern
             .find_iter(contents)
@@ -34,9 +34,9 @@ impl super::CaptureStrategy for Regex {
             .collect::<Vec<_>>();
 
         if matches.len() > 1 {
-            Some(Value::List(matches))
+            Some((Value::List(matches), 0))
         } else {
-            matches.into_iter().next()
+            matches.into_iter().next().map(|v| (v, 0))
         }
     }
 }

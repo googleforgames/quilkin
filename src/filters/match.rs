@@ -119,7 +119,7 @@ fn match_filter<'config, 'ctx, Ctx>(
 
 impl Filter for Match {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn read(&self, ctx: &mut ReadContext<'_>) -> Result<(), FilterError> {
+    fn read<P: Packet>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
         tracing::trace!(metadata=?ctx.metadata);
         match_filter(
             &self.on_read_filters,
@@ -131,7 +131,7 @@ impl Filter for Match {
     }
 
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
+    fn write<P: Packet>(&self, ctx: &mut WriteContext<P>) -> Result<(), FilterError> {
         match_filter(
             &self.on_write_filters,
             &self.metrics,
@@ -199,7 +199,7 @@ mod tests {
         );
         let mut dest = Vec::new();
         let mut ctx = ReadContext::new(
-            endpoints.into(),
+            &endpoints,
             ([127, 0, 0, 1], 7000).into(),
             alloc_buffer(contents),
             &mut dest,
@@ -215,7 +215,7 @@ mod tests {
         );
         let mut dest = Vec::new();
         let mut ctx = ReadContext::new(
-            endpoints.into(),
+            &endpoints,
             ([127, 0, 0, 1], 7000).into(),
             alloc_buffer(contents),
             &mut dest,

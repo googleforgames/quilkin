@@ -43,13 +43,13 @@ impl Concatenate {
 }
 
 impl Filter for Concatenate {
-    fn read(&self, ctx: &mut ReadContext<'_>) -> Result<(), FilterError> {
+    fn read<P: Packet>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
         match self.on_read {
             Strategy::Append => {
-                ctx.contents.extend_from_slice(&self.bytes);
+                ctx.contents.extend_tail(&self.bytes);
             }
             Strategy::Prepend => {
-                ctx.contents.prepend_from_slice(&self.bytes);
+                ctx.contents.extend_head(&self.bytes);
             }
             Strategy::DoNothing => {}
         }
@@ -57,13 +57,13 @@ impl Filter for Concatenate {
         Ok(())
     }
 
-    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
+    fn write<P: Packet>(&self, ctx: &mut WriteContext<P>) -> Result<(), FilterError> {
         match self.on_write {
             Strategy::Append => {
-                ctx.contents.extend_from_slice(&self.bytes);
+                ctx.contents.extend_tail(&self.bytes);
             }
             Strategy::Prepend => {
-                ctx.contents.prepend_from_slice(&self.bytes);
+                ctx.contents.extend_head(&self.bytes);
             }
             Strategy::DoNothing => {}
         }

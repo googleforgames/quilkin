@@ -95,13 +95,10 @@ impl DownstreamReceiveWorkerConfig {
             return Err(PipelineError::NoUpstreamEndpoints);
         }
 
+        let cm = config.clusters.clone_value();
         let filters = config.filters.load();
-        let mut context = ReadContext::new(
-            config.clusters.clone_value(),
-            packet.source.into(),
-            packet.contents,
-            destinations,
-        );
+        let mut context =
+            ReadContext::new(&cm, packet.source.into(), packet.contents, destinations);
         filters.read(&mut context).map_err(PipelineError::Filter)?;
 
         let ReadContext { contents, .. } = context;

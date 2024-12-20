@@ -67,18 +67,18 @@ mod tests {
     use crate::test::{alloc_buffer, load_test_filters};
 
     use super::*;
-    use crate::filters::{Filter, FilterError, FilterRegistry, ReadContext, WriteContext};
+    use crate::filters::{Filter, FilterError, FilterRegistry, Packet, ReadContext, WriteContext};
     use crate::net::endpoint::{Endpoint, EndpointAddress};
 
     #[allow(dead_code)]
     struct TestFilter {}
 
     impl Filter for TestFilter {
-        fn read(&self, _: &mut ReadContext<'_>) -> Result<(), FilterError> {
+        fn read<P: Packet>(&self, _: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
             Err(FilterError::Custom("test error"))
         }
 
-        fn write(&self, _: &mut WriteContext) -> Result<(), FilterError> {
+        fn write<P: Packet>(&self, _: &mut WriteContext<P>) -> Result<(), FilterError> {
             Err(FilterError::Custom("test error"))
         }
     }
@@ -108,7 +108,7 @@ mod tests {
         let mut dest = Vec::new();
         assert!(filter
             .read(&mut ReadContext::new(
-                endpoints.into(),
+                &endpoints,
                 addr.clone(),
                 alloc_buffer([]),
                 &mut dest,
