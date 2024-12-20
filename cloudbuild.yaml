@@ -99,7 +99,7 @@ options:
     - "REPOSITORY=${_REPOSITORY}"
     - "BUILD_IMAGE_TAG=${_BUILD_IMAGE_TAG}"
     - "CARGO_TERM_COLOR=always"
-    - 'RUSTFLAGS="-C target-feature=+aes,+vaes,+avx2"'
+    - 'RUSTFLAGS="-C target-feature=+aes,+avx2"'
   machineType: E2_HIGHCPU_32
   dynamic_substitutions: true
 timeout: 7200s
