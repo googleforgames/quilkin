@@ -63,9 +63,10 @@ impl BufferPool {
             .unwrap_or_else(|| BytesMut::with_capacity(capacity));
 
         self.outstanding.fetch_add(1, Relaxed);
+        inner.clear();
 
         if inner.capacity() < capacity {
-            inner.reserve(capacity - inner.capacity());
+            inner.reserve(capacity);
         }
 
         PoolBuffer {
@@ -248,7 +249,8 @@ impl std::ops::Deref for PoolBuffer {
 impl std::ops::DerefMut for PoolBuffer {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.as_mut_slice(0..self.inner.capacity())
+        dbg!(self.len());
+        self.as_mut_slice(0..dbg!(self.inner.capacity()))
     }
 }
 
@@ -277,6 +279,11 @@ impl crate::filters::Packet for PoolBuffer {
     }
 
     #[inline]
+    fn as_mut_slice(&mut self) -> &mut [u8] {
+        self.as_mut_slice(0..dbg!(self.capacity()))
+    }
+
+    #[inline]
     fn remove_head(&mut self, length: usize) {
         self.split_prefix(length);
     }
@@ -294,6 +301,16 @@ impl crate::filters::Packet for PoolBuffer {
     #[inline]
     fn extend_tail(&mut self, bytes: &[u8]) {
         self.extend_from_slice(bytes);
+    }
+
+    #[inline]
+    fn set_len(&mut self, len: usize) {
+        self.truncate(len);
+    }
+
+    #[inline]
+    fn alloc_sized(&self, size: usize) -> Option<Self> {
+        Some(self.owner.clone().alloc_sized(size))
     }
 }
 
