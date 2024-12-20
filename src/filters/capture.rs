@@ -71,7 +71,7 @@ impl Filter for Capture {
 
             if remove != 0 {
                 if remove < 0 {
-                    ctx.contents.remove_head(remove.abs() as _);
+                    ctx.contents.remove_head(remove.unsigned_abs());
                 } else {
                     ctx.contents.remove_tail(remove as _);
                 }
@@ -198,8 +198,8 @@ mod tests {
         let end = Regex {
             pattern: ::regex::bytes::Regex::new(".{3}$").unwrap(),
         };
-        let mut contents = alloc_buffer(b"helloabc");
-        let result = end.capture(&mut contents).unwrap().0;
+        let contents = alloc_buffer(b"helloabc");
+        let result = end.capture(&contents).unwrap().0;
         assert_eq!(Value::Bytes(b"abc".to_vec().into()), result);
         assert_eq!(b"helloabc", &*contents);
     }
@@ -211,14 +211,14 @@ mod tests {
             remove: false,
         };
         let mut contents = alloc_buffer(b"helloabc");
-        let (result, remove) = end.capture(&mut contents).unwrap();
+        let (result, remove) = end.capture(&contents).unwrap();
         assert_eq!(Value::Bytes(b"abc".to_vec().into()), result);
         assert_eq!(remove, 0);
         assert_eq!(b"helloabc", &*contents);
 
         end.remove = true;
 
-        let (result, remove) = end.capture(&mut contents).unwrap();
+        let (result, remove) = end.capture(&contents).unwrap();
         assert_eq!(Value::Bytes(b"abc".to_vec().into()), result);
         assert_eq!(remove, 3);
         contents.remove_tail(remove as _);
@@ -233,17 +233,17 @@ mod tests {
         };
         let mut contents = alloc_buffer(b"abchello");
 
-        let (result, remove) = beg.capture(&mut contents).unwrap();
+        let (result, remove) = beg.capture(&contents).unwrap();
         assert_eq!(Value::Bytes(b"abc".to_vec().into()), result);
         assert_eq!(remove, 0);
         assert_eq!(b"abchello", &*contents);
 
         beg.remove = true;
 
-        let (result, remove) = beg.capture(&mut contents).unwrap();
+        let (result, remove) = beg.capture(&contents).unwrap();
         assert_eq!(Value::Bytes(b"abc".to_vec().into()), result);
         assert_eq!(remove, -3);
-        contents.remove_head(remove.abs() as _);
+        contents.remove_head(remove.unsigned_abs());
         assert_eq!(b"hello", &*contents);
     }
 

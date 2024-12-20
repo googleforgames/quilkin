@@ -41,7 +41,7 @@ impl super::CaptureStrategy for Prefix {
             (
                 value,
                 if self.remove {
-                    self.size as isize * -1
+                    -(self.size as isize)
                 } else {
                     0
                 },
