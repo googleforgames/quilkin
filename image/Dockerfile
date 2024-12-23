@@ -14,9 +14,10 @@
 
 FROM gcr.io/distroless/cc-debian12:nonroot as base
 WORKDIR /
+ARG TARGETPLATFORM
 COPY ./license.html .
 COPY ./dependencies-src.zip .
-COPY --chown=nonroot:nonroot ./target/image/quilkin .
+COPY --chown=nonroot:nonroot ./target/image/${TARGETPLATFORM}/quilkin .
 
 USER nonroot:nonroot
 ENTRYPOINT ["/quilkin"]
