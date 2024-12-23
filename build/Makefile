@@ -57,6 +57,7 @@ gcloud_mount_args := -v $(build_path)/.config/gcloud:/root/.config/gcloud
 cargo_build_x86_64_linux := build --profile=lto --target x86_64-unknown-linux-gnu
 cargo_build_x86_64_apple := build --release --target x86_64-apple-darwin
 cargo_build_aarch64-apple := build --release --target aarch64-apple-darwin
+cargo_build_aarch64_linux := build  --profile=lto --target aarch64-unknown-linux-gnu
 cargo_build_x86_64_windows := build --release --target x86_64-pc-windows-gnu
 
 #   _____                    _
@@ -103,14 +104,18 @@ binary-archive: ensure-build-image build-licence-report build-all-binaries
 	docker run --rm $(common_rust_args) -w $(CARGO_TARGET_DIR) \
 			--entrypoint=bash $(BUILD_IMAGE_TAG) -c 'cp ../../license.html . && zip ../../quilkin-$(package_version).zip ./*/lto/quilkin ./*/lto/quilkin.exe ./license.html'
 
-# Build binary for x86_64-unknown-linux-gnu.
+# Build binary for x86_64-unknown-linux-gnu and aarch64-unknown-linux-gnu
 # Use BUILD_LOCAL=1 to build through local cargo rather than through the build container.
 build-linux-binary: ensure-build-image gen-protobuf
 ifdef BUILD_LOCAL
 	cargo $(cargo_build_x86_64_linux)
+	cargo $(cargo_build_aarch64_linux)
 else
-	docker run --rm $(common_rust_args) -e "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=/usr/bin/x86_64-linux-gnu-gcc" \
-		--entrypoint=cargo $(BUILD_IMAGE_TAG) $(cargo_build_x86_64_linux)
+	docker run --rm $(common_rust_args) \
+	    -e "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=/usr/bin/x86_64-linux-gnu-gcc" \
+		-e "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=/usr/bin/aarch64-linux-gnu-gcc" \
+		$(BUILD_IMAGE_TAG) \
+		sh -c "cargo $(cargo_build_x86_64_linux) && cargo $(cargo_build_aarch64_linux) --no-default-features"
 endif
 
 # Build binary for x86_64-pc-windows-gnu
@@ -147,15 +152,18 @@ endif
 # Use BUILD_LOCAL=1 to build the binary through local cargo rather than through the build container.
 build-image: ensure-build-image build-licence-report build-linux-binary
 build-image:
-	-mkdir -p "$(project_path)/target/image/"
+	-mkdir -p "$(project_path)/target/image/linux/amd64"
+	-mkdir -p "$(project_path)/target/image/linux/arm64"
 ifdef BUILD_LOCAL
-	cp "$(project_path)/target/x86_64-unknown-linux-gnu/lto/quilkin" "$(project_path)/target/image/"
+	cp "$(project_path)/target/x86_64-unknown-linux-gnu/lto/quilkin" "$(project_path)/target/image/linux/amd64/"
+	cp "$(project_path)/target/aarch64-unknown-linux-gnu/lto/quilkin" "$(project_path)/target/image/linux/arm64/"
 else
-	cp "$(project_path)/target/build-image/x86_64-unknown-linux-gnu/lto/quilkin" "$(project_path)/target/image/"
+	cp "$(project_path)/target/build-image/x86_64-unknown-linux-gnu/lto/quilkin" "$(project_path)/target/image/linux/amd64/"
+	cp "$(project_path)/target/build-image/aarch64-unknown-linux-gnu/lto/quilkin" "$(project_path)/target/image/linux/arm64/"
 endif
 	docker run --rm $(common_rust_args) \
 		--entrypoint=bash $(BUILD_IMAGE_TAG) -c './image/archive_dependencies.sh'
-	docker build --platform=linux/amd64 -t $(IMAGE_TAG) -f $(project_path)/image/Dockerfile $(project_path)
+	docker buildx build --platform=linux/amd64,linux/arm64 -t $(IMAGE_TAG) -f $(project_path)/image/Dockerfile $(project_path)
 
 # Generates the HTML report of all open source licence dependencies
 build-licence-report: ensure-build-image
