@@ -147,7 +147,7 @@ else
 	    -e "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=/usr/bin/x86_64-linux-gnu-gcc" \
 		-e "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=/usr/bin/aarch64-linux-gnu-gcc" \
 		$(BUILD_IMAGE_TAG) \
-		sh -c "cargo $(cargo_build_x86_64_linux) && cargo $(cargo_build_aarch64_linux) --no-default-features"
+		sh -c "cargo $(cargo_build_x86_64_linux) && CC=aarch64-linux-gnu-gcc cargo $(cargo_build_aarch64_linux) --no-default-features"
 endif
 
 # Build binary for x86_64-pc-windows-gnu
