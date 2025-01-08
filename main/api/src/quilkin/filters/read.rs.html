@@ -90,7 +90,7 @@
     </span><span class="kw">pub </span>metadata: DynamicMetadata,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'ctx</span>, P: <span class="kw">super</span>::Packet&gt; ReadContext&lt;<span class="lifetime">'ctx</span>, P&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'ctx</span>, P: <span class="kw">super</span>::PacketMut&gt; ReadContext&lt;<span class="lifetime">'ctx</span>, P&gt; {
     <span class="doccomment">/// Creates a new [`ReadContext`].
     </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>new(

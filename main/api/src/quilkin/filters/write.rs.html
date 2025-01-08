@@ -78,7 +78,7 @@
     </span><span class="kw">pub </span>metadata: DynamicMetadata,
 }
 
-<span class="kw">impl</span>&lt;P: <span class="kw">super</span>::Packet&gt; WriteContext&lt;P&gt; {
+<span class="kw">impl</span>&lt;P: <span class="kw">super</span>::PacketMut&gt; WriteContext&lt;P&gt; {
     <span class="doccomment">/// Creates a new [`WriteContext`]
     </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>new(source: EndpointAddress, dest: EndpointAddress, contents: P) -&gt; <span class="self">Self </span>{

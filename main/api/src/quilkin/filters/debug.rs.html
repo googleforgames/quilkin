@@ -167,13 +167,13 @@
 
 <span class="kw">impl </span>Filter <span class="kw">for </span>Debug {
     <span class="attr">#[cfg_attr(feature = <span class="string">"instrument"</span>, tracing::instrument(skip(<span class="self">self</span>, ctx)))]
-    </span><span class="kw">fn </span>read&lt;P: Packet&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext&lt;<span class="lifetime">'_</span>, P&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+    </span><span class="kw">fn </span>read&lt;P: PacketMut&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext&lt;<span class="lifetime">'_</span>, P&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="macro">info!</span>(id = <span class="question-mark">?</span><span class="self">self</span>.config.id, source = <span class="question-mark">?</span><span class="kw-2">&amp;</span>ctx.source, contents = <span class="question-mark">?</span>String::from_utf8_lossy(ctx.contents.as_slice()), <span class="string">"Read filter event"</span>);
         <span class="prelude-val">Ok</span>(())
     }
 
     <span class="attr">#[cfg_attr(feature = <span class="string">"instrument"</span>, tracing::instrument(skip(<span class="self">self</span>, ctx)))]
-    </span><span class="kw">fn </span>write&lt;P: Packet&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext&lt;P&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+    </span><span class="kw">fn </span>write&lt;P: PacketMut&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext&lt;P&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="macro">info!</span>(
             id = <span class="question-mark">?</span><span class="self">self</span>.config.id,
             source = <span class="question-mark">?</span><span class="kw-2">&amp;</span>ctx.source,

@@ -297,7 +297,7 @@
 }
 
 <span class="kw">impl </span>Filter <span class="kw">for </span>LoadBalancer {
-    <span class="kw">fn </span>read&lt;P: Packet&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext&lt;<span class="lifetime">'_</span>, P&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+    <span class="kw">fn </span>read&lt;P: PacketMut&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext&lt;<span class="lifetime">'_</span>, P&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="self">self</span>.endpoint_chooser
             .choose_endpoints(ctx.destinations, ctx.endpoints, <span class="kw-2">&amp;</span>ctx.source);
         <span class="prelude-val">Ok</span>(())

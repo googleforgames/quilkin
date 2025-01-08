@@ -362,7 +362,35 @@
 <a href="#361" id="361">361</a>
 <a href="#362" id="362">362</a>
 <a href="#363" id="363">363</a>
-<a href="#364" id="364">364</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -387,6 +415,8 @@
         Arc,
     },
 };
+
+<span class="kw">use </span><span class="kw">crate</span>::filters::{Packet, PacketMut};
 
 <span class="kw">type </span>Pool = Mutex&lt;Vec&lt;BytesMut&gt;&gt;;
 
@@ -636,10 +666,24 @@
     }
 }
 
-<span class="kw">impl </span><span class="kw">crate</span>::filters::Packet <span class="kw">for </span>PoolBuffer {
+<span class="kw">impl </span>Packet <span class="kw">for </span>PoolBuffer {
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>as_slice(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[u8] {
         <span class="self">self</span>.as_ref()
+    }
+
+    <span class="attr">#[inline]
+    </span><span class="kw">fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="self">self</span>.as_slice().len()
+    }
+}
+
+<span class="kw">impl </span>PacketMut <span class="kw">for </span>PoolBuffer {
+    <span class="kw">type </span>FrozenPacket = FrozenPoolBuffer;
+
+    <span class="attr">#[inline]
+    </span><span class="kw">fn </span>alloc_sized(<span class="kw-2">&amp;</span><span class="self">self</span>, size: usize) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>&gt; {
+        <span class="prelude-val">Some</span>(<span class="self">self</span>.owner.clone().alloc_sized(size))
     }
 
     <span class="attr">#[inline]
@@ -668,13 +712,13 @@
     }
 
     <span class="attr">#[inline]
-    </span><span class="kw">fn </span>set_len(<span class="kw-2">&amp;mut </span><span class="self">self</span>, len: usize) {
-        <span class="self">self</span>.truncate(len);
+    </span><span class="kw">fn </span>freeze(<span class="self">self</span>) -&gt; FrozenPoolBuffer {
+        <span class="self">self</span>.freeze()
     }
 
     <span class="attr">#[inline]
-    </span><span class="kw">fn </span>alloc_sized(<span class="kw-2">&amp;</span><span class="self">self</span>, size: usize) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>&gt; {
-        <span class="prelude-val">Some</span>(<span class="self">self</span>.owner.clone().alloc_sized(size))
+    </span><span class="kw">fn </span>set_len(<span class="kw-2">&amp;mut </span><span class="self">self</span>, len: usize) {
+        <span class="self">self</span>.truncate(len);
     }
 }
 
@@ -692,6 +736,18 @@
     <span class="attr">#[inline]
     </span><span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
         <span class="self">self</span>.inner.is_empty()
+    }
+}
+
+<span class="kw">impl </span>Packet <span class="kw">for </span>FrozenPoolBuffer {
+    <span class="attr">#[inline]
+    </span><span class="kw">fn </span>as_slice(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[u8] {
+        <span class="self">self</span>.inner.as_ref()
+    }
+
+    <span class="attr">#[inline]
+    </span><span class="kw">fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="self">self</span>.inner.len()
     }
 }
 

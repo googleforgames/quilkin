@@ -463,9 +463,9 @@
 }
 
 <span class="doccomment">/// A filter that implements rate limiting on packets based on the token-bucket
-/// algorithm.  Packets that violate the rate limit are dropped.  It only
+/// algorithm.  PacketMuts that violate the rate limit are dropped.  It only
 /// applies rate limiting on packets received from a downstream connection (processed
-/// through [`LocalRateLimit::read`]). Packets coming from upstream endpoints
+/// through [`LocalRateLimit::read`]). PacketMuts coming from upstream endpoints
 /// flow through the filter untouched.
 </span><span class="kw">pub struct </span>LocalRateLimit {
     <span class="doccomment">/// Tracks rate limiting state per source address.
@@ -556,7 +556,7 @@
 }
 
 <span class="kw">impl </span>Filter <span class="kw">for </span>LocalRateLimit {
-    <span class="kw">fn </span>read&lt;P: Packet&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext&lt;<span class="lifetime">'_</span>, P&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+    <span class="kw">fn </span>read&lt;P: PacketMut&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext&lt;<span class="lifetime">'_</span>, P&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="kw">if </span><span class="self">self</span>.acquire_token(<span class="kw-2">&amp;</span>ctx.source) {
             <span class="prelude-val">Ok</span>(())
         } <span class="kw">else </span>{

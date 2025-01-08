@@ -390,7 +390,7 @@
 }
 
 <span class="kw">impl </span>Filter <span class="kw">for </span>TokenRouter {
-    <span class="kw">fn </span>read&lt;P: Packet&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext&lt;<span class="lifetime">'_</span>, P&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+    <span class="kw">fn </span>read&lt;P: PacketMut&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext&lt;<span class="lifetime">'_</span>, P&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="kw">match </span>ctx.metadata.get(<span class="kw-2">&amp;</span><span class="self">self</span>.config.metadata_key) {
             <span class="prelude-val">Some</span>(metadata::Value::Bytes(token)) =&gt; {
                 <span class="kw">let </span>tok = <span class="kw">crate</span>::net::cluster::Token::new(token);
@@ -428,7 +428,7 @@
 }
 
 <span class="kw">impl </span>Filter <span class="kw">for </span>HashedTokenRouter {
-    <span class="kw">fn </span>read&lt;P: Packet&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext&lt;<span class="lifetime">'_</span>, P&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+    <span class="kw">fn </span>read&lt;P: PacketMut&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext&lt;<span class="lifetime">'_</span>, P&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="self">self</span>.<span class="number">0</span>.read(ctx)
     }
 }
@@ -686,7 +686,7 @@
     <span class="kw">fn </span>assert_read&lt;F, P&gt;(filter: <span class="kw-2">&amp;</span>F, <span class="kw-2">mut </span>ctx: ReadContext&lt;<span class="lifetime">'_</span>, P&gt;)
     <span class="kw">where
         </span>F: Filter + <span class="question-mark">?</span>Sized,
-        P: Packet,
+        P: PacketMut,
     {
         filter.read(<span class="kw-2">&amp;mut </span>ctx).unwrap();
         <span class="macro">assert_eq!</span>(<span class="string">b"hello"</span>, ctx.contents.as_slice());

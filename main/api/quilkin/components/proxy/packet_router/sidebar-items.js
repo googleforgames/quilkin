@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["spawn_receivers"],"struct":["DownstreamReceiveWorkerConfig"]};
+window.SIDEBAR_ITEMS = {"fn":["spawn_receivers"],"struct":["DownstreamReceiveWorkerConfig"],"trait":["Packet","PacketMut"]};

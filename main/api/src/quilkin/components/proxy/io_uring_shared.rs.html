@@ -641,14 +641,7 @@
 <a href="#640" id="640">640</a>
 <a href="#641" id="641">641</a>
 <a href="#642" id="642">642</a>
-<a href="#643" id="643">643</a>
-<a href="#644" id="644">644</a>
-<a href="#645" id="645">645</a>
-<a href="#646" id="646">646</a>
-<a href="#647" id="647">647</a>
-<a href="#648" id="648">648</a>
-<a href="#649" id="649">649</a>
-<a href="#650" id="650">650</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#643" id="643">643</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -899,14 +892,7 @@
                 source: packet.source,
             };
 
-            <span class="kw">crate</span>::components::proxy::packet_router::DownstreamReceiveWorkerConfig::process_task(
-                ds_packet,
-                <span class="kw-2">*</span>worker_id,
-                config,
-                sessions,
-                error_acc,
-                destinations,
-            );
+            ds_packet.process(<span class="kw-2">*</span>worker_id, config, sessions, error_acc, destinations);
         }
         PacketProcessorCtx::SessionPool { pool, port, .. } =&gt; {
             <span class="kw">let </span><span class="kw-2">mut </span>last_received_at = <span class="prelude-val">None</span>;
