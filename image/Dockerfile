@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM gcr.io/distroless/cc-debian12:nonroot as base
+FROM gcr.io/distroless/cc-debian12:nonroot AS base
 WORKDIR /
 ARG TARGETPLATFORM
 COPY ./license.html .
