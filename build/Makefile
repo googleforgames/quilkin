@@ -163,7 +163,8 @@ else
 endif
 	docker run --rm $(common_rust_args) \
 		--entrypoint=bash $(BUILD_IMAGE_TAG) -c './image/archive_dependencies.sh'
-	docker buildx build --platform=linux/amd64,linux/arm64 -t $(IMAGE_TAG) -f $(project_path)/image/Dockerfile $(project_path)
+	docker buildx create --use --driver=docker-container --name container --platform=linux/amd64,linux/arm64
+	docker buildx build --platform=linux/amd64,linux/arm64 -t $(IMAGE_TAG) -f $(project_path)/image/Dockerfile $(project_path) --builder=container
 
 # Generates the HTML report of all open source licence dependencies
 build-licence-report: ensure-build-image
