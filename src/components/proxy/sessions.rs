@@ -51,6 +51,13 @@ cfg_if::cfg_if! {
     }
 }
 
+/// Responsible for managing sending processed traffic to its destination and
+/// tracking metrics and other information about the session.
+pub trait SessionManager {
+    type Packet: crate::filters::Packet;
+    fn send(&self, key: SessionKey, contents: &Self::Packet) -> Result<(), super::PipelineError>;
+}
+
 #[derive(PartialEq, Eq, Hash)]
 pub enum SessionError {
     SocketAddressUnavailable,
@@ -453,6 +460,14 @@ impl SessionPool {
             tracing::info!(sessions=%self.session_map.len(), "waiting for active sessions to expire");
             self.session_map.clear();
         }
+    }
+}
+
+impl SessionManager for Arc<SessionPool> {
+    type Packet = FrozenPoolBuffer;
+
+    fn send(&self, key: SessionKey, contents: &Self::Packet) -> Result<(), super::PipelineError> {
+        SessionPool::send(self, key, contents.clone())
     }
 }
 

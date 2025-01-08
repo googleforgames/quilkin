@@ -128,8 +128,7 @@ impl super::DownstreamReceiveWorkerConfig {
                                 }
                                 last_received_at = Some(received_at);
 
-                                Self::process_task(
-                                    packet,
+                                packet.process(
                                     worker_id,
                                     &config,
                                     &sessions,

@@ -273,7 +273,7 @@ impl schemars::JsonSchema for FilterChain {
 }
 
 impl Filter for FilterChain {
-    fn read<P: Packet>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
+    fn read<P: PacketMut>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
         for ((id, instance), histogram) in self
             .filters
             .iter()
@@ -303,7 +303,7 @@ impl Filter for FilterChain {
         Ok(())
     }
 
-    fn write<P: Packet>(&self, ctx: &mut WriteContext<P>) -> Result<(), FilterError> {
+    fn write<P: PacketMut>(&self, ctx: &mut WriteContext<P>) -> Result<(), FilterError> {
         for ((id, instance), histogram) in self
             .filters
             .iter()

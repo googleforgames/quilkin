@@ -53,7 +53,7 @@ impl Compress {
 
 impl Filter for Compress {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn read<P: Packet>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
+    fn read<P: PacketMut>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
         let original_size = ctx.contents.as_slice().len();
 
         match self.on_read {
@@ -96,7 +96,7 @@ impl Filter for Compress {
     }
 
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn write<P: Packet>(&self, ctx: &mut WriteContext<P>) -> Result<(), FilterError> {
+    fn write<P: PacketMut>(&self, ctx: &mut WriteContext<P>) -> Result<(), FilterError> {
         let original_size = ctx.contents.as_slice().len();
         match self.on_write {
             Action::Compress => match self.compressor.encode(&ctx.contents) {

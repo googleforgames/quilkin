@@ -87,12 +87,12 @@ impl TryFrom<Config> for Timestamp {
 }
 
 impl Filter for Timestamp {
-    fn read<P: Packet>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
+    fn read<P: PacketMut>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
         self.observe(&ctx.metadata, Direction::Read);
         Ok(())
     }
 
-    fn write<P: Packet>(&self, ctx: &mut WriteContext<P>) -> Result<(), FilterError> {
+    fn write<P: PacketMut>(&self, ctx: &mut WriteContext<P>) -> Result<(), FilterError> {
         self.observe(&ctx.metadata, Direction::Write);
         Ok(())
     }

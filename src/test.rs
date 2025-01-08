@@ -99,7 +99,7 @@ fn get_address(address_type: AddressType, socket: &DualStackLocalSocket) -> Sock
 pub struct TestFilter;
 
 impl Filter for TestFilter {
-    fn read<P: Packet>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
+    fn read<P: PacketMut>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
         // append values on each run
         ctx.metadata
             .entry("downstream".into())
@@ -111,7 +111,7 @@ impl Filter for TestFilter {
         Ok(())
     }
 
-    fn write<P: Packet>(&self, ctx: &mut WriteContext<P>) -> Result<(), FilterError> {
+    fn write<P: PacketMut>(&self, ctx: &mut WriteContext<P>) -> Result<(), FilterError> {
         // append values on each run
         ctx.metadata
             .entry("upstream".into())

@@ -43,7 +43,7 @@ impl StaticFilter for TokenRouter {
 }
 
 impl Filter for TokenRouter {
-    fn read<P: Packet>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
+    fn read<P: PacketMut>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
         match ctx.metadata.get(&self.config.metadata_key) {
             Some(metadata::Value::Bytes(token)) => {
                 let tok = crate::net::cluster::Token::new(token);
@@ -81,7 +81,7 @@ impl StaticFilter for HashedTokenRouter {
 }
 
 impl Filter for HashedTokenRouter {
-    fn read<P: Packet>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
+    fn read<P: PacketMut>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
         self.0.read(ctx)
     }
 }
@@ -339,7 +339,7 @@ mod tests {
     fn assert_read<F, P>(filter: &F, mut ctx: ReadContext<'_, P>)
     where
         F: Filter + ?Sized,
-        P: Packet,
+        P: PacketMut,
     {
         filter.read(&mut ctx).unwrap();
         assert_eq!(b"hello", ctx.contents.as_slice());

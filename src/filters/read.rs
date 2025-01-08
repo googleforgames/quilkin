@@ -35,7 +35,7 @@ pub struct ReadContext<'ctx, P> {
     pub metadata: DynamicMetadata,
 }
 
-impl<'ctx, P: super::Packet> ReadContext<'ctx, P> {
+impl<'ctx, P: super::PacketMut> ReadContext<'ctx, P> {
     /// Creates a new [`ReadContext`].
     #[inline]
     pub fn new(

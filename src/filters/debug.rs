@@ -38,13 +38,13 @@ impl Debug {
 
 impl Filter for Debug {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn read<P: Packet>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
+    fn read<P: PacketMut>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
         info!(id = ?self.config.id, source = ?&ctx.source, contents = ?String::from_utf8_lossy(ctx.contents.as_slice()), "Read filter event");
         Ok(())
     }
 
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn write<P: Packet>(&self, ctx: &mut WriteContext<P>) -> Result<(), FilterError> {
+    fn write<P: PacketMut>(&self, ctx: &mut WriteContext<P>) -> Result<(), FilterError> {
         info!(
             id = ?self.config.id,
             source = ?&ctx.source,

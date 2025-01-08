@@ -119,7 +119,7 @@ fn match_filter<'config, 'ctx, Ctx>(
 
 impl Filter for Match {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn read<P: Packet>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
+    fn read<P: PacketMut>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
         tracing::trace!(metadata=?ctx.metadata);
         match_filter(
             &self.on_read_filters,
@@ -131,7 +131,7 @@ impl Filter for Match {
     }
 
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn write<P: Packet>(&self, ctx: &mut WriteContext<P>) -> Result<(), FilterError> {
+    fn write<P: PacketMut>(&self, ctx: &mut WriteContext<P>) -> Result<(), FilterError> {
         match_filter(
             &self.on_write_filters,
             &self.metrics,

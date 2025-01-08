@@ -24,6 +24,8 @@ use std::{
     },
 };
 
+use crate::filters::{Packet, PacketMut};
+
 type Pool = Mutex<Vec<BytesMut>>;
 
 pub struct BufferPool {
@@ -272,10 +274,24 @@ impl Drop for PoolBuffer {
     }
 }
 
-impl crate::filters::Packet for PoolBuffer {
+impl Packet for PoolBuffer {
     #[inline]
     fn as_slice(&self) -> &[u8] {
         self.as_ref()
+    }
+
+    #[inline]
+    fn len(&self) -> usize {
+        self.as_slice().len()
+    }
+}
+
+impl PacketMut for PoolBuffer {
+    type FrozenPacket = FrozenPoolBuffer;
+
+    #[inline]
+    fn alloc_sized(&self, size: usize) -> Option<Self> {
+        Some(self.owner.clone().alloc_sized(size))
     }
 
     #[inline]
@@ -304,13 +320,13 @@ impl crate::filters::Packet for PoolBuffer {
     }
 
     #[inline]
-    fn set_len(&mut self, len: usize) {
-        self.truncate(len);
+    fn freeze(self) -> FrozenPoolBuffer {
+        self.freeze()
     }
 
     #[inline]
-    fn alloc_sized(&self, size: usize) -> Option<Self> {
-        Some(self.owner.clone().alloc_sized(size))
+    fn set_len(&mut self, len: usize) {
+        self.truncate(len);
     }
 }
 
@@ -328,6 +344,18 @@ impl FrozenPoolBuffer {
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.inner.is_empty()
+    }
+}
+
+impl Packet for FrozenPoolBuffer {
+    #[inline]
+    fn as_slice(&self) -> &[u8] {
+        self.inner.as_ref()
+    }
+
+    #[inline]
+    fn len(&self) -> usize {
+        self.inner.len()
     }
 }
 
