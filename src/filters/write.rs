@@ -32,7 +32,7 @@ pub struct WriteContext<P> {
     pub metadata: DynamicMetadata,
 }
 
-impl<P: super::Packet> WriteContext<P> {
+impl<P: super::PacketMut> WriteContext<P> {
     /// Creates a new [`WriteContext`]
     #[inline]
     pub fn new(source: EndpointAddress, dest: EndpointAddress, contents: P) -> Self {

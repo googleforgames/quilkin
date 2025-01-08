@@ -38,7 +38,7 @@ impl LoadBalancer {
 }
 
 impl Filter for LoadBalancer {
-    fn read<P: Packet>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
+    fn read<P: PacketMut>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
         self.endpoint_chooser
             .choose_endpoints(ctx.destinations, ctx.endpoints, &ctx.source);
         Ok(())

@@ -58,7 +58,7 @@ impl Capture {
 
 impl Filter for Capture {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn read<P: Packet>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
+    fn read<P: PacketMut>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
         let capture = self.capture.capture(ctx.contents.as_slice());
         ctx.metadata.insert(
             self.is_present_key,

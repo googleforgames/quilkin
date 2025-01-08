@@ -43,7 +43,7 @@ impl Concatenate {
 }
 
 impl Filter for Concatenate {
-    fn read<P: Packet>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
+    fn read<P: PacketMut>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
         match self.on_read {
             Strategy::Append => {
                 ctx.contents.extend_tail(&self.bytes);
@@ -57,7 +57,7 @@ impl Filter for Concatenate {
         Ok(())
     }
 
-    fn write<P: Packet>(&self, ctx: &mut WriteContext<P>) -> Result<(), FilterError> {
+    fn write<P: PacketMut>(&self, ctx: &mut WriteContext<P>) -> Result<(), FilterError> {
         match self.on_write {
             Strategy::Append => {
                 ctx.contents.extend_tail(&self.bytes);

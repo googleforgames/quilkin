@@ -249,14 +249,7 @@ fn process_packet(
                 source: packet.source,
             };
 
-            crate::components::proxy::packet_router::DownstreamReceiveWorkerConfig::process_task(
-                ds_packet,
-                *worker_id,
-                config,
-                sessions,
-                error_acc,
-                destinations,
-            );
+            ds_packet.process(*worker_id, config, sessions, error_acc, destinations);
         }
         PacketProcessorCtx::SessionPool { pool, port, .. } => {
             let mut last_received_at = None;

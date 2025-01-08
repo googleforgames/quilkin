@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use crate::filters::Packet;
+use crate::filters::PacketMut;
 use parking_lot::Mutex;
 use std::io;
 
@@ -30,7 +30,7 @@ pub enum Compressor {
 }
 
 impl Compressor {
-    pub fn encode<P: Packet>(&self, contents: &P) -> io::Result<P> {
+    pub fn encode<P: PacketMut>(&self, contents: &P) -> io::Result<P> {
         let input = contents.as_slice();
         let encoded = match self {
             Self::Snappy(imp) => {
@@ -80,7 +80,7 @@ impl Compressor {
         Ok(encoded)
     }
 
-    pub fn decode<P: Packet>(&self, contents: &P) -> io::Result<P> {
+    pub fn decode<P: PacketMut>(&self, contents: &P) -> io::Result<P> {
         let input = contents.as_slice();
         let decoded = match self {
             Self::Snappy(_imp) => {
