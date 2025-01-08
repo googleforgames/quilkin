@@ -377,10 +377,20 @@
     config: Config,
 }
 
-<span class="kw">impl </span>TokenRouter {
-    <span class="doccomment">/// Non-async version of [`Filter::read`], as this filter does no actual async
-    /// operations. Used in benchmarking.
-    </span><span class="kw">pub fn </span>sync_read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext&lt;<span class="lifetime">'_</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+<span class="kw">impl </span>StaticFilter <span class="kw">for </span>TokenRouter {
+    <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str = <span class="string">"quilkin.filters.token_router.v1alpha1.TokenRouter"</span>;
+    <span class="kw">type </span>Configuration = Config;
+    <span class="kw">type </span>BinaryConfiguration = proto::TokenRouter;
+
+    <span class="kw">fn </span>try_from_config(config: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Configuration&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, CreationError&gt; {
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            config: config.unwrap_or_default(),
+        })
+    }
+}
+
+<span class="kw">impl </span>Filter <span class="kw">for </span>TokenRouter {
+    <span class="kw">fn </span>read&lt;P: Packet&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext&lt;<span class="lifetime">'_</span>, P&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="kw">match </span>ctx.metadata.get(<span class="kw-2">&amp;</span><span class="self">self</span>.config.metadata_key) {
             <span class="prelude-val">Some</span>(metadata::Value::Bytes(token)) =&gt; {
                 <span class="kw">let </span>tok = <span class="kw">crate</span>::net::cluster::Token::new(token);
@@ -403,24 +413,6 @@
     }
 }
 
-<span class="kw">impl </span>StaticFilter <span class="kw">for </span>TokenRouter {
-    <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str = <span class="string">"quilkin.filters.token_router.v1alpha1.TokenRouter"</span>;
-    <span class="kw">type </span>Configuration = Config;
-    <span class="kw">type </span>BinaryConfiguration = proto::TokenRouter;
-
-    <span class="kw">fn </span>try_from_config(config: <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Configuration&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, CreationError&gt; {
-        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
-            config: config.unwrap_or_default(),
-        })
-    }
-}
-
-<span class="kw">impl </span>Filter <span class="kw">for </span>TokenRouter {
-    <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext&lt;<span class="lifetime">'_</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
-        <span class="self">self</span>.sync_read(ctx)
-    }
-}
-
 <span class="kw">pub struct </span>HashedTokenRouter(TokenRouter);
 
 <span class="kw">impl </span>StaticFilter <span class="kw">for </span>HashedTokenRouter {
@@ -436,8 +428,8 @@
 }
 
 <span class="kw">impl </span>Filter <span class="kw">for </span>HashedTokenRouter {
-    <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext&lt;<span class="lifetime">'_</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
-        <span class="self">self</span>.<span class="number">0</span>.sync_read(ctx)
+    <span class="kw">fn </span>read&lt;P: Packet&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext&lt;<span class="lifetime">'_</span>, P&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+        <span class="self">self</span>.<span class="number">0</span>.read(ctx)
     }
 }
 
@@ -590,7 +582,7 @@
                 name
             );
             <span class="kw">if let </span><span class="prelude-val">Some</span>(expected) = expected {
-                <span class="macro">assert_eq!</span>(expected, result.unwrap(), <span class="string">"{}"</span>, name);
+                <span class="macro">assert_eq!</span>(expected, result.unwrap(), <span class="string">"{name}"</span>);
             }
         }
     }
@@ -604,20 +596,22 @@
             .into(),
         );
         <span class="kw">let </span><span class="kw-2">mut </span>dest = Vec::new();
-        <span class="kw">let </span><span class="kw-2">mut </span>ctx = new_ctx(<span class="kw-2">&amp;mut </span>dest);
-        ctx.metadata
-            .insert(TOKEN_KEY.into(), Value::Bytes(<span class="string">b"123"</span>.to_vec().into()));
-        assert_read(<span class="kw-2">&amp;</span>filter, ctx);
+        with_ctx(<span class="kw-2">&amp;mut </span>dest, |<span class="kw-2">mut </span>ctx| {
+            ctx.metadata
+                .insert(TOKEN_KEY.into(), Value::Bytes(<span class="string">b"123"</span>.to_vec().into()));
+            assert_read(<span class="kw-2">&amp;</span>filter, ctx);
+        });
     }
 
     <span class="attr">#[tokio::test]
     </span><span class="kw">async fn </span>factory_empty_config() {
         <span class="kw">let </span>filter = TokenRouter::from_config(<span class="prelude-val">None</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>dest = Vec::new();
-        <span class="kw">let </span><span class="kw-2">mut </span>ctx = new_ctx(<span class="kw-2">&amp;mut </span>dest);
-        ctx.metadata
-            .insert(CAPTURED_BYTES.into(), Value::Bytes(<span class="string">b"123"</span>.to_vec().into()));
-        assert_read(<span class="kw-2">&amp;</span>filter, ctx);
+        with_ctx(<span class="kw-2">&amp;mut </span>dest, |<span class="kw-2">mut </span>ctx| {
+            ctx.metadata
+                .insert(CAPTURED_BYTES.into(), Value::Bytes(<span class="string">b"123"</span>.to_vec().into()));
+            assert_read(<span class="kw-2">&amp;</span>filter, ctx);
+        });
     }
 
     <span class="attr">#[tokio::test]
@@ -629,23 +623,26 @@
         <span class="kw">let </span>filter = TokenRouter::from_config(config.into());
         <span class="kw">let </span><span class="kw-2">mut </span>dest = Vec::new();
 
-        <span class="kw">let </span><span class="kw-2">mut </span>ctx = new_ctx(<span class="kw-2">&amp;mut </span>dest);
-        ctx.metadata
-            .insert(CAPTURED_BYTES.into(), Value::Bytes(<span class="string">b"123"</span>.to_vec().into()));
-        assert_read(<span class="kw-2">&amp;</span>filter, ctx);
+        with_ctx(<span class="kw-2">&amp;mut </span>dest, |<span class="kw-2">mut </span>ctx| {
+            ctx.metadata
+                .insert(CAPTURED_BYTES.into(), Value::Bytes(<span class="string">b"123"</span>.to_vec().into()));
+            assert_read(<span class="kw-2">&amp;</span>filter, ctx);
+        });
         dest.clear();
 
         <span class="comment">// invalid key
-        </span><span class="kw">let </span><span class="kw-2">mut </span>ctx = new_ctx(<span class="kw-2">&amp;mut </span>dest);
-        ctx.metadata
-            .insert(CAPTURED_BYTES.into(), Value::Bytes(<span class="string">b"567"</span>.to_vec().into()));
+        </span>with_ctx(<span class="kw-2">&amp;mut </span>dest, |<span class="kw-2">mut </span>ctx| {
+            ctx.metadata
+                .insert(CAPTURED_BYTES.into(), Value::Bytes(<span class="string">b"567"</span>.to_vec().into()));
 
-        <span class="macro">assert!</span>(filter.read(<span class="kw-2">&amp;mut </span>ctx).is_err());
+            <span class="macro">assert!</span>(filter.read(<span class="kw-2">&amp;mut </span>ctx).is_err());
+        });
         dest.clear();
 
         <span class="comment">// no key
-        </span><span class="kw">let </span><span class="kw-2">mut </span>ctx = new_ctx(<span class="kw-2">&amp;mut </span>dest);
-        <span class="macro">assert!</span>(filter.read(<span class="kw-2">&amp;mut </span>ctx).is_err());
+        </span>with_ctx(<span class="kw-2">&amp;mut </span>dest, |<span class="kw-2">mut </span>ctx| {
+            <span class="macro">assert!</span>(filter.read(<span class="kw-2">&amp;mut </span>ctx).is_err());
+        });
     }
 
     <span class="attr">#[tokio::test]
@@ -657,7 +654,10 @@
         assert_write_no_change(<span class="kw-2">&amp;</span>filter);
     }
 
-    <span class="kw">fn </span>new_ctx(dest: <span class="kw-2">&amp;mut </span>Vec&lt;<span class="kw">crate</span>::net::EndpointAddress&gt;) -&gt; ReadContext&lt;<span class="lifetime">'_</span>&gt; {
+    <span class="kw">fn </span>with_ctx(
+        dest: <span class="kw-2">&amp;mut </span>Vec&lt;<span class="kw">crate</span>::net::EndpointAddress&gt;,
+        test: <span class="kw">impl </span>FnOnce(ReadContext&lt;<span class="lifetime">'_</span>, <span class="kw">crate</span>::pool::PoolBuffer&gt;),
+    ) {
         <span class="kw">let </span>endpoint1 = Endpoint::with_metadata(
             <span class="string">"127.0.0.1:80"</span>.parse().unwrap(),
             Metadata {
@@ -675,21 +675,21 @@
 
         <span class="kw">let </span>endpoints = <span class="kw">crate</span>::net::cluster::ClusterMap::default();
         endpoints.insert_default([endpoint1, endpoint2].into());
-        ReadContext::new(
-            endpoints.into(),
+        test(ReadContext::new(
+            <span class="kw-2">&amp;</span>endpoints,
             <span class="string">"127.0.0.1:100"</span>.parse().unwrap(),
             pool.alloc_slice(<span class="string">b"hello"</span>),
             dest,
-        )
+        ))
     }
 
-    <span class="kw">fn </span>assert_read&lt;F&gt;(filter: <span class="kw-2">&amp;</span>F, <span class="kw-2">mut </span>ctx: ReadContext&lt;<span class="lifetime">'_</span>&gt;)
+    <span class="kw">fn </span>assert_read&lt;F, P&gt;(filter: <span class="kw-2">&amp;</span>F, <span class="kw-2">mut </span>ctx: ReadContext&lt;<span class="lifetime">'_</span>, P&gt;)
     <span class="kw">where
         </span>F: Filter + <span class="question-mark">?</span>Sized,
+        P: Packet,
     {
         filter.read(<span class="kw-2">&amp;mut </span>ctx).unwrap();
-
-        <span class="macro">assert_eq!</span>(<span class="string">b"hello"</span>, ctx.contents.as_ref());
+        <span class="macro">assert_eq!</span>(<span class="string">b"hello"</span>, ctx.contents.as_slice());
     }
 }
 </code></pre></div></section></main></body></html>

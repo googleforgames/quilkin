@@ -86,7 +86,26 @@
 <a href="#85" id="85">85</a>
 <a href="#86" id="86">86</a>
 <a href="#87" id="87">87</a>
-<a href="#88" id="88">88</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -111,12 +130,17 @@
     hash::{Hash, Hasher},
 };
 
-<span class="kw">use </span><span class="kw">crate</span>::filters::ReadContext;
+<span class="kw">use </span><span class="kw">crate</span>::net::{ClusterMap, EndpointAddress};
 
 <span class="doccomment">/// EndpointChooser chooses from a set of endpoints that a proxy is connected to.
 </span><span class="kw">pub trait </span>EndpointChooser: Send + Sync {
     <span class="doccomment">/// choose_endpoints asks for the next endpoint(s) to use.
-    </span><span class="kw">fn </span>choose_endpoints(<span class="kw-2">&amp;</span><span class="self">self</span>, endpoints: <span class="kw-2">&amp;mut </span>ReadContext&lt;<span class="lifetime">'_</span>&gt;);
+    </span><span class="kw">fn </span>choose_endpoints(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        destinations: <span class="kw-2">&amp;mut </span>Vec&lt;EndpointAddress&gt;,
+        endpoints: <span class="kw-2">&amp;</span>ClusterMap,
+        src: <span class="kw-2">&amp;</span>EndpointAddress,
+    );
 }
 
 <span class="doccomment">/// RoundRobinEndpointChooser chooses endpoints in round-robin order.
@@ -133,12 +157,17 @@
 }
 
 <span class="kw">impl </span>EndpointChooser <span class="kw">for </span>RoundRobinEndpointChooser {
-    <span class="kw">fn </span>choose_endpoints(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext&lt;<span class="lifetime">'_</span>&gt;) {
+    <span class="kw">fn </span>choose_endpoints(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        destinations: <span class="kw-2">&amp;mut </span>Vec&lt;EndpointAddress&gt;,
+        endpoints: <span class="kw-2">&amp;</span>ClusterMap,
+        _src: <span class="kw-2">&amp;</span>EndpointAddress,
+    ) {
         <span class="kw">let </span>count = <span class="self">self</span>.next_endpoint.fetch_add(<span class="number">1</span>, Ordering::Relaxed);
         <span class="comment">// Note: The index is guaranteed to be in range.
-        </span>ctx.destinations.push(
-            ctx.endpoints
-                .nth_endpoint(count % ctx.endpoints.num_of_endpoints())
+        </span>destinations.push(
+            endpoints
+                .nth_endpoint(count % endpoints.num_of_endpoints())
                 .unwrap()
                 .address
                 .clone(),
@@ -150,11 +179,15 @@
 </span><span class="kw">pub struct </span>RandomEndpointChooser;
 
 <span class="kw">impl </span>EndpointChooser <span class="kw">for </span>RandomEndpointChooser {
-    <span class="kw">fn </span>choose_endpoints(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext&lt;<span class="lifetime">'_</span>&gt;) {
+    <span class="kw">fn </span>choose_endpoints(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        destinations: <span class="kw-2">&amp;mut </span>Vec&lt;EndpointAddress&gt;,
+        endpoints: <span class="kw-2">&amp;</span>ClusterMap,
+        _src: <span class="kw-2">&amp;</span>EndpointAddress,
+    ) {
         <span class="comment">// The index is guaranteed to be in range.
-        </span><span class="kw">let </span>index = thread_rng().gen_range(<span class="number">0</span>..ctx.endpoints.num_of_endpoints());
-        ctx.destinations
-            .push(ctx.endpoints.nth_endpoint(index).unwrap().address.clone());
+        </span><span class="kw">let </span>index = thread_rng().gen_range(<span class="number">0</span>..endpoints.num_of_endpoints());
+        destinations.push(endpoints.nth_endpoint(index).unwrap().address.clone());
     }
 }
 
@@ -162,12 +195,17 @@
 </span><span class="kw">pub struct </span>HashEndpointChooser;
 
 <span class="kw">impl </span>EndpointChooser <span class="kw">for </span>HashEndpointChooser {
-    <span class="kw">fn </span>choose_endpoints(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext&lt;<span class="lifetime">'_</span>&gt;) {
+    <span class="kw">fn </span>choose_endpoints(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        destinations: <span class="kw-2">&amp;mut </span>Vec&lt;EndpointAddress&gt;,
+        endpoints: <span class="kw-2">&amp;</span>ClusterMap,
+        src: <span class="kw-2">&amp;</span>EndpointAddress,
+    ) {
         <span class="kw">let </span><span class="kw-2">mut </span>hasher = DefaultHasher::new();
-        ctx.source.hash(<span class="kw-2">&amp;mut </span>hasher);
-        ctx.destinations.push(
-            ctx.endpoints
-                .nth_endpoint(hasher.finish() <span class="kw">as </span>usize % ctx.endpoints.num_of_endpoints())
+        src.hash(<span class="kw-2">&amp;mut </span>hasher);
+        destinations.push(
+            endpoints
+                .nth_endpoint(hasher.finish() <span class="kw">as </span>usize % endpoints.num_of_endpoints())
                 .unwrap()
                 .address
                 .clone(),

@@ -204,7 +204,9 @@
 <a href="#203" id="203">203</a>
 <a href="#204" id="204">204</a>
 <a href="#205" id="205">205</a>
-<a href="#206" id="206">206</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -293,12 +295,12 @@
 }
 
 <span class="kw">impl </span>Filter <span class="kw">for </span>Timestamp {
-    <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext&lt;<span class="lifetime">'_</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+    <span class="kw">fn </span>read&lt;P: Packet&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext&lt;<span class="lifetime">'_</span>, P&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="self">self</span>.observe(<span class="kw-2">&amp;</span>ctx.metadata, Direction::Read);
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+    <span class="kw">fn </span>write&lt;P: Packet&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext&lt;P&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="self">self</span>.observe(<span class="kw-2">&amp;</span>ctx.metadata, Direction::Write);
         <span class="prelude-val">Ok</span>(())
     }
@@ -364,8 +366,9 @@
         <span class="kw">const </span>TIMESTAMP_KEY: <span class="kw-2">&amp;</span>str = <span class="string">"BASIC"</span>;
         <span class="kw">let </span>filter = Timestamp::from_config(Config::new(TIMESTAMP_KEY).into());
         <span class="kw">let </span><span class="kw-2">mut </span>dest = Vec::new();
+        <span class="kw">let </span>cm = Default::default();
         <span class="kw">let </span><span class="kw-2">mut </span>ctx = ReadContext::new(
-            &lt;<span class="kw">_</span>&gt;::default(),
+            <span class="kw-2">&amp;</span>cm,
             (std::net::Ipv4Addr::UNSPECIFIED, <span class="number">0</span>).into(),
             alloc_buffer(<span class="string">b"hello"</span>),
             <span class="kw-2">&amp;mut </span>dest,
@@ -397,8 +400,9 @@
         <span class="kw">let </span>timestamp = Timestamp::from_config(Config::new(TIMESTAMP_KEY).into());
         <span class="kw">let </span>source = (std::net::Ipv4Addr::UNSPECIFIED, <span class="number">0</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>dest = Vec::new();
+        <span class="kw">let </span>cm = Default::default();
         <span class="kw">let </span><span class="kw-2">mut </span>ctx = ReadContext::new(
-            &lt;<span class="kw">_</span>&gt;::default(),
+            <span class="kw-2">&amp;</span>cm,
             source.into(),
             alloc_buffer([<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">99</span>, <span class="number">81</span>, <span class="number">55</span>, <span class="number">181</span>]),
             <span class="kw-2">&amp;mut </span>dest,

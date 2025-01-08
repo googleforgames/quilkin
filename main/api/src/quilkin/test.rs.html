@@ -539,8 +539,7 @@
 <a href="#538" id="538">538</a>
 <a href="#539" id="539">539</a>
 <a href="#540" id="540">540</a>
-<a href="#541" id="541">541</a>
-<a href="#542" id="542">542</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#541" id="541">541</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -641,7 +640,7 @@
 </span><span class="kw">pub struct </span>TestFilter;
 
 <span class="kw">impl </span>Filter <span class="kw">for </span>TestFilter {
-    <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+    <span class="kw">fn </span>read&lt;P: Packet&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>ReadContext&lt;<span class="lifetime">'_</span>, P&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="comment">// append values on each run
         </span>ctx.metadata
             .entry(<span class="string">"downstream"</span>.into())
@@ -649,11 +648,11 @@
             .or_insert_with(|| Value::String(<span class="string">"receive"</span>.into()));
 
         ctx.contents
-            .extend_from_slice(<span class="macro">format!</span>(<span class="string">":odr:{}"</span>, ctx.source).as_bytes());
+            .extend_tail(<span class="macro">format!</span>(<span class="string">":odr:{}"</span>, ctx.source).as_bytes());
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+    <span class="kw">fn </span>write&lt;P: Packet&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>WriteContext&lt;P&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
         <span class="comment">// append values on each run
         </span>ctx.metadata
             .entry(<span class="string">"upstream"</span>.into())
@@ -661,7 +660,7 @@
             .or_insert_with(|| Value::String(<span class="string">"receive"</span>.to_string()));
 
         ctx.contents
-            .extend_from_slice(<span class="macro">format!</span>(<span class="string">":our:{}:{}"</span>, ctx.source, ctx.dest).as_bytes());
+            .extend_tail(<span class="macro">format!</span>(<span class="string">":our:{}:{}"</span>, ctx.source, ctx.dest).as_bytes());
         <span class="prelude-val">Ok</span>(())
     }
 }
@@ -913,12 +912,11 @@
     <span class="kw">let </span>source = <span class="string">"127.0.0.1:90"</span>.parse().unwrap();
     <span class="kw">let </span>contents = <span class="string">b"hello"</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>dest = Vec::new();
-    <span class="kw">let </span><span class="kw-2">mut </span>context =
-        ReadContext::new(endpoints.clone(), source, alloc_buffer(contents), <span class="kw-2">&amp;mut </span>dest);
+    <span class="kw">let </span><span class="kw-2">mut </span>context = ReadContext::new(<span class="kw-2">&amp;</span>endpoints, source, alloc_buffer(contents), <span class="kw-2">&amp;mut </span>dest);
 
     filter.read(<span class="kw-2">&amp;mut </span>context).unwrap();
     <span class="macro">assert!</span>(context.destinations.is_empty());
-    <span class="macro">assert_eq!</span>(endpoints, context.endpoints);
+    <span class="macro">assert_eq!</span>(endpoints.as_ref(), context.endpoints);
     <span class="macro">assert_eq!</span>(contents, <span class="kw-2">&amp;*</span>context.contents);
 }
 

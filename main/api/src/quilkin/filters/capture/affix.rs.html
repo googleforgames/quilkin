@@ -70,8 +70,7 @@
 <a href="#69" id="69">69</a>
 <a href="#70" id="70">70</a>
 <a href="#71" id="71">71</a>
-<a href="#72" id="72">72</a>
-<a href="#73" id="73">73</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#72" id="72">72</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -87,7 +86,7 @@
  *  limitations under the License.
  */
 
-</span><span class="kw">use crate</span>::{net::endpoint::metadata::Value, pool::PoolBuffer};
+</span><span class="kw">use </span><span class="kw">crate</span>::net::endpoint::metadata::Value;
 <span class="kw">use </span>bytes::Bytes;
 
 <span class="doccomment">/// Returns whether the capture size is bigger than the packet size.
@@ -107,15 +106,18 @@
 }
 
 <span class="kw">impl </span><span class="kw">super</span>::CaptureStrategy <span class="kw">for </span>Prefix {
-    <span class="kw">fn </span>capture(<span class="kw-2">&amp;</span><span class="self">self</span>, contents: <span class="kw-2">&amp;mut </span>PoolBuffer) -&gt; <span class="prelude-ty">Option</span>&lt;Value&gt; {
+    <span class="kw">fn </span>capture(<span class="kw-2">&amp;</span><span class="self">self</span>, contents: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;(Value, isize)&gt; {
         is_valid_size(contents, <span class="self">self</span>.size).then(|| {
-            <span class="kw">if </span><span class="self">self</span>.remove {
-                Value::Bytes(Bytes::copy_from_slice(
-                    contents.split_prefix(<span class="self">self</span>.size <span class="kw">as _</span>),
-                ))
-            } <span class="kw">else </span>{
-                Value::Bytes(Bytes::copy_from_slice(<span class="kw-2">&amp;</span>contents[..<span class="self">self</span>.size <span class="kw">as _</span>]))
-            }
+            <span class="kw">let </span>value = Value::Bytes(Bytes::copy_from_slice(<span class="kw-2">&amp;</span>contents[..<span class="self">self</span>.size <span class="kw">as _</span>]));
+
+            (
+                value,
+                <span class="kw">if </span><span class="self">self</span>.remove {
+                    -(<span class="self">self</span>.size <span class="kw">as </span>isize)
+                } <span class="kw">else </span>{
+                    <span class="number">0
+                </span>},
+            )
         })
     }
 }
@@ -131,16 +133,12 @@
 }
 
 <span class="kw">impl </span><span class="kw">super</span>::CaptureStrategy <span class="kw">for </span>Suffix {
-    <span class="kw">fn </span>capture(<span class="kw-2">&amp;</span><span class="self">self</span>, contents: <span class="kw-2">&amp;mut </span>PoolBuffer) -&gt; <span class="prelude-ty">Option</span>&lt;Value&gt; {
+    <span class="kw">fn </span>capture(<span class="kw-2">&amp;</span><span class="self">self</span>, contents: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;(Value, isize)&gt; {
         is_valid_size(contents, <span class="self">self</span>.size).then(|| {
-            <span class="kw">if </span><span class="self">self</span>.remove {
-                Value::Bytes(Bytes::copy_from_slice(
-                    contents.split_suffix(<span class="self">self</span>.size <span class="kw">as _</span>),
-                ))
-            } <span class="kw">else </span>{
-                <span class="kw">let </span>index = contents.len() - <span class="self">self</span>.size <span class="kw">as </span>usize;
-                Value::Bytes(Bytes::copy_from_slice(<span class="kw-2">&amp;</span>contents[index..]))
-            }
+            <span class="kw">let </span>index = contents.len() - <span class="self">self</span>.size <span class="kw">as </span>usize;
+            <span class="kw">let </span>value = Value::Bytes(Bytes::copy_from_slice(<span class="kw-2">&amp;</span>contents[index..]));
+
+            (value, <span class="kw">if </span><span class="self">self</span>.remove { <span class="self">self</span>.size <span class="kw">as </span>isize } <span class="kw">else </span>{ <span class="number">0 </span>})
         })
     }
 }

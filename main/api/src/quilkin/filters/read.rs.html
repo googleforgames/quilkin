@@ -53,12 +53,7 @@
 <a href="#52" id="52">52</a>
 <a href="#53" id="53">53</a>
 <a href="#54" id="54">54</a>
-<a href="#55" id="55">55</a>
-<a href="#56" id="56">56</a>
-<a href="#57" id="57">57</a>
-<a href="#58" id="58">58</a>
-<a href="#59" id="59">59</a>
-<a href="#60" id="60">60</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#55" id="55">55</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -74,39 +69,34 @@
  * limitations under the License.
  */
 
-</span><span class="kw">use </span>std::sync::Arc;
-
-<span class="attr">#[cfg(doc)]
+</span><span class="attr">#[cfg(doc)]
 </span><span class="kw">use </span><span class="kw">crate</span>::filters::Filter;
-<span class="kw">use crate</span>::{
-    net::{
-        endpoint::{metadata::DynamicMetadata, EndpointAddress},
-        ClusterMap,
-    },
-    pool::PoolBuffer,
+<span class="kw">use </span><span class="kw">crate</span>::net::{
+    endpoint::{metadata::DynamicMetadata, EndpointAddress},
+    ClusterMap,
 };
 
 <span class="doccomment">/// The input arguments to [`Filter::read`].
-</span><span class="kw">pub struct </span>ReadContext&lt;<span class="lifetime">'ctx</span>&gt; {
+</span><span class="kw">pub struct </span>ReadContext&lt;<span class="lifetime">'ctx</span>, P&gt; {
     <span class="doccomment">/// The upstream endpoints that the packet will be forwarded to.
-    </span><span class="kw">pub </span>endpoints: Arc&lt;ClusterMap&gt;,
+    </span><span class="kw">pub </span>endpoints: <span class="kw-2">&amp;</span><span class="lifetime">'ctx </span>ClusterMap,
     <span class="doccomment">/// The upstream endpoints that the packet will be forwarded to.
     </span><span class="kw">pub </span>destinations: <span class="kw-2">&amp;</span><span class="lifetime">'ctx </span><span class="kw-2">mut </span>Vec&lt;EndpointAddress&gt;,
     <span class="doccomment">/// The source of the received packet.
     </span><span class="kw">pub </span>source: EndpointAddress,
     <span class="doccomment">/// Contents of the received packet.
-    </span><span class="kw">pub </span>contents: PoolBuffer,
+    </span><span class="kw">pub </span>contents: P,
     <span class="doccomment">/// Arbitrary values that can be passed from one filter to another.
     </span><span class="kw">pub </span>metadata: DynamicMetadata,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'ctx</span>&gt; ReadContext&lt;<span class="lifetime">'ctx</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'ctx</span>, P: <span class="kw">super</span>::Packet&gt; ReadContext&lt;<span class="lifetime">'ctx</span>, P&gt; {
     <span class="doccomment">/// Creates a new [`ReadContext`].
     </span><span class="attr">#[inline]
     </span><span class="kw">pub fn </span>new(
-        endpoints: Arc&lt;ClusterMap&gt;,
+        endpoints: <span class="kw-2">&amp;</span><span class="lifetime">'ctx </span>ClusterMap,
         source: EndpointAddress,
-        contents: PoolBuffer,
+        contents: P,
         destinations: <span class="kw-2">&amp;</span><span class="lifetime">'ctx </span><span class="kw-2">mut </span>Vec&lt;EndpointAddress&gt;,
     ) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{

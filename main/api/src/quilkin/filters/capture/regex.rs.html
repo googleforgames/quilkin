@@ -62,7 +62,7 @@
  *  limitations under the License.
  */
 
-</span><span class="kw">use crate</span>::{net::endpoint::metadata::Value, pool::PoolBuffer};
+</span><span class="kw">use </span><span class="kw">crate</span>::net::endpoint::metadata::Value;
 
 <span class="doccomment">/// Capture from the start of the packet.
 </span><span class="attr">#[derive(serde::Serialize, serde::Deserialize, Debug, schemars::JsonSchema)]
@@ -74,7 +74,7 @@
 }
 
 <span class="kw">impl </span><span class="kw">super</span>::CaptureStrategy <span class="kw">for </span>Regex {
-    <span class="kw">fn </span>capture(<span class="kw-2">&amp;</span><span class="self">self</span>, contents: <span class="kw-2">&amp;mut </span>PoolBuffer) -&gt; <span class="prelude-ty">Option</span>&lt;Value&gt; {
+    <span class="kw">fn </span>capture(<span class="kw-2">&amp;</span><span class="self">self</span>, contents: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;(Value, isize)&gt; {
         <span class="kw">let </span>matches = <span class="self">self
             </span>.pattern
             .find_iter(contents)
@@ -82,9 +82,9 @@
             .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
         <span class="kw">if </span>matches.len() &gt; <span class="number">1 </span>{
-            <span class="prelude-val">Some</span>(Value::List(matches))
+            <span class="prelude-val">Some</span>((Value::List(matches), <span class="number">0</span>))
         } <span class="kw">else </span>{
-            matches.into_iter().next()
+            matches.into_iter().next().map(|v| (v, <span class="number">0</span>))
         }
     }
 }

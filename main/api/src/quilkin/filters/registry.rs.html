@@ -188,18 +188,18 @@
     <span class="kw">use </span><span class="kw">crate</span>::test::{alloc_buffer, load_test_filters};
 
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
-    <span class="kw">use </span><span class="kw">crate</span>::filters::{Filter, FilterError, FilterRegistry, ReadContext, WriteContext};
+    <span class="kw">use </span><span class="kw">crate</span>::filters::{Filter, FilterError, FilterRegistry, Packet, ReadContext, WriteContext};
     <span class="kw">use </span><span class="kw">crate</span>::net::endpoint::{Endpoint, EndpointAddress};
 
     <span class="attr">#[allow(dead_code)]
     </span><span class="kw">struct </span>TestFilter {}
 
     <span class="kw">impl </span>Filter <span class="kw">for </span>TestFilter {
-        <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut </span>ReadContext&lt;<span class="lifetime">'_</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+        <span class="kw">fn </span>read&lt;P: Packet&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut </span>ReadContext&lt;<span class="lifetime">'_</span>, P&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
             <span class="prelude-val">Err</span>(FilterError::Custom(<span class="string">"test error"</span>))
         }
 
-        <span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut </span>WriteContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
+        <span class="kw">fn </span>write&lt;P: Packet&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut </span>WriteContext&lt;P&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), FilterError&gt; {
             <span class="prelude-val">Err</span>(FilterError::Custom(<span class="string">"test error"</span>))
         }
     }
@@ -229,7 +229,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>dest = Vec::new();
         <span class="macro">assert!</span>(filter
             .read(<span class="kw-2">&amp;mut </span>ReadContext::new(
-                endpoints.into(),
+                <span class="kw-2">&amp;</span>endpoints,
                 addr.clone(),
                 alloc_buffer([]),
                 <span class="kw-2">&amp;mut </span>dest,

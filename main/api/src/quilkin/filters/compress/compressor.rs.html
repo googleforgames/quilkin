@@ -171,7 +171,26 @@
 <a href="#170" id="170">170</a>
 <a href="#171" id="171">171</a>
 <a href="#172" id="172">172</a>
-<a href="#173" id="173">173</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -187,9 +206,9 @@
  * limitations under the License.
  */
 
-</span><span class="kw">use </span><span class="kw">crate</span>::pool::{BufferPool, PoolBuffer};
+</span><span class="kw">use </span><span class="kw">crate</span>::filters::Packet;
 <span class="kw">use </span>parking_lot::Mutex;
-<span class="kw">use </span>std::{io, sync::Arc};
+<span class="kw">use </span>std::io;
 
 <span class="kw">use </span>lz4_flex::block;
 <span class="kw">use </span>snap::raw;
@@ -203,78 +222,97 @@
 }
 
 <span class="kw">impl </span>Compressor {
-    <span class="kw">pub fn </span>encode(<span class="kw-2">&amp;</span><span class="self">self</span>, pool: Arc&lt;BufferPool&gt;, contents: <span class="kw-2">&amp;mut </span>PoolBuffer) -&gt; io::Result&lt;()&gt; {
+    <span class="kw">pub fn </span>encode&lt;P: Packet&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, contents: <span class="kw-2">&amp;</span>P) -&gt; io::Result&lt;P&gt; {
+        <span class="kw">let </span>input = contents.as_slice();
         <span class="kw">let </span>encoded = <span class="kw">match </span><span class="self">self </span>{
             <span class="self">Self</span>::Snappy(imp) =&gt; {
-                <span class="kw">let </span>size = raw::max_compress_len(contents.len());
-                <span class="kw">let </span><span class="kw-2">mut </span>encoded = pool.alloc_sized(size);
+                <span class="kw">let </span>size = raw::max_compress_len(input.len());
+                <span class="kw">let </span><span class="kw-2">mut </span>encoded = contents.alloc_sized(size).ok_or_else(|| {
+                    std::io::Error::new(
+                        std::io::ErrorKind::OutOfMemory,
+                        <span class="string">"failed to allocate buffer for compress output"</span>,
+                    )
+                })<span class="question-mark">?</span>;
 
                 <span class="kw">let </span><span class="kw-2">mut </span>encoder = imp.encoder();
 
-                <span class="kw">let </span>res = encoder.compress(contents, encoded.as_mut_slice(<span class="number">0</span>..size));
+                <span class="kw">let </span>res = encoder.compress(input, <span class="kw-2">&amp;mut </span>encoded.as_mut_slice()[..<span class="macro">dbg!</span>(size)]);
                 imp.absorb(encoder);
 
-                <span class="kw">let </span>compressed = res<span class="question-mark">?</span>;
-                encoded.truncate(compressed);
+                encoded.set_len(res<span class="question-mark">?</span>);
                 encoded
             }
             <span class="self">Self</span>::Lz4 =&gt; {
-                <span class="kw">let </span>size = block::get_maximum_output_size(contents.len()) + <span class="number">3</span>;
-                <span class="kw">let </span><span class="kw-2">mut </span>encoded = pool.alloc_sized(size);
+                <span class="kw">let </span>size = block::get_maximum_output_size(input.len()) + <span class="number">3</span>;
+                <span class="kw">let </span><span class="kw-2">mut </span>encoded = contents.alloc_sized(size).ok_or_else(|| {
+                    std::io::Error::new(
+                        std::io::ErrorKind::OutOfMemory,
+                        <span class="string">"failed to allocate buffer for compress output"</span>,
+                    )
+                })<span class="question-mark">?</span>;
 
-                <span class="kw">let </span>slen = size::write(encoded.as_mut_slice(<span class="number">0</span>..size), contents.len() <span class="kw">as </span>u16);
+                <span class="kw">let </span>slen = size::write(encoded.as_mut_slice(), input.len() <span class="kw">as </span>u16);
 
-                <span class="kw">let </span>compressed = block::compress_into(contents, encoded.as_mut_slice(slen..size))
+                <span class="kw">let </span>compressed =
+                    block::compress_into(input, <span class="kw-2">&amp;mut </span>encoded.as_mut_slice()[slen..size]).map_err(
+                        |_e| {
+                            <span class="comment">// This should be impossible
+                            </span>io::Error::new(
+                                io::ErrorKind::OutOfMemory,
+                                <span class="string">"not enough space allocated for compressed output"</span>,
+                            )
+                        },
+                    )<span class="question-mark">?</span>;
+
+                encoded.set_len(compressed + slen);
+                encoded
+            }
+        };
+
+        <span class="prelude-val">Ok</span>(encoded)
+    }
+
+    <span class="kw">pub fn </span>decode&lt;P: Packet&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, contents: <span class="kw-2">&amp;</span>P) -&gt; io::Result&lt;P&gt; {
+        <span class="kw">let </span>input = contents.as_slice();
+        <span class="kw">let </span>decoded = <span class="kw">match </span><span class="self">self </span>{
+            <span class="self">Self</span>::Snappy(_imp) =&gt; {
+                <span class="kw">let </span>size = raw::decompress_len(input)<span class="question-mark">?</span>;
+                <span class="kw">let </span><span class="kw-2">mut </span>decoded = contents.alloc_sized(size).ok_or_else(|| {
+                    std::io::Error::new(
+                        std::io::ErrorKind::OutOfMemory,
+                        <span class="string">"failed to allocate buffer for decompress output"</span>,
+                    )
+                })<span class="question-mark">?</span>;
+
+                <span class="kw">let </span>decompressed = raw::Decoder::new().decompress(input, decoded.as_mut_slice())<span class="question-mark">?</span>;
+
+                decoded.set_len(decompressed);
+                decoded
+            }
+            <span class="self">Self</span>::Lz4 =&gt; {
+                <span class="kw">let </span>(size, slen) = size::read(input);
+                <span class="kw">let </span><span class="kw-2">mut </span>decoded = contents.alloc_sized(size <span class="kw">as _</span>).ok_or_else(|| {
+                    std::io::Error::new(
+                        std::io::ErrorKind::OutOfMemory,
+                        <span class="string">"failed to allocate buffer for decompress output"</span>,
+                    )
+                })<span class="question-mark">?</span>;
+
+                <span class="kw">let </span>decompressed = block::decompress_into(<span class="kw-2">&amp;</span>input[slen..], decoded.as_mut_slice())
                     .map_err(|_e| {
                     <span class="comment">// This should be impossible
                     </span>io::Error::new(
                         io::ErrorKind::OutOfMemory,
-                        <span class="string">"not enough space allocated for compressed output"</span>,
+                        <span class="string">"not enough space allocated for decompressed output"</span>,
                     )
                 })<span class="question-mark">?</span>;
 
-                encoded.truncate(compressed + slen);
-                encoded
-            }
-        };
-
-        <span class="kw-2">*</span>contents = encoded;
-        <span class="prelude-val">Ok</span>(())
-    }
-
-    <span class="kw">pub fn </span>decode(<span class="kw-2">&amp;</span><span class="self">self</span>, pool: Arc&lt;BufferPool&gt;, contents: <span class="kw-2">&amp;mut </span>PoolBuffer) -&gt; io::Result&lt;()&gt; {
-        <span class="kw">let </span>decoded = <span class="kw">match </span><span class="self">self </span>{
-            <span class="self">Self</span>::Snappy(_imp) =&gt; {
-                <span class="kw">let </span>size = raw::decompress_len(contents)<span class="question-mark">?</span>;
-                <span class="kw">let </span><span class="kw-2">mut </span>decoded = pool.alloc_sized(size);
-
-                <span class="kw">let </span>decompressed =
-                    raw::Decoder::new().decompress(contents, decoded.as_mut_slice(<span class="number">0</span>..size))<span class="question-mark">?</span>;
-
-                decoded.truncate(decompressed);
-                decoded
-            }
-            <span class="self">Self</span>::Lz4 =&gt; {
-                <span class="kw">let </span>(size, slen) = size::read(contents);
-                <span class="kw">let </span><span class="kw-2">mut </span>decoded = pool.alloc_sized(size <span class="kw">as _</span>);
-
-                <span class="kw">let </span>decompressed =
-                    block::decompress_into(<span class="kw-2">&amp;</span>contents[slen..], decoded.as_mut_slice(<span class="number">0</span>..size <span class="kw">as _</span>))
-                        .map_err(|_e| {
-                        <span class="comment">// This should be impossible
-                        </span>io::Error::new(
-                            io::ErrorKind::OutOfMemory,
-                            <span class="string">"not enough space allocated for decompressed output"</span>,
-                        )
-                    })<span class="question-mark">?</span>;
-
-                decoded.truncate(decompressed);
+                decoded.set_len(decompressed);
                 decoded
             }
         };
 
-        <span class="kw-2">*</span>contents = decoded;
-        <span class="prelude-val">Ok</span>(())
+        <span class="prelude-val">Ok</span>(decoded)
     }
 }
 
