@@ -38,8 +38,9 @@ impl LoadBalancer {
 }
 
 impl Filter for LoadBalancer {
-    fn read(&self, ctx: &mut ReadContext<'_>) -> Result<(), FilterError> {
-        self.endpoint_chooser.choose_endpoints(ctx);
+    fn read<P: Packet>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
+        self.endpoint_chooser
+            .choose_endpoints(ctx.destinations, ctx.endpoints, &ctx.source);
         Ok(())
     }
 }
@@ -65,7 +66,7 @@ mod tests {
     };
 
     fn get_response_addresses(
-        filter: &dyn Filter,
+        filter: &LoadBalancer,
         input_addresses: &[EndpointAddress],
         source: EndpointAddress,
     ) -> Vec<EndpointAddress> {
@@ -77,8 +78,7 @@ mod tests {
         let endpoints = crate::net::cluster::ClusterMap::new_default(endpoints);
         let mut dest = Vec::new();
         {
-            let mut context =
-                ReadContext::new(endpoints.into(), source, alloc_buffer([]), &mut dest);
+            let mut context = ReadContext::new(&endpoints, source, alloc_buffer([]), &mut dest);
             filter.read(&mut context).unwrap();
         }
 

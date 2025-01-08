@@ -273,7 +273,7 @@ impl schemars::JsonSchema for FilterChain {
 }
 
 impl Filter for FilterChain {
-    fn read(&self, ctx: &mut ReadContext<'_>) -> Result<(), FilterError> {
+    fn read<P: Packet>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
         for ((id, instance), histogram) in self
             .filters
             .iter()
@@ -303,7 +303,7 @@ impl Filter for FilterChain {
         Ok(())
     }
 
-    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
+    fn write<P: Packet>(&self, ctx: &mut WriteContext<P>) -> Result<(), FilterError> {
         for ((id, instance), histogram) in self
             .filters
             .iter()
@@ -380,7 +380,7 @@ mod tests {
         let endpoints_fixture = endpoints();
         let mut dest = Vec::new();
         let mut context = ReadContext::new(
-            endpoints_fixture.clone(),
+            &endpoints_fixture,
             "127.0.0.1:70".parse().unwrap(),
             alloc_buffer(b"hello"),
             &mut dest,
@@ -437,7 +437,7 @@ mod tests {
 
         let (contents, metadata) = {
             let mut context = ReadContext::new(
-                endpoints_fixture.clone(),
+                &endpoints_fixture,
                 "127.0.0.1:70".parse().unwrap(),
                 alloc_buffer(b"hello"),
                 &mut dest,

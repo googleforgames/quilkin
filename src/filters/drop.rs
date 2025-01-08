@@ -32,12 +32,12 @@ impl Drop {
 
 impl Filter for Drop {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip_all))]
-    fn read(&self, _: &mut ReadContext<'_>) -> Result<(), FilterError> {
+    fn read<P: Packet>(&self, _: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
         Err(FilterError::Dropped)
     }
 
     #[cfg_attr(feature = "instrument", tracing::instrument(skip_all))]
-    fn write(&self, _: &mut WriteContext) -> Result<(), FilterError> {
+    fn write<P: Packet>(&self, _: &mut WriteContext<P>) -> Result<(), FilterError> {
         Err(FilterError::Dropped)
     }
 }

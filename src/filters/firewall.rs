@@ -50,7 +50,7 @@ impl StaticFilter for Firewall {
 
 impl Filter for Firewall {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn read(&self, ctx: &mut ReadContext<'_>) -> Result<(), FilterError> {
+    fn read<P: Packet>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
         for rule in &self.on_read {
             if rule.contains(ctx.source.to_socket_addr()?) {
                 return match rule.action {
@@ -78,7 +78,7 @@ impl Filter for Firewall {
     }
 
     #[cfg_attr(feature = "instrument", tracing::instrument(skip(self, ctx)))]
-    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
+    fn write<P: Packet>(&self, ctx: &mut WriteContext<P>) -> Result<(), FilterError> {
         for rule in &self.on_write {
             if rule.contains(ctx.source.to_socket_addr()?) {
                 return match rule.action {
@@ -136,7 +136,7 @@ mod tests {
         );
         let mut dest = Vec::new();
         let mut ctx = ReadContext::new(
-            endpoints.into(),
+            &endpoints,
             (local_ip, 80).into(),
             alloc_buffer([]),
             &mut dest,
@@ -148,7 +148,7 @@ mod tests {
         );
         let mut dest = Vec::new();
         let mut ctx = ReadContext::new(
-            endpoints.into(),
+            &endpoints,
             (local_ip, 2000).into(),
             alloc_buffer([]),
             &mut dest,

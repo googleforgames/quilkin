@@ -49,14 +49,15 @@ fn token_router(b: Bencher, token_kind: &str) {
     .counter(divan::counter::BytesCount::new(total_token_size))
     .bench_local_values(|(cm, buffer, mut dest, metadata)| {
         let mut rc = quilkin::filters::ReadContext {
-            endpoints: cm,
+            endpoints: &cm,
             destinations: &mut dest,
             source: quilkin::net::EndpointAddress::LOCALHOST,
             contents: buffer,
             metadata,
         };
 
-        let _ = divan::black_box(filter.sync_read(&mut rc));
+        use quilkin::filters::Filter;
+        let _ = divan::black_box(filter.read(&mut rc));
     })
 }
 

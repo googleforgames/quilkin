@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-use crate::{net::endpoint::metadata::Value, pool::PoolBuffer};
+use crate::net::endpoint::metadata::Value;
 use bytes::Bytes;
 
 /// Returns whether the capture size is bigger than the packet size.
@@ -34,15 +34,18 @@ pub struct Prefix {
 }
 
 impl super::CaptureStrategy for Prefix {
-    fn capture(&self, contents: &mut PoolBuffer) -> Option<Value> {
+    fn capture(&self, contents: &[u8]) -> Option<(Value, isize)> {
         is_valid_size(contents, self.size).then(|| {
-            if self.remove {
-                Value::Bytes(Bytes::copy_from_slice(
-                    contents.split_prefix(self.size as _),
-                ))
-            } else {
-                Value::Bytes(Bytes::copy_from_slice(&contents[..self.size as _]))
-            }
+            let value = Value::Bytes(Bytes::copy_from_slice(&contents[..self.size as _]));
+
+            (
+                value,
+                if self.remove {
+                    -(self.size as isize)
+                } else {
+                    0
+                },
+            )
         })
     }
 }
@@ -58,16 +61,12 @@ pub struct Suffix {
 }
 
 impl super::CaptureStrategy for Suffix {
-    fn capture(&self, contents: &mut PoolBuffer) -> Option<Value> {
+    fn capture(&self, contents: &[u8]) -> Option<(Value, isize)> {
         is_valid_size(contents, self.size).then(|| {
-            if self.remove {
-                Value::Bytes(Bytes::copy_from_slice(
-                    contents.split_suffix(self.size as _),
-                ))
-            } else {
-                let index = contents.len() - self.size as usize;
-                Value::Bytes(Bytes::copy_from_slice(&contents[index..]))
-            }
+            let index = contents.len() - self.size as usize;
+            let value = Value::Bytes(Bytes::copy_from_slice(&contents[index..]));
+
+            (value, if self.remove { self.size as isize } else { 0 })
         })
     }
 }

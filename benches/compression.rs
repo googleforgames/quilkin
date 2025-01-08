@@ -35,14 +35,11 @@ mod decompress {
         let compressor = Compressor::from(Mode::Snappy);
 
         b.with_inputs(|| {
-            let mut packet = pool.clone().alloc_slice(&packet);
-            compressor.encode(pool.clone(), &mut packet).unwrap();
-            packet
+            let packet = pool.clone().alloc_slice(&packet);
+            compressor.encode(&packet).unwrap()
         })
         .input_counter(|buf| divan::counter::BytesCount::new(buf.len()))
-        .bench_local_refs(|buf| {
-            compressor.decode(pool.clone(), buf).unwrap();
-        })
+        .bench_local_refs(|buf| compressor.decode(buf).unwrap())
     }
 
     #[divan::bench(consts = PACKET_SIZES)]
@@ -52,14 +49,11 @@ mod decompress {
         let compressor = Compressor::from(Mode::Lz4);
 
         b.with_inputs(|| {
-            let mut packet = pool.clone().alloc_slice(&packet);
-            compressor.encode(pool.clone(), &mut packet).unwrap();
-            packet
+            let packet = pool.clone().alloc_slice(&packet);
+            compressor.encode(&packet).unwrap()
         })
         .input_counter(|buf| divan::counter::BytesCount::new(buf.len()))
-        .bench_local_refs(|buf| {
-            compressor.decode(pool.clone(), buf).unwrap();
-        })
+        .bench_local_refs(|buf| compressor.decode(buf).unwrap())
     }
 }
 
@@ -75,9 +69,7 @@ mod compress {
 
         b.with_inputs(|| pool.clone().alloc_slice(&packet))
             .input_counter(|buf| divan::counter::BytesCount::new(buf.len()))
-            .bench_local_refs(|buf| {
-                compressor.encode(pool.clone(), buf).unwrap();
-            })
+            .bench_local_refs(|buf| compressor.encode(buf).unwrap())
     }
 
     #[divan::bench(consts = PACKET_SIZES)]
@@ -88,8 +80,6 @@ mod compress {
 
         b.with_inputs(|| pool.clone().alloc_slice(&packet))
             .input_counter(|buf| divan::counter::BytesCount::new(buf.len()))
-            .bench_local_refs(|buf| {
-                compressor.encode(pool.clone(), buf).unwrap();
-            })
+            .bench_local_refs(|buf| compressor.encode(buf).unwrap())
     }
 }
