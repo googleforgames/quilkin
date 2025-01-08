@@ -21,9 +21,9 @@
 //! enough that it doesn't make sense to share the same code
 
 use crate::{
+    collections::PoolBuffer,
     components::proxy::{self, PendingSends, PipelineError, SendPacket},
     metrics,
-    pool::PoolBuffer,
     time::UtcTimestamp,
 };
 use io_uring::{squeue::Entry, types::Fd};
@@ -295,7 +295,7 @@ impl<'uring> LoopCtx<'uring> {
 
     /// Enqueues a recv_from on the socket
     #[inline]
-    fn enqueue_recv(&mut self, buffer: crate::pool::PoolBuffer) {
+    fn enqueue_recv(&mut self, buffer: crate::collections::PoolBuffer) {
         let packet = LoopPacketInner::Recv(RecvPacket {
             buffer,
             source: empty_net_addr(),
@@ -423,7 +423,7 @@ impl IoUringLoop {
         thread_name: String,
         mut ctx: PacketProcessorCtx,
         pending_sends: (PendingSends, EventFd),
-        buffer_pool: Arc<crate::pool::BufferPool>,
+        buffer_pool: Arc<crate::collections::BufferPool>,
     ) -> Result<(), PipelineError> {
         let dispatcher = tracing::dispatcher::get_default(|d| d.clone());
 

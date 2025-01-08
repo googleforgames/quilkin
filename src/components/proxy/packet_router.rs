@@ -150,7 +150,7 @@ pub struct DownstreamReceiveWorkerConfig {
     pub config: Arc<Config>,
     pub sessions: Arc<SessionPool>,
     pub error_sender: super::error::ErrorSender,
-    pub buffer_pool: Arc<crate::pool::BufferPool>,
+    pub buffer_pool: Arc<crate::collections::BufferPool>,
 }
 
 /// Spawns a background task that sits in a loop, receiving packets from the passed in socket.
@@ -163,7 +163,7 @@ pub async fn spawn_receivers(
     socket: socket2::Socket,
     worker_sends: Vec<(super::PendingSends, super::PacketSendReceiver)>,
     sessions: &Arc<SessionPool>,
-    buffer_pool: Arc<crate::pool::BufferPool>,
+    buffer_pool: Arc<crate::collections::BufferPool>,
 ) -> crate::Result<()> {
     let (error_sender, mut error_receiver) = mpsc::channel(128);
 

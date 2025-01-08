@@ -107,14 +107,14 @@ pub struct SendPacket {
     /// The destination address of the packet
     pub destination: socket2::SockAddr,
     /// The packet data being sent
-    pub data: crate::pool::FrozenPoolBuffer,
+    pub data: crate::collections::FrozenPoolBuffer,
     /// The asn info for the sender, used for metrics
     pub asn_info: Option<crate::net::maxmind_db::MetricsIpNetEntry>,
 }
 
 pub struct RecvPacket {
     pub source: SocketAddr,
-    pub data: crate::pool::PoolBuffer,
+    pub data: crate::collections::PoolBuffer,
 }
 
 #[derive(Clone, Debug)]
@@ -356,7 +356,7 @@ impl Proxy {
         }
 
         let num_workers = self.num_workers.get();
-        let buffer_pool = Arc::new(crate::pool::BufferPool::new(num_workers, 2 * 1024));
+        let buffer_pool = Arc::new(crate::collections::BufferPool::new(num_workers, 2 * 1024));
 
         let mut worker_sends = Vec::with_capacity(num_workers);
         let mut session_sends = Vec::with_capacity(num_workers);

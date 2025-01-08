@@ -1,4 +1,5 @@
 use quilkin::{
+    collections::{BufferPool, PoolBuffer},
     components::{self, RunArgs},
     config::Providers,
     net::TcpListener,
@@ -9,11 +10,11 @@ pub use serde_json::json;
 use std::{net::SocketAddr, num::NonZeroUsize, path::PathBuf, sync::Arc};
 use tokio::sync::mpsc;
 
-pub static BUFFER_POOL: once_cell::sync::Lazy<Arc<quilkin::pool::BufferPool>> =
-    once_cell::sync::Lazy::new(|| Arc::new(quilkin::pool::BufferPool::default()));
+pub static BUFFER_POOL: once_cell::sync::Lazy<Arc<BufferPool>> =
+    once_cell::sync::Lazy::new(|| Arc::new(BufferPool::default()));
 
 #[inline]
-pub fn alloc_buffer(data: impl AsRef<[u8]>) -> quilkin::pool::PoolBuffer {
+pub fn alloc_buffer(data: impl AsRef<[u8]>) -> PoolBuffer {
     BUFFER_POOL.clone().alloc_slice(data.as_ref())
 }
 

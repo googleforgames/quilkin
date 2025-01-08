@@ -23,7 +23,7 @@ fn token_router(b: Bencher, token_kind: &str) {
     }
 
     let total_token_size: usize = tokens.iter().map(|t| t.len()).sum();
-    let pool = std::sync::Arc::new(quilkin::pool::BufferPool::new(1, 1));
+    let pool = std::sync::Arc::new(quilkin::collections::BufferPool::new(1, 1));
 
     let mut rand = rand::rngs::SmallRng::seed_from_u64(42);
 

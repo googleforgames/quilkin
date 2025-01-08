@@ -25,12 +25,12 @@ use std::{
 use tokio::time::Instant;
 
 use crate::{
+    collections::{BufferPool, FrozenPoolBuffer, PoolBuffer},
     components::proxy::SendPacket,
     config::Config,
     filters::Filter,
     metrics,
     net::maxmind_db::{IpNetEntry, MetricsIpNetEntry},
-    pool::{BufferPool, FrozenPoolBuffer, PoolBuffer},
     time::UtcTimestamp,
     Loggable,
 };
