@@ -22,12 +22,12 @@ use tokio::sync::{mpsc, oneshot};
 use tracing_subscriber::EnvFilter;
 
 use crate::{
+    collections::BufferPool,
     config::Config,
     filters::{prelude::*, FilterRegistry},
     net::endpoint::metadata::Value,
     net::endpoint::{Endpoint, EndpointAddress},
     net::DualStackEpollSocket as DualStackLocalSocket,
-    pool::BufferPool,
     ShutdownKind, ShutdownRx, ShutdownTx,
 };
 
@@ -354,7 +354,7 @@ pub static BUFFER_POOL: once_cell::sync::Lazy<Arc<BufferPool>> =
     once_cell::sync::Lazy::new(|| Arc::new(BufferPool::default()));
 
 #[inline]
-pub fn alloc_buffer(data: impl AsRef<[u8]>) -> crate::pool::PoolBuffer {
+pub fn alloc_buffer(data: impl AsRef<[u8]>) -> crate::collections::PoolBuffer {
     BUFFER_POOL.clone().alloc_slice(data.as_ref())
 }
 

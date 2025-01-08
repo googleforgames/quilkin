@@ -2,8 +2,8 @@ mod shared;
 
 use divan::Bencher;
 use quilkin::{
+    collections::BufferPool,
     filters::compress::{Compressor, Mode},
-    pool::BufferPool,
 };
 use shared::*;
 use std::sync::Arc;
