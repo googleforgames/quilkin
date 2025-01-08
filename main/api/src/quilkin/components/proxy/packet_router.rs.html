@@ -371,7 +371,7 @@
     <span class="kw">pub </span>config: Arc&lt;Config&gt;,
     <span class="kw">pub </span>sessions: Arc&lt;SessionPool&gt;,
     <span class="kw">pub </span>error_sender: <span class="kw">super</span>::error::ErrorSender,
-    <span class="kw">pub </span>buffer_pool: Arc&lt;<span class="kw">crate</span>::pool::BufferPool&gt;,
+    <span class="kw">pub </span>buffer_pool: Arc&lt;<span class="kw">crate</span>::collections::BufferPool&gt;,
 }
 
 <span class="doccomment">/// Spawns a background task that sits in a loop, receiving packets from the passed in socket.
@@ -384,7 +384,7 @@
     socket: socket2::Socket,
     worker_sends: Vec&lt;(<span class="kw">super</span>::PendingSends, <span class="kw">super</span>::PacketSendReceiver)&gt;,
     sessions: <span class="kw-2">&amp;</span>Arc&lt;SessionPool&gt;,
-    buffer_pool: Arc&lt;<span class="kw">crate</span>::pool::BufferPool&gt;,
+    buffer_pool: Arc&lt;<span class="kw">crate</span>::collections::BufferPool&gt;,
 ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
     <span class="kw">let </span>(error_sender, <span class="kw-2">mut </span>error_receiver) = mpsc::channel(<span class="number">128</span>);
 

@@ -664,9 +664,9 @@
 //! enough that it doesn't make sense to share the same code
 
 </span><span class="kw">use crate</span>::{
+    collections::PoolBuffer,
     components::proxy::{<span class="self">self</span>, PendingSends, PipelineError, SendPacket},
     metrics,
-    pool::PoolBuffer,
     time::UtcTimestamp,
 };
 <span class="kw">use </span>io_uring::{squeue::Entry, types::Fd};
@@ -938,7 +938,7 @@
 
     <span class="doccomment">/// Enqueues a recv_from on the socket
     </span><span class="attr">#[inline]
-    </span><span class="kw">fn </span>enqueue_recv(<span class="kw-2">&amp;mut </span><span class="self">self</span>, buffer: <span class="kw">crate</span>::pool::PoolBuffer) {
+    </span><span class="kw">fn </span>enqueue_recv(<span class="kw-2">&amp;mut </span><span class="self">self</span>, buffer: <span class="kw">crate</span>::collections::PoolBuffer) {
         <span class="kw">let </span>packet = LoopPacketInner::Recv(RecvPacket {
             buffer,
             source: empty_net_addr(),
@@ -1066,7 +1066,7 @@
         thread_name: String,
         <span class="kw-2">mut </span>ctx: PacketProcessorCtx,
         pending_sends: (PendingSends, EventFd),
-        buffer_pool: Arc&lt;<span class="kw">crate</span>::pool::BufferPool&gt;,
+        buffer_pool: Arc&lt;<span class="kw">crate</span>::collections::BufferPool&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), PipelineError&gt; {
         <span class="kw">let </span>dispatcher = tracing::dispatcher::get_default(|d| d.clone());
 

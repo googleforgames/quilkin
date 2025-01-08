@@ -781,12 +781,12 @@
 <span class="kw">use </span>tokio::time::Instant;
 
 <span class="kw">use crate</span>::{
+    collections::{BufferPool, FrozenPoolBuffer, PoolBuffer},
     components::proxy::SendPacket,
     config::Config,
     filters::Filter,
     metrics,
     net::maxmind_db::{IpNetEntry, MetricsIpNetEntry},
-    pool::{BufferPool, FrozenPoolBuffer, PoolBuffer},
     time::UtcTimestamp,
     Loggable,
 };

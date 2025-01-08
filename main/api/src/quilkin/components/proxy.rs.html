@@ -509,14 +509,14 @@
     <span class="doccomment">/// The destination address of the packet
     </span><span class="kw">pub </span>destination: socket2::SockAddr,
     <span class="doccomment">/// The packet data being sent
-    </span><span class="kw">pub </span>data: <span class="kw">crate</span>::pool::FrozenPoolBuffer,
+    </span><span class="kw">pub </span>data: <span class="kw">crate</span>::collections::FrozenPoolBuffer,
     <span class="doccomment">/// The asn info for the sender, used for metrics
     </span><span class="kw">pub </span>asn_info: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::net::maxmind_db::MetricsIpNetEntry&gt;,
 }
 
 <span class="kw">pub struct </span>RecvPacket {
     <span class="kw">pub </span>source: SocketAddr,
-    <span class="kw">pub </span>data: <span class="kw">crate</span>::pool::PoolBuffer,
+    <span class="kw">pub </span>data: <span class="kw">crate</span>::collections::PoolBuffer,
 }
 
 <span class="attr">#[derive(Clone, Debug)]
@@ -758,7 +758,7 @@
         }
 
         <span class="kw">let </span>num_workers = <span class="self">self</span>.num_workers.get();
-        <span class="kw">let </span>buffer_pool = Arc::new(<span class="kw">crate</span>::pool::BufferPool::new(num_workers, <span class="number">2 </span>* <span class="number">1024</span>));
+        <span class="kw">let </span>buffer_pool = Arc::new(<span class="kw">crate</span>::collections::BufferPool::new(num_workers, <span class="number">2 </span>* <span class="number">1024</span>));
 
         <span class="kw">let </span><span class="kw-2">mut </span>worker_sends = Vec::with_capacity(num_workers);
         <span class="kw">let </span><span class="kw-2">mut </span>session_sends = Vec::with_capacity(num_workers);

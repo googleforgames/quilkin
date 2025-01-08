@@ -3,7 +3,7 @@
     socket: Socket,
     worker_sends: <a class="struct" href="https://doc.rust-lang.org/1.83.0/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;(<a class="struct" href="../struct.PendingSends.html" title="struct quilkin::components::proxy::PendingSends">PendingSends</a>, EventFd)&gt;,
     sessions: &amp;<a class="struct" href="https://doc.rust-lang.org/1.83.0/alloc/sync/struct.Arc.html" title="struct alloc::sync::Arc">Arc</a>&lt;<a class="struct" href="../struct.SessionPool.html" title="struct quilkin::components::proxy::SessionPool">SessionPool</a>&gt;,
-    buffer_pool: <a class="struct" href="https://doc.rust-lang.org/1.83.0/alloc/sync/struct.Arc.html" title="struct alloc::sync::Arc">Arc</a>&lt;<a class="struct" href="../../../pool/struct.BufferPool.html" title="struct quilkin::pool::BufferPool">BufferPool</a>&gt;,
+    buffer_pool: <a class="struct" href="https://doc.rust-lang.org/1.83.0/alloc/sync/struct.Arc.html" title="struct alloc::sync::Arc">Arc</a>&lt;<a class="struct" href="../../../collections/pool/struct.BufferPool.html" title="struct quilkin::collections::pool::BufferPool">BufferPool</a>&gt;,
 ) -&gt; <a class="type" href="../../../type.Result.html" title="type quilkin::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.83.0/std/primitive.unit.html">()</a>&gt;</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Spawns a background task that sits in a loop, receiving packets from the passed in socket.
 Each received packet is placed on a queue to be processed by a worker task.
 This function also spawns the set of worker tasks responsible for consuming packets

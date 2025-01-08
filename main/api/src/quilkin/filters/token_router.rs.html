@@ -656,7 +656,7 @@
 
     <span class="kw">fn </span>with_ctx(
         dest: <span class="kw-2">&amp;mut </span>Vec&lt;<span class="kw">crate</span>::net::EndpointAddress&gt;,
-        test: <span class="kw">impl </span>FnOnce(ReadContext&lt;<span class="lifetime">'_</span>, <span class="kw">crate</span>::pool::PoolBuffer&gt;),
+        test: <span class="kw">impl </span>FnOnce(ReadContext&lt;<span class="lifetime">'_</span>, <span class="kw">crate</span>::collections::PoolBuffer&gt;),
     ) {
         <span class="kw">let </span>endpoint1 = Endpoint::with_metadata(
             <span class="string">"127.0.0.1:80"</span>.parse().unwrap(),
@@ -671,7 +671,7 @@
             },
         );
 
-        <span class="kw">let </span>pool = std::sync::Arc::new(<span class="kw">crate</span>::pool::BufferPool::new(<span class="number">1</span>, <span class="number">5</span>));
+        <span class="kw">let </span>pool = std::sync::Arc::new(<span class="kw">crate</span>::collections::BufferPool::new(<span class="number">1</span>, <span class="number">5</span>));
 
         <span class="kw">let </span>endpoints = <span class="kw">crate</span>::net::cluster::ClusterMap::default();
         endpoints.insert_default([endpoint1, endpoint2].into());

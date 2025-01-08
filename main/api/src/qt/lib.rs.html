@@ -730,7 +730,9 @@
 <a href="#729" id="729">729</a>
 <a href="#730" id="730">730</a>
 <a href="#731" id="731">731</a>
-<a href="#732" id="732">732</a></pre></div><pre class="rust"><code><span class="kw">use </span>quilkin::{
+<a href="#732" id="732">732</a>
+<a href="#733" id="733">733</a></pre></div><pre class="rust"><code><span class="kw">use </span>quilkin::{
+    collections::{BufferPool, PoolBuffer},
     components::{<span class="self">self</span>, RunArgs},
     config::Providers,
     net::TcpListener,
@@ -741,11 +743,11 @@
 <span class="kw">use </span>std::{net::SocketAddr, num::NonZeroUsize, path::PathBuf, sync::Arc};
 <span class="kw">use </span>tokio::sync::mpsc;
 
-<span class="kw">pub static </span>BUFFER_POOL: once_cell::sync::Lazy&lt;Arc&lt;quilkin::pool::BufferPool&gt;&gt; =
-    once_cell::sync::Lazy::new(|| Arc::new(quilkin::pool::BufferPool::default()));
+<span class="kw">pub static </span>BUFFER_POOL: once_cell::sync::Lazy&lt;Arc&lt;BufferPool&gt;&gt; =
+    once_cell::sync::Lazy::new(|| Arc::new(BufferPool::default()));
 
 <span class="attr">#[inline]
-</span><span class="kw">pub fn </span>alloc_buffer(data: <span class="kw">impl </span>AsRef&lt;[u8]&gt;) -&gt; quilkin::pool::PoolBuffer {
+</span><span class="kw">pub fn </span>alloc_buffer(data: <span class="kw">impl </span>AsRef&lt;[u8]&gt;) -&gt; PoolBuffer {
     BUFFER_POOL.clone().alloc_slice(data.as_ref())
 }
 

@@ -563,12 +563,12 @@
 <span class="kw">use </span>tracing_subscriber::EnvFilter;
 
 <span class="kw">use crate</span>::{
+    collections::BufferPool,
     config::Config,
     filters::{prelude::<span class="kw-2">*</span>, FilterRegistry},
     net::endpoint::metadata::Value,
     net::endpoint::{Endpoint, EndpointAddress},
     net::DualStackEpollSocket <span class="kw">as </span>DualStackLocalSocket,
-    pool::BufferPool,
     ShutdownKind, ShutdownRx, ShutdownTx,
 };
 
@@ -895,7 +895,7 @@
     once_cell::sync::Lazy::new(|| Arc::new(BufferPool::default()));
 
 <span class="attr">#[inline]
-</span><span class="kw">pub fn </span>alloc_buffer(data: <span class="kw">impl </span>AsRef&lt;[u8]&gt;) -&gt; <span class="kw">crate</span>::pool::PoolBuffer {
+</span><span class="kw">pub fn </span>alloc_buffer(data: <span class="kw">impl </span>AsRef&lt;[u8]&gt;) -&gt; <span class="kw">crate</span>::collections::PoolBuffer {
     BUFFER_POOL.clone().alloc_slice(data.as_ref())
 }
 
