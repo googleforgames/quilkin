@@ -87,12 +87,12 @@ impl TryFrom<Config> for Timestamp {
 }
 
 impl Filter for Timestamp {
-    fn read(&self, ctx: &mut ReadContext<'_>) -> Result<(), FilterError> {
+    fn read<P: PacketMut>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
         self.observe(&ctx.metadata, Direction::Read);
         Ok(())
     }
 
-    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
+    fn write<P: PacketMut>(&self, ctx: &mut WriteContext<P>) -> Result<(), FilterError> {
         self.observe(&ctx.metadata, Direction::Write);
         Ok(())
     }
@@ -158,8 +158,9 @@ mod tests {
         const TIMESTAMP_KEY: &str = "BASIC";
         let filter = Timestamp::from_config(Config::new(TIMESTAMP_KEY).into());
         let mut dest = Vec::new();
+        let cm = Default::default();
         let mut ctx = ReadContext::new(
-            <_>::default(),
+            &cm,
             (std::net::Ipv4Addr::UNSPECIFIED, 0).into(),
             alloc_buffer(b"hello"),
             &mut dest,
@@ -191,8 +192,9 @@ mod tests {
         let timestamp = Timestamp::from_config(Config::new(TIMESTAMP_KEY).into());
         let source = (std::net::Ipv4Addr::UNSPECIFIED, 0);
         let mut dest = Vec::new();
+        let cm = Default::default();
         let mut ctx = ReadContext::new(
-            <_>::default(),
+            &cm,
             source.into(),
             alloc_buffer([0, 0, 0, 0, 99, 81, 55, 181]),
             &mut dest,

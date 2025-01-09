@@ -22,12 +22,12 @@ use tokio::sync::{mpsc, oneshot};
 use tracing_subscriber::EnvFilter;
 
 use crate::{
+    collections::BufferPool,
     config::Config,
     filters::{prelude::*, FilterRegistry},
     net::endpoint::metadata::Value,
     net::endpoint::{Endpoint, EndpointAddress},
     net::DualStackEpollSocket as DualStackLocalSocket,
-    pool::BufferPool,
     ShutdownKind, ShutdownRx, ShutdownTx,
 };
 
@@ -99,7 +99,7 @@ fn get_address(address_type: AddressType, socket: &DualStackLocalSocket) -> Sock
 pub struct TestFilter;
 
 impl Filter for TestFilter {
-    fn read(&self, ctx: &mut ReadContext) -> Result<(), FilterError> {
+    fn read<P: PacketMut>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
         // append values on each run
         ctx.metadata
             .entry("downstream".into())
@@ -107,11 +107,11 @@ impl Filter for TestFilter {
             .or_insert_with(|| Value::String("receive".into()));
 
         ctx.contents
-            .extend_from_slice(format!(":odr:{}", ctx.source).as_bytes());
+            .extend_tail(format!(":odr:{}", ctx.source).as_bytes());
         Ok(())
     }
 
-    fn write(&self, ctx: &mut WriteContext) -> Result<(), FilterError> {
+    fn write<P: PacketMut>(&self, ctx: &mut WriteContext<P>) -> Result<(), FilterError> {
         // append values on each run
         ctx.metadata
             .entry("upstream".into())
@@ -119,7 +119,7 @@ impl Filter for TestFilter {
             .or_insert_with(|| Value::String("receive".to_string()));
 
         ctx.contents
-            .extend_from_slice(format!(":our:{}:{}", ctx.source, ctx.dest).as_bytes());
+            .extend_tail(format!(":our:{}:{}", ctx.source, ctx.dest).as_bytes());
         Ok(())
     }
 }
@@ -354,7 +354,7 @@ pub static BUFFER_POOL: once_cell::sync::Lazy<Arc<BufferPool>> =
     once_cell::sync::Lazy::new(|| Arc::new(BufferPool::default()));
 
 #[inline]
-pub fn alloc_buffer(data: impl AsRef<[u8]>) -> crate::pool::PoolBuffer {
+pub fn alloc_buffer(data: impl AsRef<[u8]>) -> crate::collections::PoolBuffer {
     BUFFER_POOL.clone().alloc_slice(data.as_ref())
 }
 
@@ -371,12 +371,11 @@ where
     let source = "127.0.0.1:90".parse().unwrap();
     let contents = b"hello";
     let mut dest = Vec::new();
-    let mut context =
-        ReadContext::new(endpoints.clone(), source, alloc_buffer(contents), &mut dest);
+    let mut context = ReadContext::new(&endpoints, source, alloc_buffer(contents), &mut dest);
 
     filter.read(&mut context).unwrap();
     assert!(context.destinations.is_empty());
-    assert_eq!(endpoints, context.endpoints);
+    assert_eq!(endpoints.as_ref(), context.endpoints);
     assert_eq!(contents, &*context.contents);
 }
 

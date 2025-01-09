@@ -55,9 +55,9 @@ struct Bucket {
 }
 
 /// A filter that implements rate limiting on packets based on the token-bucket
-/// algorithm.  Packets that violate the rate limit are dropped.  It only
+/// algorithm.  PacketMuts that violate the rate limit are dropped.  It only
 /// applies rate limiting on packets received from a downstream connection (processed
-/// through [`LocalRateLimit::read`]). Packets coming from upstream endpoints
+/// through [`LocalRateLimit::read`]). PacketMuts coming from upstream endpoints
 /// flow through the filter untouched.
 pub struct LocalRateLimit {
     /// Tracks rate limiting state per source address.
@@ -148,7 +148,7 @@ impl LocalRateLimit {
 }
 
 impl Filter for LocalRateLimit {
-    fn read(&self, ctx: &mut ReadContext<'_>) -> Result<(), FilterError> {
+    fn read<P: PacketMut>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
         if self.acquire_token(&ctx.source) {
             Ok(())
         } else {
@@ -236,12 +236,8 @@ mod tests {
         );
 
         let mut dest = Vec::new();
-        let mut context = ReadContext::new(
-            endpoints.into(),
-            address.clone(),
-            alloc_buffer([9]),
-            &mut dest,
-        );
+        let mut context =
+            ReadContext::new(&endpoints, address.clone(), alloc_buffer([9]), &mut dest);
         let result = r.read(&mut context);
 
         if should_succeed {

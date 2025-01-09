@@ -43,7 +43,7 @@ pub mod token_router;
 pub mod prelude {
     pub use super::{
         ConvertProtoConfigError, CreateFilterArgs, CreationError, Filter, FilterError,
-        FilterInstance, ReadContext, StaticFilter, WriteContext,
+        FilterInstance, Packet, PacketMut, ReadContext, StaticFilter, WriteContext,
     };
 }
 
@@ -73,6 +73,7 @@ pub use self::{
 use crate::test::TestFilter;
 
 pub use self::chain::FilterChain;
+pub use crate::components::proxy::packet_router::{Packet, PacketMut};
 
 #[enum_dispatch::enum_dispatch(Filter)]
 pub enum FilterKind {
@@ -208,7 +209,7 @@ pub trait Filter: Send + Sync {
     /// This function should return an `Some` if the packet processing should
     /// proceed. If the packet should be rejected, it will return [`None`]
     /// instead. By default, the context passes through unchanged.
-    fn read(&self, _: &mut ReadContext<'_>) -> Result<(), FilterError> {
+    fn read<P: PacketMut>(&self, _: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
         Ok(())
     }
 
@@ -218,7 +219,7 @@ pub trait Filter: Send + Sync {
     ///
     /// This function should return an `Some` if the packet processing should
     /// proceed. If the packet should be rejected, it will return [`None`]
-    fn write(&self, _: &mut WriteContext) -> Result<(), FilterError> {
+    fn write<P: PacketMut>(&self, _: &mut WriteContext<P>) -> Result<(), FilterError> {
         Ok(())
     }
 }

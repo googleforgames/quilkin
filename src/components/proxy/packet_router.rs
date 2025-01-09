@@ -14,12 +14,13 @@
  *  limitations under the License.
  */
 
-use super::{sessions::SessionKey, PipelineError, SessionPool};
+use super::{
+    sessions::{SessionKey, SessionManager},
+    PipelineError, SessionPool,
+};
 use crate::{
     filters::{Filter as _, ReadContext},
-    metrics,
-    pool::PoolBuffer,
-    Config,
+    metrics, Config,
 };
 use std::{net::SocketAddr, sync::Arc};
 use tokio::sync::mpsc;
@@ -29,44 +30,64 @@ mod io_uring;
 #[cfg(not(target_os = "linux"))]
 mod reference;
 
+/// Representation of an immutable set of bytes pulled from the network, this trait
+/// provides an abstraction over however the packet was received (epoll, io-uring, xdp)
+///
+/// Use [PacketMut] if you need a mutable representation.
+pub trait Packet: Sized {
+    /// Returns the underlying slice of bytes representing the packet.
+    fn as_slice(&self) -> &[u8];
+
+    /// Returns the size of the packet.
+    fn len(&self) -> usize;
+
+    /// Returns whether the given packet is empty.
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+}
+
+/// Representation of an mutable set of bytes pulled from the network, this trait
+/// provides an abstraction over however the packet was received (epoll, io-uring, xdp)
+pub trait PacketMut: Sized + Packet {
+    type FrozenPacket: Packet;
+    fn alloc_sized(&self, size: usize) -> Option<Self>;
+    fn as_mut_slice(&mut self) -> &mut [u8];
+    fn set_len(&mut self, len: usize);
+    fn remove_head(&mut self, length: usize);
+    fn remove_tail(&mut self, length: usize);
+    fn extend_head(&mut self, bytes: &[u8]);
+    fn extend_tail(&mut self, bytes: &[u8]);
+    /// Returns an immutable version of the packet, this allows certain types
+    /// return a type that can be more cheaply cloned and shared.
+    fn freeze(self) -> Self::FrozenPacket;
+}
+
 /// Packet received from local port
-pub(crate) struct DownstreamPacket {
-    pub(crate) contents: PoolBuffer,
-    //received_at: UtcTimestamp,
+pub(crate) struct DownstreamPacket<P> {
+    pub(crate) contents: P,
     pub(crate) source: SocketAddr,
 }
 
-/// Represents the required arguments to run a worker task that
-/// processes packets received downstream.
-pub struct DownstreamReceiveWorkerConfig {
-    /// ID of the worker.
-    pub worker_id: usize,
-    pub port: u16,
-    pub config: Arc<Config>,
-    pub sessions: Arc<SessionPool>,
-    pub error_sender: super::error::ErrorSender,
-    pub buffer_pool: Arc<crate::pool::BufferPool>,
-}
-
-impl DownstreamReceiveWorkerConfig {
+impl<P: PacketMut> DownstreamPacket<P> {
     #[inline]
-    pub(crate) fn process_task(
-        packet: DownstreamPacket,
+    pub(crate) fn process<S: SessionManager<Packet = P::FrozenPacket>>(
+        self,
         worker_id: usize,
         config: &Arc<Config>,
-        sessions: &Arc<SessionPool>,
+        sessions: &S,
         error_acc: &mut super::error::ErrorAccumulator,
         destinations: &mut Vec<crate::net::EndpointAddress>,
     ) {
         tracing::trace!(
             id = worker_id,
-            size = packet.contents.len(),
-            source = %packet.source,
+            size = self.contents.len(),
+            source = %self.source,
             "received packet from downstream"
         );
 
         let timer = metrics::processing_time(metrics::READ).start_timer();
-        match Self::process_downstream_received_packet(packet, config, sessions, destinations) {
+        match self.process_inner(config, sessions, destinations) {
             Ok(()) => {
                 error_acc.maybe_send();
             }
@@ -84,10 +105,10 @@ impl DownstreamReceiveWorkerConfig {
 
     /// Processes a packet by running it through the filter chain.
     #[inline]
-    fn process_downstream_received_packet(
-        packet: DownstreamPacket,
+    fn process_inner<S: SessionManager<Packet = P::FrozenPacket>>(
+        self,
         config: &Arc<Config>,
-        sessions: &Arc<SessionPool>,
+        sessions: &S,
         destinations: &mut Vec<crate::net::EndpointAddress>,
     ) -> Result<(), PipelineError> {
         if !config.clusters.read().has_endpoints() {
@@ -95,13 +116,9 @@ impl DownstreamReceiveWorkerConfig {
             return Err(PipelineError::NoUpstreamEndpoints);
         }
 
+        let cm = config.clusters.clone_value();
         let filters = config.filters.load();
-        let mut context = ReadContext::new(
-            config.clusters.clone_value(),
-            packet.source.into(),
-            packet.contents,
-            destinations,
-        );
+        let mut context = ReadContext::new(&cm, self.source.into(), self.contents, destinations);
         filters.read(&mut context).map_err(PipelineError::Filter)?;
 
         let ReadContext { contents, .. } = context;
@@ -113,15 +130,27 @@ impl DownstreamReceiveWorkerConfig {
 
         for epa in destinations.drain(0..) {
             let session_key = SessionKey {
-                source: packet.source,
+                source: self.source,
                 dest: epa.to_socket_addr()?,
             };
 
-            sessions.send(session_key, contents.clone())?;
+            sessions.send(session_key, &contents)?;
         }
 
         Ok(())
     }
+}
+
+/// Represents the required arguments to run a worker task that
+/// processes packets received downstream.
+pub struct DownstreamReceiveWorkerConfig {
+    /// ID of the worker.
+    pub worker_id: usize,
+    pub port: u16,
+    pub config: Arc<Config>,
+    pub sessions: Arc<SessionPool>,
+    pub error_sender: super::error::ErrorSender,
+    pub buffer_pool: Arc<crate::collections::BufferPool>,
 }
 
 /// Spawns a background task that sits in a loop, receiving packets from the passed in socket.
@@ -134,7 +163,7 @@ pub async fn spawn_receivers(
     socket: socket2::Socket,
     worker_sends: Vec<(super::PendingSends, super::PacketSendReceiver)>,
     sessions: &Arc<SessionPool>,
-    buffer_pool: Arc<crate::pool::BufferPool>,
+    buffer_pool: Arc<crate::collections::BufferPool>,
 ) -> crate::Result<()> {
     let (error_sender, mut error_receiver) = mpsc::channel(128);
 

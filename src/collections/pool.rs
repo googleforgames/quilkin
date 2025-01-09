@@ -24,6 +24,8 @@ use std::{
     },
 };
 
+use crate::filters::{Packet, PacketMut};
+
 type Pool = Mutex<Vec<BytesMut>>;
 
 pub struct BufferPool {
@@ -63,9 +65,10 @@ impl BufferPool {
             .unwrap_or_else(|| BytesMut::with_capacity(capacity));
 
         self.outstanding.fetch_add(1, Relaxed);
+        inner.clear();
 
         if inner.capacity() < capacity {
-            inner.reserve(capacity - inner.capacity());
+            inner.reserve(capacity);
         }
 
         PoolBuffer {
@@ -248,7 +251,8 @@ impl std::ops::Deref for PoolBuffer {
 impl std::ops::DerefMut for PoolBuffer {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.as_mut_slice(0..self.inner.capacity())
+        dbg!(self.len());
+        self.as_mut_slice(0..dbg!(self.inner.capacity()))
     }
 }
 
@@ -270,6 +274,62 @@ impl Drop for PoolBuffer {
     }
 }
 
+impl Packet for PoolBuffer {
+    #[inline]
+    fn as_slice(&self) -> &[u8] {
+        self.as_ref()
+    }
+
+    #[inline]
+    fn len(&self) -> usize {
+        self.as_slice().len()
+    }
+}
+
+impl PacketMut for PoolBuffer {
+    type FrozenPacket = FrozenPoolBuffer;
+
+    #[inline]
+    fn alloc_sized(&self, size: usize) -> Option<Self> {
+        Some(self.owner.clone().alloc_sized(size))
+    }
+
+    #[inline]
+    fn as_mut_slice(&mut self) -> &mut [u8] {
+        self.as_mut_slice(0..dbg!(self.capacity()))
+    }
+
+    #[inline]
+    fn remove_head(&mut self, length: usize) {
+        self.split_prefix(length);
+    }
+
+    #[inline]
+    fn remove_tail(&mut self, length: usize) {
+        self.split_suffix(length);
+    }
+
+    #[inline]
+    fn extend_head(&mut self, bytes: &[u8]) {
+        self.prepend_from_slice(bytes);
+    }
+
+    #[inline]
+    fn extend_tail(&mut self, bytes: &[u8]) {
+        self.extend_from_slice(bytes);
+    }
+
+    #[inline]
+    fn freeze(self) -> FrozenPoolBuffer {
+        self.freeze()
+    }
+
+    #[inline]
+    fn set_len(&mut self, len: usize) {
+        self.truncate(len);
+    }
+}
+
 #[derive(Clone)]
 pub struct FrozenPoolBuffer {
     inner: Arc<PoolBuffer>,
@@ -284,6 +344,18 @@ impl FrozenPoolBuffer {
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.inner.is_empty()
+    }
+}
+
+impl Packet for FrozenPoolBuffer {
+    #[inline]
+    fn as_slice(&self) -> &[u8] {
+        self.inner.as_ref()
+    }
+
+    #[inline]
+    fn len(&self) -> usize {
+        self.inner.len()
     }
 }
 

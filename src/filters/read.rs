@@ -14,39 +14,34 @@
  * limitations under the License.
  */
 
-use std::sync::Arc;
-
 #[cfg(doc)]
 use crate::filters::Filter;
-use crate::{
-    net::{
-        endpoint::{metadata::DynamicMetadata, EndpointAddress},
-        ClusterMap,
-    },
-    pool::PoolBuffer,
+use crate::net::{
+    endpoint::{metadata::DynamicMetadata, EndpointAddress},
+    ClusterMap,
 };
 
 /// The input arguments to [`Filter::read`].
-pub struct ReadContext<'ctx> {
+pub struct ReadContext<'ctx, P> {
     /// The upstream endpoints that the packet will be forwarded to.
-    pub endpoints: Arc<ClusterMap>,
+    pub endpoints: &'ctx ClusterMap,
     /// The upstream endpoints that the packet will be forwarded to.
     pub destinations: &'ctx mut Vec<EndpointAddress>,
     /// The source of the received packet.
     pub source: EndpointAddress,
     /// Contents of the received packet.
-    pub contents: PoolBuffer,
+    pub contents: P,
     /// Arbitrary values that can be passed from one filter to another.
     pub metadata: DynamicMetadata,
 }
 
-impl<'ctx> ReadContext<'ctx> {
+impl<'ctx, P: super::PacketMut> ReadContext<'ctx, P> {
     /// Creates a new [`ReadContext`].
     #[inline]
     pub fn new(
-        endpoints: Arc<ClusterMap>,
+        endpoints: &'ctx ClusterMap,
         source: EndpointAddress,
-        contents: PoolBuffer,
+        contents: P,
         destinations: &'ctx mut Vec<EndpointAddress>,
     ) -> Self {
         Self {

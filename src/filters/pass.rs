@@ -31,12 +31,12 @@ impl Pass {
 
 impl Filter for Pass {
     #[cfg_attr(feature = "instrument", tracing::instrument(skip_all))]
-    fn read(&self, _: &mut ReadContext<'_>) -> Result<(), FilterError> {
+    fn read<P: PacketMut>(&self, _: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
         Ok(())
     }
 
     #[cfg_attr(feature = "instrument", tracing::instrument(skip_all))]
-    fn write(&self, _: &mut WriteContext) -> Result<(), FilterError> {
+    fn write<P: PacketMut>(&self, _: &mut WriteContext<P>) -> Result<(), FilterError> {
         Ok(())
     }
 }

@@ -30,10 +30,20 @@ pub struct TokenRouter {
     config: Config,
 }
 
-impl TokenRouter {
-    /// Non-async version of [`Filter::read`], as this filter does no actual async
-    /// operations. Used in benchmarking.
-    pub fn sync_read(&self, ctx: &mut ReadContext<'_>) -> Result<(), FilterError> {
+impl StaticFilter for TokenRouter {
+    const NAME: &'static str = "quilkin.filters.token_router.v1alpha1.TokenRouter";
+    type Configuration = Config;
+    type BinaryConfiguration = proto::TokenRouter;
+
+    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, CreationError> {
+        Ok(Self {
+            config: config.unwrap_or_default(),
+        })
+    }
+}
+
+impl Filter for TokenRouter {
+    fn read<P: PacketMut>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
         match ctx.metadata.get(&self.config.metadata_key) {
             Some(metadata::Value::Bytes(token)) => {
                 let tok = crate::net::cluster::Token::new(token);
@@ -56,24 +66,6 @@ impl TokenRouter {
     }
 }
 
-impl StaticFilter for TokenRouter {
-    const NAME: &'static str = "quilkin.filters.token_router.v1alpha1.TokenRouter";
-    type Configuration = Config;
-    type BinaryConfiguration = proto::TokenRouter;
-
-    fn try_from_config(config: Option<Self::Configuration>) -> Result<Self, CreationError> {
-        Ok(Self {
-            config: config.unwrap_or_default(),
-        })
-    }
-}
-
-impl Filter for TokenRouter {
-    fn read(&self, ctx: &mut ReadContext<'_>) -> Result<(), FilterError> {
-        self.sync_read(ctx)
-    }
-}
-
 pub struct HashedTokenRouter(TokenRouter);
 
 impl StaticFilter for HashedTokenRouter {
@@ -89,8 +81,8 @@ impl StaticFilter for HashedTokenRouter {
 }
 
 impl Filter for HashedTokenRouter {
-    fn read(&self, ctx: &mut ReadContext<'_>) -> Result<(), FilterError> {
-        self.0.sync_read(ctx)
+    fn read<P: PacketMut>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
+        self.0.read(ctx)
     }
 }
 
@@ -243,7 +235,7 @@ mod tests {
                 name
             );
             if let Some(expected) = expected {
-                assert_eq!(expected, result.unwrap(), "{}", name);
+                assert_eq!(expected, result.unwrap(), "{name}");
             }
         }
     }
@@ -257,20 +249,22 @@ mod tests {
             .into(),
         );
         let mut dest = Vec::new();
-        let mut ctx = new_ctx(&mut dest);
-        ctx.metadata
-            .insert(TOKEN_KEY.into(), Value::Bytes(b"123".to_vec().into()));
-        assert_read(&filter, ctx);
+        with_ctx(&mut dest, |mut ctx| {
+            ctx.metadata
+                .insert(TOKEN_KEY.into(), Value::Bytes(b"123".to_vec().into()));
+            assert_read(&filter, ctx);
+        });
     }
 
     #[tokio::test]
     async fn factory_empty_config() {
         let filter = TokenRouter::from_config(None);
         let mut dest = Vec::new();
-        let mut ctx = new_ctx(&mut dest);
-        ctx.metadata
-            .insert(CAPTURED_BYTES.into(), Value::Bytes(b"123".to_vec().into()));
-        assert_read(&filter, ctx);
+        with_ctx(&mut dest, |mut ctx| {
+            ctx.metadata
+                .insert(CAPTURED_BYTES.into(), Value::Bytes(b"123".to_vec().into()));
+            assert_read(&filter, ctx);
+        });
     }
 
     #[tokio::test]
@@ -282,23 +276,26 @@ mod tests {
         let filter = TokenRouter::from_config(config.into());
         let mut dest = Vec::new();
 
-        let mut ctx = new_ctx(&mut dest);
-        ctx.metadata
-            .insert(CAPTURED_BYTES.into(), Value::Bytes(b"123".to_vec().into()));
-        assert_read(&filter, ctx);
+        with_ctx(&mut dest, |mut ctx| {
+            ctx.metadata
+                .insert(CAPTURED_BYTES.into(), Value::Bytes(b"123".to_vec().into()));
+            assert_read(&filter, ctx);
+        });
         dest.clear();
 
         // invalid key
-        let mut ctx = new_ctx(&mut dest);
-        ctx.metadata
-            .insert(CAPTURED_BYTES.into(), Value::Bytes(b"567".to_vec().into()));
+        with_ctx(&mut dest, |mut ctx| {
+            ctx.metadata
+                .insert(CAPTURED_BYTES.into(), Value::Bytes(b"567".to_vec().into()));
 
-        assert!(filter.read(&mut ctx).is_err());
+            assert!(filter.read(&mut ctx).is_err());
+        });
         dest.clear();
 
         // no key
-        let mut ctx = new_ctx(&mut dest);
-        assert!(filter.read(&mut ctx).is_err());
+        with_ctx(&mut dest, |mut ctx| {
+            assert!(filter.read(&mut ctx).is_err());
+        });
     }
 
     #[tokio::test]
@@ -310,7 +307,10 @@ mod tests {
         assert_write_no_change(&filter);
     }
 
-    fn new_ctx(dest: &mut Vec<crate::net::EndpointAddress>) -> ReadContext<'_> {
+    fn with_ctx(
+        dest: &mut Vec<crate::net::EndpointAddress>,
+        test: impl FnOnce(ReadContext<'_, crate::collections::PoolBuffer>),
+    ) {
         let endpoint1 = Endpoint::with_metadata(
             "127.0.0.1:80".parse().unwrap(),
             Metadata {
@@ -324,24 +324,24 @@ mod tests {
             },
         );
 
-        let pool = std::sync::Arc::new(crate::pool::BufferPool::new(1, 5));
+        let pool = std::sync::Arc::new(crate::collections::BufferPool::new(1, 5));
 
         let endpoints = crate::net::cluster::ClusterMap::default();
         endpoints.insert_default([endpoint1, endpoint2].into());
-        ReadContext::new(
-            endpoints.into(),
+        test(ReadContext::new(
+            &endpoints,
             "127.0.0.1:100".parse().unwrap(),
             pool.alloc_slice(b"hello"),
             dest,
-        )
+        ))
     }
 
-    fn assert_read<F>(filter: &F, mut ctx: ReadContext<'_>)
+    fn assert_read<F, P>(filter: &F, mut ctx: ReadContext<'_, P>)
     where
         F: Filter + ?Sized,
+        P: PacketMut,
     {
         filter.read(&mut ctx).unwrap();
-
-        assert_eq!(b"hello", ctx.contents.as_ref());
+        assert_eq!(b"hello", ctx.contents.as_slice());
     }
 }

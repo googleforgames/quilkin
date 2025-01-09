@@ -25,12 +25,12 @@ use std::{
 use tokio::time::Instant;
 
 use crate::{
+    collections::{BufferPool, FrozenPoolBuffer, PoolBuffer},
     components::proxy::SendPacket,
     config::Config,
     filters::Filter,
     metrics,
     net::maxmind_db::{IpNetEntry, MetricsIpNetEntry},
-    pool::{BufferPool, FrozenPoolBuffer, PoolBuffer},
     time::UtcTimestamp,
     Loggable,
 };
@@ -49,6 +49,13 @@ cfg_if::cfg_if! {
     } else {
         mod reference;
     }
+}
+
+/// Responsible for managing sending processed traffic to its destination and
+/// tracking metrics and other information about the session.
+pub trait SessionManager {
+    type Packet: crate::filters::Packet;
+    fn send(&self, key: SessionKey, contents: &Self::Packet) -> Result<(), super::PipelineError>;
 }
 
 #[derive(PartialEq, Eq, Hash)]
@@ -453,6 +460,14 @@ impl SessionPool {
             tracing::info!(sessions=%self.session_map.len(), "waiting for active sessions to expire");
             self.session_map.clear();
         }
+    }
+}
+
+impl SessionManager for Arc<SessionPool> {
+    type Packet = FrozenPoolBuffer;
+
+    fn send(&self, key: SessionKey, contents: &Self::Packet) -> Result<(), super::PipelineError> {
+        SessionPool::send(self, key, contents.clone())
     }
 }
 
