@@ -754,7 +754,8 @@
 <a href="#753" id="753">753</a>
 <a href="#754" id="754">754</a>
 <a href="#755" id="755">755</a>
-<a href="#756" id="756">756</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#756" id="756">756</a>
+<a href="#757" id="757">757</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -782,18 +783,19 @@
 
 <span class="kw">use crate</span>::{
     collections::{BufferPool, FrozenPoolBuffer, PoolBuffer},
-    components::proxy::SendPacket,
     config::Config,
     filters::Filter,
     metrics,
-    net::maxmind_db::{IpNetEntry, MetricsIpNetEntry},
+    net::{
+        maxmind_db::{IpNetEntry, MetricsIpNetEntry},
+        queue::SendPacket,
+        PacketQueueSender,
+    },
     time::UtcTimestamp,
     Loggable,
 };
 
 <span class="kw">use </span>parking_lot::RwLock;
-
-<span class="kw">use </span><span class="kw">super</span>::PendingSends;
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>inner_metrics;
 
@@ -853,12 +855,12 @@
 /// Traffic from different gameservers is then demuxed using their address to
 /// send back to the original client.
 </span><span class="kw">pub struct </span>SessionPool {
-    ports_to_sockets: RwLock&lt;HashMap&lt;u16, PendingSends&gt;&gt;,
+    ports_to_sockets: RwLock&lt;HashMap&lt;u16, PacketQueueSender&gt;&gt;,
     storage: Arc&lt;RwLock&lt;SocketStorage&gt;&gt;,
     session_map: SessionMap,
     buffer_pool: Arc&lt;BufferPool&gt;,
     config: Arc&lt;Config&gt;,
-    downstream_sends: Vec&lt;PendingSends&gt;,
+    downstream_sends: Vec&lt;PacketQueueSender&gt;,
     downstream_index: atomic::AtomicUsize,
 }
 
@@ -877,7 +879,7 @@
     /// to release their sockets back to the parent.
     </span><span class="kw">pub fn </span>new(
         config: Arc&lt;Config&gt;,
-        downstream_sends: Vec&lt;PendingSends&gt;,
+        downstream_sends: Vec&lt;PacketQueueSender&gt;,
         buffer_pool: Arc&lt;BufferPool&gt;,
     ) -&gt; Arc&lt;<span class="self">Self</span>&gt; {
         <span class="kw">const </span>SESSION_TIMEOUT_SECONDS: Duration = Duration::from_secs(<span class="number">60</span>);
@@ -898,7 +900,7 @@
     </span><span class="kw">fn </span>create_new_session_from_new_socket&lt;<span class="lifetime">'pool</span>&gt;(
         <span class="self">self</span>: <span class="kw-2">&amp;</span><span class="lifetime">'pool </span>Arc&lt;<span class="self">Self</span>&gt;,
         key: SessionKey,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="prelude-ty">Option</span>&lt;MetricsIpNetEntry&gt;, PendingSends), <span class="kw">super</span>::PipelineError&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="prelude-ty">Option</span>&lt;MetricsIpNetEntry&gt;, PacketQueueSender), <span class="kw">super</span>::PipelineError&gt; {
         <span class="macro">tracing::trace!</span>(source=%key.source, dest=%key.dest, <span class="string">"creating new socket for session"</span>);
         <span class="kw">let </span>raw_socket = <span class="kw">crate</span>::net::raw_socket_with_reuse(<span class="number">0</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>port = raw_socket
@@ -907,7 +909,7 @@
             .ok_or(SessionError::SocketAddressUnavailable)<span class="question-mark">?
             </span>.port();
 
-        <span class="kw">let </span>(pending_sends, srecv) = <span class="kw">super</span>::PendingSends::new(<span class="number">15</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>(pending_sends, srecv) = <span class="kw">crate</span>::net::queue(<span class="number">15</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.clone()
             .spawn_session(raw_socket, port, (pending_sends.clone(), srecv))<span class="question-mark">?</span>;
 
@@ -983,10 +985,10 @@
     /// creates a new session either from a fresh socket, or if there are sockets
     /// allocated that are not reserved by an existing destination, using the
     /// existing socket.
-    </span><span class="kw">pub fn </span>get&lt;<span class="lifetime">'pool</span>&gt;(
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>get&lt;<span class="lifetime">'pool</span>&gt;(
         <span class="self">self</span>: <span class="kw-2">&amp;</span><span class="lifetime">'pool </span>Arc&lt;<span class="self">Self</span>&gt;,
         key @ SessionKey { dest, .. }: SessionKey,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="prelude-ty">Option</span>&lt;MetricsIpNetEntry&gt;, PendingSends), <span class="kw">super</span>::PipelineError&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="prelude-ty">Option</span>&lt;MetricsIpNetEntry&gt;, PacketQueueSender), <span class="kw">super</span>::PipelineError&gt; {
         <span class="macro">tracing::trace!</span>(source=%key.source, dest=%key.dest, <span class="string">"SessionPool::get"</span>);
         <span class="comment">// If we already have a session for the key pairing, return that session.
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(entry) = <span class="self">self</span>.session_map.get(<span class="kw-2">&amp;</span>key) {
@@ -1047,9 +1049,9 @@
     </span><span class="kw">fn </span>create_session_from_existing_socket&lt;<span class="lifetime">'session</span>&gt;(
         <span class="self">self</span>: <span class="kw-2">&amp;</span><span class="lifetime">'session </span>Arc&lt;<span class="self">Self</span>&gt;,
         key: SessionKey,
-        pending_sends: PendingSends,
+        pending_sends: PacketQueueSender,
         socket_port: u16,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="prelude-ty">Option</span>&lt;MetricsIpNetEntry&gt;, PendingSends), <span class="kw">super</span>::PipelineError&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="prelude-ty">Option</span>&lt;MetricsIpNetEntry&gt;, PacketQueueSender), <span class="kw">super</span>::PipelineError&gt; {
         <span class="macro">tracing::trace!</span>(source=%key.source, dest=%key.dest, <span class="string">"reusing socket for session"</span>);
         <span class="kw">let </span>asn_info = {
             <span class="kw">let </span><span class="kw-2">mut </span>storage = <span class="self">self</span>.storage.write();
@@ -1137,7 +1139,7 @@
         <span class="self">self</span>: <span class="kw-2">&amp;</span>Arc&lt;<span class="self">Self</span>&gt;,
         key: SessionKey,
         packet: FrozenPoolBuffer,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;PendingSends, <span class="kw">super</span>::PipelineError&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;PacketQueueSender, <span class="kw">super</span>::PipelineError&gt; {
         <span class="kw">let </span>(asn_info, sender) = <span class="self">self</span>.get(key)<span class="question-mark">?</span>;
 
         sender.push(SendPacket {
@@ -1245,7 +1247,7 @@
     <span class="doccomment">/// The socket port of the session.
     </span>socket_port: u16,
     <span class="doccomment">/// The queue of packets being sent to the upstream (server)
-    </span>pending_sends: PendingSends,
+    </span>pending_sends: PacketQueueSender,
     <span class="doccomment">/// The GeoIP information of the source.
     </span>asn_info: <span class="prelude-ty">Option</span>&lt;IpNetEntry&gt;,
     <span class="doccomment">/// The socket pool of the session.
@@ -1253,9 +1255,9 @@
 }
 
 <span class="kw">impl </span>Session {
-    <span class="kw">pub fn </span>new(
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new(
         key: SessionKey,
-        pending_sends: PendingSends,
+        pending_sends: PacketQueueSender,
         socket_port: u16,
         pool: Arc&lt;SessionPool&gt;,
         asn_info: <span class="prelude-ty">Option</span>&lt;IpNetEntry&gt;,
@@ -1337,8 +1339,8 @@
     <span class="kw">use </span><span class="kw">crate</span>::test::{alloc_buffer, available_addr, AddressType, TestHelper};
     <span class="kw">use </span>std::sync::Arc;
 
-    <span class="kw">async fn </span>new_pool() -&gt; (Arc&lt;SessionPool&gt;, PendingSends) {
-        <span class="kw">let </span>(pending_sends, _srecv) = PendingSends::new(<span class="number">1</span>).unwrap();
+    <span class="kw">async fn </span>new_pool() -&gt; (Arc&lt;SessionPool&gt;, PacketQueueSender) {
+        <span class="kw">let </span>(pending_sends, _srecv) = <span class="kw">crate</span>::net::queue(<span class="number">1</span>).unwrap();
         (
             SessionPool::new(
                 Arc::new(Config::default_agent()),

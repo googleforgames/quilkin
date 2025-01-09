@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["queue"],"struct":["PacketQueueSender","SendPacket"],"type":["PacketQueue","PacketQueueReceiver"]};

@@ -847,7 +847,7 @@
                 management_servers: Vec::new(),
                 to: Vec::new(),
                 to_tokens: <span class="prelude-val">None</span>,
-                socket: <span class="kw">crate</span>::net::raw_socket_with_reuse(<span class="number">0</span>).unwrap(),
+                socket: <span class="prelude-val">Some</span>(<span class="kw">crate</span>::net::raw_socket_with_reuse(<span class="number">0</span>).unwrap()),
                 qcmp,
                 phoenix,
                 notifier: <span class="prelude-val">None</span>,
@@ -856,7 +856,7 @@
 
         <span class="kw">let </span>(prox_tx, prox_rx) = tokio::sync::oneshot::channel();
 
-        <span class="kw">let </span>port = <span class="kw">crate</span>::net::socket_port(<span class="kw-2">&amp;</span>server.socket);
+        <span class="kw">let </span>port = <span class="kw">crate</span>::net::socket_port(server.socket.as_ref().unwrap());
 
         tokio::spawn(<span class="kw">async move </span>{
             server

@@ -72,15 +72,15 @@
         <span class="self">self</span>: Arc&lt;<span class="self">Self</span>&gt;,
         raw_socket: socket2::Socket,
         port: u16,
-        pending_sends: (proxy::PendingSends, proxy::io_uring_shared::EventFd),
+        pending_sends: <span class="kw">crate</span>::net::PacketQueue,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), proxy::PipelineError&gt; {
-        <span class="kw">use </span>proxy::io_uring_shared;
+        <span class="kw">use </span><span class="kw">crate</span>::net::io_uring;
 
         <span class="kw">let </span>pool = <span class="self">self</span>;
         <span class="kw">let </span>id = SESSION_COUNTER.fetch_add(<span class="number">1</span>, std::sync::atomic::Ordering::Relaxed);
         <span class="kw">let </span>_thread_span = <span class="macro">uring_span!</span>(<span class="macro">tracing::debug_span!</span>(<span class="string">"session"</span>, id).or_current());
 
-        <span class="kw">let </span>io_loop = io_uring_shared::IoUringLoop::new(
+        <span class="kw">let </span>io_loop = io_uring::IoUringLoop::new(
             <span class="number">2000</span>,
             <span class="kw">crate</span>::net::DualStackLocalSocket::from_raw(raw_socket),
         )<span class="question-mark">?</span>;
@@ -88,7 +88,7 @@
 
         io_loop.spawn(
             <span class="macro">format!</span>(<span class="string">"session-{id}"</span>),
-            io_uring_shared::PacketProcessorCtx::SessionPool { pool, port },
+            io_uring::PacketProcessorCtx::SessionPool { pool, port },
             pending_sends,
             buffer_pool,
         )

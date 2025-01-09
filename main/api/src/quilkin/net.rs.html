@@ -394,7 +394,13 @@
 <a href="#393" id="393">393</a>
 <a href="#394" id="394">394</a>
 <a href="#395" id="395">395</a>
-<a href="#396" id="396">396</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -410,7 +416,9 @@
  * limitations under the License.
  */
 
-</span><span class="doccomment">/// On linux spawns a io-uring runtime + thread, everywhere else spawns a regular tokio task.
+</span><span class="kw">pub mod </span>packet;
+
+<span class="doccomment">/// On linux spawns a io-uring runtime + thread, everywhere else spawns a regular tokio task.
 </span><span class="attr">#[cfg(not(target_os = <span class="string">"linux"</span>))]
 </span><span class="macro">macro_rules!</span> uring_spawn {
     (<span class="macro-nonterminal">$span</span>:expr, <span class="macro-nonterminal">$future</span>:expr) =&gt; {{
@@ -474,6 +482,8 @@
 <span class="macro">cfg_if::cfg_if!</span> {
     <span class="kw">if </span><span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)] </span>{
         <span class="kw">use </span>std::net::UdpSocket;
+
+        <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>io_uring;
     } <span class="kw">else </span>{
         <span class="kw">use </span>tokio::net::UdpSocket;
     }
@@ -483,6 +493,8 @@
     cluster::ClusterMap,
     endpoint::{Endpoint, EndpointAddress},
 };
+
+<span class="kw">pub use </span><span class="self">self</span>::packet::{queue, PacketQueue, PacketQueueSender};
 
 <span class="kw">fn </span>socket_with_reuse_and_address(addr: SocketAddr) -&gt; std::io::Result&lt;UdpSocket&gt; {
     <span class="macro">cfg_if::cfg_if!</span> {
@@ -613,9 +625,9 @@
             }
         } <span class="kw">else </span>{
             <span class="attr">#[inline]
-            </span><span class="kw">pub fn </span>raw_fd(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; io_uring::types::Fd {
+            </span><span class="kw">pub fn </span>raw_fd(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ::io_uring::types::Fd {
                 <span class="kw">use </span>std::os::fd::AsRawFd;
-                io_uring::types::Fd(<span class="self">self</span>.socket.as_raw_fd())
+                ::io_uring::types::Fd(<span class="self">self</span>.socket.as_raw_fd())
             }
         }
     }

@@ -382,7 +382,7 @@
 </span><span class="kw">pub async fn </span>spawn_receivers(
     config: Arc&lt;Config&gt;,
     socket: socket2::Socket,
-    worker_sends: Vec&lt;(<span class="kw">super</span>::PendingSends, <span class="kw">super</span>::PacketSendReceiver)&gt;,
+    worker_sends: Vec&lt;<span class="kw">crate</span>::net::PacketQueue&gt;,
     sessions: <span class="kw-2">&amp;</span>Arc&lt;SessionPool&gt;,
     buffer_pool: Arc&lt;<span class="kw">crate</span>::collections::BufferPool&gt;,
 ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
