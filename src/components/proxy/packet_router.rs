@@ -161,7 +161,7 @@ pub struct DownstreamReceiveWorkerConfig {
 pub async fn spawn_receivers(
     config: Arc<Config>,
     socket: socket2::Socket,
-    worker_sends: Vec<(super::PendingSends, super::PacketSendReceiver)>,
+    worker_sends: Vec<crate::net::PacketQueue>,
     sessions: &Arc<SessionPool>,
     buffer_pool: Arc<crate::collections::BufferPool>,
 ) -> crate::Result<()> {

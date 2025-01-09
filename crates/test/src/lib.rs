@@ -503,7 +503,7 @@ impl Pail {
                         to: Vec::new(),
                         to_tokens: None,
                         management_servers,
-                        socket,
+                        socket: Some(socket),
                         qcmp,
                         phoenix,
                         notifier: Some(rttx),

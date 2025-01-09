@@ -16,13 +16,8 @@
 
 //! The reference implementation is used for non-Linux targets
 
-use crate::components::proxy;
-
 impl super::DownstreamReceiveWorkerConfig {
-    pub async fn spawn(
-        self,
-        pending_sends: (proxy::PendingSends, proxy::PacketSendReceiver),
-    ) -> eyre::Result<()> {
+    pub async fn spawn(self, packet_queue: crate::net::PacketQueue) -> eyre::Result<()> {
         let Self {
             worker_id,
             port,
@@ -47,8 +42,8 @@ impl super::DownstreamReceiveWorkerConfig {
             let send_socket = socket.clone();
 
             let inner_task = async move {
-                let (pending_sends, mut sends_rx) = pending_sends;
-                let mut sends_double_buffer = Vec::with_capacity(pending_sends.capacity());
+                let (packet_queue, mut sends_rx) = packet_queue;
+                let mut sends_double_buffer = Vec::with_capacity(packet_queue.capacity());
 
                 while sends_rx.changed().await.is_ok() {
                     if !*sends_rx.borrow() {
@@ -56,7 +51,7 @@ impl super::DownstreamReceiveWorkerConfig {
                         break;
                     }
 
-                    sends_double_buffer = pending_sends.swap(sends_double_buffer);
+                    sends_double_buffer = packet_queue.swap(sends_double_buffer);
 
                     for packet in sends_double_buffer.drain(..sends_double_buffer.len()) {
                         let (result, _) = send_socket

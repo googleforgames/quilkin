@@ -306,7 +306,7 @@ impl TestHelper {
                 management_servers: Vec::new(),
                 to: Vec::new(),
                 to_tokens: None,
-                socket: crate::net::raw_socket_with_reuse(0).unwrap(),
+                socket: Some(crate::net::raw_socket_with_reuse(0).unwrap()),
                 qcmp,
                 phoenix,
                 notifier: None,
@@ -315,7 +315,7 @@ impl TestHelper {
 
         let (prox_tx, prox_rx) = tokio::sync::oneshot::channel();
 
-        let port = crate::net::socket_port(&server.socket);
+        let port = crate::net::socket_port(server.socket.as_ref().unwrap());
 
         tokio::spawn(async move {
             server

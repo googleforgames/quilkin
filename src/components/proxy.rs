@@ -14,83 +14,9 @@
  *  limitations under the License.
  */
 
-mod error;
+pub(crate) mod error;
 pub mod packet_router;
 mod sessions;
-
-cfg_if::cfg_if! {
-    if #[cfg(target_os = "linux")] {
-        pub(crate) mod io_uring_shared;
-        pub(crate) type PacketSendReceiver = io_uring_shared::EventFd;
-        pub(crate) type PacketSendSender = io_uring_shared::EventFdWriter;
-    } else {
-        pub(crate) type PacketSendReceiver = tokio::sync::watch::Receiver<bool>;
-        pub(crate) type PacketSendSender = tokio::sync::watch::Sender<bool>;
-    }
-}
-
-/// A simple packet queue that signals when a packet is pushed
-///
-/// For io_uring this notifies an eventfd that will be processed on the next
-/// completion loop
-#[derive(Clone)]
-pub struct PendingSends {
-    packets: Arc<parking_lot::Mutex<Vec<SendPacket>>>,
-    notify: PacketSendSender,
-}
-
-impl PendingSends {
-    pub fn new(capacity: usize) -> std::io::Result<(Self, PacketSendReceiver)> {
-        #[cfg(target_os = "linux")]
-        let (notify, rx) = {
-            let rx = io_uring_shared::EventFd::new()?;
-            (rx.writer(), rx)
-        };
-        #[cfg(not(target_os = "linux"))]
-        let (notify, rx) = tokio::sync::watch::channel(true);
-
-        Ok((
-            Self {
-                packets: Arc::new(parking_lot::Mutex::new(Vec::with_capacity(capacity))),
-                notify,
-            },
-            rx,
-        ))
-    }
-
-    #[inline]
-    pub(crate) fn capacity(&self) -> usize {
-        self.packets.lock().capacity()
-    }
-
-    /// Pushes a packet onto the queue to be sent, signalling a sender that
-    /// it's available
-    #[inline]
-    pub(crate) fn push(&self, packet: SendPacket) {
-        self.packets.lock().push(packet);
-        #[cfg(target_os = "linux")]
-        self.notify.write(1);
-        #[cfg(not(target_os = "linux"))]
-        let _ = self.notify.send(true);
-    }
-
-    /// Called to shutdown the consumer side of the sends (ie the io loop that is
-    /// actually dequing and sending packets)
-    #[inline]
-    pub(crate) fn shutdown_receiver(&self) {
-        #[cfg(target_os = "linux")]
-        self.notify.write(0xdeadbeef);
-        #[cfg(not(target_os = "linux"))]
-        let _ = self.notify.send(false);
-    }
-
-    /// Swaps the current queue with an empty one so we only lock for a pointer swap
-    #[inline]
-    pub fn swap(&self, mut swap: Vec<SendPacket>) -> Vec<SendPacket> {
-        swap.clear();
-        std::mem::replace(&mut self.packets.lock(), swap)
-    }
-}
 
 use super::RunArgs;
 pub use error::{ErrorMap, PipelineError};
@@ -102,20 +28,6 @@ use std::{
         Arc,
     },
 };
-
-pub struct SendPacket {
-    /// The destination address of the packet
-    pub destination: socket2::SockAddr,
-    /// The packet data being sent
-    pub data: crate::collections::FrozenPoolBuffer,
-    /// The asn info for the sender, used for metrics
-    pub asn_info: Option<crate::net::maxmind_db::MetricsIpNetEntry>,
-}
-
-pub struct RecvPacket {
-    pub source: SocketAddr,
-    pub data: crate::collections::PoolBuffer,
-}
 
 #[derive(Clone, Debug)]
 pub struct Ready {
@@ -156,7 +68,7 @@ pub struct Proxy {
     pub management_servers: Vec<tonic::transport::Endpoint>,
     pub to: Vec<SocketAddr>,
     pub to_tokens: Option<ToTokens>,
-    pub socket: socket2::Socket,
+    pub socket: Option<socket2::Socket>,
     pub qcmp: socket2::Socket,
     pub phoenix: crate::net::TcpListener,
     pub notifier: Option<tokio::sync::mpsc::UnboundedSender<String>>,
@@ -173,7 +85,7 @@ impl Default for Proxy {
             management_servers: Vec::new(),
             to: Vec::new(),
             to_tokens: None,
-            socket: crate::net::raw_socket_with_reuse(0).unwrap(),
+            socket: Some(crate::net::raw_socket_with_reuse(0).unwrap()),
             qcmp,
             phoenix,
             notifier: None,
@@ -183,7 +95,7 @@ impl Default for Proxy {
 
 impl Proxy {
     pub async fn run(
-        self,
+        mut self,
         RunArgs {
             config,
             ready,
@@ -191,7 +103,8 @@ impl Proxy {
         }: RunArgs<Ready>,
         initialized: Option<tokio::sync::oneshot::Sender<()>>,
     ) -> crate::Result<()> {
-        let _mmdb_task = self.mmdb.map(|source| {
+        let _mmdb_task = self.mmdb.as_ref().map(|source| {
+            let source = source.clone();
             tokio::spawn(async move {
                 while let Err(error) =
                     tryhard::retry_fn(|| crate::MaxmindDb::update(source.clone()))
@@ -205,7 +118,7 @@ impl Proxy {
         });
 
         if !self.to.is_empty() {
-            let endpoints = if let Some(tt) = self.to_tokens {
+            let endpoints = if let Some(tt) = &self.to_tokens {
                 let (unique, overflow) = 256u64.overflowing_pow(tt.length as _);
                 if overflow {
                     panic!(
@@ -355,28 +268,7 @@ impl Proxy {
                 .expect("failed to spawn proxy-subscription thread");
         }
 
-        let num_workers = self.num_workers.get();
-        let buffer_pool = Arc::new(crate::collections::BufferPool::new(num_workers, 2 * 1024));
-
-        let mut worker_sends = Vec::with_capacity(num_workers);
-        let mut session_sends = Vec::with_capacity(num_workers);
-        for _ in 0..num_workers {
-            let psends = PendingSends::new(15)?;
-            session_sends.push(psends.0.clone());
-            worker_sends.push(psends);
-        }
-
-        let sessions = SessionPool::new(config.clone(), session_sends, buffer_pool.clone());
-
-        packet_router::spawn_receivers(
-            config.clone(),
-            self.socket,
-            worker_sends,
-            &sessions,
-            buffer_pool,
-        )
-        .await?;
-
+        let router_shutdown = self.spawn_packet_router(config.clone()).await?;
         crate::codec::qcmp::spawn(self.qcmp, shutdown_rx.clone())?;
         crate::net::phoenix::spawn(
             self.phoenix,
@@ -395,8 +287,50 @@ impl Proxy {
             .await
             .map_err(|error| eyre::eyre!(error))?;
 
-        sessions.shutdown(*shutdown_rx.borrow() == crate::ShutdownKind::Normal);
+        (router_shutdown)(shutdown_rx);
 
         Ok(())
+    }
+
+    pub async fn spawn_packet_router(
+        &mut self,
+        config: Arc<crate::config::Config>,
+    ) -> eyre::Result<impl FnOnce(crate::ShutdownRx)> {
+        self.spawn_user_space_router(config).await
+    }
+
+    /// Launches the user space implementation of the packet router using
+    /// sockets. This implementation uses a pool of buffers and sockets to
+    /// manage UDP sessions and sockets. On Linux this will use io-uring, where
+    /// as it will use epoll interfaces on non-Linux platforms.
+    pub async fn spawn_user_space_router(
+        &mut self,
+        config: Arc<crate::config::Config>,
+    ) -> eyre::Result<impl FnOnce(crate::ShutdownRx)> {
+        let workers = self.num_workers.get();
+        let buffer_pool = Arc::new(crate::collections::BufferPool::new(workers, 2 * 1024));
+
+        let mut worker_sends = Vec::with_capacity(workers);
+        let mut session_sends = Vec::with_capacity(workers);
+        for _ in 0..workers {
+            let queue = crate::net::queue(15)?;
+            session_sends.push(queue.0.clone());
+            worker_sends.push(queue);
+        }
+
+        let sessions = SessionPool::new(config.clone(), session_sends, buffer_pool.clone());
+
+        packet_router::spawn_receivers(
+            config,
+            self.socket.take().unwrap(),
+            worker_sends,
+            &sessions,
+            buffer_pool,
+        )
+        .await?;
+
+        Ok(move |shutdown_rx: crate::ShutdownRx| {
+            sessions.shutdown(*shutdown_rx.borrow() == crate::ShutdownKind::Normal);
+        })
     }
 }

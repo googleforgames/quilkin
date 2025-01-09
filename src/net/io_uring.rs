@@ -22,8 +22,9 @@
 
 use crate::{
     collections::PoolBuffer,
-    components::proxy::{self, PendingSends, PipelineError, SendPacket},
+    components::proxy::{self, PipelineError},
     metrics,
+    net::{packet::queue::SendPacket, PacketQueue},
     time::UtcTimestamp,
 };
 use io_uring::{squeue::Entry, types::Fd};
@@ -213,13 +214,13 @@ impl LoopPacket {
 pub enum PacketProcessorCtx {
     Router {
         config: Arc<crate::config::Config>,
-        sessions: Arc<crate::components::proxy::SessionPool>,
-        error_acc: super::error::ErrorAccumulator,
+        sessions: Arc<proxy::SessionPool>,
+        error_acc: proxy::error::ErrorAccumulator,
         worker_id: usize,
         destinations: Vec<crate::net::EndpointAddress>,
     },
     SessionPool {
-        pool: Arc<crate::components::proxy::SessionPool>,
+        pool: Arc<proxy::SessionPool>,
         port: u16,
     },
 }
@@ -422,7 +423,7 @@ impl IoUringLoop {
         self,
         thread_name: String,
         mut ctx: PacketProcessorCtx,
-        pending_sends: (PendingSends, EventFd),
+        pending_sends: PacketQueue,
         buffer_pool: Arc<crate::collections::BufferPool>,
     ) -> Result<(), PipelineError> {
         let dispatcher = tracing::dispatcher::get_default(|d| d.clone());

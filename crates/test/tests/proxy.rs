@@ -1,5 +1,5 @@
 use qt::*;
-use quilkin::{components::proxy, test::TestConfig};
+use quilkin::{components::proxy, net, test::TestConfig};
 use tracing::Instrument as _;
 
 trace_test!(server, {
@@ -108,7 +108,7 @@ trace_test!(uring_receiver, {
     let socket = sb.client();
     let (ws, addr) = sb.socket();
 
-    let pending_sends = proxy::PendingSends::new(1).unwrap();
+    let pending_sends = net::queue(1).unwrap();
 
     // we'll test a single DownstreamReceiveWorkerConfig
     proxy::packet_router::DownstreamReceiveWorkerConfig {
@@ -153,9 +153,9 @@ trace_test!(
             .modify(|clusters| clusters.insert_default([endpoint.into()].into()));
 
         let pending_sends: Vec<_> = [
-            proxy::PendingSends::new(1).unwrap(),
-            proxy::PendingSends::new(1).unwrap(),
-            proxy::PendingSends::new(1).unwrap(),
+            net::queue(1).unwrap(),
+            net::queue(1).unwrap(),
+            net::queue(1).unwrap(),
         ]
         .into_iter()
         .collect();
