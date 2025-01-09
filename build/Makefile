@@ -196,7 +196,7 @@ endif
 	docker run --rm $(common_rust_args) \
 		--entrypoint=bash $(BUILD_IMAGE_TAG) -c './image/archive_dependencies.sh'
 	docker buildx create --use --driver=docker-container --name container --platform=linux/amd64,linux/arm64
-	docker buildx build --platform=linux/amd64,linux/arm64 -t $(IMAGE_TAG) -f $(project_path)/image/Dockerfile $(project_path) --builder=container --load
+	docker buildx build --platform=linux/amd64,linux/arm64 -t $(IMAGE_TAG) -f $(project_path)/image/Dockerfile $(project_path) --builder=container --push
 
 # Generates the HTML report of all open source licence dependencies
 build-licence-report: ensure-build-image
@@ -211,7 +211,9 @@ build-licence-report:
 # to set those options.
 # If a `kubectl` authentication failure occurs, run `kubectl get ns` to confirm access and refresh the Kubernetes
 # authentication token, and try again if successful.
-test-agones: push
+ifndef SKIP_BUILD_IMAGE
+test-agones: build-image
+endif
 test-agones:
 	$(MAKE) run-test-agones
 
@@ -233,9 +235,6 @@ run-test-agones:
 # USe `SKIP_BUILD_IMAGE` if you want to skip building the image if it has been already built.
 # See `build-image` for more details.
 push:
-ifndef SKIP_BUILD_IMAGE
-push: build-image
-endif
 	docker push $(IMAGE_TAG)
 
 # Convenience target to build and push quilkin images into a minikube instance
