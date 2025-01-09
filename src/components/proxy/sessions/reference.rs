@@ -14,14 +14,14 @@
  *  limitations under the License.
  */
 
-use crate::components::proxy;
+use crate::{components::proxy, net::PacketQueue};
 
 impl super::SessionPool {
     pub(super) fn spawn_session(
         self: std::sync::Arc<Self>,
         raw_socket: socket2::Socket,
         port: u16,
-        pending_sends: (proxy::PendingSends, proxy::PacketSendReceiver),
+        pending_sends: PacketQueue,
     ) -> Result<(), proxy::PipelineError> {
         let pool = self;
 

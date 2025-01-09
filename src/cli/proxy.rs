@@ -123,7 +123,7 @@ impl Proxy {
             to: self.to,
             to_tokens,
             num_workers,
-            socket,
+            socket: Some(socket),
             qcmp,
             phoenix,
             notifier: None,

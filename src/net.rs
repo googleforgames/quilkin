@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+pub mod packet;
+
 /// On linux spawns a io-uring runtime + thread, everywhere else spawns a regular tokio task.
 #[cfg(not(target_os = "linux"))]
 macro_rules! uring_spawn {
@@ -78,6 +80,8 @@ use socket2::{Protocol, Socket, Type};
 cfg_if::cfg_if! {
     if #[cfg(target_os = "linux")] {
         use std::net::UdpSocket;
+
+        pub(crate) mod io_uring;
     } else {
         use tokio::net::UdpSocket;
     }
@@ -87,6 +91,8 @@ pub use self::{
     cluster::ClusterMap,
     endpoint::{Endpoint, EndpointAddress},
 };
+
+pub use self::packet::{queue, PacketQueue, PacketQueueSender};
 
 fn socket_with_reuse_and_address(addr: SocketAddr) -> std::io::Result<UdpSocket> {
     cfg_if::cfg_if! {
@@ -217,9 +223,9 @@ impl DualStackLocalSocket {
             }
         } else {
             #[inline]
-            pub fn raw_fd(&self) -> io_uring::types::Fd {
+            pub fn raw_fd(&self) -> ::io_uring::types::Fd {
                 use std::os::fd::AsRawFd;
-                io_uring::types::Fd(self.socket.as_raw_fd())
+                ::io_uring::types::Fd(self.socket.as_raw_fd())
             }
         }
     }

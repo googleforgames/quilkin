@@ -14,15 +14,11 @@
  *  limitations under the License.
  */
 
-use crate::components::proxy;
 use eyre::Context as _;
 
 impl super::DownstreamReceiveWorkerConfig {
-    pub async fn spawn(
-        self,
-        pending_sends: (proxy::PendingSends, proxy::PacketSendReceiver),
-    ) -> eyre::Result<()> {
-        use crate::components::proxy::io_uring_shared;
+    pub async fn spawn(self, pending_sends: crate::net::PacketQueue) -> eyre::Result<()> {
+        use crate::net::io_uring;
 
         let Self {
             worker_id,
@@ -36,11 +32,11 @@ impl super::DownstreamReceiveWorkerConfig {
         let socket =
             crate::net::DualStackLocalSocket::new(port).context("failed to bind socket")?;
 
-        let io_loop = io_uring_shared::IoUringLoop::new(2000, socket)?;
+        let io_loop = io_uring::IoUringLoop::new(2000, socket)?;
         io_loop
             .spawn(
                 format!("packet-router-{worker_id}"),
-                io_uring_shared::PacketProcessorCtx::Router {
+                io_uring::PacketProcessorCtx::Router {
                     config,
                     sessions,
                     error_acc: super::super::error::ErrorAccumulator::new(error_sender),

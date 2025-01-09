@@ -217,7 +217,7 @@ async fn test(t: &mut TestHelper, yaml: &str, address_type: AddressType) -> mpsc
     let local_addr = proxy_socket.local_addr().unwrap().as_socket().unwrap();
 
     let proxy = quilkin::components::proxy::Proxy {
-        socket: proxy_socket,
+        socket: Some(proxy_socket),
         ..Default::default()
     };
 
