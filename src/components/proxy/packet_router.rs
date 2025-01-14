@@ -23,7 +23,6 @@ use crate::{
     metrics, Config,
 };
 use std::{net::SocketAddr, sync::Arc};
-use tokio::sync::mpsc;
 
 #[cfg(target_os = "linux")]
 mod io_uring;
@@ -76,7 +75,6 @@ impl<P: PacketMut> DownstreamPacket<P> {
         worker_id: usize,
         config: &Arc<Config>,
         sessions: &S,
-        error_acc: &mut super::error::ErrorAccumulator,
         destinations: &mut Vec<crate::net::EndpointAddress>,
     ) {
         tracing::trace!(
@@ -87,17 +85,19 @@ impl<P: PacketMut> DownstreamPacket<P> {
         );
 
         let timer = metrics::processing_time(metrics::READ).start_timer();
-        match self.process_inner(config, sessions, destinations) {
-            Ok(()) => {
-                error_acc.maybe_send();
-            }
-            Err(error) => {
-                let discriminant = error.discriminant();
-                metrics::errors_total(metrics::READ, discriminant, &metrics::EMPTY).inc();
-                metrics::packets_dropped_total(metrics::READ, discriminant, &metrics::EMPTY).inc();
+        if let Err(error) = self.process_inner(config, sessions, destinations) {
+            let discriminant = error.discriminant();
 
-                error_acc.push_error(error);
+            // We only want to mark potential I/O errors as errors, as they
+            // can indicate something wrong with the system, error variants
+            // from packets being bad aren't errors from quilkin's perspective.
+            if matches!(
+                error,
+                PipelineError::Io(_) | PipelineError::Filter(crate::filters::FilterError::Io(_))
+            ) {
+                metrics::errors_total(metrics::READ, discriminant, &metrics::EMPTY).inc();
             }
+            metrics::packets_dropped_total(metrics::READ, discriminant, &metrics::EMPTY).inc();
         }
 
         timer.stop_and_record();
@@ -149,7 +149,6 @@ pub struct DownstreamReceiveWorkerConfig {
     pub port: u16,
     pub config: Arc<Config>,
     pub sessions: Arc<SessionPool>,
-    pub error_sender: super::error::ErrorSender,
     pub buffer_pool: Arc<crate::collections::BufferPool>,
 }
 
@@ -165,8 +164,6 @@ pub async fn spawn_receivers(
     sessions: &Arc<SessionPool>,
     buffer_pool: Arc<crate::collections::BufferPool>,
 ) -> crate::Result<()> {
-    let (error_sender, mut error_receiver) = mpsc::channel(128);
-
     let port = crate::net::socket_port(&socket);
 
     for (worker_id, ws) in worker_sends.into_iter().enumerate() {
@@ -175,47 +172,11 @@ pub async fn spawn_receivers(
             port,
             config: config.clone(),
             sessions: sessions.clone(),
-            error_sender: error_sender.clone(),
             buffer_pool: buffer_pool.clone(),
         };
 
         worker.spawn(ws).await?;
     }
-
-    drop(error_sender);
-
-    tokio::spawn(async move {
-        let mut log_task = tokio::time::interval(std::time::Duration::from_secs(5));
-
-        #[allow(clippy::mutable_key_type)]
-        let mut pipeline_errors = super::error::ErrorMap::default();
-
-        #[allow(clippy::mutable_key_type)]
-        fn report(errors: &mut super::error::ErrorMap) {
-            for (error, instances) in errors.drain() {
-                tracing::warn!(%error, %instances, "pipeline report");
-            }
-        }
-
-        loop {
-            tokio::select! {
-                _ = log_task.tick() => {
-                    report(&mut pipeline_errors);
-                }
-                received = error_receiver.recv() => {
-                    let Some(errors) = received else {
-                        report(&mut pipeline_errors);
-                        tracing::info!("pipeline reporting task closed");
-                        return;
-                    };
-
-                    for (k, v) in errors {
-                        *pipeline_errors.entry(k).or_default() += v;
-                    }
-                }
-            }
-        }
-    });
 
     Ok(())
 }

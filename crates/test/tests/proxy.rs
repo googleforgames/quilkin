@@ -87,19 +87,6 @@ trace_test!(uring_receiver, {
 
     let (mut packet_rx, endpoint) = sb.server("server");
 
-    let (error_sender, mut error_receiver) = tokio::sync::mpsc::channel::<proxy::ErrorMap>(20);
-
-    tokio::task::spawn(
-        async move {
-            while let Some(errors) = error_receiver.recv().await {
-                for error in errors.keys() {
-                    tracing::error!(%error, "error sent from DownstreamReceiverWorker");
-                }
-            }
-        }
-        .instrument(tracing::debug_span!("error rx")),
-    );
-
     let config = std::sync::Arc::new(quilkin::Config::default_non_agent());
     config
         .clusters
@@ -115,7 +102,6 @@ trace_test!(uring_receiver, {
         worker_id: 1,
         port: addr.port(),
         config: config.clone(),
-        error_sender,
         buffer_pool: quilkin::test::BUFFER_POOL.clone(),
         sessions: proxy::SessionPool::new(
             config,

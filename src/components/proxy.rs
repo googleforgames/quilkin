@@ -19,7 +19,7 @@ pub mod packet_router;
 mod sessions;
 
 use super::RunArgs;
-pub use error::{ErrorMap, PipelineError};
+pub use error::PipelineError;
 pub use sessions::SessionPool;
 use std::{
     net::SocketAddr,

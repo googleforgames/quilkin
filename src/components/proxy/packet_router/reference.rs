@@ -23,7 +23,6 @@ impl super::DownstreamReceiveWorkerConfig {
             port,
             config,
             sessions,
-            error_sender,
             buffer_pool,
         } = self;
 
@@ -95,8 +94,6 @@ impl super::DownstreamReceiveWorkerConfig {
                 }
             }
 
-            let mut error_acc =
-                crate::components::proxy::error::ErrorAccumulator::new(error_sender);
             let mut destinations = Vec::with_capacity(1);
 
             loop {
@@ -127,7 +124,6 @@ impl super::DownstreamReceiveWorkerConfig {
                                     worker_id,
                                     &config,
                                     &sessions,
-                                    &mut error_acc,
                                     &mut destinations,
                                 );
                             }
