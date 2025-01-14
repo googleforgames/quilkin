@@ -1033,7 +1033,7 @@
                                             </span>{
                                                 <span class="kw">let </span>error_display = err.to_string();
                                                 <span class="kw">crate</span>::metrics::phoenix_server_errors(<span class="kw-2">&amp;</span>error_display).inc();
-                                                <span class="macro">tracing::error!</span>(
+                                                <span class="macro">tracing::debug!</span>(
                                                     <span class="string">"failed to respond to phoenix request: {error_display}"
                                                 </span>);
                                             }
