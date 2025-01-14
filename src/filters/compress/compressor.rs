@@ -44,7 +44,7 @@ impl Compressor {
 
                 let mut encoder = imp.encoder();
 
-                let res = encoder.compress(input, &mut encoded.as_mut_slice()[..dbg!(size)]);
+                let res = encoder.compress(input, &mut encoded.as_mut_slice()[..size]);
                 imp.absorb(encoder);
 
                 encoded.set_len(res?);
