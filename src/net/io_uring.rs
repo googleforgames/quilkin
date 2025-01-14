@@ -215,7 +215,6 @@ pub enum PacketProcessorCtx {
     Router {
         config: Arc<crate::config::Config>,
         sessions: Arc<proxy::SessionPool>,
-        error_acc: proxy::error::ErrorAccumulator,
         worker_id: usize,
         destinations: Vec<crate::net::EndpointAddress>,
     },
@@ -235,7 +234,6 @@ fn process_packet(
             config,
             sessions,
             worker_id,
-            error_acc,
             destinations,
         } => {
             let received_at = UtcTimestamp::now();
@@ -250,7 +248,7 @@ fn process_packet(
                 source: packet.source,
             };
 
-            ds_packet.process(*worker_id, config, sessions, error_acc, destinations);
+            ds_packet.process(*worker_id, config, sessions, destinations);
         }
         PacketProcessorCtx::SessionPool { pool, port, .. } => {
             let mut last_received_at = None;

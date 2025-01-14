@@ -25,7 +25,6 @@ impl super::DownstreamReceiveWorkerConfig {
             port,
             config,
             sessions,
-            error_sender,
             buffer_pool,
         } = self;
 
@@ -39,7 +38,6 @@ impl super::DownstreamReceiveWorkerConfig {
                 io_uring::PacketProcessorCtx::Router {
                     config,
                     sessions,
-                    error_acc: super::super::error::ErrorAccumulator::new(error_sender),
                     worker_id,
                     destinations: Vec::with_capacity(1),
                 },
