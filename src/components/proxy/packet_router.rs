@@ -87,7 +87,16 @@ impl<P: PacketMut> DownstreamPacket<P> {
         let timer = metrics::processing_time(metrics::READ).start_timer();
         if let Err(error) = self.process_inner(config, sessions, destinations) {
             let discriminant = error.discriminant();
-            metrics::errors_total(metrics::READ, discriminant, &metrics::EMPTY).inc();
+
+            // We only want to mark potential I/O errors as errors, as they
+            // can indicate something wrong with the system, error variants
+            // from packets being bad aren't errors from quilkin's perspective.
+            if matches!(
+                error,
+                PipelineError::Io(_) | PipelineError::Filter(crate::filters::FilterError::Io(_))
+            ) {
+                metrics::errors_total(metrics::READ, discriminant, &metrics::EMPTY).inc();
+            }
             metrics::packets_dropped_total(metrics::READ, discriminant, &metrics::EMPTY).inc();
         }
 
