@@ -251,8 +251,7 @@ impl std::ops::Deref for PoolBuffer {
 impl std::ops::DerefMut for PoolBuffer {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
-        dbg!(self.len());
-        self.as_mut_slice(0..dbg!(self.inner.capacity()))
+        self.as_mut_slice(0..self.inner.capacity())
     }
 }
 
@@ -296,7 +295,7 @@ impl PacketMut for PoolBuffer {
 
     #[inline]
     fn as_mut_slice(&mut self) -> &mut [u8] {
-        self.as_mut_slice(0..dbg!(self.capacity()))
+        self.as_mut_slice(0..self.capacity())
     }
 
     #[inline]
