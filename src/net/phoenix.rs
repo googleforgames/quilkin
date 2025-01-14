@@ -130,7 +130,7 @@ pub fn spawn<M: Clone + Measurement + Sync + Send + 'static>(
                                             {
                                                 let error_display = err.to_string();
                                                 crate::metrics::phoenix_server_errors(&error_display).inc();
-                                                tracing::error!(
+                                                tracing::debug!(
                                                     "failed to respond to phoenix request: {error_display}"
                                                 );
                                             }
