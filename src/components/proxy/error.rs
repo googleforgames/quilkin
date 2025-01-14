@@ -22,8 +22,6 @@ pub enum PipelineError {
     Filter(crate::filters::FilterError),
     Session(super::sessions::SessionError),
     Io(std::io::Error),
-    ChannelClosed,
-    ChannelFull,
 }
 
 impl PipelineError {
@@ -33,8 +31,6 @@ impl PipelineError {
             Self::Filter(fe) => fe.discriminant(),
             Self::Session(_) => "session",
             Self::Io(_) => "io",
-            Self::ChannelClosed => "channel closed",
-            Self::ChannelFull => "channel full",
         }
     }
 }
@@ -48,8 +44,6 @@ impl fmt::Display for PipelineError {
             Self::Filter(fe) => write!(f, "filter {fe}"),
             Self::Session(session) => write!(f, "session error: {session}"),
             Self::Io(io) => write!(f, "OS level error: {io}"),
-            Self::ChannelClosed => f.write_str("channel closed"),
-            Self::ChannelFull => f.write_str("channel full"),
         }
     }
 }
@@ -73,8 +67,6 @@ impl PartialEq for PipelineError {
             (Self::Filter(fa), Self::Filter(fb)) => fa.eq(fb),
             (Self::Session(sa), Self::Session(sb)) => sa.eq(sb),
             (Self::Io(ia), Self::Io(ib)) => ia.kind().eq(&ib.kind()),
-            (Self::ChannelClosed, Self::ChannelClosed) => true,
-            (Self::ChannelFull, Self::ChannelFull) => true,
             _ => false,
         }
     }
@@ -91,7 +83,7 @@ impl Hash for PipelineError {
             Self::Filter(fe) => Hash::hash(&fe, state),
             Self::Session(se) => Hash::hash(&se, state),
             Self::Io(io) => Hash::hash(&io.kind(), state),
-            Self::NoUpstreamEndpoints | Self::ChannelClosed | Self::ChannelFull => {}
+            Self::NoUpstreamEndpoints => {}
         }
     }
 }
