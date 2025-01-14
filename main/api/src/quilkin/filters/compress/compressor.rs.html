@@ -236,7 +236,7 @@
 
                 <span class="kw">let </span><span class="kw-2">mut </span>encoder = imp.encoder();
 
-                <span class="kw">let </span>res = encoder.compress(input, <span class="kw-2">&amp;mut </span>encoded.as_mut_slice()[..<span class="macro">dbg!</span>(size)]);
+                <span class="kw">let </span>res = encoder.compress(input, <span class="kw-2">&amp;mut </span>encoded.as_mut_slice()[..size]);
                 imp.absorb(encoder);
 
                 encoded.set_len(res<span class="question-mark">?</span>);
