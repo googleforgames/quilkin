@@ -180,46 +180,7 @@
 <a href="#179" id="179">179</a>
 <a href="#180" id="180">180</a>
 <a href="#181" id="181">181</a>
-<a href="#182" id="182">182</a>
-<a href="#183" id="183">183</a>
-<a href="#184" id="184">184</a>
-<a href="#185" id="185">185</a>
-<a href="#186" id="186">186</a>
-<a href="#187" id="187">187</a>
-<a href="#188" id="188">188</a>
-<a href="#189" id="189">189</a>
-<a href="#190" id="190">190</a>
-<a href="#191" id="191">191</a>
-<a href="#192" id="192">192</a>
-<a href="#193" id="193">193</a>
-<a href="#194" id="194">194</a>
-<a href="#195" id="195">195</a>
-<a href="#196" id="196">196</a>
-<a href="#197" id="197">197</a>
-<a href="#198" id="198">198</a>
-<a href="#199" id="199">199</a>
-<a href="#200" id="200">200</a>
-<a href="#201" id="201">201</a>
-<a href="#202" id="202">202</a>
-<a href="#203" id="203">203</a>
-<a href="#204" id="204">204</a>
-<a href="#205" id="205">205</a>
-<a href="#206" id="206">206</a>
-<a href="#207" id="207">207</a>
-<a href="#208" id="208">208</a>
-<a href="#209" id="209">209</a>
-<a href="#210" id="210">210</a>
-<a href="#211" id="211">211</a>
-<a href="#212" id="212">212</a>
-<a href="#213" id="213">213</a>
-<a href="#214" id="214">214</a>
-<a href="#215" id="215">215</a>
-<a href="#216" id="216">216</a>
-<a href="#217" id="217">217</a>
-<a href="#218" id="218">218</a>
-<a href="#219" id="219">219</a>
-<a href="#220" id="220">220</a>
-<a href="#221" id="221">221</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#182" id="182">182</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -244,7 +205,6 @@
     metrics, Config,
 };
 <span class="kw">use </span>std::{net::SocketAddr, sync::Arc};
-<span class="kw">use </span>tokio::sync::mpsc;
 
 <span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)]
 </span><span class="kw">mod </span>io_uring;
@@ -297,7 +257,6 @@
         worker_id: usize,
         config: <span class="kw-2">&amp;</span>Arc&lt;Config&gt;,
         sessions: <span class="kw-2">&amp;</span>S,
-        error_acc: <span class="kw-2">&amp;mut </span><span class="kw">super</span>::error::ErrorAccumulator,
         destinations: <span class="kw-2">&amp;mut </span>Vec&lt;<span class="kw">crate</span>::net::EndpointAddress&gt;,
     ) {
         <span class="macro">tracing::trace!</span>(
@@ -308,17 +267,19 @@
         </span>);
 
         <span class="kw">let </span>timer = metrics::processing_time(metrics::READ).start_timer();
-        <span class="kw">match </span><span class="self">self</span>.process_inner(config, sessions, destinations) {
-            <span class="prelude-val">Ok</span>(()) =&gt; {
-                error_acc.maybe_send();
-            }
-            <span class="prelude-val">Err</span>(error) =&gt; {
-                <span class="kw">let </span>discriminant = error.discriminant();
-                metrics::errors_total(metrics::READ, discriminant, <span class="kw-2">&amp;</span>metrics::EMPTY).inc();
-                metrics::packets_dropped_total(metrics::READ, discriminant, <span class="kw-2">&amp;</span>metrics::EMPTY).inc();
+        <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = <span class="self">self</span>.process_inner(config, sessions, destinations) {
+            <span class="kw">let </span>discriminant = error.discriminant();
 
-                error_acc.push_error(error);
+            <span class="comment">// We only want to mark potential I/O errors as errors, as they
+            // can indicate something wrong with the system, error variants
+            // from packets being bad aren't errors from quilkin's perspective.
+            </span><span class="kw">if </span><span class="macro">matches!</span>(
+                error,
+                PipelineError::Io(<span class="kw">_</span>) | PipelineError::Filter(<span class="kw">crate</span>::filters::FilterError::Io(<span class="kw">_</span>))
+            ) {
+                metrics::errors_total(metrics::READ, discriminant, <span class="kw-2">&amp;</span>metrics::EMPTY).inc();
             }
+            metrics::packets_dropped_total(metrics::READ, discriminant, <span class="kw-2">&amp;</span>metrics::EMPTY).inc();
         }
 
         timer.stop_and_record();
@@ -370,7 +331,6 @@
     <span class="kw">pub </span>port: u16,
     <span class="kw">pub </span>config: Arc&lt;Config&gt;,
     <span class="kw">pub </span>sessions: Arc&lt;SessionPool&gt;,
-    <span class="kw">pub </span>error_sender: <span class="kw">super</span>::error::ErrorSender,
     <span class="kw">pub </span>buffer_pool: Arc&lt;<span class="kw">crate</span>::collections::BufferPool&gt;,
 }
 
@@ -386,8 +346,6 @@
     sessions: <span class="kw-2">&amp;</span>Arc&lt;SessionPool&gt;,
     buffer_pool: Arc&lt;<span class="kw">crate</span>::collections::BufferPool&gt;,
 ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
-    <span class="kw">let </span>(error_sender, <span class="kw-2">mut </span>error_receiver) = mpsc::channel(<span class="number">128</span>);
-
     <span class="kw">let </span>port = <span class="kw">crate</span>::net::socket_port(<span class="kw-2">&amp;</span>socket);
 
     <span class="kw">for </span>(worker_id, ws) <span class="kw">in </span>worker_sends.into_iter().enumerate() {
@@ -396,47 +354,11 @@
             port,
             config: config.clone(),
             sessions: sessions.clone(),
-            error_sender: error_sender.clone(),
             buffer_pool: buffer_pool.clone(),
         };
 
         worker.spawn(ws).<span class="kw">await</span><span class="question-mark">?</span>;
     }
-
-    drop(error_sender);
-
-    tokio::spawn(<span class="kw">async move </span>{
-        <span class="kw">let </span><span class="kw-2">mut </span>log_task = tokio::time::interval(std::time::Duration::from_secs(<span class="number">5</span>));
-
-        <span class="attr">#[allow(clippy::mutable_key_type)]
-        </span><span class="kw">let </span><span class="kw-2">mut </span>pipeline_errors = <span class="kw">super</span>::error::ErrorMap::default();
-
-        <span class="attr">#[allow(clippy::mutable_key_type)]
-        </span><span class="kw">fn </span>report(errors: <span class="kw-2">&amp;mut </span><span class="kw">super</span>::error::ErrorMap) {
-            <span class="kw">for </span>(error, instances) <span class="kw">in </span>errors.drain() {
-                <span class="macro">tracing::warn!</span>(%error, %instances, <span class="string">"pipeline report"</span>);
-            }
-        }
-
-        <span class="kw">loop </span>{
-            <span class="macro">tokio::select!</span> {
-                <span class="kw">_ </span>= log_task.tick() =&gt; {
-                    report(<span class="kw-2">&amp;mut </span>pipeline_errors);
-                }
-                received = error_receiver.recv() =&gt; {
-                    <span class="kw">let </span><span class="prelude-val">Some</span>(errors) = received <span class="kw">else </span>{
-                        report(<span class="kw-2">&amp;mut </span>pipeline_errors);
-                        <span class="macro">tracing::info!</span>(<span class="string">"pipeline reporting task closed"</span>);
-                        <span class="kw">return</span>;
-                    };
-
-                    <span class="kw">for </span>(k, v) <span class="kw">in </span>errors {
-                        <span class="kw-2">*</span>pipeline_errors.entry(k).or_default() += v;
-                    }
-                }
-            }
-        }
-    });
 
     <span class="prelude-val">Ok</span>(())
 }

@@ -87,101 +87,7 @@
 <a href="#86" id="86">86</a>
 <a href="#87" id="87">87</a>
 <a href="#88" id="88">88</a>
-<a href="#89" id="89">89</a>
-<a href="#90" id="90">90</a>
-<a href="#91" id="91">91</a>
-<a href="#92" id="92">92</a>
-<a href="#93" id="93">93</a>
-<a href="#94" id="94">94</a>
-<a href="#95" id="95">95</a>
-<a href="#96" id="96">96</a>
-<a href="#97" id="97">97</a>
-<a href="#98" id="98">98</a>
-<a href="#99" id="99">99</a>
-<a href="#100" id="100">100</a>
-<a href="#101" id="101">101</a>
-<a href="#102" id="102">102</a>
-<a href="#103" id="103">103</a>
-<a href="#104" id="104">104</a>
-<a href="#105" id="105">105</a>
-<a href="#106" id="106">106</a>
-<a href="#107" id="107">107</a>
-<a href="#108" id="108">108</a>
-<a href="#109" id="109">109</a>
-<a href="#110" id="110">110</a>
-<a href="#111" id="111">111</a>
-<a href="#112" id="112">112</a>
-<a href="#113" id="113">113</a>
-<a href="#114" id="114">114</a>
-<a href="#115" id="115">115</a>
-<a href="#116" id="116">116</a>
-<a href="#117" id="117">117</a>
-<a href="#118" id="118">118</a>
-<a href="#119" id="119">119</a>
-<a href="#120" id="120">120</a>
-<a href="#121" id="121">121</a>
-<a href="#122" id="122">122</a>
-<a href="#123" id="123">123</a>
-<a href="#124" id="124">124</a>
-<a href="#125" id="125">125</a>
-<a href="#126" id="126">126</a>
-<a href="#127" id="127">127</a>
-<a href="#128" id="128">128</a>
-<a href="#129" id="129">129</a>
-<a href="#130" id="130">130</a>
-<a href="#131" id="131">131</a>
-<a href="#132" id="132">132</a>
-<a href="#133" id="133">133</a>
-<a href="#134" id="134">134</a>
-<a href="#135" id="135">135</a>
-<a href="#136" id="136">136</a>
-<a href="#137" id="137">137</a>
-<a href="#138" id="138">138</a>
-<a href="#139" id="139">139</a>
-<a href="#140" id="140">140</a>
-<a href="#141" id="141">141</a>
-<a href="#142" id="142">142</a>
-<a href="#143" id="143">143</a>
-<a href="#144" id="144">144</a>
-<a href="#145" id="145">145</a>
-<a href="#146" id="146">146</a>
-<a href="#147" id="147">147</a>
-<a href="#148" id="148">148</a>
-<a href="#149" id="149">149</a>
-<a href="#150" id="150">150</a>
-<a href="#151" id="151">151</a>
-<a href="#152" id="152">152</a>
-<a href="#153" id="153">153</a>
-<a href="#154" id="154">154</a>
-<a href="#155" id="155">155</a>
-<a href="#156" id="156">156</a>
-<a href="#157" id="157">157</a>
-<a href="#158" id="158">158</a>
-<a href="#159" id="159">159</a>
-<a href="#160" id="160">160</a>
-<a href="#161" id="161">161</a>
-<a href="#162" id="162">162</a>
-<a href="#163" id="163">163</a>
-<a href="#164" id="164">164</a>
-<a href="#165" id="165">165</a>
-<a href="#166" id="166">166</a>
-<a href="#167" id="167">167</a>
-<a href="#168" id="168">168</a>
-<a href="#169" id="169">169</a>
-<a href="#170" id="170">170</a>
-<a href="#171" id="171">171</a>
-<a href="#172" id="172">172</a>
-<a href="#173" id="173">173</a>
-<a href="#174" id="174">174</a>
-<a href="#175" id="175">175</a>
-<a href="#176" id="176">176</a>
-<a href="#177" id="177">177</a>
-<a href="#178" id="178">178</a>
-<a href="#179" id="179">179</a>
-<a href="#180" id="180">180</a>
-<a href="#181" id="181">181</a>
-<a href="#182" id="182">182</a>
-<a href="#183" id="183">183</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#89" id="89">89</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -205,11 +111,6 @@
     Filter(<span class="kw">crate</span>::filters::FilterError),
     Session(<span class="kw">super</span>::sessions::SessionError),
     Io(std::io::Error),
-    ChannelClosed,
-    ChannelFull,
-    <span class="doccomment">/// This occurs if a receive task has accumulated so many errors that the
-    /// error details had to be dropped in order to reduce memory pressure
-    </span>AccumulatorOverflow,
 }
 
 <span class="kw">impl </span>PipelineError {
@@ -219,9 +120,6 @@
             <span class="self">Self</span>::Filter(fe) =&gt; fe.discriminant(),
             <span class="self">Self</span>::Session(<span class="kw">_</span>) =&gt; <span class="string">"session"</span>,
             <span class="self">Self</span>::Io(<span class="kw">_</span>) =&gt; <span class="string">"io"</span>,
-            <span class="self">Self</span>::ChannelClosed =&gt; <span class="string">"channel closed"</span>,
-            <span class="self">Self</span>::ChannelFull =&gt; <span class="string">"channel full"</span>,
-            <span class="self">Self</span>::AccumulatorOverflow =&gt; <span class="string">"error accumulator overflow"</span>,
         }
     }
 }
@@ -235,9 +133,6 @@
             <span class="self">Self</span>::Filter(fe) =&gt; <span class="macro">write!</span>(f, <span class="string">"filter {fe}"</span>),
             <span class="self">Self</span>::Session(session) =&gt; <span class="macro">write!</span>(f, <span class="string">"session error: {session}"</span>),
             <span class="self">Self</span>::Io(io) =&gt; <span class="macro">write!</span>(f, <span class="string">"OS level error: {io}"</span>),
-            <span class="self">Self</span>::ChannelClosed =&gt; f.write_str(<span class="string">"channel closed"</span>),
-            <span class="self">Self</span>::ChannelFull =&gt; f.write_str(<span class="string">"channel full"</span>),
-            <span class="self">Self</span>::AccumulatorOverflow =&gt; f.write_str(<span class="string">"error accumulator overflow"</span>),
         }
     }
 }
@@ -261,9 +156,6 @@
             (<span class="self">Self</span>::Filter(fa), <span class="self">Self</span>::Filter(fb)) =&gt; fa.eq(fb),
             (<span class="self">Self</span>::Session(sa), <span class="self">Self</span>::Session(sb)) =&gt; sa.eq(sb),
             (<span class="self">Self</span>::Io(ia), <span class="self">Self</span>::Io(ib)) =&gt; ia.kind().eq(<span class="kw-2">&amp;</span>ib.kind()),
-            (<span class="self">Self</span>::ChannelClosed, <span class="self">Self</span>::ChannelClosed) =&gt; <span class="bool-val">true</span>,
-            (<span class="self">Self</span>::ChannelFull, <span class="self">Self</span>::ChannelFull) =&gt; <span class="bool-val">true</span>,
-            (<span class="self">Self</span>::AccumulatorOverflow, <span class="self">Self</span>::AccumulatorOverflow) =&gt; <span class="bool-val">true</span>,
             <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
         }
     }
@@ -280,87 +172,7 @@
             <span class="self">Self</span>::Filter(fe) =&gt; Hash::hash(<span class="kw-2">&amp;</span>fe, state),
             <span class="self">Self</span>::Session(se) =&gt; Hash::hash(<span class="kw-2">&amp;</span>se, state),
             <span class="self">Self</span>::Io(io) =&gt; Hash::hash(<span class="kw-2">&amp;</span>io.kind(), state),
-            <span class="self">Self</span>::NoUpstreamEndpoints
-            | <span class="self">Self</span>::ChannelClosed
-            | <span class="self">Self</span>::ChannelFull
-            | <span class="self">Self</span>::AccumulatorOverflow =&gt; {}
-        }
-    }
-}
-
-<span class="kw">pub type </span>ErrorMap = gxhash::HashMap&lt;PipelineError, u64&gt;;
-
-<span class="kw">pub type </span>ErrorSender = tokio::sync::mpsc::Sender&lt;ErrorMap&gt;;
-<span class="comment">//pub type ErrorReceiver = tokio::sync::mpsc::Receiver&lt;ErrorMap&gt;;
-
-</span><span class="doccomment">/// The soft cap of errors after which we try to send them to the collation task
-</span><span class="kw">const </span>CAP_ERRORS: usize = <span class="number">10 </span>* <span class="number">1024</span>;
-<span class="doccomment">/// The maximum errors that can be accumulated before being dropped and lost
-</span><span class="kw">const </span>MAX_ERRORS: usize = <span class="number">100 </span>* <span class="number">1024</span>;
-<span class="kw">const </span>MAX_ELAPSED: std::time::Duration = std::time::Duration::from_secs(<span class="number">5</span>);
-
-<span class="kw">use </span>std::time::Instant;
-
-<span class="doccomment">/// Accumulates errors on downstream receiver tasks before sending them for collation
-///
-/// If many errors occur and
-</span><span class="kw">pub struct </span>ErrorAccumulator {
-    map: ErrorMap,
-    tx: ErrorSender,
-    oldest: Instant,
-}
-
-<span class="kw">impl </span>ErrorAccumulator {
-    <span class="kw">pub fn </span>new(tx: ErrorSender) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            map: &lt;<span class="kw">_</span>&gt;::default(),
-            tx,
-            oldest: Instant::now(),
-        }
-    }
-
-    <span class="kw">pub fn </span>maybe_send(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; bool {
-        <span class="kw">if </span><span class="self">self</span>.map.is_empty() || <span class="self">self</span>.oldest.elapsed() &lt; MAX_ELAPSED {
-            <span class="kw">return </span><span class="bool-val">false</span>;
-        }
-
-        <span class="self">self</span>.do_send()
-    }
-
-    <span class="kw">fn </span>do_send(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; bool {
-        <span class="kw">let </span><span class="prelude-val">Ok</span>(permit) = <span class="self">self</span>.tx.try_reserve() <span class="kw">else </span>{
-            <span class="kw">return </span><span class="bool-val">false</span>;
-        };
-
-        <span class="attr">#[allow(clippy::mutable_key_type)]
-        </span><span class="kw">let </span>map = std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.map);
-        permit.send(map);
-        <span class="bool-val">true
-    </span>}
-
-    <span class="kw">pub fn </span>push_error(<span class="kw-2">&amp;mut </span><span class="self">self</span>, error: PipelineError) {
-        <span class="kw">if </span><span class="self">self</span>.map.is_empty() {
-            <span class="self">self</span>.oldest = Instant::now();
-        }
-
-        <span class="kw-2">*</span><span class="self">self</span>.map.entry(error).or_default() += <span class="number">1</span>;
-
-        <span class="kw">if </span><span class="self">self</span>.map.len() &gt;= CAP_ERRORS {
-            <span class="kw">if </span><span class="self">self</span>.do_send() {
-                <span class="kw">return</span>;
-            }
-
-            <span class="comment">// If we failed to send and we've reach our max capacity, reset and
-            // note the fact that we did so
-            </span><span class="kw">if </span><span class="self">self</span>.map.len() &gt;= MAX_ERRORS {
-                <span class="self">self</span>.map.clear();
-                <span class="self">self</span>.map.insert(PipelineError::AccumulatorOverflow, <span class="number">1</span>);
-                <span class="self">self</span>.oldest = Instant::now();
-            }
-        }
-
-        <span class="kw">if </span><span class="self">self</span>.oldest.elapsed() &gt;= MAX_ELAPSED {
-            <span class="self">self</span>.do_send();
+            <span class="self">Self</span>::NoUpstreamEndpoints =&gt; {}
         }
     }
 }
