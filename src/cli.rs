@@ -51,20 +51,35 @@ pub mod relay;
 const ETC_CONFIG_PATH: &str = "/etc/quilkin/quilkin.yaml";
 const PORT_ENV_VAR: &str = "QUILKIN_PORT";
 
-/// The Command-Line Interface for Quilkin.
+#[derive(Debug, clap::Parser)]
+#[command(next_help_heading = "Administration Options")]
+pub struct AdminCli {
+    /// Whether to spawn an administration server (metrics, profiling, etc).
+    #[arg(
+        long = "admin.enabled",
+        env = "QUILKIN_ADMIN_ENABLED",
+        value_name = "BOOL",
+        num_args(0..=1),
+        action=clap::ArgAction::Set,
+        default_missing_value = "true",
+        default_value_t = true
+    )]
+    enabled: bool,
+    /// The address to bind for the admin server.
+    #[clap(long = "admin.address", env = "QUILKIN_ADMIN_ADDRESS")]
+    pub address: Option<std::net::SocketAddr>,
+}
+
+/// Quilkin: a non-transparent UDP proxy specifically designed for use with
+/// large scale multiplayer dedicated game servers deployments, to
+/// ensure security, access control, telemetry data, metrics and more.
 #[derive(Debug, clap::Parser)]
 #[command(version)]
 #[non_exhaustive]
 pub struct Cli {
-    /// Whether to spawn the admin server or not.
-    #[clap(env, long)]
-    pub no_admin: bool,
     /// The path to the configuration file for the Quilkin instance.
     #[clap(short, long, env = "QUILKIN_CONFIG", default_value = "quilkin.yaml")]
     pub config: PathBuf,
-    /// The port to bind for the admin server
-    #[clap(long, env = "QUILKIN_ADMIN_ADDRESS")]
-    pub admin_address: Option<std::net::SocketAddr>,
     /// Whether Quilkin will report any results to stdout/stderr.
     #[clap(short, long, env)]
     pub quiet: bool,
@@ -77,6 +92,8 @@ pub struct Cli {
      .map(|s| s.parse::<LogFormats>().unwrap()),
      )]
     pub log_format: LogFormats,
+    #[command(flatten)]
+    pub admin: AdminCli,
 }
 
 /// The various log format options
@@ -210,8 +227,8 @@ impl Cli {
             None => Config::default_non_agent(),
         });
 
-        if !self.no_admin {
-            mode.server(config.clone(), self.admin_address);
+        if self.admin.enabled {
+            mode.server(config.clone(), self.admin.address);
         }
 
         let (shutdown_tx, shutdown_rx) = crate::make_shutdown_channel(Default::default());
