@@ -53,7 +53,7 @@ async fn agent_ping() {
     let (_tx, rx) = quilkin::make_shutdown_channel(quilkin::ShutdownKind::Testing);
     tokio::spawn(async move {
         agent
-            .run(server_config, Default::default(), rx)
+            .run(None, server_config, Default::default(), rx)
             .await
             .expect("Agent should run")
     });

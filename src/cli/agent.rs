@@ -33,18 +33,6 @@ pub struct Agent {
     /// One or more `quilkin relay` endpoints to push configuration changes to.
     #[clap(short, long, env = "QUILKIN_MANAGEMENT_SERVER")]
     pub relay: Vec<tonic::transport::Endpoint>,
-    /// The `region` to set in the cluster map for any provider
-    /// endpoints discovered.
-    #[clap(long, env = "QUILKIN_REGION")]
-    pub region: Option<String>,
-    /// The `zone` in the `region` to set in the cluster map for any provider
-    /// endpoints discovered.
-    #[clap(long, env = "QUILKIN_ZONE")]
-    pub zone: Option<String>,
-    /// The `sub_zone` in the `zone` in the `region` to set in the cluster map
-    /// for any provider endpoints discovered.
-    #[clap(long, env = "QUILKIN_SUB_ZONE")]
-    pub sub_zone: Option<String>,
     /// The configuration source for a management server.
     #[clap(subcommand)]
     pub provider: Option<crate::config::Providers>,
@@ -80,9 +68,6 @@ impl Default for Agent {
         Self {
             qcmp_port: PORT,
             relay: <_>::default(),
-            region: <_>::default(),
-            zone: <_>::default(),
-            sub_zone: <_>::default(),
             provider: <_>::default(),
             icao_code: <_>::default(),
             address_type: None,
@@ -95,18 +80,11 @@ impl Agent {
     #[tracing::instrument(skip_all)]
     pub async fn run(
         self,
+        locality: Option<crate::net::endpoint::Locality>,
         config: Arc<Config>,
         ready: Ready,
         shutdown_rx: crate::ShutdownRx,
     ) -> crate::Result<()> {
-        let locality = self.region.map(|region| {
-            crate::net::endpoint::Locality::new(
-                region,
-                self.zone.unwrap_or_default(),
-                self.sub_zone.unwrap_or_default(),
-            )
-        });
-
         let qcmp_socket = crate::net::raw_socket_with_reuse(self.qcmp_port)?;
         let icao_code = Some(self.icao_code);
 

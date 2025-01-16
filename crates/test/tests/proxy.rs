@@ -1,6 +1,5 @@
 use qt::*;
 use quilkin::{components::proxy, net, test::TestConfig};
-use tracing::Instrument as _;
 
 trace_test!(server, {
     let mut sc = qt::sandbox_config!();

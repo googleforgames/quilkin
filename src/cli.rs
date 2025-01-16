@@ -70,6 +70,31 @@ pub struct AdminCli {
     pub address: Option<std::net::SocketAddr>,
 }
 
+#[derive(Debug, clap::Parser)]
+#[command(next_help_heading = "Locality Options")]
+pub struct LocalityCli {
+    /// The `region` to set in the cluster map for any provider
+    /// endpoints discovered.
+    #[clap(long = "locality.region", env = "QUILKIN_LOCALITY_REGION")]
+    pub region: Option<String>,
+    /// The `zone` in the `region` to set in the cluster map for any provider
+    /// endpoints discovered.
+    #[clap(
+        long = "locality.region.zone",
+        requires("region"),
+        env = "QUILKIN_LOCALITY_ZONE"
+    )]
+    pub zone: Option<String>,
+    /// The `sub_zone` in the `zone` in the `region` to set in the cluster map
+    /// for any provider endpoints discovered.
+    #[clap(
+        long = "locality.region.sub_zone",
+        requires("zone"),
+        env = "QUILKIN_LOCALITY_SUB_ZONE"
+    )]
+    pub sub_zone: Option<String>,
+}
+
 /// Quilkin: a non-transparent UDP proxy specifically designed for use with
 /// large scale multiplayer dedicated game servers deployments, to
 /// ensure security, access control, telemetry data, metrics and more.
@@ -94,6 +119,8 @@ pub struct Cli {
     pub log_format: LogFormats,
     #[command(flatten)]
     pub admin: AdminCli,
+    #[command(flatten)]
+    pub locality: LocalityCli,
 }
 
 /// The various log format options
@@ -231,6 +258,14 @@ impl Cli {
             mode.server(config.clone(), self.admin.address);
         }
 
+        let locality = self.locality.region.map(|region| {
+            crate::net::endpoint::Locality::new(
+                region,
+                self.locality.zone.unwrap_or_default(),
+                self.locality.sub_zone.unwrap_or_default(),
+            )
+        });
+
         let (shutdown_tx, shutdown_rx) = crate::make_shutdown_channel(Default::default());
         crate::alloc::spawn_heap_stats_updates(
             std::time::Duration::from_secs(10),
@@ -261,13 +296,13 @@ impl Cli {
 
         match (self.command, mode) {
             (Commands::Agent(agent), Admin::Agent(ready)) => {
-                agent.run(config, ready, shutdown_rx).await
+                agent.run(locality, config, ready, shutdown_rx).await
             }
             (Commands::Proxy(runner), Admin::Proxy(ready)) => {
                 runner.run(config, ready, tx, shutdown_rx).await
             }
             (Commands::Manage(manager), Admin::Manage(ready)) => {
-                manager.run(config, ready, shutdown_rx).await
+                manager.run(locality, config, ready, shutdown_rx).await
             }
             (Commands::Relay(relay), Admin::Relay(ready)) => {
                 relay.run(config, ready, shutdown_rx).await
