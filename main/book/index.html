@@ -197,7 +197,7 @@ proxy. To see a basic usage of the command-line interface run through the
 for deploying quilkin for your game network.</li>
 </ul>
 <pre><code class="language-shell">$ quilkin --help
-The Command-Line Interface for Quilkin
+Quilkin: a non-transparent UDP proxy specifically designed for use with large scale multiplayer dedicated game servers deployments, to ensure security, access control, telemetry data, metrics and more
 
 Usage: quilkin [OPTIONS] &lt;COMMAND&gt;
 
@@ -211,13 +211,15 @@ Commands:
   help                    Print this message or the help of the given subcommand(s)
 
 Options:
-      --no-admin                       Whether to spawn the admin server or not [env: NO_ADMIN=]
-  -c, --config &lt;CONFIG&gt;                The path to the configuration file for the Quilkin instance [env: QUILKIN_CONFIG=] [default: quilkin.yaml]
-      --admin-address &lt;ADMIN_ADDRESS&gt;  The port to bind for the admin server [env: QUILKIN_ADMIN_ADDRESS=]
-  -q, --quiet                          Whether Quilkin will report any results to stdout/stderr [env: QUIET=]
-      --log-format &lt;LOG_FORMAT&gt;        [default: auto] [possible values: auto, json, plain, pretty]
-  -h, --help                           Print help
-  -V, --version                        Print version
+  -c, --config &lt;CONFIG&gt;          The path to the configuration file for the Quilkin instance [env: QUILKIN_CONFIG=] [default: quilkin.yaml]
+  -q, --quiet                    Whether Quilkin will report any results to stdout/stderr [env: QUIET=]
+      --log-format &lt;LOG_FORMAT&gt;  [default: auto] [possible values: auto, json, plain, pretty]
+  -h, --help                     Print help
+  -V, --version                  Print version
+
+Administration Options:
+      --admin.enabled [&lt;BOOL&gt;]   Whether to spawn an administration server (metrics, profiling, etc) [env: QUILKIN_ADMIN_ENABLED=] [default: true] [possible values: true, false]
+      --admin.address &lt;ADDRESS&gt;  The address to bind for the admin server [env: QUILKIN_ADMIN_ADDRESS=]
 </code></pre>
 
                     </main>

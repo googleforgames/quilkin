@@ -282,7 +282,24 @@
 <a href="#281" id="281">281</a>
 <a href="#282" id="282">282</a>
 <a href="#283" id="283">283</a>
-<a href="#284" id="284">284</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -335,20 +352,35 @@
 <span class="kw">const </span>ETC_CONFIG_PATH: <span class="kw-2">&amp;</span>str = <span class="string">"/etc/quilkin/quilkin.yaml"</span>;
 <span class="kw">const </span>PORT_ENV_VAR: <span class="kw-2">&amp;</span>str = <span class="string">"QUILKIN_PORT"</span>;
 
-<span class="doccomment">/// The Command-Line Interface for Quilkin.
+<span class="attr">#[derive(Debug, clap::Parser)]
+#[command(next_help_heading = <span class="string">"Administration Options"</span>)]
+</span><span class="kw">pub struct </span>AdminCli {
+    <span class="doccomment">/// Whether to spawn an administration server (metrics, profiling, etc).
+    </span><span class="attr">#[arg(
+        long = <span class="string">"admin.enabled"</span>,
+        env = <span class="string">"QUILKIN_ADMIN_ENABLED"</span>,
+        value_name = <span class="string">"BOOL"</span>,
+        num_args(<span class="number">0</span>..=<span class="number">1</span>),
+        action=clap::ArgAction::Set,
+        default_missing_value = <span class="string">"true"</span>,
+        default_value_t = <span class="bool-val">true
+    </span>)]
+    </span>enabled: bool,
+    <span class="doccomment">/// The address to bind for the admin server.
+    </span><span class="attr">#[clap(long = <span class="string">"admin.address"</span>, env = <span class="string">"QUILKIN_ADMIN_ADDRESS"</span>)]
+    </span><span class="kw">pub </span>address: <span class="prelude-ty">Option</span>&lt;std::net::SocketAddr&gt;,
+}
+
+<span class="doccomment">/// Quilkin: a non-transparent UDP proxy specifically designed for use with
+/// large scale multiplayer dedicated game servers deployments, to
+/// ensure security, access control, telemetry data, metrics and more.
 </span><span class="attr">#[derive(Debug, clap::Parser)]
 #[command(version)]
 #[non_exhaustive]
 </span><span class="kw">pub struct </span>Cli {
-    <span class="doccomment">/// Whether to spawn the admin server or not.
-    </span><span class="attr">#[clap(env, long)]
-    </span><span class="kw">pub </span>no_admin: bool,
     <span class="doccomment">/// The path to the configuration file for the Quilkin instance.
     </span><span class="attr">#[clap(short, long, env = <span class="string">"QUILKIN_CONFIG"</span>, default_value = <span class="string">"quilkin.yaml"</span>)]
     </span><span class="kw">pub </span>config: PathBuf,
-    <span class="doccomment">/// The port to bind for the admin server
-    </span><span class="attr">#[clap(long, env = <span class="string">"QUILKIN_ADMIN_ADDRESS"</span>)]
-    </span><span class="kw">pub </span>admin_address: <span class="prelude-ty">Option</span>&lt;std::net::SocketAddr&gt;,
     <span class="doccomment">/// Whether Quilkin will report any results to stdout/stderr.
     </span><span class="attr">#[clap(short, long, env)]
     </span><span class="kw">pub </span>quiet: bool,
@@ -361,6 +393,8 @@
      .map(|s| s.parse::&lt;LogFormats&gt;().unwrap()),
      )]
     <span class="kw">pub </span>log_format: LogFormats,
+    <span class="attr">#[command(flatten)]
+    </span><span class="kw">pub </span>admin: AdminCli,
 }
 
 <span class="doccomment">/// The various log format options
@@ -494,8 +528,8 @@
             <span class="prelude-val">None </span>=&gt; Config::default_non_agent(),
         });
 
-        <span class="kw">if </span>!<span class="self">self</span>.no_admin {
-            mode.server(config.clone(), <span class="self">self</span>.admin_address);
+        <span class="kw">if </span><span class="self">self</span>.admin.enabled {
+            mode.server(config.clone(), <span class="self">self</span>.admin.address);
         }
 
         <span class="kw">let </span>(shutdown_tx, shutdown_rx) = <span class="kw">crate</span>::make_shutdown_channel(Default::default());
