@@ -220,6 +220,14 @@ Options:
 Administration Options:
       --admin.enabled [&lt;BOOL&gt;]   Whether to spawn an administration server (metrics, profiling, etc) [env: QUILKIN_ADMIN_ENABLED=] [default: true] [possible values: true, false]
       --admin.address &lt;ADDRESS&gt;  The address to bind for the admin server [env: QUILKIN_ADMIN_ADDRESS=]
+
+Locality Options:
+      --locality.region &lt;REGION&gt;
+          The `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_LOCALITY_REGION=]
+      --locality.region.zone &lt;ZONE&gt;
+          The `zone` in the `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_LOCALITY_ZONE=]
+      --locality.region.sub_zone &lt;SUB_ZONE&gt;
+          The `sub_zone` in the `zone` in the `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_LOCALITY_SUB_ZONE=]
 </code></pre>
 
                     </main>

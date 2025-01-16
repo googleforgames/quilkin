@@ -107,29 +107,7 @@
 <a href="#106" id="106">106</a>
 <a href="#107" id="107">107</a>
 <a href="#108" id="108">108</a>
-<a href="#109" id="109">109</a>
-<a href="#110" id="110">110</a>
-<a href="#111" id="111">111</a>
-<a href="#112" id="112">112</a>
-<a href="#113" id="113">113</a>
-<a href="#114" id="114">114</a>
-<a href="#115" id="115">115</a>
-<a href="#116" id="116">116</a>
-<a href="#117" id="117">117</a>
-<a href="#118" id="118">118</a>
-<a href="#119" id="119">119</a>
-<a href="#120" id="120">120</a>
-<a href="#121" id="121">121</a>
-<a href="#122" id="122">122</a>
-<a href="#123" id="123">123</a>
-<a href="#124" id="124">124</a>
-<a href="#125" id="125">125</a>
-<a href="#126" id="126">126</a>
-<a href="#127" id="127">127</a>
-<a href="#128" id="128">128</a>
-<a href="#129" id="129">129</a>
-<a href="#130" id="130">130</a>
-<a href="#131" id="131">131</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#109" id="109">109</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -164,18 +142,6 @@
     <span class="doccomment">/// One or more `quilkin relay` endpoints to push configuration changes to.
     </span><span class="attr">#[clap(short, long, env = <span class="string">"QUILKIN_MANAGEMENT_SERVER"</span>)]
     </span><span class="kw">pub </span>relay: Vec&lt;tonic::transport::Endpoint&gt;,
-    <span class="doccomment">/// The `region` to set in the cluster map for any provider
-    /// endpoints discovered.
-    </span><span class="attr">#[clap(long, env = <span class="string">"QUILKIN_REGION"</span>)]
-    </span><span class="kw">pub </span>region: <span class="prelude-ty">Option</span>&lt;String&gt;,
-    <span class="doccomment">/// The `zone` in the `region` to set in the cluster map for any provider
-    /// endpoints discovered.
-    </span><span class="attr">#[clap(long, env = <span class="string">"QUILKIN_ZONE"</span>)]
-    </span><span class="kw">pub </span>zone: <span class="prelude-ty">Option</span>&lt;String&gt;,
-    <span class="doccomment">/// The `sub_zone` in the `zone` in the `region` to set in the cluster map
-    /// for any provider endpoints discovered.
-    </span><span class="attr">#[clap(long, env = <span class="string">"QUILKIN_SUB_ZONE"</span>)]
-    </span><span class="kw">pub </span>sub_zone: <span class="prelude-ty">Option</span>&lt;String&gt;,
     <span class="doccomment">/// The configuration source for a management server.
     </span><span class="attr">#[clap(subcommand)]
     </span><span class="kw">pub </span>provider: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::config::Providers&gt;,
@@ -211,9 +177,6 @@
         <span class="self">Self </span>{
             qcmp_port: PORT,
             relay: &lt;<span class="kw">_</span>&gt;::default(),
-            region: &lt;<span class="kw">_</span>&gt;::default(),
-            zone: &lt;<span class="kw">_</span>&gt;::default(),
-            sub_zone: &lt;<span class="kw">_</span>&gt;::default(),
             provider: &lt;<span class="kw">_</span>&gt;::default(),
             icao_code: &lt;<span class="kw">_</span>&gt;::default(),
             address_type: <span class="prelude-val">None</span>,
@@ -226,18 +189,11 @@
     <span class="attr">#[tracing::instrument(skip_all)]
     </span><span class="kw">pub async fn </span>run(
         <span class="self">self</span>,
+        locality: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::net::endpoint::Locality&gt;,
         config: Arc&lt;Config&gt;,
         ready: Ready,
         shutdown_rx: <span class="kw">crate</span>::ShutdownRx,
     ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
-        <span class="kw">let </span>locality = <span class="self">self</span>.region.map(|region| {
-            <span class="kw">crate</span>::net::endpoint::Locality::new(
-                region,
-                <span class="self">self</span>.zone.unwrap_or_default(),
-                <span class="self">self</span>.sub_zone.unwrap_or_default(),
-            )
-        });
-
         <span class="kw">let </span>qcmp_socket = <span class="kw">crate</span>::net::raw_socket_with_reuse(<span class="self">self</span>.qcmp_port)<span class="question-mark">?</span>;
         <span class="kw">let </span>icao_code = <span class="prelude-val">Some</span>(<span class="self">self</span>.icao_code);
 

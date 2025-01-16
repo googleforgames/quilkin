@@ -221,6 +221,14 @@ Options:
 Administration Options:
       --admin.enabled [&lt;BOOL&gt;]   Whether to spawn an administration server (metrics, profiling, etc) [env: QUILKIN_ADMIN_ENABLED=] [default: true] [possible values: true, false]
       --admin.address &lt;ADDRESS&gt;  The address to bind for the admin server [env: QUILKIN_ADMIN_ADDRESS=]
+
+Locality Options:
+      --locality.region &lt;REGION&gt;
+          The `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_LOCALITY_REGION=]
+      --locality.region.zone &lt;ZONE&gt;
+          The `zone` in the `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_LOCALITY_ZONE=]
+      --locality.region.sub_zone &lt;SUB_ZONE&gt;
+          The `sub_zone` in the `zone` in the `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_LOCALITY_SUB_ZONE=]
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="installation"><a class="header" href="#installation">Installation</a></h1>
 <p>There are variety of automated and manual methods for installing Quilkin onto
@@ -232,7 +240,7 @@ your local machine through <a href="installation.html#cargo">Cargo</a>.</p>
 <dl>
   <dt><strong>Source / Method</strong></dt>
   <dd>
-<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.10.0-dev-5c447e6
+<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.10.0-dev-a4b302a
 </code></pre>
   </dd>
   <dt><strong>Notes</strong></dt>
@@ -2433,9 +2441,6 @@ Commands:
 Options:
   -r, --relay &lt;RELAY&gt;                One or more `quilkin relay` endpoints to push configuration changes to [env: QUILKIN_MANAGEMENT_SERVER=]
   -p, --port &lt;PORT&gt;                  The TCP port to listen to, to serve discovery responses [env: QUILKIN_PORT=] [default: 7800]
-      --region &lt;REGION&gt;              The `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_REGION=]
-      --zone &lt;ZONE&gt;                  The `zone` in the `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_ZONE=]
-      --sub-zone &lt;SUB_ZONE&gt;          The `sub_zone` in the `zone` in the `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_SUB_ZONE=]
       --address-type &lt;ADDRESS_TYPE&gt;  If specified, filters the available gameserver addresses to the one that matches the specified type
       --ip-kind &lt;IP_KIND&gt;            If specified, additionally filters the gameserver address by its ip kind [default: any] [possible values: v4, v6, any]
   -h, --help                         Print help
@@ -3256,9 +3261,6 @@ Commands:
 Options:
   -q, --qcmp-port &lt;QCMP_PORT&gt;        Port for QCMP service [env: QCMP_PORT=] [default: 7600]
   -r, --relay &lt;RELAY&gt;                One or more `quilkin relay` endpoints to push configuration changes to [env: QUILKIN_MANAGEMENT_SERVER=]
-      --region &lt;REGION&gt;              The `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_REGION=]
-      --zone &lt;ZONE&gt;                  The `zone` in the `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_ZONE=]
-      --sub-zone &lt;SUB_ZONE&gt;          The `sub_zone` in the `zone` in the `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_SUB_ZONE=]
       --address-type &lt;ADDRESS_TYPE&gt;  If specified, filters the available gameserver addresses to the one that matches the specified type
       --ip-kind &lt;IP_KIND&gt;            If specified, additionally filters the gameserver address by its ip kind [possible values: v4, v6, any]
   -i, --icao-code &lt;ICAO_CODE&gt;        The ICAO code for the agent [env: ICAO_CODE=] [default: XXXX]
