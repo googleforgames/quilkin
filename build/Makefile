@@ -36,8 +36,10 @@ else
 endif
 
 # Set this value if you want to use an external registry
-REPOSITORY ?= ""
+REPOSITORY ?= "tocakaboing/"
 IMAGE_TAG ?= ${REPOSITORY}quilkin:$(package_version)
+IMAGE_TAG_ARM64 ?= ${REPOSITORY}quilkin-arm64:$(package_version)
+IMAGE_TAG_AMD64 ?= ${REPOSITORY}quilkin-amd64:$(package_version)
 PREV_IMAGE_TAG ?= us-docker.pkg.dev/quilkin/release/quilkin:0.8.0
 MINIKUBE_PROFILE ?= quilkin
 CARGO_TARGET_DIR ?= /workspace/target/build-image
@@ -163,8 +165,12 @@ else
 endif
 	docker run --rm $(common_rust_args) \
 		--entrypoint=bash $(BUILD_IMAGE_TAG) -c './image/archive_dependencies.sh'
-	docker buildx create --use --driver=docker-container --name container --platform=linux/amd64,linux/arm64
-	docker buildx build --platform=linux/amd64,linux/arm64 -t $(IMAGE_TAG) -f $(project_path)/image/Dockerfile $(project_path) --builder=container --push
+	docker buildx build --platform=linux/amd64 --build-arg TARGETPLATFORM=linux/amd64 --provenance false -t $(IMAGE_TAG_AMD64) -f $(project_path)/image/Dockerfile $(project_path) 
+	docker buildx build --platform=linux/arm64 --build-arg TARGETPLATFORM=linux/arm64 --provenance false -t $(IMAGE_TAG_ARM64) -f $(project_path)/image/Dockerfile $(project_path) 
+	docker push $(IMAGE_TAG_AMD64)
+	docker push $(IMAGE_TAG_ARM64)
+	docker manifest create $(IMAGE_TAG) $(IMAGE_TAG_AMD64) $(IMAGE_TAG_ARM64)
+	docker manifest push $(IMAGE_TAG)
 
 # Generates the HTML report of all open source licence dependencies
 build-licence-report: ensure-build-image
