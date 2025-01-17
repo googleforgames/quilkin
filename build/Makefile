@@ -36,7 +36,7 @@ else
 endif
 
 # Set this value if you want to use an external registry
-REPOSITORY ?= "tocakaboing/"
+REPOSITORY ?= ""
 IMAGE_TAG ?= ${REPOSITORY}quilkin:$(package_version)
 IMAGE_TAG_ARM64 ?= ${REPOSITORY}quilkin-arm64:$(package_version)
 IMAGE_TAG_AMD64 ?= ${REPOSITORY}quilkin-amd64:$(package_version)
