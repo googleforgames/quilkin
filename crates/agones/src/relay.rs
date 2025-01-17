@@ -263,6 +263,8 @@ mod tests {
 
         // Setup the relay
         let args = [
+            "--service.mds",
+            "--service.xds",
             "relay",
             "agones",
             "--config-namespace",
@@ -347,6 +349,7 @@ mod tests {
 
         // agent deployment
         let args = [
+            "--service.qcmp",
             "agent",
             "--relay",
             &format!("http://{relay_name}:7900"),

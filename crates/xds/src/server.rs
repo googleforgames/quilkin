@@ -79,7 +79,7 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
         let server = AggregatedDiscoveryServiceServer::new(self)
             .max_encoding_message_size(crate::config::max_grpc_message_size());
         let server = tonic::transport::Server::builder().add_service(server);
-        tracing::info!("serving management server on port `{}`", listener.port());
+        tracing::info!(port = listener.port(), "publishing xDS server");
         Ok(server
             .serve_with_incoming(listener.into_stream()?)
             .map_err(From::from))
@@ -98,7 +98,7 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
         let server = AggregatedControlPlaneDiscoveryServiceServer::new(self)
             .max_encoding_message_size(crate::config::max_grpc_message_size());
         let server = tonic::transport::Server::builder().add_service(server);
-        tracing::info!("serving relay server on port `{}`", listener.port());
+        tracing::info!(port = listener.port(), "publishing mDS server");
         Ok(server
             .serve_with_incoming(listener.into_stream()?)
             .map_err(From::from))

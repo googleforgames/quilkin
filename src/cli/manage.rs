@@ -17,8 +17,6 @@
 use crate::components::manage;
 pub use manage::Ready;
 
-define_port!(7800);
-
 /// Runs Quilkin as a xDS management server, using `provider` as
 /// a configuration source.
 #[derive(clap::Args, Clone, Debug)]
@@ -26,9 +24,6 @@ pub struct Manage {
     /// One or more `quilkin relay` endpoints to push configuration changes to.
     #[clap(short, long, env = "QUILKIN_MANAGEMENT_SERVER")]
     pub relay: Vec<tonic::transport::Endpoint>,
-    /// The TCP port to listen to, to serve discovery responses.
-    #[clap(short, long, env = super::PORT_ENV_VAR, default_value_t = PORT)]
-    pub port: u16,
     /// The configuration source for a management server.
     #[clap(subcommand)]
     pub provider: crate::config::Providers,
@@ -50,13 +45,10 @@ impl Manage {
         ready: Ready,
         shutdown_rx: crate::ShutdownRx,
     ) -> crate::Result<()> {
-        let listener = crate::net::TcpListener::bind(Some(self.port))?;
-
         manage::Manage {
             locality,
             provider: self.provider,
             relay_servers: self.relay,
-            listener,
             address_selector: self.address_type.map(|at| crate::config::AddressSelector {
                 name: at,
                 kind: self.ip_kind,

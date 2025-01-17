@@ -40,7 +40,6 @@ impl Ready {
 
 pub struct Agent {
     pub locality: Option<Locality>,
-    pub qcmp_socket: socket2::Socket,
     pub icao_code: Option<IcaoCode>,
     pub relay_servers: Vec<tonic::transport::Endpoint>,
     pub provider: Option<Providers>,
@@ -58,15 +57,11 @@ impl Agent {
         }: RunArgs<Ready>,
     ) -> crate::Result<()> {
         {
-            let crate::config::DatacenterConfig::Agent {
-                icao_code,
-                qcmp_port,
-            } = &config.datacenter
+            let crate::config::DatacenterConfig::Agent { icao_code, .. } = &config.datacenter
             else {
                 unreachable!("this should be an agent config");
             };
 
-            qcmp_port.store(crate::net::socket_port(&self.qcmp_socket).into());
             icao_code.store(self.icao_code.unwrap_or_default().into());
         }
 
@@ -102,7 +97,6 @@ impl Agent {
             None
         };
 
-        crate::codec::qcmp::spawn(self.qcmp_socket, shutdown_rx.clone())?;
         shutdown_rx.changed().await.map_err(From::from)
     }
 }

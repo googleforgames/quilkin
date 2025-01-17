@@ -28,18 +28,10 @@ use strum_macros::{Display, EnumString};
 
 pub use self::{
     agent::Agent, generate_config_schema::GenerateConfigSchema, manage::Manage, proxy::Proxy,
-    qcmp::Qcmp, relay::Relay,
+    qcmp::Qcmp, relay::Relay, service::Service,
 };
 
-macro_rules! define_port {
-    ($port:expr) => {
-        pub const PORT: u16 = $port;
-
-        pub fn default_port() -> u16 {
-            PORT
-        }
-    };
-}
+mod service;
 
 pub mod agent;
 pub mod generate_config_schema;
@@ -49,7 +41,6 @@ pub mod qcmp;
 pub mod relay;
 
 const ETC_CONFIG_PATH: &str = "/etc/quilkin/quilkin.yaml";
-const PORT_ENV_VAR: &str = "QUILKIN_PORT";
 
 #[derive(Debug, clap::Parser)]
 #[command(next_help_heading = "Administration Options")]
@@ -121,6 +112,8 @@ pub struct Cli {
     pub admin: AdminCli,
     #[command(flatten)]
     pub locality: LocalityCli,
+    #[command(flatten)]
+    pub service: service::Service,
 }
 
 /// The various log format options
@@ -193,12 +186,9 @@ impl Cli {
                 return generator.generate_config_schema();
             }
             Commands::Agent(_) => Admin::Agent(<_>::default()),
-            Commands::Proxy(proxy) => {
+            Commands::Proxy(_) => {
                 let ready = components::proxy::Ready {
-                    idle_request_interval: proxy
-                        .idle_request_interval_secs
-                        .map(std::time::Duration::from_secs)
-                        .unwrap_or(admin_server::IDLE_REQUEST_INTERVAL),
+                    idle_request_interval: admin_server::IDLE_REQUEST_INTERVAL,
                     ..Default::default()
                 };
                 Admin::Proxy(ready)
@@ -293,6 +283,8 @@ impl Cli {
             // any subsequent shutdown tasks.
             shutdown_tx.send(crate::ShutdownKind::Normal).ok();
         });
+
+        tokio::spawn(self.service.spawn_services(&config, &shutdown_rx)?);
 
         match (self.command, mode) {
             (Commands::Agent(agent), Admin::Agent(ready)) => {

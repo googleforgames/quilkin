@@ -29,15 +29,16 @@ use quilkin::{
 #[cfg_attr(target_os = "macos", ignore)]
 async fn r#match() {
     let mut t = TestHelper::default();
-    let echo = t.run_echo_server(AddressType::Random).await;
+    tokio::spawn(async move {
+        let echo = t.run_echo_server(AddressType::Random).await;
 
-    let capture_yaml = "
+        let capture_yaml = "
 suffix:
     size: 3
     remove: true
-";
+    ";
 
-    let matches_yaml = "
+        let matches_yaml = "
 on_read:
     metadataKey: quilkin.dev/capture
     fallthrough:
@@ -56,80 +57,81 @@ on_read:
           config:
             on_read: APPEND
             bytes: YWJj # abc
-";
+            ";
 
-    let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
-    server_config
-        .clusters
-        .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
-    server_config.filters.store(
-        quilkin::filters::FilterChain::try_create([
-            Filter {
-                name: Capture::NAME.into(),
-                label: None,
-                config: serde_yaml::from_str(capture_yaml).unwrap(),
-            },
-            Filter {
-                name: Match::NAME.into(),
-                label: None,
-                config: serde_yaml::from_str(matches_yaml).unwrap(),
-            },
-        ])
-        .map(std::sync::Arc::new)
-        .unwrap(),
-    );
+        let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
+        server_config
+            .clusters
+            .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
+        server_config.filters.store(
+            quilkin::filters::FilterChain::try_create([
+                Filter {
+                    name: Capture::NAME.into(),
+                    label: None,
+                    config: serde_yaml::from_str(capture_yaml).unwrap(),
+                },
+                Filter {
+                    name: Match::NAME.into(),
+                    label: None,
+                    config: serde_yaml::from_str(matches_yaml).unwrap(),
+                },
+            ])
+            .map(std::sync::Arc::new)
+            .unwrap(),
+        );
 
-    let server_port = t.run_server(server_config, None, None).await;
+        let server_port = t.run_server(server_config, None, None).await;
 
-    let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
+        let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
 
-    let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port);
+        let local_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port);
 
-    // abc packet
-    let msg = b"helloabc";
-    socket.send_to(msg, &local_addr).await.unwrap();
+        // abc packet
+        let msg = b"helloabc";
+        socket.send_to(msg, &local_addr).await.unwrap();
 
-    assert_eq!(
-        "helloxyz",
-        timeout(Duration::from_millis(500), recv_chan.recv())
-            .await
-            .expect("should have received a packet")
-            .unwrap()
-    );
+        assert_eq!(
+            "helloxyz",
+            timeout(Duration::from_millis(500), recv_chan.recv())
+                .await
+                .expect("should have received a packet")
+                .unwrap()
+        );
 
-    // send an xyz packet
-    let msg = b"helloxyz";
-    socket.send_to(msg, &local_addr).await.unwrap();
+        // send an xyz packet
+        let msg = b"helloxyz";
+        socket.send_to(msg, &local_addr).await.unwrap();
 
-    assert_eq!(
-        "helloabc",
-        timeout(Duration::from_millis(500), recv_chan.recv())
-            .await
-            .expect("should have received a packet")
-            .unwrap()
-    );
+        assert_eq!(
+            "helloabc",
+            timeout(Duration::from_millis(500), recv_chan.recv())
+                .await
+                .expect("should have received a packet")
+                .unwrap()
+        );
 
-    // fallthrough packet
-    let msg = b"hellodef";
-    socket.send_to(msg, &local_addr).await.unwrap();
+        // fallthrough packet
+        let msg = b"hellodef";
+        socket.send_to(msg, &local_addr).await.unwrap();
 
-    assert_eq!(
-        "hellodef",
-        timeout(Duration::from_millis(500), recv_chan.recv())
-            .await
-            .expect("should have received a packet")
-            .unwrap()
-    );
+        assert_eq!(
+            "hellodef",
+            timeout(Duration::from_millis(500), recv_chan.recv())
+                .await
+                .expect("should have received a packet")
+                .unwrap()
+        );
 
-    // second fallthrough packet
-    let msg = b"hellofgh";
-    socket.send_to(msg, &local_addr).await.unwrap();
+        // second fallthrough packet
+        let msg = b"hellofgh";
+        socket.send_to(msg, &local_addr).await.unwrap();
 
-    assert_eq!(
-        "hellodef",
-        timeout(Duration::from_millis(500), recv_chan.recv())
-            .await
-            .expect("should have received a packet")
-            .unwrap()
-    );
+        assert_eq!(
+            "hellodef",
+            timeout(Duration::from_millis(500), recv_chan.recv())
+                .await
+                .expect("should have received a packet")
+                .unwrap()
+        );
+    });
 }

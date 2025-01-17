@@ -7,7 +7,7 @@ use quilkin::{
     Config, ShutdownTx,
 };
 pub use serde_json::json;
-use std::{net::SocketAddr, num::NonZeroUsize, path::PathBuf, sync::Arc};
+use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 use tokio::sync::mpsc;
 
 pub static BUFFER_POOL: once_cell::sync::Lazy<Arc<BufferPool>> =
@@ -75,7 +75,9 @@ macro_rules! trace_test {
 
             let _guard = init_logging($crate::Level::DEBUG, mname);
 
-            $body
+            tokio::spawn(async move {
+                $body
+            });
         }
     };
 }
@@ -307,11 +309,8 @@ impl Pail {
             PailConfig::Relay(rpc) => {
                 use components::relay;
 
-                let xds_listener = TcpListener::bind(None).unwrap();
-                let mds_listener = TcpListener::bind(None).unwrap();
-
-                let xds_port = xds_listener.port();
-                let mds_port = mds_listener.port();
+                let xds_port = TcpListener::bind(None).unwrap().port();
+                let mds_port = TcpListener::bind(None).unwrap().port();
 
                 let path = td.join(spc.name);
                 let mut tc = rpc.config.unwrap_or_default();
@@ -326,10 +325,17 @@ impl Pail {
                 let config = Arc::new(Config::default_non_agent());
                 config.id.store(Arc::new(spc.name.into()));
 
+                let _task = tokio::spawn(
+                    quilkin::cli::Service::default()
+                        .xds()
+                        .xds_port(xds_port)
+                        .mds()
+                        .mds_port(mds_port)
+                        .spawn_services(&config, &shutdown_rx)
+                        .unwrap(),
+                );
                 let task = tokio::spawn(
                     relay::Relay {
-                        xds_listener,
-                        mds_listener,
                         provider: Some(Providers::File { path }),
                     }
                     .run(RunArgs {
@@ -392,21 +398,28 @@ impl Pail {
                 let (shutdown, shutdown_rx) =
                     quilkin::make_shutdown_channel(quilkin::ShutdownKind::Testing);
 
-                let qcmp_socket =
-                    quilkin::net::raw_socket_with_reuse(0).expect("failed to bind qcmp socket");
-                let qcmp_port = quilkin::net::socket_port(&qcmp_socket);
+                let qcmp_port = quilkin::net::socket_port(
+                    &quilkin::net::raw_socket_with_reuse(0).expect("failed to bind qcmp socket"),
+                );
 
                 let config_path = path.clone();
                 let config = Arc::new(Config::default_agent());
                 config.id.store(Arc::new(spc.name.into()));
                 let acfg = config.clone();
 
+                let _task = tokio::spawn(
+                    quilkin::cli::Service::default()
+                        .qcmp()
+                        .qcmp_port(qcmp_port)
+                        .spawn_services(&config, &shutdown_rx)
+                        .unwrap(),
+                );
+
                 let task = tokio::spawn(async move {
                     components::agent::Agent {
                         locality: None,
                         icao_code: Some(apc.icao_code),
                         relay_servers,
-                        qcmp_socket,
                         provider: Some(Providers::File { path }),
                         address_selector: None,
                     }
@@ -430,14 +443,18 @@ impl Pail {
                 })
             }
             PailConfig::Proxy(ppc) => {
-                let socket = quilkin::net::raw_socket_with_reuse(0).expect("failed to bind socket");
-                let qcmp =
-                    quilkin::net::raw_socket_with_reuse(0).expect("failed to bind qcmp socket");
-                let qcmp_port = quilkin::net::socket_port(&qcmp);
-                let phoenix = TcpListener::bind(None).expect("failed to bind phoenix socket");
-                let phoenix_port = phoenix.port();
+                let port = {
+                    let socket =
+                        quilkin::net::raw_socket_with_reuse(0).expect("failed to bind socket");
+                    quilkin::net::socket_port(&socket)
+                };
 
-                let port = quilkin::net::socket_port(&socket);
+                let qcmp_port = quilkin::net::socket_port(
+                    &quilkin::net::raw_socket_with_reuse(0).expect("failed to bind qcmp socket"),
+                );
+                let phoenix_port = TcpListener::bind(None)
+                    .expect("failed to bind phoenix socket")
+                    .port();
 
                 let management_servers = spc
                     .dependencies
@@ -496,13 +513,20 @@ impl Pail {
 
                 let (rttx, rtrx) = tokio::sync::mpsc::unbounded_channel();
 
+                let _task = tokio::spawn(
+                    quilkin::cli::Service::default()
+                        .udp()
+                        .udp_port(port)
+                        .qcmp()
+                        .qcmp_port(qcmp_port)
+                        .phoenix()
+                        .phoenix_port(phoenix_port)
+                        .spawn_services(&config, &shutdown_rx)
+                        .unwrap(),
+                );
                 let task = tokio::spawn(async move {
                     components::proxy::Proxy {
-                        num_workers: NonZeroUsize::new(1).unwrap(),
                         management_servers,
-                        socket: Some(socket),
-                        qcmp,
-                        phoenix,
                         notifier: Some(rttx),
                         ..Default::default()
                     }

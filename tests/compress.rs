@@ -27,59 +27,61 @@ use quilkin::{
 #[cfg_attr(target_os = "macos", ignore)]
 async fn client_and_server() {
     let mut t = TestHelper::default();
-    let echo = t.run_echo_server(AddressType::Random).await;
+    tokio::spawn(async move {
+        let echo = t.run_echo_server(AddressType::Random).await;
 
-    // create server configuration as
-    let yaml = "
+        // create server configuration as
+        let yaml = "
 on_read: DECOMPRESS
 on_write: COMPRESS
 ";
-    let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
-    server_config
-        .clusters
-        .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
-    server_config.filters.store(
-        quilkin::filters::FilterChain::try_create([Filter {
-            name: Compress::factory().name().into(),
-            label: None,
-            config: serde_yaml::from_str(yaml).unwrap(),
-        }])
-        .map(std::sync::Arc::new)
-        .unwrap(),
-    );
-    // Run server proxy.
-    let server_port = t.run_server(server_config, None, None).await;
+        let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
+        server_config
+            .clusters
+            .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
+        server_config.filters.store(
+            quilkin::filters::FilterChain::try_create([Filter {
+                name: Compress::factory().name().into(),
+                label: None,
+                config: serde_yaml::from_str(yaml).unwrap(),
+            }])
+            .map(std::sync::Arc::new)
+            .unwrap(),
+        );
+        // Run server proxy.
+        let server_port = t.run_server(server_config, None, None).await;
 
-    // create a local client
-    let yaml = "
+        // create a local client
+        let yaml = "
 on_read: COMPRESS
 on_write: DECOMPRESS
 ";
-    let client_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
-    client_config.clusters.modify(|clusters| {
-        clusters.insert_default([(std::net::Ipv6Addr::LOCALHOST, server_port).into()].into())
+        let client_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
+        client_config.clusters.modify(|clusters| {
+            clusters.insert_default([(std::net::Ipv6Addr::LOCALHOST, server_port).into()].into())
+        });
+        client_config.filters.store(
+            quilkin::filters::FilterChain::try_create([Filter {
+                name: Compress::factory().name().into(),
+                label: None,
+                config: serde_yaml::from_str(yaml).unwrap(),
+            }])
+            .map(std::sync::Arc::new)
+            .unwrap(),
+        );
+        // Run client proxy.
+        let client_port = t.run_server(client_config, None, None).await;
+
+        // let's send the packet
+        let (mut rx, tx) = t.open_socket_and_recv_multiple_packets().await;
+
+        tx.send_to(b"hello", (std::net::Ipv6Addr::LOCALHOST, client_port))
+            .await
+            .unwrap();
+        let expected = timeout(Duration::from_millis(500), rx.recv())
+            .await
+            .expect("should have received a packet")
+            .unwrap();
+        assert_eq!("hello", expected);
     });
-    client_config.filters.store(
-        quilkin::filters::FilterChain::try_create([Filter {
-            name: Compress::factory().name().into(),
-            label: None,
-            config: serde_yaml::from_str(yaml).unwrap(),
-        }])
-        .map(std::sync::Arc::new)
-        .unwrap(),
-    );
-    // Run client proxy.
-    let client_port = t.run_server(client_config, None, None).await;
-
-    // let's send the packet
-    let (mut rx, tx) = t.open_socket_and_recv_multiple_packets().await;
-
-    tx.send_to(b"hello", (std::net::Ipv6Addr::LOCALHOST, client_port))
-        .await
-        .unwrap();
-    let expected = timeout(Duration::from_millis(500), rx.recv())
-        .await
-        .expect("should have received a packet")
-        .unwrap();
-    assert_eq!("hello", expected);
 }

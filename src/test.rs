@@ -296,22 +296,23 @@ impl TestHelper {
             mode.server(config.clone(), address);
         }
 
-        let server = server.unwrap_or_else(|| {
-            let qcmp = crate::net::raw_socket_with_reuse(0).unwrap();
-            let phoenix = crate::net::TcpListener::bind(None).unwrap();
+        let port = {
+            let socket = crate::net::raw_socket_with_reuse(0).unwrap();
+            crate::net::socket_port(&socket)
+        };
 
-            crate::components::proxy::Proxy {
-                num_workers: std::num::NonZeroUsize::new(1).unwrap(),
-                socket: Some(crate::net::raw_socket_with_reuse(0).unwrap()),
-                qcmp,
-                phoenix,
-                ..Default::default()
-            }
+        let service = crate::cli::Service::default().udp().udp_port(port);
+        tokio::spawn(service.spawn_services(&config, &shutdown_rx).unwrap());
+
+        let server = server.unwrap_or_else(|| crate::components::proxy::Proxy {
+            mmdb: None,
+            management_servers: Vec::new(),
+            to: Vec::new(),
+            to_tokens: None,
+            notifier: None,
         });
 
         let (prox_tx, prox_rx) = tokio::sync::oneshot::channel();
-
-        let port = crate::net::socket_port(server.socket.as_ref().unwrap());
 
         tokio::spawn(async move {
             server

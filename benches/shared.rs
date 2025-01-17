@@ -330,22 +330,15 @@ impl QuilkinLoop {
                     .insert_default([quilkin::net::endpoint::Endpoint::new(endpoint.into())].into())
             });
 
-            let proxy = quilkin::cli::Proxy {
-                port,
-                qcmp_port: runtime
-                    .block_on(quilkin::test::available_addr(
-                        quilkin::test::AddressType::Random,
-                    ))
-                    .port(),
-                ..<_>::default()
-            };
-
-            runtime.block_on(async move {
-                proxy
-                    .run(config, Default::default(), None, shutdown_rx)
-                    .await
-                    .unwrap();
-            });
+            runtime
+                .block_on(
+                    quilkin::cli::Service::default()
+                        .udp()
+                        .udp_port(port)
+                        .spawn_services(&config, &shutdown_rx)
+                        .unwrap(),
+                )
+                .unwrap();
         });
 
         Self {

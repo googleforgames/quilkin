@@ -158,7 +158,7 @@ trace_test!(
             config,
             socket,
             pending_sends,
-            &sessions,
+            sessions,
             BUFFER_POOL.clone(),
         )
         .await

@@ -531,6 +531,7 @@ pub fn fallback<'i, E: ParserError<Stream<'i>> + AddContext<Stream<'i>, StrConte
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::vec;
 
     #[test]
     fn exclude() -> PResult<()> {

@@ -848,56 +848,59 @@ mod tests {
             },
         );
 
-        let (_tx, rx) = crate::make_shutdown_channel(Default::default());
-        let socket = raw_socket_with_reuse(qcmp_port).unwrap();
-        crate::codec::qcmp::spawn(socket, rx.clone()).unwrap();
-        tokio::time::sleep(Duration::from_millis(150)).await;
+        tokio::spawn(async move {
+            let (_tx, rx) = crate::make_shutdown_channel(Default::default());
+            let socket = raw_socket_with_reuse(qcmp_port).unwrap();
+            let _qcmp_task = crate::codec::qcmp::spawn(socket, rx.clone());
+            tokio::time::sleep(Duration::from_millis(150)).await;
 
-        let measurement =
-            crate::codec::qcmp::QcmpMeasurement::with_artificial_delay(Duration::from_millis(50))
-                .unwrap();
-
-        let phoenix = Phoenix::builder(measurement)
-            .interval_range(Duration::from_millis(10)..Duration::from_millis(15))
-            .build();
-
-        super::spawn(qcmp_listener, config.clone(), rx, phoenix).unwrap();
-        tokio::time::sleep(Duration::from_millis(150)).await;
-
-        let client =
-            hyper_util::client::legacy::Client::builder(hyper_util::rt::TokioExecutor::new())
-                .build_http::<http_body_util::Empty<bytes::Bytes>>();
-        use http_body_util::BodyExt;
-        for _ in 0..10 {
-            let resp = tokio::time::timeout(
-                Duration::from_millis(100),
-                client
-                    .get(format!("http://localhost:{qcmp_port}/").parse().unwrap())
-                    .await
-                    .unwrap()
-                    .into_body()
-                    .collect(),
+            let measurement = crate::codec::qcmp::QcmpMeasurement::with_artificial_delay(
+                Duration::from_millis(50),
             )
-            .await
-            .unwrap()
-            .unwrap()
-            .to_bytes();
+            .unwrap();
 
-            let map = serde_json::from_slice::<serde_json::Map<_, _>>(&resp).unwrap();
+            let phoenix = Phoenix::builder(measurement)
+                .interval_range(Duration::from_millis(10)..Duration::from_millis(15))
+                .build();
 
-            let coords = Coordinates {
-                x: std::time::Duration::from_millis(50).as_nanos() as f64 / 2.0,
-                y: std::time::Duration::from_millis(1).as_nanos() as f64 / 2.0,
-            };
+            super::spawn(qcmp_listener, config.clone(), rx, phoenix).unwrap();
+            tokio::time::sleep(Duration::from_millis(150)).await;
 
-            let min = Coordinates::ORIGIN.distance_to(&coords);
-            let max = min * 3.0;
-            let distance = map[icao_code.as_ref()].as_f64().unwrap();
+            let client =
+                hyper_util::client::legacy::Client::builder(hyper_util::rt::TokioExecutor::new())
+                    .build_http::<http_body_util::Empty<bytes::Bytes>>();
+            use http_body_util::BodyExt;
+            for _ in 0..10 {
+                let resp = tokio::time::timeout(
+                    Duration::from_millis(100),
+                    client
+                        .get(format!("http://localhost:{qcmp_port}/").parse().unwrap())
+                        .await
+                        .unwrap()
+                        .into_body()
+                        .collect(),
+                )
+                .await
+                .unwrap()
+                .unwrap()
+                .to_bytes();
 
-            assert!(
-                distance > min && distance < max,
-                "expected distance {distance} to be > {min} and < {max}",
-            );
-        }
+                let map = serde_json::from_slice::<serde_json::Map<_, _>>(&resp).unwrap();
+
+                let coords = Coordinates {
+                    x: std::time::Duration::from_millis(50).as_nanos() as f64 / 2.0,
+                    y: std::time::Duration::from_millis(1).as_nanos() as f64 / 2.0,
+                };
+
+                let min = Coordinates::ORIGIN.distance_to(&coords);
+                let max = min * 3.0;
+                let distance = map[icao_code.as_ref()].as_f64().unwrap();
+
+                assert!(
+                    distance > min && distance < max,
+                    "expected distance {distance} to be > {min} and < {max}",
+                );
+            }
+        });
     }
 }

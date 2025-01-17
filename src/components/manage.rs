@@ -25,7 +25,6 @@ pub struct Manage {
     pub locality: Option<Locality>,
     pub relay_servers: Vec<tonic::transport::Endpoint>,
     pub provider: Providers,
-    pub listener: crate::net::TcpListener,
     pub address_selector: Option<crate::config::AddressSelector>,
 }
 
@@ -73,19 +72,7 @@ impl Manage {
             None
         };
 
-        use futures::TryFutureExt as _;
-        let server_task = tokio::spawn(
-            crate::net::xds::server::ControlPlane::from_arc(
-                config,
-                crate::components::admin::IDLE_REQUEST_INTERVAL,
-            )
-            .management_server(self.listener)?,
-        )
-        .map_err(From::from)
-        .and_then(std::future::ready);
-
         tokio::select! {
-            result = server_task => result,
             result = provider_task => result?,
             result = shutdown_rx.changed() => result.map_err(From::from),
         }

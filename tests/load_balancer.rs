@@ -36,47 +36,49 @@ policy: ROUND_ROBIN
 ";
     let selected_endpoint = Arc::new(Mutex::new(None::<SocketAddr>));
 
-    let mut echo_addresses = std::collections::BTreeSet::new();
-    for _ in 0..2 {
-        let selected_endpoint = selected_endpoint.clone();
-        echo_addresses.insert(
-            t.run_echo_server_with_tap(AddressType::Random, move |_, _, echo_addr| {
-                let _ = selected_endpoint.lock().unwrap().replace(echo_addr);
-            })
-            .await,
-        );
-    }
+    tokio::spawn(async move {
+        let mut echo_addresses = std::collections::BTreeSet::new();
+        for _ in 0..2 {
+            let selected_endpoint = selected_endpoint.clone();
+            echo_addresses.insert(
+                t.run_echo_server_with_tap(AddressType::Random, move |_, _, echo_addr| {
+                    let _ = selected_endpoint.lock().unwrap().replace(echo_addr);
+                })
+                .await,
+            );
+        }
 
-    let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
-    server_config.clusters.modify(|clusters| {
-        clusters.insert_default(echo_addresses.iter().cloned().map(Endpoint::new).collect())
+        let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
+        server_config.clusters.modify(|clusters| {
+            clusters.insert_default(echo_addresses.iter().cloned().map(Endpoint::new).collect())
+        });
+        server_config.filters.store(
+            quilkin::filters::FilterChain::try_create([Filter {
+                name: LoadBalancer::factory().name().into(),
+                label: None,
+                config: serde_yaml::from_str(yaml).unwrap(),
+            }])
+            .map(std::sync::Arc::new)
+            .unwrap(),
+        );
+
+        let server_port = t.run_server(server_config, None, None).await;
+        let server_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port);
+
+        let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
+
+        for addr in echo_addresses {
+            socket.send_to(b"hello", &server_addr).await.unwrap();
+            let value = timeout(Duration::from_secs(5), recv_chan.recv())
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!("hello", value);
+
+            assert_eq!(
+                addr,
+                selected_endpoint.lock().unwrap().take().unwrap().into()
+            );
+        }
     });
-    server_config.filters.store(
-        quilkin::filters::FilterChain::try_create([Filter {
-            name: LoadBalancer::factory().name().into(),
-            label: None,
-            config: serde_yaml::from_str(yaml).unwrap(),
-        }])
-        .map(std::sync::Arc::new)
-        .unwrap(),
-    );
-
-    let server_port = t.run_server(server_config, None, None).await;
-    let server_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port);
-
-    let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
-
-    for addr in echo_addresses {
-        socket.send_to(b"hello", &server_addr).await.unwrap();
-        let value = timeout(Duration::from_secs(5), recv_chan.recv())
-            .await
-            .unwrap()
-            .unwrap();
-        assert_eq!("hello", value);
-
-        assert_eq!(
-            addr,
-            selected_endpoint.lock().unwrap().take().unwrap().into()
-        );
-    }
 }

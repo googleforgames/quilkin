@@ -27,42 +27,44 @@ use quilkin::{
 async fn echo() {
     let mut t = TestHelper::default();
 
-    // create two echo servers as endpoints
-    let server1 = t.run_echo_server(AddressType::Random).await;
-    let server2 = t.run_echo_server(AddressType::Random).await;
+    tokio::spawn(async move {
+        // create two echo servers as endpoints
+        let server1 = t.run_echo_server(AddressType::Random).await;
+        let server2 = t.run_echo_server(AddressType::Random).await;
 
-    // create server configuration
-    let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
-    server_config.clusters.modify(|clusters| {
-        clusters.insert_default(
-            [
-                Endpoint::new(server1.clone()),
-                Endpoint::new(server2.clone()),
-            ]
-            .into(),
-        )
+        // create server configuration
+        let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
+        server_config.clusters.modify(|clusters| {
+            clusters.insert_default(
+                [
+                    Endpoint::new(server1.clone()),
+                    Endpoint::new(server2.clone()),
+                ]
+                .into(),
+            )
+        });
+
+        let local_port = t.run_server(server_config, None, None).await;
+        let local_addr = std::net::SocketAddr::from((std::net::Ipv6Addr::LOCALHOST, local_port));
+
+        // let's send the packet
+        let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
+
+        socket.send_to(b"hello", &local_addr).await.unwrap();
+        let value = timeout(Duration::from_millis(500), recv_chan.recv())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!("hello", value);
+        let value = timeout(Duration::from_millis(500), recv_chan.recv())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!("hello", value);
+
+        // should only be two returned items
+        assert!(timeout(Duration::from_millis(500), recv_chan.recv())
+            .await
+            .is_err());
     });
-
-    let local_port = t.run_server(server_config, None, None).await;
-    let local_addr = std::net::SocketAddr::from((std::net::Ipv6Addr::LOCALHOST, local_port));
-
-    // let's send the packet
-    let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
-
-    socket.send_to(b"hello", &local_addr).await.unwrap();
-    let value = timeout(Duration::from_millis(500), recv_chan.recv())
-        .await
-        .unwrap()
-        .unwrap();
-    assert_eq!("hello", value);
-    let value = timeout(Duration::from_millis(500), recv_chan.recv())
-        .await
-        .unwrap()
-        .unwrap();
-    assert_eq!("hello", value);
-
-    // should only be two returned items
-    assert!(timeout(Duration::from_millis(500), recv_chan.recv())
-        .await
-        .is_err());
 }

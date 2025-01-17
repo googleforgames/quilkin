@@ -192,7 +192,11 @@ impl Measurement for QcmpMeasurement {
     }
 }
 
-pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) -> crate::Result<()> {
+pub fn spawn(
+    socket: socket2::Socket,
+    mut shutdown_rx: crate::ShutdownRx,
+) -> impl std::future::Future<Output = crate::Result<()>> {
+    use futures::TryFutureExt as _;
     use tracing::{instrument::WithSubscriber as _, Instrument as _};
 
     let port = crate::net::socket_port(&socket);
@@ -258,9 +262,7 @@ pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) -> cra
         }
         .instrument(tracing::debug_span!("qcmp"))
         .with_current_subscriber(),
-    );
-
-    Ok(())
+    ).map_err(From::from)
 }
 
 /// The set of possible QCMP commands.
@@ -676,7 +678,7 @@ mod tests {
         let addr = socket.local_addr().unwrap().as_socket().unwrap();
 
         let (_tx, rx) = crate::make_shutdown_channel(Default::default());
-        spawn(socket, rx).unwrap();
+        let _task = spawn(socket, rx);
 
         let delay = Duration::from_millis(50);
         let node = QcmpMeasurement::with_artificial_delay(delay).unwrap();

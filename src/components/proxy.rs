@@ -62,42 +62,18 @@ pub struct ToTokens {
     pub length: usize,
 }
 
+#[derive(Default)]
 pub struct Proxy {
-    pub num_workers: std::num::NonZeroUsize,
     pub mmdb: Option<crate::net::maxmind_db::Source>,
     pub management_servers: Vec<tonic::transport::Endpoint>,
     pub to: Vec<SocketAddr>,
     pub to_tokens: Option<ToTokens>,
-    pub socket: Option<socket2::Socket>,
-    pub qcmp: socket2::Socket,
-    pub phoenix: crate::net::TcpListener,
     pub notifier: Option<tokio::sync::mpsc::UnboundedSender<String>>,
-    pub xdp: crate::cli::proxy::XdpOptions,
-}
-
-impl Default for Proxy {
-    fn default() -> Self {
-        let qcmp = crate::net::raw_socket_with_reuse(0).unwrap();
-        let phoenix = crate::net::TcpListener::bind(Some(crate::net::socket_port(&qcmp))).unwrap();
-
-        Self {
-            num_workers: std::num::NonZeroUsize::new(1).unwrap(),
-            mmdb: None,
-            management_servers: Vec::new(),
-            to: Vec::new(),
-            to_tokens: None,
-            socket: Some(crate::net::raw_socket_with_reuse(0).unwrap()),
-            qcmp,
-            phoenix,
-            notifier: None,
-            xdp: Default::default(),
-        }
-    }
 }
 
 impl Proxy {
     pub async fn run(
-        mut self,
+        self,
         RunArgs {
             config,
             ready,
@@ -270,15 +246,6 @@ impl Proxy {
                 .expect("failed to spawn proxy-subscription thread");
         }
 
-        let router_shutdown = self.spawn_packet_router(config.clone()).await?;
-        crate::codec::qcmp::spawn(self.qcmp, shutdown_rx.clone())?;
-        crate::net::phoenix::spawn(
-            self.phoenix,
-            config.clone(),
-            shutdown_rx.clone(),
-            crate::net::phoenix::Phoenix::new(crate::codec::qcmp::QcmpMeasurement::new()?),
-        )?;
-
         tracing::info!("Quilkin is ready");
         if let Some(initialized) = initialized {
             let _ = initialized.send(());
@@ -289,110 +256,6 @@ impl Proxy {
             .await
             .map_err(|error| eyre::eyre!(error))?;
 
-        (router_shutdown)(shutdown_rx);
-
         Ok(())
-    }
-
-    pub async fn spawn_packet_router(
-        &mut self,
-        config: Arc<crate::config::Config>,
-    ) -> eyre::Result<Box<dyn FnOnce(crate::ShutdownRx) + Send>> {
-        #[cfg(target_os = "linux")]
-        {
-            match self.spawn_xdp(config.clone(), self.xdp.force_xdp) {
-                Ok(xdp) => {
-                    return Ok(xdp);
-                }
-                Err(err) => {
-                    if self.xdp.force_xdp {
-                        return Err(err);
-                    }
-
-                    tracing::warn!(
-                        ?err,
-                        "failed to spawn XDP I/O loop, falling back to io-uring"
-                    );
-                }
-            }
-        }
-
-        self.spawn_user_space_router(config).await
-    }
-
-    /// Launches the user space implementation of the packet router using
-    /// sockets. This implementation uses a pool of buffers and sockets to
-    /// manage UDP sessions and sockets. On Linux this will use io-uring, where
-    /// as it will use epoll interfaces on non-Linux platforms.
-    pub async fn spawn_user_space_router(
-        &mut self,
-        config: Arc<crate::config::Config>,
-    ) -> eyre::Result<Box<dyn FnOnce(crate::ShutdownRx) + Send>> {
-        let workers = self.num_workers.get();
-        let buffer_pool = Arc::new(crate::collections::BufferPool::new(workers, 2 * 1024));
-
-        let mut worker_sends = Vec::with_capacity(workers);
-        let mut session_sends = Vec::with_capacity(workers);
-        for _ in 0..workers {
-            let queue = crate::net::queue(15)?;
-            session_sends.push(queue.0.clone());
-            worker_sends.push(queue);
-        }
-
-        let sessions = SessionPool::new(config.clone(), session_sends, buffer_pool.clone());
-
-        packet_router::spawn_receivers(
-            config,
-            self.socket.take().unwrap(),
-            worker_sends,
-            &sessions,
-            buffer_pool,
-        )
-        .await?;
-
-        Ok(Box::new(move |shutdown_rx: crate::ShutdownRx| {
-            sessions.shutdown(*shutdown_rx.borrow() == crate::ShutdownKind::Normal);
-        }))
-    }
-
-    #[cfg(target_os = "linux")]
-    fn spawn_xdp(
-        &mut self,
-        config: Arc<crate::config::Config>,
-        force_xdp: bool,
-    ) -> eyre::Result<Box<dyn FnOnce(crate::ShutdownRx) + Send>> {
-        use crate::net::xdp;
-        use eyre::Context as _;
-
-        // TODO: remove this once it's been more stabilized
-        if !force_xdp {
-            eyre::bail!("XDP currently disabled by default");
-        }
-
-        let Some(external_port) = self.socket.as_ref().and_then(|s| {
-            s.local_addr()
-                .ok()
-                .and_then(|la| la.as_socket().map(|sa| sa.port()))
-        }) else {
-            eyre::bail!("unable to determine port");
-        };
-
-        let workers = xdp::setup_xdp_io(xdp::XdpConfig {
-            nic: self
-                .xdp
-                .network_interface
-                .as_deref()
-                .map_or(xdp::NicConfig::Default, xdp::NicConfig::Name),
-            external_port,
-            maximum_packet_memory: self.xdp.maximum_memory,
-            require_zero_copy: self.xdp.force_zerocopy,
-            require_tx_checksum: self.xdp.force_tx_checksum_offload,
-        })
-        .context("failed to setup XDP")?;
-
-        let io_loop = xdp::spawn(workers, config).context("failed to spawn XDP I/O loop")?;
-        Ok(Box::new(move |srx: crate::ShutdownRx| {
-            io_loop.shutdown(*srx.borrow() == crate::ShutdownKind::Normal);
-        }))
     }
 }

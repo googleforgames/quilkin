@@ -30,34 +30,38 @@ async fn health_server() {
     server_config.clusters.modify(|clusters| {
         clusters.insert_default(["127.0.0.1:0".parse::<Endpoint>().unwrap()].into())
     });
-    t.run_server(
-        server_config,
-        None,
-        Some(Some((std::net::Ipv6Addr::UNSPECIFIED, 9093).into())),
-    )
-    .await;
-    tokio::time::sleep(std::time::Duration::from_millis(250)).await;
 
-    let client = hyper_util::client::legacy::Client::builder(hyper_util::rt::TokioExecutor::new())
-        .build_http::<http_body_util::Empty<bytes::Bytes>>();
-    use http_body_util::BodyExt;
-    let resp = client
-        .get(Uri::from_static(LIVE_ADDRESS))
-        .await
-        .unwrap()
-        .into_body()
-        .collect()
-        .await
-        .unwrap()
-        .to_bytes()
-        .to_vec();
+    tokio::spawn(async move {
+        t.run_server(
+            server_config,
+            None,
+            Some(Some((std::net::Ipv6Addr::UNSPECIFIED, 9093).into())),
+        )
+        .await;
+        tokio::time::sleep(std::time::Duration::from_millis(250)).await;
 
-    assert_eq!("ok", String::from_utf8(resp).unwrap());
+        let client =
+            hyper_util::client::legacy::Client::builder(hyper_util::rt::TokioExecutor::new())
+                .build_http::<http_body_util::Empty<bytes::Bytes>>();
+        use http_body_util::BodyExt;
+        let resp = client
+            .get(Uri::from_static(LIVE_ADDRESS))
+            .await
+            .unwrap()
+            .into_body()
+            .collect()
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
 
-    let _ = panic::catch_unwind(|| {
-        panic!("oh no!");
+        assert_eq!("ok", String::from_utf8(resp).unwrap());
+
+        let _ = panic::catch_unwind(|| {
+            panic!("oh no!");
+        });
+
+        let resp = client.get(Uri::from_static(LIVE_ADDRESS)).await.unwrap();
+        assert!(resp.status().is_server_error(), "Should be unhealthy");
     });
-
-    let resp = client.get(Uri::from_static(LIVE_ADDRESS)).await.unwrap();
-    assert!(resp.status().is_server_error(), "Should be unhealthy");
 }

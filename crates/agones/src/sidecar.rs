@@ -16,7 +16,9 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::{game_server, is_gameserver_ready, quilkin_config_map, quilkin_container, Client};
+    use crate::{
+        debug_pods, game_server, is_gameserver_ready, quilkin_config_map, quilkin_container, Client,
+    };
     use k8s_openapi::api::core::v1::{ConfigMap, ConfigMapVolumeSource, Volume};
     use kube::{api::PostParams, runtime::wait::await_condition, Api, ResourceExt};
     use quilkin::{config::providers::k8s::agones::GameServer, test::TestHelper};
@@ -98,7 +100,7 @@ clusters:
         let mount_name = "config".to_string();
         template.containers.push(quilkin_container(
             &client,
-            Some(vec!["proxy".into()]),
+            Some(vec!["--service.udp".into(), "proxy".into()]),
             Some(mount_name.clone()),
             true,
         ));
@@ -129,6 +131,8 @@ clusters:
             .await
             .unwrap();
 
+        debug_pods(&client, "role=proxy".into()).await;
+        debug_pods(&client, "role=gameserver".into()).await;
         let response = timeout(Duration::from_secs(30), recv.packet_rx)
             .await
             .expect("should receive packet")

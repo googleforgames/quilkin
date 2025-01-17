@@ -19,17 +19,12 @@ use std::sync::Arc;
 use crate::{components::agent, config::Config};
 pub use agent::Ready;
 
-define_port!(7600);
-
 /// Runs Quilkin as a relay service that runs a Manager Discovery Service
 /// (mDS) for accepting cluster and configuration information from xDS
 /// management services, and exposing it as a single merged xDS service for
 /// proxy services.
-#[derive(clap::Args, Clone, Debug)]
+#[derive(clap::Args, Clone, Debug, Default)]
 pub struct Agent {
-    /// Port for QCMP service.
-    #[clap(short, long, env = "QCMP_PORT", default_value_t = PORT)]
-    pub qcmp_port: u16,
     /// One or more `quilkin relay` endpoints to push configuration changes to.
     #[clap(short, long, env = "QUILKIN_MANAGEMENT_SERVER")]
     pub relay: Vec<tonic::transport::Endpoint>,
@@ -63,19 +58,6 @@ impl clap::ValueEnum for crate::config::AddrKind {
     }
 }
 
-impl Default for Agent {
-    fn default() -> Self {
-        Self {
-            qcmp_port: PORT,
-            relay: <_>::default(),
-            provider: <_>::default(),
-            icao_code: <_>::default(),
-            address_type: None,
-            ip_kind: None,
-        }
-    }
-}
-
 impl Agent {
     #[tracing::instrument(skip_all)]
     pub async fn run(
@@ -85,12 +67,10 @@ impl Agent {
         ready: Ready,
         shutdown_rx: crate::ShutdownRx,
     ) -> crate::Result<()> {
-        let qcmp_socket = crate::net::raw_socket_with_reuse(self.qcmp_port)?;
         let icao_code = Some(self.icao_code);
 
         agent::Agent {
             locality,
-            qcmp_socket,
             icao_code,
             relay_servers: self.relay,
             provider: self.provider,

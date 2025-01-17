@@ -161,7 +161,7 @@ pub async fn spawn_receivers(
     config: Arc<Config>,
     socket: socket2::Socket,
     worker_sends: Vec<crate::net::PacketQueue>,
-    sessions: &Arc<SessionPool>,
+    sessions: Arc<SessionPool>,
     buffer_pool: Arc<crate::collections::BufferPool>,
 ) -> crate::Result<()> {
     let port = crate::net::socket_port(&socket);
