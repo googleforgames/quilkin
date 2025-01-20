@@ -34,7 +34,7 @@ static ALIGNED: &'static AlignedTo<u64, [u8]> = &AlignedTo {
     bytes: *include_bytes!("../bin/packet-router.bin"),
 };
 
-static PROGRAM: &'static [u8] = &ALIGNED.bytes;
+static PROGRAM: &[u8] = &ALIGNED.bytes;
 
 #[derive(thiserror::Error, Debug)]
 pub enum BindError {
