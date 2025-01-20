@@ -258,7 +258,7 @@ dependencies = [
  "bytes",
  "libc",
  "log",
- "object 0.36.5",
+ "object 0.36.7",
  "once_cell",
  "thiserror 1.0.69",
  "tokio",
@@ -297,7 +297,7 @@ dependencies = [
  "core-error",
  "hashbrown 0.15.1",
  "log",
- "object 0.36.5",
+ "object 0.36.7",
  "thiserror 1.0.69",
 ]
 
@@ -2229,9 +2229,9 @@ dependencies = [
 
 [[package]]
 name = "object"
-version = "0.36.5"
+version = "0.36.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aedf0a2d09c573ed1d8d85b30c119153926a2b36dce0ab28322c09a117a4683e"
+checksum = "62948e14d923ea95ea2c7c86c71013138b66525b86bdc08d2dcc262bdb497b87"
 dependencies = [
  "crc32fast",
  "hashbrown 0.15.1",
