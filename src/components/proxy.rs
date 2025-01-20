@@ -303,6 +303,11 @@ impl Proxy {
             use crate::net::xdp;
             use eyre::Context as _;
 
+            // TODO: remove this once it's been more stabilized
+            if true {
+                break 'xdp;
+            }
+
             let Some(external_port) = self.socket.as_ref().and_then(|s| {
                 s.local_addr()
                     .ok()
