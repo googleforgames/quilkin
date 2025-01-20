@@ -2,9 +2,11 @@
 #![allow(clippy::undocumented_unsafe_blocks)]
 
 use quilkin::{
-    components::proxy::xdp::process::{self, xdp},
     filters::{self, StaticFilter as _},
-    net,
+    net::{
+        self,
+        xdp::process::{self, xdp},
+    },
 };
 use std::{
     collections::BTreeSet,

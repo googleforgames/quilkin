@@ -18,9 +18,6 @@ pub(crate) mod error;
 pub mod packet_router;
 mod sessions;
 
-#[cfg(target_os = "linux")]
-pub mod xdp;
-
 use super::RunArgs;
 pub use error::PipelineError;
 pub use sessions::SessionPool;
