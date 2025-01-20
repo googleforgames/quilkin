@@ -1,4 +1,5 @@
 #![cfg(target_os = "linux")]
+#![allow(clippy::undocumented_unsafe_blocks)]
 
 use quilkin::{
     components::proxy::xdp::process::{self, xdp},
@@ -13,7 +14,7 @@ use std::{
 
 #[inline]
 fn endpoints(eps: &[(SocketAddr, &[u8])]) -> BTreeSet<net::Endpoint> {
-    eps.into_iter()
+    eps.iter()
         .map(|(addr, token)| {
             quilkin::net::Endpoint::with_metadata(
                 (*addr).into(),
@@ -419,7 +420,7 @@ async fn packet_manipulation() {
         let udp = xdp::packet::net_types::UdpPacket::parse_packet(&server_packet)
             .unwrap()
             .unwrap();
-        let pdata = (&server_packet[udp.data_offset..udp.data_offset + udp.data_length]).to_vec();
+        let pdata = server_packet[udp.data_offset..udp.data_offset + udp.data_length].to_vec();
         assert_eq!(&pdata[..2], &data[..2]);
         assert_eq!(&pdata[2..], &concat_data,);
 

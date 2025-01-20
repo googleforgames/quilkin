@@ -180,17 +180,6 @@ where
     }
 }
 
-pub trait Packet: Sized {
-    fn as_slice(&self) -> &[u8];
-    fn as_mut_slice(&mut self) -> &mut [u8];
-    fn set_len(&mut self, len: usize);
-    fn remove_head(&mut self, length: usize);
-    fn remove_tail(&mut self, length: usize);
-    fn extend_head(&mut self, bytes: &[u8]);
-    fn extend_tail(&mut self, bytes: &[u8]);
-    fn alloc_sized(&self, size: usize) -> Option<Self>;
-}
-
 /// Trait for routing and manipulating packets.
 ///
 /// An implementation of [`Filter`] provides a `read` and a `write` method. Both

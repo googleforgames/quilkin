@@ -34,6 +34,15 @@ impl filters::Packet for QPacket {
             .unwrap()
     }
 
+    #[inline]
+    fn len(&self) -> usize {
+        self.udp.data_length
+    }
+}
+
+impl filters::PacketMut for QPacket {
+    type FrozenPacket = QPacket;
+
     fn alloc_sized(&self, _size: usize) -> Option<Self> {
         // Only used by compress filter, which we don't support
         None
@@ -92,6 +101,10 @@ impl filters::Packet for QPacket {
 
     fn set_len(&mut self, _len: usize) {
         unimplemented!("only used by compression/io_uring");
+    }
+
+    fn freeze(self) -> Self::FrozenPacket {
+        unreachable!();
     }
 }
 
