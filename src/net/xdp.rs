@@ -258,52 +258,53 @@ pub struct XdpLoop {
 impl XdpLoop {
     /// Detaches the eBPF program from the attacked NIC and cancels all I/O
     /// threads, waiting for them to exit
-    pub async fn shutdown(mut self) {
-        let _ = tokio::task::spawn_blocking(move || {
-            if let Err(error) = self.ebpf_prog.detach(self.xdp_link) {
-                tracing::error!(%error, "failed to detach eBPF program");
-            }
+    pub fn shutdown(mut self, wait: bool) {
+        if let Err(error) = self.ebpf_prog.detach(self.xdp_link) {
+            tracing::error!(%error, "failed to detach eBPF program");
+        }
 
-            for (tid, _) in &mut self.threads {
-                // This will only fail if the thread doesn't exist, so we just
-                // make it so that we skip joining if that happens
-                // SAFETY: this should be safe to call even if the thread doesn't
-                // exist
-                let err = unsafe { libc::pthread_cancel(*tid) };
-                match err {
-                    0 => {}
-                    libc::ESRCH => {
-                        tracing::warn!(tid, "thread does not exist");
-                        *tid = 0;
-                    }
-                    _ => {
-                        tracing::warn!(
-                            tid,
-                            err,
-                            "thread could not be cancelled, but the error seems to be incorrect"
-                        );
-                        *tid = 0;
-                    }
+        for (tid, _) in &mut self.threads {
+            // This will only fail if the thread doesn't exist, so we just
+            // make it so that we skip joining if that happens
+            // SAFETY: this should be safe to call even if the thread doesn't
+            // exist
+            let err = unsafe { libc::pthread_cancel(*tid) };
+            match err {
+                0 => {}
+                libc::ESRCH => {
+                    tracing::warn!(tid, "thread does not exist");
+                    *tid = 0;
+                }
+                _ => {
+                    tracing::warn!(
+                        tid,
+                        err,
+                        "thread could not be cancelled, but the error seems to be incorrect"
+                    );
+                    *tid = 0;
                 }
             }
+        }
 
-            for (tid, jh) in self.threads {
-                if tid == 0 {
-                    continue;
-                }
+        if !wait {
+            return;
+        }
 
-                if let Err(error) = jh.join() {
-                    if let Some(error) = error.downcast_ref::<&'static str>() {
-                        tracing::error!(tid, error, "XDP I/O thread enountered error");
-                    } else if let Some(error) = error.downcast_ref::<String>() {
-                        tracing::error!(tid, error, "XDP I/O thread enountered error");
-                    } else {
-                        tracing::error!(tid, ?error, "XDP I/O thread enountered error");
-                    };
-                }
+        for (tid, jh) in self.threads {
+            if tid == 0 {
+                continue;
             }
-        })
-        .await;
+
+            if let Err(error) = jh.join() {
+                if let Some(error) = error.downcast_ref::<&'static str>() {
+                    tracing::error!(tid, error, "XDP I/O thread enountered error");
+                } else if let Some(error) = error.downcast_ref::<String>() {
+                    tracing::error!(tid, error, "XDP I/O thread enountered error");
+                } else {
+                    tracing::error!(tid, ?error, "XDP I/O thread enountered error");
+                };
+            }
+        }
     }
 }
 

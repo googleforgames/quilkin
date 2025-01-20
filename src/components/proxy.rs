@@ -72,6 +72,7 @@ pub struct Proxy {
     pub qcmp: socket2::Socket,
     pub phoenix: crate::net::TcpListener,
     pub notifier: Option<tokio::sync::mpsc::UnboundedSender<String>>,
+    pub xdp: crate::cli::proxy::XdpOptions,
 }
 
 impl Default for Proxy {
@@ -89,6 +90,7 @@ impl Default for Proxy {
             qcmp,
             phoenix,
             notifier: None,
+            xdp: Default::default(),
         }
     }
 }
@@ -295,7 +297,61 @@ impl Proxy {
     pub async fn spawn_packet_router(
         &mut self,
         config: Arc<crate::config::Config>,
-    ) -> eyre::Result<impl FnOnce(crate::ShutdownRx)> {
+    ) -> eyre::Result<Box<dyn FnOnce(crate::ShutdownRx) + Send>> {
+        #[cfg(target_os = "linux")]
+        'xdp: {
+            use crate::net::xdp;
+            use eyre::Context as _;
+
+            let Some(external_port) = self.socket.as_ref().and_then(|s| {
+                s.local_addr()
+                    .ok()
+                    .and_then(|la| la.as_socket().map(|sa| sa.port()))
+            }) else {
+                break 'xdp;
+            };
+
+            match xdp::setup_xdp_io(xdp::XdpConfig {
+                nic: self
+                    .xdp
+                    .network_interface
+                    .as_deref()
+                    .map_or(xdp::NicConfig::Default, xdp::NicConfig::Name),
+                external_port,
+                maximum_packet_memory: self.xdp.maximum_memory,
+                require_zero_copy: self.xdp.force_zerocopy,
+                require_tx_checksum: self.xdp.force_tx_checksum_offload,
+            }) {
+                Ok(workers) => match xdp::spawn(workers, config.clone()) {
+                    Ok(xdp_loop) => {
+                        return Ok(Box::new(move |srx: crate::ShutdownRx| {
+                            xdp_loop.shutdown(*srx.borrow() == crate::ShutdownKind::Normal);
+                        }));
+                    }
+                    Err(err) => {
+                        if self.xdp.force_xdp {
+                            return Err(err)
+                                .context("failed to spawn XDP I/O loop, and XDP mode is forced");
+                        }
+
+                        tracing::warn!(
+                            ?err,
+                            "failed to spawn XDP I/O loop, falling back to io-uring"
+                        );
+                        break 'xdp;
+                    }
+                },
+                Err(err) => {
+                    if self.xdp.force_xdp {
+                        return Err(err).context("unable to setup XDP, and XDP mode is forced");
+                    }
+
+                    tracing::warn!(?err, "failed to setup XDP, falling back to io-uring");
+                    break 'xdp;
+                }
+            }
+        }
+
         self.spawn_user_space_router(config).await
     }
 
@@ -306,7 +362,7 @@ impl Proxy {
     pub async fn spawn_user_space_router(
         &mut self,
         config: Arc<crate::config::Config>,
-    ) -> eyre::Result<impl FnOnce(crate::ShutdownRx)> {
+    ) -> eyre::Result<Box<dyn FnOnce(crate::ShutdownRx) + Send>> {
         let workers = self.num_workers.get();
         let buffer_pool = Arc::new(crate::collections::BufferPool::new(workers, 2 * 1024));
 
@@ -329,8 +385,8 @@ impl Proxy {
         )
         .await?;
 
-        Ok(move |shutdown_rx: crate::ShutdownRx| {
+        Ok(Box::new(move |shutdown_rx: crate::ShutdownRx| {
             sessions.shutdown(*shutdown_rx.borrow() == crate::ShutdownKind::Normal);
-        })
+        }))
     }
 }
