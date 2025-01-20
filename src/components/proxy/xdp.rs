@@ -119,7 +119,7 @@ pub enum XdpSpawnError {
 /// based on user configuration, failing if requirements cannot be met
 ///
 /// This function currently only supports one mode of operation, which is that
-/// a socket is bound to every available queue on the NIC, and when [`spawn_xdp_io`]
+/// a socket is bound to every available queue on the NIC, and when [`spawn`]
 /// is invoked, each socket is processed in its own thread
 ///
 /// Binding to fewer queues is possible in the future but requires additional
