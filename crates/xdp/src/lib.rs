@@ -164,8 +164,10 @@ impl EbpfProgram {
         nic: NicIndex,
         flags: aya::programs::XdpFlags,
     ) -> Result<aya::programs::xdp::XdpLinkId, aya::programs::ProgramError> {
-        if let Err(error) = aya_log::EbpfLogger::init(&mut self.bpf) {
-            tracing::warn!(%error, "failed to initialize eBPF logging");
+        // Would be good to enable this if we do end up adding log messages to
+        // the eBPF program
+        if let Err(_error) = aya_log::EbpfLogger::init(&mut self.bpf) {
+            //tracing::warn!(%error, "failed to initialize eBPF logging");
         }
 
         // We use this entrypoint for now, but in the future we could also use
