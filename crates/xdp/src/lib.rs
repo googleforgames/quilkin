@@ -29,7 +29,7 @@ struct AlignedTo<Align, Bytes: ?Sized> {
 }
 
 // dummy static used to create aligned data
-static ALIGNED: &'static AlignedTo<u64, [u8]> = &AlignedTo {
+static ALIGNED: &AlignedTo<u64, [u8]> = &AlignedTo {
     _align: [],
     bytes: *include_bytes!("../bin/packet-router.bin"),
 };
