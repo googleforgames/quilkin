@@ -438,7 +438,7 @@ pub async fn create_tokenised_gameserver(
 
     let mut gs = list.items[0].clone();
     // add routing label to the GameServer
-    assert_eq!(3, token.as_bytes().len());
+    assert_eq!(3, token.len());
     gs.metadata
         .annotations
         .get_or_insert(Default::default())
