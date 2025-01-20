@@ -82,6 +82,7 @@ cfg_if::cfg_if! {
         use std::net::UdpSocket;
 
         pub(crate) mod io_uring;
+        pub mod xdp;
     } else {
         use tokio::net::UdpSocket;
     }

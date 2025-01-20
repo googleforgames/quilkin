@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-use xdp::nic::NicIndex;
+pub use aya;
+pub use xdp::{self, nic::NicIndex};
 
 const PROGRAM: &[u8] = include_bytes!("../bin/packet-router.bin");
 
@@ -26,8 +27,10 @@ pub enum BindError {
     Map(#[from] aya::maps::MapError),
     #[error("failed to bind socket: {0}")]
     Socket(#[from] xdp::socket::SocketError),
-    #[error("failed to determine queue count for NIC: {0}")]
-    UnknownQueueCount(#[from] std::io::Error),
+    #[error("XDP error: {0}")]
+    Xdp(#[from] xdp::error::Error),
+    #[error("mmap error: {0}")]
+    Mmap(#[from] std::io::Error),
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -40,8 +43,33 @@ pub enum LoadError {
     DefaultPortRangeModified(u16, u16),
 }
 
+/// An individual XDP worker.
+///
+/// For now there is always one worker per NIC queue, and doesn't use shared
+/// memory allowing them to work on the queue in complete isolation
+pub struct XdpWorker {
+    /// The actual socket bound to the queue, used for polling operations
+    pub socket: xdp::socket::XdpSocket,
+    /// The memory map shared with the kernel where buffers used to receive
+    /// and send packets are stored
+    pub umem: xdp::Umem,
+    /// The ring used to indicate to the kernel we wish to receive packets
+    pub fill: xdp::FillRing,
+    /// The ring the kernel pushes received packets to
+    pub rx: xdp::RxRing,
+    /// The ring we push packets we wish to send
+    pub tx: xdp::TxRing,
+    /// The ring the kernel pushes packets that have finished sending
+    pub completion: xdp::CompletionRing,
+}
+
 pub struct EbpfProgram {
     bpf: aya::Ebpf,
+    /// The external port is a variable that we modify at load time so the eBPF
+    /// program can filter out which packets it is interested in. This needs to
+    /// be the same port used in the I/O loop to determine if the packet is sent
+    /// from a client or a server
+    pub external_port: xdp::packet::net_types::NetworkU16,
 }
 
 impl EbpfProgram {
@@ -51,8 +79,8 @@ impl EbpfProgram {
     /// how globals work in eBPF.
     pub fn load(external_port: u16) -> Result<Self, LoadError> {
         let mut loader = aya::EbpfLoader::new();
-        let port = external_port.to_be();
-        loader.set_global("EXTERNAL_PORT_NO", &port, true);
+        let external_port_no = external_port.to_be();
+        loader.set_global("EXTERNAL_PORT_NO", &external_port_no, true);
 
         // We exploit the fact that Linux by default does not assign ephemeral
         // ports in the full range allowed by IANA, but we want to sanity check
@@ -80,90 +108,54 @@ impl EbpfProgram {
             )
         })?;
 
-        if end > 60999 {
+        if end != 60999 {
             return Err(LoadError::DefaultPortRangeModified(start, end));
         }
 
         Ok(Self {
             bpf: loader.load(PROGRAM)?,
+            external_port: xdp::packet::net_types::NetworkU16(external_port_no),
         })
     }
 
-    /// Gets the information for the default NIC
-    pub fn get_default_nic() -> std::io::Result<Option<NicIndex>> {
-        let table = std::fs::read_to_string("/proc/net/route")?;
-
-        // In most cases there will probably only be one NIC that talks to
-        // the rest of the network, but just in case, fail if there is
-        // more than one, so the user is forced to specify. We _could_ go
-        // further and use netlink to get the route for a global IP eg. 8.8.8.8,
-        // but the rtnetlink crate is...pretty bad to work with
-        let mut def_iface = None;
-
-        // skip column headers
-        for line in table.lines().skip(1) {
-            let mut iter = line.split(char::is_whitespace).filter_map(|s| {
-                let s = s.trim();
-                (!s.is_empty()).then_some(s)
-            });
-
-            let Some(name) = iter.next() else {
-                continue;
-            };
-            let Some(flags) = iter.nth(2).and_then(|f| u16::from_str_radix(f, 16).ok()) else {
-                continue;
-            };
-
-            if flags & (libc::RTF_UP | libc::RTF_GATEWAY) != libc::RTF_UP | libc::RTF_GATEWAY {
-                continue;
-            }
-
-            let Some(iface) = NicIndex::lookup_by_name(name)? else {
-                continue;
-            };
-
-            if let Some(def) = def_iface {
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::Unsupported,
-                    format!("unable to determine default interface, found {def:?} and {iface:?}"),
-                ));
-            }
-
-            def_iface = Some(iface);
-        }
-
-        Ok(def_iface)
-    }
-
-    /// Gets the information of the NIC with the specified name
-    #[inline]
-    pub fn get_nic(name: &str) -> std::io::Result<Option<NicIndex>> {
-        NicIndex::lookup_by_name(name)
-    }
-
-    /// Binds the specified sockets and inserts them into the eBPF map
-    pub fn bind_sockets(
+    /// Creates and binds sockets
+    pub fn create_and_bind_sockets(
         &mut self,
         nic: NicIndex,
-        sb: Vec<(xdp::socket::XdpSocketBuilder, xdp::socket::BindFlags)>,
-    ) -> Result<Vec<xdp::socket::XdpSocket>, BindError> {
+        umem_cfg: xdp::umem::UmemCfg,
+        device_caps: &xdp::nic::NetdevCapabilities,
+        ring_cfg: xdp::RingConfig,
+    ) -> Result<Vec<XdpWorker>, BindError> {
         use std::os::fd::AsRawFd as _;
-        {
-            let q_count = nic.queue_count().map_err(BindError::UnknownQueueCount)?.1;
-            assert_eq!(sb.len() as u32, q_count, "shared Umem is not supported at the moment, we require there is an AF_XDP socket per NIC queue");
-        }
 
         let mut xsk_map = aya::maps::XskMap::try_from(
             self.bpf.map_mut("XSK").expect("failed to retrieve XSK map"),
         )?;
 
-        let mut sockets = Vec::with_capacity(sb.len());
-        for (i, (sb, bf)) in sb.into_iter().enumerate() {
-            xsk_map.set(i as _, sb.as_raw_fd(), 0)?;
-            sockets.push(sb.bind(nic, i as _, bf)?);
+        let mut entries = Vec::with_capacity(device_caps.queue_count as _);
+        for i in 0..device_caps.queue_count {
+            let umem = xdp::Umem::map(umem_cfg)?;
+            let mut sb = xdp::socket::XdpSocketBuilder::new()?;
+            let (rings, mut bind_flags) = sb.build_rings(&umem, ring_cfg)?;
+
+            if device_caps.zero_copy.is_available() {
+                bind_flags.force_zerocopy();
+            }
+
+            let socket = sb.bind(nic, i, bind_flags)?;
+            xsk_map.set(i, socket.as_raw_fd(), 0)?;
+
+            entries.push(XdpWorker {
+                socket,
+                umem,
+                fill: rings.fill_ring,
+                rx: rings.rx_ring.unwrap(),
+                tx: rings.tx_ring.unwrap(),
+                completion: rings.completion_ring,
+            });
         }
 
-        Ok(sockets)
+        Ok(entries)
     }
 
     pub fn attach(
@@ -187,4 +179,64 @@ impl EbpfProgram {
 
         program.attach_to_if_index(nic.into(), flags)
     }
+
+    pub fn detach(
+        &mut self,
+        link_id: aya::programs::xdp::XdpLinkId,
+    ) -> Result<(), aya::programs::ProgramError> {
+        let program: &mut aya::programs::Xdp = self
+            .bpf
+            .program_mut("all_queues")
+            .expect("failed to locate 'all_queues' program")
+            .try_into()
+            .expect("'all_queues' is not an xdp program");
+        program.detach(link_id)
+    }
+}
+
+/// Gets the information for the default NIC
+pub fn get_default_nic() -> std::io::Result<Option<NicIndex>> {
+    let table = std::fs::read_to_string("/proc/net/route")?;
+
+    // In most cases there will probably only be one NIC that talks to
+    // the rest of the network, but just in case, fail if there is
+    // more than one, so the user is forced to specify. We _could_ go
+    // further and use netlink to get the route for a global IP eg. 8.8.8.8,
+    // but the rtnetlink crate is...pretty bad to work with, maybe neli?
+    // (though want to get rid of that as well)
+    let mut def_iface = None;
+
+    // skip column headers
+    for line in table.lines().skip(1) {
+        let mut iter = line.split(char::is_whitespace).filter_map(|s| {
+            let s = s.trim();
+            (!s.is_empty()).then_some(s)
+        });
+
+        let Some(name) = iter.next() else {
+            continue;
+        };
+        let Some(flags) = iter.nth(2).and_then(|f| u16::from_str_radix(f, 16).ok()) else {
+            continue;
+        };
+
+        if flags & (libc::RTF_UP | libc::RTF_GATEWAY) != libc::RTF_UP | libc::RTF_GATEWAY {
+            continue;
+        }
+
+        let Some(iface) = NicIndex::lookup_by_name(name)? else {
+            continue;
+        };
+
+        if let Some(def) = def_iface {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Unsupported,
+                format!("unable to determine default interface, found {def:?} and {iface:?}"),
+            ));
+        }
+
+        def_iface = Some(iface);
+    }
+
+    Ok(def_iface)
 }
