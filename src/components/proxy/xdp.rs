@@ -1,8 +1,11 @@
+#![allow(dead_code)]
+
 use quilkin_xdp::xdp::{
     self,
     nic::{NicIndex, NicName},
 };
-mod process;
+use std::sync::Arc;
+pub mod process;
 
 pub enum NicConfig<'n> {
     /// Specifies a NIC by name, setup will fail if a NIC with that name doesn't exist
@@ -59,6 +62,8 @@ pub struct XdpWorkers {
     workers: Vec<quilkin_xdp::XdpWorker>,
     nic: NicIndex,
     external_port: NetworkU16,
+    ipv6: std::net::Ipv6Addr,
+    ipv4: std::net::Ipv4Addr,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -79,6 +84,8 @@ pub enum XdpSetupError {
     NicUnavailable(#[from] NicUnavailable),
     #[error("failed to query device capabilities for {0}: {1}")]
     NicQuery(NicName, #[source] std::io::Error),
+    #[error("failed to query ip addresses for {0}: {1}")]
+    AddressQuery(NicName, #[source] std::io::Error),
     #[error("`XDP_ZEROCOPY` is unavailable for {0}")]
     ZeroCopyUnavailable(NicName),
     #[error("`XDP_TXMD_FLAGS_TIMESTAMP` is unavailable for {0}")]
@@ -94,6 +101,18 @@ pub enum XdpSetupError {
     },
     #[error("XDP error: {0}")]
     Xdp(#[from] xdp::error::Error),
+    #[error("XDP load error: {0}")]
+    XdpLoad(#[from] quilkin_xdp::LoadError),
+    #[error("bind error: {0}")]
+    BindError(#[from] quilkin_xdp::BindError),
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum XdpSpawnError {
+    #[error("Failed to spawn worker thread: {0}")]
+    Thread(#[source] std::io::Error),
+    #[error("Failed to attach XDP program: {0}")]
+    XdpAttach(#[from] quilkin_xdp::aya::programs::ProgramError),
 }
 
 /// Attempts to setup XDP by querying NIC support and allocating ring buffers
@@ -118,9 +137,9 @@ pub fn setup_xdp_io(config: XdpConfig<'_>) -> Result<XdpWorkers, XdpSetupError> 
 
     let name = nic_index
         .name()
-        .map_err(|_err| NicUnavailable::UnknownIndex(nic_index.index()))?;
+        .map_err(|_err| NicUnavailable::UnknownIndex(nic_index.into()))?;
 
-    tracing::info!("using NIC {name}({})", nic_index.index());
+    tracing::info!(nic = ?nic_index, "selected NIC");
 
     let device_caps = nic_index
         .query_capabilities()
@@ -135,6 +154,23 @@ pub fn setup_xdp_io(config: XdpConfig<'_>) -> Result<XdpWorkers, XdpSetupError> 
     if config.require_tx_checksum && !device_caps.tx_metadata.checksum() {
         return Err(XdpSetupError::TxChecksumUnavailable(name));
     }
+
+    let (ipv4, ipv6) = nic_index
+        .addresses()
+        .and_then(|(ipv4, ipv6)| {
+            if ipv4.is_none() && ipv6.is_none() {
+                Err(std::io::Error::new(
+                    std::io::ErrorKind::AddrNotAvailable,
+                    "neither an ipv4 nor ipv6 address could be determined for the device",
+                ))
+            } else {
+                Ok((
+                    ipv4.unwrap_or(std::net::Ipv4Addr::new(0, 0, 0, 0)),
+                    ipv6.unwrap_or(std::net::Ipv6Addr::from_bits(0)),
+                ))
+            }
+        })
+        .map_err(|err| XdpSetupError::AddressQuery(name, err))?;
 
     // Bit arbitrary, but set the floor at 128 packets per umem
     const MINIMUM_UMEM_COUNT: u64 = 128;
@@ -161,7 +197,7 @@ pub fn setup_xdp_io(config: XdpConfig<'_>) -> Result<XdpWorkers, XdpSetupError> 
 
             let (max, xunit) = byte_units(max);
             let (min, nunit) =
-                byte_units(MINIMUM_UMEM_COUNT * PACKET_SIZE * device_caps.queue_count as _);
+                byte_units(MINIMUM_UMEM_COUNT * PACKET_SIZE * device_caps.queue_count as u64);
 
             return Err(XdpSetupError::MinimumMemoryRequirementsExceeded {
                 max,
@@ -186,7 +222,7 @@ pub fn setup_xdp_io(config: XdpConfig<'_>) -> Result<XdpWorkers, XdpSetupError> 
         // header without needing to copy any bytes. note this doesn't take into
         // account if a filter adds or removes bytes from the beginning of the
         // data payload
-        head_room: (xdp::frame::net_types::Ipv6Hdr::LEN - xdp::frame::net_types::Ipv4Hdr::LEN)
+        head_room: (xdp::packet::net_types::Ipv6Hdr::LEN - xdp::packet::net_types::Ipv4Hdr::LEN)
             as u32,
         frame_count: packet_count,
         // TODO: This should be done in the type system so we can avoid logic
@@ -204,11 +240,13 @@ pub fn setup_xdp_io(config: XdpConfig<'_>) -> Result<XdpWorkers, XdpSetupError> 
         workers,
         nic: nic_index,
         external_port: NetworkU16(config.external_port.to_be()),
+        ipv4,
+        ipv6,
     })
 }
 
-/// We need the u64 for the call to pthread_cancel, but unfortunately `std::thread::ThreadId`
-/// doesn't have that on [stable](https://doc.rust-lang.org/std/thread/struct.ThreadId.html#method.as_u64)
+/// We need the u64 for the call to [`pthread_cancel`](https://www.man7.org/linux/man-pages/man3/pthread_cancel.3.html),
+/// but unfortunately `std::thread::ThreadId` doesn't have that on [stable](https://doc.rust-lang.org/std/thread/struct.ThreadId.html#method.as_u64)
 type ThreadId = u64;
 
 pub struct XdpLoop {
@@ -220,8 +258,8 @@ pub struct XdpLoop {
 impl XdpLoop {
     /// Detaches the eBPF program from the attacked NIC and cancels all I/O
     /// threads, waiting for them to exit
-    pub async fn shutdown(self) {
-        tokio::task::spawn_blocking(|| {
+    pub async fn shutdown(mut self) {
+        let _ = tokio::task::spawn_blocking(move || {
             if let Err(error) = self.ebpf_prog.detach(self.xdp_link) {
                 tracing::error!(%error, "failed to detach eBPF program");
             }
@@ -234,11 +272,11 @@ impl XdpLoop {
                 let err = unsafe { libc::pthread_cancel(*tid) };
                 match err {
                     0 => {}
-                    libc::ESCRH => {
+                    libc::ESRCH => {
                         tracing::warn!(tid, "thread does not exist");
                         *tid = 0;
                     }
-                    other => {
+                    _ => {
                         tracing::warn!(
                             tid,
                             err,
@@ -269,17 +307,19 @@ impl XdpLoop {
     }
 }
 
-pub fn spawn(
-    workers: XdpWorkers,
-    config: std::sync::Arc<crate::Config>,
-) -> Result<XdpLoop, XdpSpawnError> {
+pub fn spawn(workers: XdpWorkers, config: Arc<crate::Config>) -> Result<XdpLoop, XdpSpawnError> {
     let (tx, rx) = std::sync::mpsc::sync_channel(1);
 
     let external_port = workers.external_port;
+    let ipv4 = workers.ipv4;
+    let ipv6 = workers.ipv6;
+    let session_state = Arc::new(process::SessionState::default());
+
     let mut threads = Vec::with_capacity(workers.workers.len());
     for (i, mut worker) in workers.workers.into_iter().enumerate() {
         let tx = tx.clone();
         let cfg = config.clone();
+        let ss = session_state.clone();
 
         let jh = std::thread::Builder::new()
             .name(format!("xdp-io-{i}"))
@@ -290,8 +330,9 @@ pub fn spawn(
 
                 // SAFETY: there are no invariants to uphold
                 tx.send(unsafe { libc::pthread_self() }).unwrap();
-                io_loop(worker, external_port, cfg)
-            })?;
+                io_loop(worker, external_port, cfg, ss, ipv4, ipv6)
+            })
+            .map_err(XdpSpawnError::Thread)?;
 
         let tid = rx.recv().unwrap();
         threads.push((tid, jh));
@@ -311,19 +352,19 @@ pub fn spawn(
 }
 
 const BATCH_SIZE: usize = 64;
-use xdp::{
-    frame::net_types::{NetworkU16, UdpPacket},
-    Frame,
-};
+use xdp::packet::net_types::NetworkU16;
 
 fn io_loop(
     worker: quilkin_xdp::XdpWorker,
     external_port: NetworkU16,
-    cfg: std::sync::Arc<crate::Config>,
+    config: Arc<crate::Config>,
+    sessions: Arc<process::SessionState>,
+    local_ipv4: std::net::Ipv4Addr,
+    local_ipv6: std::net::Ipv6Addr,
 ) {
     let quilkin_xdp::XdpWorker {
         mut umem,
-        mut socket,
+        socket,
         mut fill,
         mut rx,
         mut tx,
@@ -333,13 +374,23 @@ fn io_loop(
     const POLL_TIMEOUT: xdp::socket::PollTimeout =
         xdp::socket::PollTimeout::new(Some(std::time::Duration::from_millis(100)));
 
+    let mut state = process::State {
+        external_port,
+        config,
+        destinations: Vec::with_capacity(1),
+        sessions,
+        local_ipv4,
+        local_ipv6,
+    };
+
+    let mut rx_slab = xdp::HeapSlab::with_capacity(BATCH_SIZE);
+    let mut tx_slab = xdp::HeapSlab::with_capacity(BATCH_SIZE * 4);
+    let mut pending_sends = 0;
+
     // SAFETY: the cases of unsafe in this code block all concern the relationship
     // between frames and the Umem, the frames cannot outlive the Umem which is
     // the owner of the actual memory map
     unsafe {
-        let mut slab = xdp::Slab::with_capacity(BATCH_SIZE);
-        let mut pending_sends = 0;
-
         loop {
             // Wait for packets to be received/sent, note that
             // [poll](https://www.man7.org/linux/man-pages/man2/poll.2.html) also acts
@@ -349,16 +400,16 @@ fn io_loop(
                 continue;
             };
 
-            let recvd = rx.recv(&umem, &mut slab);
+            let recvd = rx.recv(&umem, &mut rx_slab);
 
-            let enqueued_sends = if recvd > 0 {
-                // Ensure the fill ring doesn't get starved, dropping packets
-                fill.enqueue(&mut umem, BATCH_SIZE * 2 - recvd);
+            // Ensure the fill ring doesn't get starved, which could drop packets
+            fill.enqueue(&mut umem, BATCH_SIZE * 2 - recvd);
 
-                process::process_packets(&mut slab, &mut umem, &mut tx, external_port, &cfg)
-            } else {
-                0
-            };
+            // Process each of the packets that we received, potentially queuing
+            // packets to be sent
+            process::process_packets(&mut rx_slab, &mut umem, &mut tx_slab, &mut state);
+
+            let enqueued_sends = tx.send(&mut tx_slab);
 
             // Return frames that have completed sending
             pending_sends -= completion.dequeue(&mut umem, pending_sends);

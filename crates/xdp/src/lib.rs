@@ -54,7 +54,7 @@ pub struct XdpWorker {
 
 pub struct EbpfProgram {
     bpf: aya::Ebpf,
-    pub external_port: xdp::frame::net_types::NetworkU16,
+    pub external_port: xdp::packet::net_types::NetworkU16,
 }
 
 impl EbpfProgram {
@@ -93,13 +93,13 @@ impl EbpfProgram {
             )
         })?;
 
-        if end > 60999 {
+        if end != 60999 {
             return Err(LoadError::DefaultPortRangeModified(start, end));
         }
 
         Ok(Self {
             bpf: loader.load(PROGRAM)?,
-            external_port: xdp::frame::net_types::NetworkU16(external_port_no),
+            external_port: xdp::packet::net_types::NetworkU16(external_port_no),
         })
     }
 

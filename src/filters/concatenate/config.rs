@@ -61,7 +61,6 @@ impl From<Strategy> for proto::concatenate::StrategyValue {
 
 /// Config represents a `Concatenate` filter configuration.
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, JsonSchema)]
-#[non_exhaustive]
 pub struct Config {
     /// Whether or not to `append` or `prepend` or `do nothing` on Filter `Read`
     #[serde(default)]

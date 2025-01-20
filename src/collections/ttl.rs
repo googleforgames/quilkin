@@ -175,6 +175,7 @@ where
     V: Send + Sync,
 {
     /// Returns a reference to value corresponding to key.
+    #[inline]
     pub fn get(&self, key: &K) -> Option<Ref<K, Value<V>>> {
         let value = self.0.inner.get(key);
         if let Some(ref value) = value {
@@ -185,6 +186,7 @@ where
     }
 
     /// Returns a reference to value corresponding to key.
+    #[inline]
     pub fn try_get(&self, key: &K) -> TryResult<Ref<K, Value<V>>> {
         let value = self.0.inner.try_get(key);
         if let TryResult::Present(ref value) = value {
@@ -196,6 +198,7 @@ where
 
     /// Returns a mutable reference to value corresponding to key.
     /// The value will be reset to expire at the configured TTL after the time of retrieval.
+    #[inline]
     pub fn get_mut(&self, key: &K) -> Option<RefMut<K, Value<V>>> {
         let value = self.0.inner.get_mut(key);
         if let Some(ref value) = value {
@@ -206,21 +209,25 @@ where
     }
 
     /// Returns the number of entries currently in the map.
+    #[inline]
     pub fn len(&self) -> usize {
         self.0.inner.len()
     }
 
     /// Returns whether the map currently contains no entries.
+    #[inline]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
     /// Returns whether the map currently contains any entries.
+    #[inline]
     pub fn is_not_empty(&self) -> bool {
         !self.is_empty()
     }
 
     /// Returns true if the map contains a value for the specified key.
+    #[inline]
     pub fn contains_key(&self, key: &K) -> bool {
         self.0.inner.contains_key(key)
     }
@@ -228,6 +235,7 @@ where
     /// Inserts a key-value pair into the map.
     /// The value will be set to expire at the configured TTL after the time of insertion.
     /// If a previous value existed for this key, that value is returned.
+    #[inline]
     pub fn insert(&self, key: K, value: V) -> Option<V> {
         self.0
             .inner
@@ -236,6 +244,7 @@ where
     }
 
     /// Removes a key-value pair from the map.
+    #[inline]
     pub fn remove(&self, key: K) -> bool {
         self.0.inner.remove(&key).is_some()
     }
@@ -249,6 +258,7 @@ where
     /// Returns an entry for in-place updates of the specified key-value pair.
     /// Note: This acquires a write lock on the map's shard that corresponds
     /// to the entry.
+    #[inline]
     pub fn entry(&self, key: K) -> Entry<K, Value<V>> {
         let ttl = self.0.ttl;
         match self.0.inner.entry(key) {
