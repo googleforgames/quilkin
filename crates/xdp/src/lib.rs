@@ -43,17 +43,32 @@ pub enum LoadError {
     DefaultPortRangeModified(u16, u16),
 }
 
+/// An individual XDP worker.
+///
+/// For now there is always one worker per NIC queue, and doesn't use shared
+/// memory allowing them to work on the queue in complete isolation
 pub struct XdpWorker {
+    /// The actual socket bound to the queue, used for polling operations
     pub socket: xdp::socket::XdpSocket,
+    /// The memory map shared with the kernel where buffers used to receive
+    /// and send packets are stored
     pub umem: xdp::Umem,
+    /// The ring used to indicate to the kernel we wish to receive packets
     pub fill: xdp::FillRing,
+    /// The ring the kernel pushes received packets to
     pub rx: xdp::RxRing,
+    /// The ring we push packets we wish to send
     pub tx: xdp::TxRing,
+    /// The ring the kernel pushes packets that have finished sending
     pub completion: xdp::CompletionRing,
 }
 
 pub struct EbpfProgram {
     bpf: aya::Ebpf,
+    /// The external port is a variable that we modify at load time so the eBPF
+    /// program can filter out which packets it is interested in. This needs to
+    /// be the same port used in the I/O loop to determine if the packet is sent
+    /// from a client or a server
     pub external_port: xdp::packet::net_types::NetworkU16,
 }
 

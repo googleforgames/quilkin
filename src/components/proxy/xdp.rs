@@ -307,6 +307,16 @@ impl XdpLoop {
     }
 }
 
+/// The entrypoint into the XDP I/O loop.
+///
+/// This spawns a named thread for each configured XDP socket to run the packet
+/// receiving + processing + sending, after which the eBPF program used to route
+/// packets to the XDP sockets is attached to the NIC.
+///
+/// # Errors
+///
+/// This can fail if threads can not be spawned for some reason (unlikely), the
+/// more likely reason for failure is the inability to attach the eBPF program
 pub fn spawn(workers: XdpWorkers, config: Arc<crate::Config>) -> Result<XdpLoop, XdpSpawnError> {
     let (tx, rx) = std::sync::mpsc::sync_channel(1);
 
@@ -354,6 +364,11 @@ pub fn spawn(workers: XdpWorkers, config: Arc<crate::Config>) -> Result<XdpLoop,
 const BATCH_SIZE: usize = 64;
 use xdp::packet::net_types::NetworkU16;
 
+/// The core I/O loop
+///
+/// All of the ring operations are done in this loop so that the actual
+/// [`process::process_packets`] code can be cleanly tested without relying on
+/// a fully setup XDP socket/rings, relying only on a `Umem` (memory map)
 fn io_loop(
     worker: quilkin_xdp::XdpWorker,
     external_port: NetworkU16,

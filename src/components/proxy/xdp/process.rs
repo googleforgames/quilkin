@@ -21,12 +21,14 @@ use std::{
     },
 };
 
-struct QPacket {
+/// Wrapper around the actual packet buffer and the UDP metadata it parsed to
+/// so that we can satisify the filter traits
+struct PacketWrapper {
     inner: Packet,
     udp: UdpPacket,
 }
 
-impl filters::Packet for QPacket {
+impl filters::Packet for PacketWrapper {
     #[inline]
     fn as_slice(&self) -> &[u8] {
         self.inner
@@ -40,8 +42,8 @@ impl filters::Packet for QPacket {
     }
 }
 
-impl filters::PacketMut for QPacket {
-    type FrozenPacket = QPacket;
+impl filters::PacketMut for PacketWrapper {
+    type FrozenPacket = PacketWrapper;
 
     fn alloc_sized(&self, _size: usize) -> Option<Self> {
         // Only used by compress filter, which we don't support
@@ -376,7 +378,7 @@ pub fn process_packets(
             metrics::WRITE
         };
 
-        let packet = QPacket { inner, udp };
+        let packet = PacketWrapper { inner, udp };
 
         let res = {
             let _timer = metrics::processing_time(direction).start_timer();
@@ -418,7 +420,7 @@ fn push_packet(
 
 #[inline]
 fn process_client_packet(
-    packet: QPacket,
+    packet: PacketWrapper,
     umem: &mut Umem,
     filters: &filters::FilterChain,
     cm: &crate::net::ClusterMap,
@@ -525,7 +527,7 @@ fn process_client_packet(
 
 #[inline]
 fn process_server_packet(
-    packet: QPacket,
+    packet: PacketWrapper,
     filters: &crate::filters::FilterChain,
     state: &mut State,
     tx_slab: &mut HeapSlab,
