@@ -90,6 +90,7 @@ impl EbpfProgram {
         let port_range = std::fs::read_to_string("/proc/sys/net/ipv4/ip_local_port_range")?;
         let (start, end) =
             port_range
+                .trim()
                 .split_once(char::is_whitespace)
                 .ok_or(std::io::Error::new(
                     std::io::ErrorKind::InvalidData,
