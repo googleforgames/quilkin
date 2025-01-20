@@ -155,7 +155,7 @@ impl GameServer {
     }
 
     pub fn is_allocated(&self) -> bool {
-        self.status.as_ref().map_or(false, |status| {
+        self.status.as_ref().is_some_and(|status| {
             tracing::trace!(?status.addresses, ?status.state, "checking gameserver");
             matches!(status.state, GameServerState::Allocated)
         })
