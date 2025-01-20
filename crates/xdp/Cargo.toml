@@ -9,7 +9,7 @@ edition.workspace = true
 aya = "0.13.1"
 # Allows forwarding trace messages from eBPF programs to a global logger
 aya-log = "0.2.1"
-libc = "0.2"
+libc.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 xdp = { git = "https://github.com/Jake-Shadle/xdp", branch = "impl" }

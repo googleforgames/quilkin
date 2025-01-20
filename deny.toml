@@ -23,7 +23,9 @@ targets = [
 all-features = true
 
 [advisories]
-ignore = ["RUSTSEC-2024-0384", { id = "RUSTSEC-2024-0421", reason = "transitive dependency, updated but not released https://github.com/hickory-dns/hickory-dns/pull/2564" }]
+ignore = [
+    { id = "RUSTSEC-2024-0384", reason = "instant is unmaintained, it's only used a transitive dependency, and it doesn't matter, at least for now" },
+]
 
 [bans]
 deny = [
@@ -38,6 +40,8 @@ deny = [
 ]
 multiple-versions = "deny"
 skip = [
+    { crate = "object@0.32.2", reason = "transitive dependency due to backtrace, backtrace is updated, but stable-eyre using a feature that doesn't exist any longer, and can't update, sigh" },
+
 ]
 skip-tree = [
     { crate = "regex-automata@0.1", reason = "matchers is using an old version, https://github.com/hawkw/matchers/pull/5, but it's also barely maintained..." },
@@ -70,3 +74,8 @@ exceptions = [
 name = "ring"
 expression = "MIT AND ISC AND OpenSSL"
 license-files = [{ path = "LICENSE", hash = 0xbd0eed23 }]
+
+[sources]
+allow-git = [
+    "https://github.com/Jake-Shadle/xdp"
+]
