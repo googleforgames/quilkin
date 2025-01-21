@@ -240,7 +240,27 @@
 <a href="#239" id="239">239</a>
 <a href="#240" id="240">240</a>
 <a href="#241" id="241">241</a>
-<a href="#242" id="242">242</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -259,7 +279,24 @@
 </span><span class="kw">pub use </span>aya;
 <span class="kw">pub use </span>xdp::{<span class="self">self</span>, nic::NicIndex};
 
-<span class="kw">const </span>PROGRAM: <span class="kw-2">&amp;</span>[u8] = <span class="macro">include_bytes!</span>(<span class="string">"../bin/packet-router.bin"</span>);
+<span class="comment">// object unfortunately has alignment requirements, so we need to make sure
+// the raw bytes are aligned for a 64-bit ELF (8 bytes)
+
+// https://users.rust-lang.org/t/can-i-conveniently-compile-bytes-into-a-rust-program-with-a-specific-alignment/24049/2
+// This struct is generic in Bytes to admit unsizing coercions.
+</span><span class="attr">#[repr(C)] </span><span class="comment">// guarantee 'bytes' comes after '_align'
+</span><span class="kw">struct </span>AlignedTo&lt;Align, Bytes: <span class="question-mark">?</span>Sized&gt; {
+    _align: [Align; <span class="number">0</span>],
+    bytes: Bytes,
+}
+
+<span class="comment">// dummy static used to create aligned data
+</span><span class="kw">static </span>ALIGNED: <span class="kw-2">&amp;</span>AlignedTo&lt;u64, [u8]&gt; = <span class="kw-2">&amp;</span>AlignedTo {
+    _align: [],
+    bytes: <span class="kw-2">*</span><span class="macro">include_bytes!</span>(<span class="string">"../bin/packet-router.bin"</span>),
+};
+
+<span class="kw">static </span>PROGRAM: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span>ALIGNED.bytes;
 
 <span class="attr">#[derive(thiserror::Error, Debug)]
 </span><span class="kw">pub enum </span>BindError {
@@ -332,6 +369,7 @@
         </span><span class="kw">let </span>port_range = std::fs::read_to_string(<span class="string">"/proc/sys/net/ipv4/ip_local_port_range"</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>(start, end) =
             port_range
+                .trim()
                 .split_once(char::is_whitespace)
                 .ok_or(std::io::Error::new(
                     std::io::ErrorKind::InvalidData,
@@ -405,9 +443,11 @@
         nic: NicIndex,
         flags: aya::programs::XdpFlags,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;aya::programs::xdp::XdpLinkId, aya::programs::ProgramError&gt; {
-        <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = aya_log::EbpfLogger::init(<span class="kw-2">&amp;mut </span><span class="self">self</span>.bpf) {
-            <span class="macro">tracing::warn!</span>(%error, <span class="string">"failed to initialize eBPF logging"</span>);
-        }
+        <span class="comment">// Would be good to enable this if we do end up adding log messages to
+        // the eBPF program
+        </span><span class="kw">if let </span><span class="prelude-val">Err</span>(_error) = aya_log::EbpfLogger::init(<span class="kw-2">&amp;mut </span><span class="self">self</span>.bpf) {
+            <span class="comment">//tracing::warn!(%error, "failed to initialize eBPF logging");
+        </span>}
 
         <span class="comment">// We use this entrypoint for now, but in the future we could also use
         // a round robin mode when the xdp lib supports shared Umem

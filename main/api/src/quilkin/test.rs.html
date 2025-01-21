@@ -535,11 +535,7 @@
 <a href="#534" id="534">534</a>
 <a href="#535" id="535">535</a>
 <a href="#536" id="536">536</a>
-<a href="#537" id="537">537</a>
-<a href="#538" id="538">538</a>
-<a href="#539" id="539">539</a>
-<a href="#540" id="540">540</a>
-<a href="#541" id="541">541</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#537" id="537">537</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -843,14 +839,10 @@
 
             <span class="kw">crate</span>::components::proxy::Proxy {
                 num_workers: std::num::NonZeroUsize::new(<span class="number">1</span>).unwrap(),
-                mmdb: <span class="prelude-val">None</span>,
-                management_servers: Vec::new(),
-                to: Vec::new(),
-                to_tokens: <span class="prelude-val">None</span>,
                 socket: <span class="prelude-val">Some</span>(<span class="kw">crate</span>::net::raw_socket_with_reuse(<span class="number">0</span>).unwrap()),
                 qcmp,
                 phoenix,
-                notifier: <span class="prelude-val">None</span>,
+                ..Default::default()
             }
         });
 
