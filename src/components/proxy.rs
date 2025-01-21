@@ -300,7 +300,7 @@ impl Proxy {
     ) -> eyre::Result<Box<dyn FnOnce(crate::ShutdownRx) + Send>> {
         #[cfg(target_os = "linux")]
         {
-            match self.spawn_xdp(config.clone()) {
+            match self.spawn_xdp(config.clone(), self.xdp.force_xdp) {
                 Ok(xdp) => {
                     return Ok(xdp);
                 }
@@ -359,13 +359,14 @@ impl Proxy {
     fn spawn_xdp(
         &mut self,
         config: Arc<crate::config::Config>,
+        force_xdp: bool,
     ) -> eyre::Result<Box<dyn FnOnce(crate::ShutdownRx) + Send>> {
         use crate::net::xdp;
         use eyre::Context as _;
 
         // TODO: remove this once it's been more stabilized
-        if true {
-            eyre::bail!("temporarily disabled");
+        if !force_xdp {
+            eyre::bail!("XDP currently disabled by default");
         }
 
         let Some(external_port) = self.socket.as_ref().and_then(|s| {
