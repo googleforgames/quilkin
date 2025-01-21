@@ -245,65 +245,39 @@ pub fn setup_xdp_io(config: XdpConfig<'_>) -> Result<XdpWorkers, XdpSetupError> 
     })
 }
 
-/// We need the u64 for the call to [`pthread_cancel`](https://www.man7.org/linux/man-pages/man3/pthread_cancel.3.html),
-/// but unfortunately `std::thread::ThreadId` doesn't have that on [stable](https://doc.rust-lang.org/std/thread/struct.ThreadId.html#method.as_u64)
-type ThreadId = u64;
-
 pub struct XdpLoop {
-    threads: Vec<(ThreadId, std::thread::JoinHandle<()>)>,
+    threads: Vec<std::thread::JoinHandle<()>>,
     ebpf_prog: quilkin_xdp::EbpfProgram,
     xdp_link: quilkin_xdp::aya::programs::xdp::XdpLinkId,
+    shutdown: Arc<std::sync::atomic::AtomicBool>,
 }
 
 impl XdpLoop {
     /// Detaches the eBPF program from the attacked NIC and cancels all I/O
     /// threads, waiting for them to exit
-    pub async fn shutdown(mut self) {
-        let _ = tokio::task::spawn_blocking(move || {
-            if let Err(error) = self.ebpf_prog.detach(self.xdp_link) {
-                tracing::error!(%error, "failed to detach eBPF program");
-            }
+    pub fn shutdown(mut self, wait: bool) {
+        if let Err(error) = self.ebpf_prog.detach(self.xdp_link) {
+            tracing::error!(%error, "failed to detach eBPF program");
+        }
 
-            for (tid, _) in &mut self.threads {
-                // This will only fail if the thread doesn't exist, so we just
-                // make it so that we skip joining if that happens
-                // SAFETY: this should be safe to call even if the thread doesn't
-                // exist
-                let err = unsafe { libc::pthread_cancel(*tid) };
-                match err {
-                    0 => {}
-                    libc::ESRCH => {
-                        tracing::warn!(tid, "thread does not exist");
-                        *tid = 0;
-                    }
-                    _ => {
-                        tracing::warn!(
-                            tid,
-                            err,
-                            "thread could not be cancelled, but the error seems to be incorrect"
-                        );
-                        *tid = 0;
-                    }
-                }
-            }
+        self.shutdown
+            .store(true, std::sync::atomic::Ordering::Relaxed);
 
-            for (tid, jh) in self.threads {
-                if tid == 0 {
-                    continue;
-                }
+        if !wait {
+            return;
+        }
 
-                if let Err(error) = jh.join() {
-                    if let Some(error) = error.downcast_ref::<&'static str>() {
-                        tracing::error!(tid, error, "XDP I/O thread enountered error");
-                    } else if let Some(error) = error.downcast_ref::<String>() {
-                        tracing::error!(tid, error, "XDP I/O thread enountered error");
-                    } else {
-                        tracing::error!(tid, ?error, "XDP I/O thread enountered error");
-                    };
-                }
+        for jh in self.threads {
+            if let Err(error) = jh.join() {
+                if let Some(error) = error.downcast_ref::<&'static str>() {
+                    tracing::error!(error, "XDP I/O thread enountered error");
+                } else if let Some(error) = error.downcast_ref::<String>() {
+                    tracing::error!(error, "XDP I/O thread enountered error");
+                } else {
+                    tracing::error!(?error, "XDP I/O thread enountered error");
+                };
             }
-        })
-        .await;
+        }
     }
 }
 
@@ -318,18 +292,17 @@ impl XdpLoop {
 /// This can fail if threads can not be spawned for some reason (unlikely), the
 /// more likely reason for failure is the inability to attach the eBPF program
 pub fn spawn(workers: XdpWorkers, config: Arc<crate::Config>) -> Result<XdpLoop, XdpSpawnError> {
-    let (tx, rx) = std::sync::mpsc::sync_channel(1);
-
     let external_port = workers.external_port;
     let ipv4 = workers.ipv4;
     let ipv6 = workers.ipv6;
     let session_state = Arc::new(process::SessionState::default());
+    let shutdown = Arc::new(std::sync::atomic::AtomicBool::new(false));
 
     let mut threads = Vec::with_capacity(workers.workers.len());
     for (i, mut worker) in workers.workers.into_iter().enumerate() {
-        let tx = tx.clone();
         let cfg = config.clone();
         let ss = session_state.clone();
+        let shutdown = shutdown.clone();
 
         let jh = std::thread::Builder::new()
             .name(format!("xdp-io-{i}"))
@@ -338,14 +311,11 @@ pub fn spawn(workers: XdpWorkers, config: Arc<crate::Config>) -> Result<XdpLoop,
                 // SAFETY: we keep the umem alive for as long as the socket is alive
                 unsafe { worker.fill.enqueue(&mut worker.umem, BATCH_SIZE * 2) };
 
-                // SAFETY: there are no invariants to uphold
-                tx.send(unsafe { libc::pthread_self() }).unwrap();
-                io_loop(worker, external_port, cfg, ss, ipv4, ipv6)
+                io_loop(worker, external_port, cfg, ss, ipv4, ipv6, shutdown.clone())
             })
             .map_err(XdpSpawnError::Thread)?;
 
-        let tid = rx.recv().unwrap();
-        threads.push((tid, jh));
+        threads.push(jh);
     }
 
     // Now that all the io loops are running, attach the eBPF program to route
@@ -358,6 +328,7 @@ pub fn spawn(workers: XdpWorkers, config: Arc<crate::Config>) -> Result<XdpLoop,
         threads,
         ebpf_prog,
         xdp_link,
+        shutdown,
     })
 }
 
@@ -376,6 +347,7 @@ fn io_loop(
     sessions: Arc<process::SessionState>,
     local_ipv4: std::net::Ipv4Addr,
     local_ipv6: std::net::Ipv6Addr,
+    shutdown: Arc<std::sync::atomic::AtomicBool>,
 ) {
     let quilkin_xdp::XdpWorker {
         mut umem,
@@ -406,7 +378,7 @@ fn io_loop(
     // between frames and the Umem, the frames cannot outlive the Umem which is
     // the owner of the actual memory map
     unsafe {
-        loop {
+        while !shutdown.load(std::sync::atomic::Ordering::Relaxed) {
             // Wait for packets to be received/sent, note that
             // [poll](https://www.man7.org/linux/man-pages/man2/poll.2.html) also acts
             // as a [cancellation point](https://www.man7.org/linux/man-pages/man7/pthreads.7.html),

@@ -17,7 +17,24 @@
 pub use aya;
 pub use xdp::{self, nic::NicIndex};
 
-const PROGRAM: &[u8] = include_bytes!("../bin/packet-router.bin");
+// object unfortunately has alignment requirements, so we need to make sure
+// the raw bytes are aligned for a 64-bit ELF (8 bytes)
+
+// https://users.rust-lang.org/t/can-i-conveniently-compile-bytes-into-a-rust-program-with-a-specific-alignment/24049/2
+// This struct is generic in Bytes to admit unsizing coercions.
+#[repr(C)] // guarantee 'bytes' comes after '_align'
+struct AlignedTo<Align, Bytes: ?Sized> {
+    _align: [Align; 0],
+    bytes: Bytes,
+}
+
+// dummy static used to create aligned data
+static ALIGNED: &AlignedTo<u64, [u8]> = &AlignedTo {
+    _align: [],
+    bytes: *include_bytes!("../bin/packet-router.bin"),
+};
+
+static PROGRAM: &[u8] = &ALIGNED.bytes;
 
 #[derive(thiserror::Error, Debug)]
 pub enum BindError {
@@ -90,6 +107,7 @@ impl EbpfProgram {
         let port_range = std::fs::read_to_string("/proc/sys/net/ipv4/ip_local_port_range")?;
         let (start, end) =
             port_range
+                .trim()
                 .split_once(char::is_whitespace)
                 .ok_or(std::io::Error::new(
                     std::io::ErrorKind::InvalidData,
@@ -163,8 +181,10 @@ impl EbpfProgram {
         nic: NicIndex,
         flags: aya::programs::XdpFlags,
     ) -> Result<aya::programs::xdp::XdpLinkId, aya::programs::ProgramError> {
-        if let Err(error) = aya_log::EbpfLogger::init(&mut self.bpf) {
-            tracing::warn!(%error, "failed to initialize eBPF logging");
+        // Would be good to enable this if we do end up adding log messages to
+        // the eBPF program
+        if let Err(_error) = aya_log::EbpfLogger::init(&mut self.bpf) {
+            //tracing::warn!(%error, "failed to initialize eBPF logging");
         }
 
         // We use this entrypoint for now, but in the future we could also use

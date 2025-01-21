@@ -499,14 +499,12 @@ impl Pail {
                 let task = tokio::spawn(async move {
                     components::proxy::Proxy {
                         num_workers: NonZeroUsize::new(1).unwrap(),
-                        mmdb: None,
-                        to: Vec::new(),
-                        to_tokens: None,
                         management_servers,
                         socket: Some(socket),
                         qcmp,
                         phoenix,
                         notifier: Some(rttx),
+                        ..Default::default()
                     }
                     .run(
                         RunArgs {

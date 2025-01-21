@@ -302,14 +302,10 @@ impl TestHelper {
 
             crate::components::proxy::Proxy {
                 num_workers: std::num::NonZeroUsize::new(1).unwrap(),
-                mmdb: None,
-                management_servers: Vec::new(),
-                to: Vec::new(),
-                to_tokens: None,
                 socket: Some(crate::net::raw_socket_with_reuse(0).unwrap()),
                 qcmp,
                 phoenix,
-                notifier: None,
+                ..Default::default()
             }
         });
 
