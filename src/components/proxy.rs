@@ -309,7 +309,10 @@ impl Proxy {
                         return Err(err);
                     }
 
-                    tracing::warn!(?err, "failed to spawn XDP I/O loop, falling back to io-uring");
+                    tracing::warn!(
+                        ?err,
+                        "failed to spawn XDP I/O loop, falling back to io-uring"
+                    );
                 }
             }
         }
@@ -353,7 +356,10 @@ impl Proxy {
     }
 
     #[cfg(target_os = "linux")]
-    fn spawn_xdp(&mut self, config: Arc<crate::config::Config>) -> eyre::Result<Box<dyn FnOnce(crate::ShutdownRx) + Send>> {
+    fn spawn_xdp(
+        &mut self,
+        config: Arc<crate::config::Config>,
+    ) -> eyre::Result<Box<dyn FnOnce(crate::ShutdownRx) + Send>> {
         use crate::net::xdp;
         use eyre::Context as _;
 
@@ -380,7 +386,8 @@ impl Proxy {
             maximum_packet_memory: self.xdp.maximum_memory,
             require_zero_copy: self.xdp.force_zerocopy,
             require_tx_checksum: self.xdp.force_tx_checksum_offload,
-        }).context("failed to setup XDP")?;
+        })
+        .context("failed to setup XDP")?;
 
         let io_loop = xdp::spawn(workers, config).context("failed to spawn XDP I/O loop")?;
         Ok(Box::new(move |srx: crate::ShutdownRx| {
