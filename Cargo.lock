@@ -4292,7 +4292,7 @@ checksum = "1e9df38ee2d2c3c5948ea468a8406ff0db0b29ae1ffde1bcf20ef305bcc95c51"
 [[package]]
 name = "xdp"
 version = "0.0.1"
-source = "git+https://github.com/Jake-Shadle/xdp?branch=impl#c375726411235a9d05c9e12c638cf6148c2fdec7"
+source = "git+https://github.com/Jake-Shadle/xdp?branch=impl#4ec459e29fd1fdf38f85a7d48b64d3ae2f6098de"
 dependencies = [
  "libc",
  "memmap2",
