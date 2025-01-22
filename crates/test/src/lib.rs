@@ -307,11 +307,8 @@ impl Pail {
             PailConfig::Relay(rpc) => {
                 use components::relay;
 
-                let xds_listener = TcpListener::bind(None).unwrap();
-                let mds_listener = TcpListener::bind(None).unwrap();
-
-                let xds_port = xds_listener.port();
-                let mds_port = mds_listener.port();
+                let xds_port = TcpListener::bind(None).unwrap().port();
+                let mds_port = TcpListener::bind(None).unwrap().port();
 
                 let path = td.join(spc.name);
                 let mut tc = rpc.config.unwrap_or_default();
@@ -328,8 +325,8 @@ impl Pail {
 
                 let task = tokio::spawn(
                     relay::Relay {
-                        xds_listener,
-                        mds_listener,
+                        xds_port,
+                        mds_port,
                         provider: Some(Providers::File { path }),
                     }
                     .run(RunArgs {
@@ -392,9 +389,9 @@ impl Pail {
                 let (shutdown, shutdown_rx) =
                     quilkin::make_shutdown_channel(quilkin::ShutdownKind::Testing);
 
-                let qcmp_socket =
-                    quilkin::net::raw_socket_with_reuse(0).expect("failed to bind qcmp socket");
-                let qcmp_port = quilkin::net::socket_port(&qcmp_socket);
+                let port = quilkin::net::socket_port(
+                    &quilkin::net::raw_socket_with_reuse(0).expect("failed to bind qcmp socket"),
+                );
 
                 let config_path = path.clone();
                 let config = Arc::new(Config::default_agent());
@@ -406,7 +403,7 @@ impl Pail {
                         locality: None,
                         icao_code: Some(apc.icao_code),
                         relay_servers,
-                        qcmp_socket,
+                        port,
                         provider: Some(Providers::File { path }),
                         address_selector: None,
                     }
@@ -419,7 +416,7 @@ impl Pail {
                 });
 
                 Self::Agent(AgentPail {
-                    qcmp_port,
+                    qcmp_port: port,
                     task,
                     shutdown,
                     config_file: Some(ConfigFile {

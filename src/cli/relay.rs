@@ -19,7 +19,6 @@ use std::sync::Arc;
 use crate::{
     components::relay,
     config::{Config, Providers},
-    net::TcpListener,
 };
 pub use relay::Ready;
 
@@ -63,12 +62,9 @@ impl Relay {
         ready: Ready,
         shutdown_rx: crate::ShutdownRx,
     ) -> crate::Result<()> {
-        let xds_listener = TcpListener::bind(Some(self.xds_port))?;
-        let mds_listener = TcpListener::bind(Some(self.mds_port))?;
-
         relay::Relay {
-            xds_listener,
-            mds_listener,
+            xds_port: self.xds_port,
+            mds_port: self.mds_port,
             provider: self.providers,
         }
         .run(crate::components::RunArgs {

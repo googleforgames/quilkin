@@ -85,12 +85,11 @@ impl Agent {
         ready: Ready,
         shutdown_rx: crate::ShutdownRx,
     ) -> crate::Result<()> {
-        let qcmp_socket = crate::net::raw_socket_with_reuse(self.qcmp_port)?;
         let icao_code = Some(self.icao_code);
 
         agent::Agent {
             locality,
-            qcmp_socket,
+            port: self.qcmp_port,
             icao_code,
             relay_servers: self.relay,
             provider: self.provider,
