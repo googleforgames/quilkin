@@ -297,6 +297,8 @@ impl Cli {
             shutdown_tx.send(crate::ShutdownKind::Normal).ok();
         });
 
+        self.service.spawn_services(&config, &shutdown_rx)?;
+
         match (self.command, mode) {
             (Commands::Agent(agent), Admin::Agent(ready)) => {
                 agent.run(locality, config, ready, shutdown_rx).await

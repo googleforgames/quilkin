@@ -50,13 +50,11 @@ impl Manage {
         ready: Ready,
         shutdown_rx: crate::ShutdownRx,
     ) -> crate::Result<()> {
-        let listener = crate::net::TcpListener::bind(Some(self.port))?;
-
         manage::Manage {
             locality,
+            port: self.port,
             provider: self.provider,
             relay_servers: self.relay,
-            listener,
             address_selector: self.address_type.map(|at| crate::config::AddressSelector {
                 name: at,
                 kind: self.ip_kind,

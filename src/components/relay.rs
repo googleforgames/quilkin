@@ -15,7 +15,7 @@
  */
 
 use super::RunArgs;
-use crate::{config::Providers, net::TcpListener};
+use crate::config::Providers;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
@@ -44,8 +44,8 @@ impl Ready {
 }
 
 pub struct Relay {
-    pub xds_listener: TcpListener,
-    pub mds_listener: TcpListener,
+    pub xds_port: u16,
+    pub mds_port: u16,
     pub provider: Option<Providers>,
 }
 
@@ -59,15 +59,6 @@ impl Relay {
             mut shutdown_rx,
         }: RunArgs<Ready>,
     ) -> crate::Result<()> {
-        use crate::net::xds::server::ControlPlane;
-
-        let xds_server = ControlPlane::from_arc(config.clone(), ready.idle_request_interval)
-            .management_server(self.xds_listener)?;
-        let mds_server = tokio::spawn(
-            ControlPlane::from_arc(config.clone(), ready.idle_request_interval)
-                .relay_server(self.mds_listener)?,
-        );
-
         let _provider_task = self.provider.map(|provider| {
             let config = config.clone();
             let provider_is_healthy = ready.provider_is_healthy.clone();
@@ -134,14 +125,13 @@ impl Relay {
             }
         });
 
-        tokio::select! {
-            result = xds_server => {
-                result
-            }
-            result = mds_server => {
-                result?
-            }
-            result = shutdown_rx.changed() => result.map_err(From::from),
-        }
+        crate::cli::Service::default()
+            .xds()
+            .xds_port(self.xds_port)
+            .mds()
+            .mds_port(self.mds_port)
+            .spawn_services(&config, &shutdown_rx)?;
+
+        shutdown_rx.changed().await.map_err(From::from)
     }
 }
