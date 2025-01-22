@@ -29,10 +29,10 @@ rust_toolchain := $(shell grep channel $(project_path)/rust-toolchain.toml | awk
 
 # if this is a release, don't put the sha, otherwise, leave it off.
 ifdef QUILKIN_RELEASE
-	package_version := $(shell grep -A1 -w "name = \"quilkin\"" $(project_path)/Cargo.toml | grep version -m 1 | awk '{print $$3}')
+	package_version := $(shell grep -A1 -w "name = \"quilkin\"" $(project_path)/Cargo.toml | grep version -m 1 | awk -F'"' '{print $$2}')
 else
 	git_sha := $(shell git rev-parse --short=7 HEAD)
-	package_version := $(shell grep -A1 -w "name = \"quilkin\"" $(project_path)/Cargo.toml | grep version -m 1 | awk '{print $$3}')-${git_sha}
+	package_version := $(shell grep -A1 -w "name = \"quilkin\"" $(project_path)/Cargo.toml | grep version -m 1 | awk  -F'"' '{print $$2}')-${git_sha}
 endif
 
 # Set this value if you want to use an external registry
@@ -197,8 +197,8 @@ else
 endif
 	docker run --rm $(common_rust_args) \
 		--entrypoint=bash $(BUILD_IMAGE_TAG) -c './image/archive_dependencies.sh'
-	docker buildx build --platform=linux/amd64 --build-arg TARGETPLATFORM=linux/amd64 --provenance false -t $(IMAGE_TAG_AMD64) -f $(project_path)/image/Dockerfile $(project_path) 
-	docker buildx build --platform=linux/arm64 --build-arg TARGETPLATFORM=linux/arm64 --provenance false -t $(IMAGE_TAG_ARM64) -f $(project_path)/image/Dockerfile $(project_path) 
+	docker build --platform=linux/amd64 --build-arg TARGETPLATFORM=linux/amd64 -t $(IMAGE_TAG_AMD64) -f $(project_path)/image/Dockerfile $(project_path) 
+	docker build --platform=linux/arm64 --build-arg TARGETPLATFORM=linux/arm64 -t $(IMAGE_TAG_ARM64) -f $(project_path)/image/Dockerfile $(project_path) 
 	docker push $(IMAGE_TAG_AMD64)
 	docker push $(IMAGE_TAG_ARM64)
 	docker manifest create $(IMAGE_TAG) $(IMAGE_TAG_AMD64) $(IMAGE_TAG_ARM64)
