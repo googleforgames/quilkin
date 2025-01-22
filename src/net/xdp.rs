@@ -321,6 +321,12 @@ pub fn spawn(workers: XdpWorkers, config: Arc<crate::Config>) -> Result<XdpLoop,
     // Now that all the io loops are running, attach the eBPF program to route
     // packets to the bound sockets
     let mut ebpf_prog = workers.ebpf_prog;
+
+    // We use the default flags here, which means that the program will be attached
+    // in driver mode if the NIC + driver is capable of it, otherwise it will fallback
+    // to SKB mode. This allows maximum compatibility, and we already provide
+    // flags to force zerocopy, which relies on driver mode, so the user can use
+    // that if they don't want the fallback behavior
     let xdp_link =
         ebpf_prog.attach(workers.nic, quilkin_xdp::aya::programs::XdpFlags::default())?;
 

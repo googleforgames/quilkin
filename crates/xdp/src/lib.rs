@@ -249,10 +249,13 @@ pub fn get_default_nic() -> std::io::Result<Option<NicIndex>> {
         };
 
         if let Some(def) = def_iface {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::Unsupported,
-                format!("unable to determine default interface, found {def:?} and {iface:?}"),
-            ));
+            // A NIC can have multiple routes, so don't error when it comes up again
+            if def != iface {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::Unsupported,
+                    format!("unable to determine default interface, found {def:?} and {iface:?}"),
+                ));
+            }
         }
 
         def_iface = Some(iface);
