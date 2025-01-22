@@ -594,19 +594,7 @@
 <a href="#593" id="593">593</a>
 <a href="#594" id="594">594</a>
 <a href="#595" id="595">595</a>
-<a href="#596" id="596">596</a>
-<a href="#597" id="597">597</a>
-<a href="#598" id="598">598</a>
-<a href="#599" id="599">599</a>
-<a href="#600" id="600">600</a>
-<a href="#601" id="601">601</a>
-<a href="#602" id="602">602</a>
-<a href="#603" id="603">603</a>
-<a href="#604" id="604">604</a>
-<a href="#605" id="605">605</a>
-<a href="#606" id="606">606</a>
-<a href="#607" id="607">607</a>
-<a href="#608" id="608">608</a></pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
+<a href="#596" id="596">596</a></pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
     components::proxy::PipelineError,
     filters::{<span class="self">self</span>, Filter <span class="kw">as _</span>},
     metrics,
@@ -616,7 +604,7 @@
 <span class="kw">use </span>quilkin_xdp::xdp::{
     packet::{
         csum,
-        net_types::{FullAddress, IpAddresses, NetworkU16, UdpPacket},
+        net_types::{IpAddresses, NetworkU16, UdpPacket},
         Packet, PacketError,
     },
     HeapSlab, Umem,
@@ -979,7 +967,7 @@
             <span class="macro">unreachable!</span>(<span class="string">"we somehow got a non-UDP packet, this should be impossible with the eBPF program we use to route packets"</span>);
         };
 
-        <span class="kw">let </span>is_client = udp.destination.port == state.external_port;
+        <span class="kw">let </span>is_client = udp.dst_port == state.external_port;
         <span class="kw">let </span>direction = <span class="kw">if </span>is_client {
             metrics::READ
         } <span class="kw">else </span>{
@@ -1035,7 +1023,7 @@
     state: <span class="kw-2">&amp;mut </span>State,
     tx_slab: <span class="kw-2">&amp;mut </span>HeapSlab,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), PipelineError&gt; {
-    <span class="kw">let </span>source_addr = SocketAddr::from((packet.udp.ips.source(), packet.udp.source.port.host()));
+    <span class="kw">let </span>source_addr = SocketAddr::from((packet.udp.ips.source(), packet.udp.src_port.host()));
     <span class="kw">let </span><span class="kw-2">mut </span>ctx =
         filters::ReadContext::new(cm, source_addr.into(), packet, <span class="kw-2">&amp;mut </span>state.destinations);
 
@@ -1070,14 +1058,10 @@
             <span class="kw">let </span>src_port = state.session(source_addr, dest_addr);
 
             <span class="kw">let </span><span class="kw-2">mut </span>headers = UdpPacket {
-                source: FullAddress {
-                    mac: packet.udp.destination.mac,
-                    port: src_port,
-                },
-                destination: FullAddress {
-                    mac: packet.udp.source.mac,
-                    port: dest_addr.port().into(),
-                },
+                src_mac: packet.udp.dst_mac,
+                src_port,
+                dst_mac: packet.udp.src_mac,
+                dst_port: dest_addr.port().into(),
                 ips: state.ips(dest_addr.ip()),
                 data_offset: packet.udp.data_offset,
                 data_length: packet.udp.data_length,
@@ -1107,14 +1091,10 @@
     <span class="kw">let </span>src_port = state.session(source_addr, dest_addr);
 
     <span class="kw">let </span><span class="kw-2">mut </span>headers = UdpPacket {
-        source: FullAddress {
-            mac: packet.udp.destination.mac,
-            port: src_port,
-        },
-        destination: FullAddress {
-            mac: packet.udp.source.mac,
-            port: dest_addr.port().into(),
-        },
+        src_mac: packet.udp.dst_mac,
+        src_port,
+        dst_mac: packet.udp.src_mac,
+        dst_port: dest_addr.port().into(),
         ips: state.ips(dest_addr.ip()),
         data_offset: packet.udp.data_offset,
         data_length: packet.udp.data_length,
@@ -1140,9 +1120,9 @@
     state: <span class="kw-2">&amp;mut </span>State,
     tx_slab: <span class="kw-2">&amp;mut </span>HeapSlab,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), PipelineError&gt; {
-    <span class="kw">let </span>server_addr = SocketAddr::new(packet.udp.ips.source(), packet.udp.source.port.host());
+    <span class="kw">let </span>server_addr = SocketAddr::new(packet.udp.ips.source(), packet.udp.src_port.host());
 
-    <span class="kw">let </span><span class="prelude-val">Some</span>(client_addr) = state.lookup_client(server_addr, packet.udp.destination.port) <span class="kw">else </span>{
+    <span class="kw">let </span><span class="prelude-val">Some</span>(client_addr) = state.lookup_client(server_addr, packet.udp.dst_port) <span class="kw">else </span>{
         <span class="macro">tracing::debug!</span>(address = %server_addr, <span class="string">"received traffic from a server that has no downstream"</span>);
         <span class="kw">return </span><span class="prelude-val">Ok</span>(());
     };
@@ -1156,14 +1136,10 @@
     } = ctx;
 
     <span class="kw">let </span>headers = UdpPacket {
-        source: FullAddress {
-            mac: packet.udp.destination.mac,
-            port: state.external_port,
-        },
-        destination: FullAddress {
-            mac: packet.udp.source.mac,
-            port: client_addr.port().into(),
-        },
+        src_mac: packet.udp.dst_mac,
+        src_port: state.external_port,
+        dst_mac: packet.udp.src_mac,
+        dst_port: client_addr.port().into(),
         ips: state.ips(client_addr.ip()),
         data_offset: packet.udp.data_offset,
         data_length: packet.udp.data_length,
@@ -1174,7 +1150,7 @@
     push_packet(
         metrics::Direction::Write,
         modify_packet_headers(<span class="kw-2">&amp;</span>packet.udp, <span class="kw-2">&amp;</span>headers, <span class="kw-2">&amp;mut </span>packet.inner).map(|<span class="kw">_</span>| {
-            <span class="kw">let _ </span>= csum::recalc_udp(<span class="kw-2">&amp;mut </span>packet.inner);
+            <span class="kw">let _ </span>= packet.inner.calc_udp_checksum();
             packet.inner
         }),
         tx_slab,
