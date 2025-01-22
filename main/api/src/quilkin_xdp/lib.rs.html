@@ -260,7 +260,10 @@
 <a href="#259" id="259">259</a>
 <a href="#260" id="260">260</a>
 <a href="#261" id="261">261</a>
-<a href="#262" id="262">262</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -511,10 +514,13 @@
         };
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(def) = def_iface {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(std::io::Error::new(
-                std::io::ErrorKind::Unsupported,
-                <span class="macro">format!</span>(<span class="string">"unable to determine default interface, found {def:?} and {iface:?}"</span>),
-            ));
+            <span class="comment">// A NIC can have multiple routes, so don't error when it comes up again
+            </span><span class="kw">if </span>def != iface {
+                <span class="kw">return </span><span class="prelude-val">Err</span>(std::io::Error::new(
+                    std::io::ErrorKind::Unsupported,
+                    <span class="macro">format!</span>(<span class="string">"unable to determine default interface, found {def:?} and {iface:?}"</span>),
+                ));
+            }
         }
 
         def_iface = <span class="prelude-val">Some</span>(iface);

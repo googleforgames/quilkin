@@ -404,7 +404,13 @@
 <a href="#403" id="403">403</a>
 <a href="#404" id="404">404</a>
 <a href="#405" id="405">405</a>
-<a href="#406" id="406">406</a></pre></div><pre class="rust"><code><span class="attr">#![allow(dead_code)]
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a></pre></div><pre class="rust"><code><span class="attr">#![allow(dead_code)]
 
 </span><span class="kw">use </span>quilkin_xdp::xdp::{
     <span class="self">self</span>,
@@ -727,7 +733,13 @@
     <span class="comment">// Now that all the io loops are running, attach the eBPF program to route
     // packets to the bound sockets
     </span><span class="kw">let </span><span class="kw-2">mut </span>ebpf_prog = workers.ebpf_prog;
-    <span class="kw">let </span>xdp_link =
+
+    <span class="comment">// We use the default flags here, which means that the program will be attached
+    // in driver mode if the NIC + driver is capable of it, otherwise it will fallback
+    // to SKB mode. This allows maximum compatibility, and we already provide
+    // flags to force zerocopy, which relies on driver mode, so the user can use
+    // that if they don't want the fallback behavior
+    </span><span class="kw">let </span>xdp_link =
         ebpf_prog.attach(workers.nic, quilkin_xdp::aya::programs::XdpFlags::default())<span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>(XdpLoop {
