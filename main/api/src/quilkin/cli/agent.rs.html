@@ -106,8 +106,7 @@
 <a href="#105" id="105">105</a>
 <a href="#106" id="106">106</a>
 <a href="#107" id="107">107</a>
-<a href="#108" id="108">108</a>
-<a href="#109" id="109">109</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#108" id="108">108</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -194,12 +193,11 @@
         ready: Ready,
         shutdown_rx: <span class="kw">crate</span>::ShutdownRx,
     ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
-        <span class="kw">let </span>qcmp_socket = <span class="kw">crate</span>::net::raw_socket_with_reuse(<span class="self">self</span>.qcmp_port)<span class="question-mark">?</span>;
         <span class="kw">let </span>icao_code = <span class="prelude-val">Some</span>(<span class="self">self</span>.icao_code);
 
         agent::Agent {
             locality,
-            qcmp_socket,
+            port: <span class="self">self</span>.qcmp_port,
             icao_code,
             relay_servers: <span class="self">self</span>.relay,
             provider: <span class="self">self</span>.provider,

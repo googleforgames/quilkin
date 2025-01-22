@@ -84,14 +84,7 @@
 <a href="#83" id="83">83</a>
 <a href="#84" id="84">84</a>
 <a href="#85" id="85">85</a>
-<a href="#86" id="86">86</a>
-<a href="#87" id="87">87</a>
-<a href="#88" id="88">88</a>
-<a href="#89" id="89">89</a>
-<a href="#90" id="90">90</a>
-<a href="#91" id="91">91</a>
-<a href="#92" id="92">92</a>
-<a href="#93" id="93">93</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#86" id="86">86</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -118,7 +111,7 @@
     <span class="kw">pub </span>locality: <span class="prelude-ty">Option</span>&lt;Locality&gt;,
     <span class="kw">pub </span>relay_servers: Vec&lt;tonic::transport::Endpoint&gt;,
     <span class="kw">pub </span>provider: Providers,
-    <span class="kw">pub </span>listener: <span class="kw">crate</span>::net::TcpListener,
+    <span class="kw">pub </span>port: u16,
     <span class="kw">pub </span>address_selector: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::config::AddressSelector&gt;,
 }
 
@@ -166,19 +159,12 @@
             <span class="prelude-val">None
         </span>};
 
-        <span class="kw">use </span>futures::TryFutureExt <span class="kw">as _</span>;
-        <span class="kw">let </span>server_task = tokio::spawn(
-            <span class="kw">crate</span>::net::xds::server::ControlPlane::from_arc(
-                config,
-                <span class="kw">crate</span>::components::admin::IDLE_REQUEST_INTERVAL,
-            )
-            .management_server(<span class="self">self</span>.listener)<span class="question-mark">?</span>,
-        )
-        .map_err(From::from)
-        .and_then(std::future::ready);
+        <span class="kw">crate</span>::cli::Service::default()
+            .xds()
+            .xds_port(<span class="self">self</span>.port)
+            .spawn_services(<span class="kw-2">&amp;</span>config, <span class="kw-2">&amp;</span>shutdown_rx)<span class="question-mark">?</span>;
 
         <span class="macro">tokio::select!</span> {
-            result = server_task =&gt; result,
             result = provider_task =&gt; result<span class="question-mark">?</span>,
             result = shutdown_rx.changed() =&gt; result.map_err(From::from),
         }

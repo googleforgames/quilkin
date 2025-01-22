@@ -75,11 +75,7 @@
 <a href="#74" id="74">74</a>
 <a href="#75" id="75">75</a>
 <a href="#76" id="76">76</a>
-<a href="#77" id="77">77</a>
-<a href="#78" id="78">78</a>
-<a href="#79" id="79">79</a>
-<a href="#80" id="80">80</a>
-<a href="#81" id="81">81</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#77" id="77">77</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -100,7 +96,6 @@
 <span class="kw">use crate</span>::{
     components::relay,
     config::{Config, Providers},
-    net::TcpListener,
 };
 <span class="kw">pub use </span>relay::Ready;
 
@@ -144,12 +139,9 @@
         ready: Ready,
         shutdown_rx: <span class="kw">crate</span>::ShutdownRx,
     ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
-        <span class="kw">let </span>xds_listener = TcpListener::bind(<span class="prelude-val">Some</span>(<span class="self">self</span>.xds_port))<span class="question-mark">?</span>;
-        <span class="kw">let </span>mds_listener = TcpListener::bind(<span class="prelude-val">Some</span>(<span class="self">self</span>.mds_port))<span class="question-mark">?</span>;
-
         relay::Relay {
-            xds_listener,
-            mds_listener,
+            xds_port: <span class="self">self</span>.xds_port,
+            mds_port: <span class="self">self</span>.mds_port,
             provider: <span class="self">self</span>.providers,
         }
         .run(<span class="kw">crate</span>::components::RunArgs {

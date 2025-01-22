@@ -68,9 +68,7 @@
 <a href="#67" id="67">67</a>
 <a href="#68" id="68">68</a>
 <a href="#69" id="69">69</a>
-<a href="#70" id="70">70</a>
-<a href="#71" id="71">71</a>
-<a href="#72" id="72">72</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#70" id="70">70</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -122,13 +120,11 @@
         ready: Ready,
         shutdown_rx: <span class="kw">crate</span>::ShutdownRx,
     ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
-        <span class="kw">let </span>listener = <span class="kw">crate</span>::net::TcpListener::bind(<span class="prelude-val">Some</span>(<span class="self">self</span>.port))<span class="question-mark">?</span>;
-
         manage::Manage {
             locality,
+            port: <span class="self">self</span>.port,
             provider: <span class="self">self</span>.provider,
             relay_servers: <span class="self">self</span>.relay,
-            listener,
             address_selector: <span class="self">self</span>.address_type.map(|at| <span class="kw">crate</span>::config::AddressSelector {
                 name: at,
                 kind: <span class="self">self</span>.ip_kind,

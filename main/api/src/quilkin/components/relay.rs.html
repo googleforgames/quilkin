@@ -135,17 +135,7 @@
 <a href="#134" id="134">134</a>
 <a href="#135" id="135">135</a>
 <a href="#136" id="136">136</a>
-<a href="#137" id="137">137</a>
-<a href="#138" id="138">138</a>
-<a href="#139" id="139">139</a>
-<a href="#140" id="140">140</a>
-<a href="#141" id="141">141</a>
-<a href="#142" id="142">142</a>
-<a href="#143" id="143">143</a>
-<a href="#144" id="144">144</a>
-<a href="#145" id="145">145</a>
-<a href="#146" id="146">146</a>
-<a href="#147" id="147">147</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#137" id="137">137</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -162,7 +152,7 @@
  */
 
 </span><span class="kw">use </span><span class="kw">super</span>::RunArgs;
-<span class="kw">use crate</span>::{config::Providers, net::TcpListener};
+<span class="kw">use </span><span class="kw">crate</span>::config::Providers;
 <span class="kw">use </span>std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
@@ -191,8 +181,8 @@
 }
 
 <span class="kw">pub struct </span>Relay {
-    <span class="kw">pub </span>xds_listener: TcpListener,
-    <span class="kw">pub </span>mds_listener: TcpListener,
+    <span class="kw">pub </span>xds_port: u16,
+    <span class="kw">pub </span>mds_port: u16,
     <span class="kw">pub </span>provider: <span class="prelude-ty">Option</span>&lt;Providers&gt;,
 }
 
@@ -206,15 +196,6 @@
             <span class="kw-2">mut </span>shutdown_rx,
         }: RunArgs&lt;Ready&gt;,
     ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
-        <span class="kw">use </span><span class="kw">crate</span>::net::xds::server::ControlPlane;
-
-        <span class="kw">let </span>xds_server = ControlPlane::from_arc(config.clone(), ready.idle_request_interval)
-            .management_server(<span class="self">self</span>.xds_listener)<span class="question-mark">?</span>;
-        <span class="kw">let </span>mds_server = tokio::spawn(
-            ControlPlane::from_arc(config.clone(), ready.idle_request_interval)
-                .relay_server(<span class="self">self</span>.mds_listener)<span class="question-mark">?</span>,
-        );
-
         <span class="kw">let </span>_provider_task = <span class="self">self</span>.provider.map(|provider| {
             <span class="kw">let </span>config = config.clone();
             <span class="kw">let </span>provider_is_healthy = ready.provider_is_healthy.clone();
@@ -281,15 +262,14 @@
             }
         });
 
-        <span class="macro">tokio::select!</span> {
-            result = xds_server =&gt; {
-                result
-            }
-            result = mds_server =&gt; {
-                result<span class="question-mark">?
-            </span>}
-            result = shutdown_rx.changed() =&gt; result.map_err(From::from),
-        }
+        <span class="kw">crate</span>::cli::Service::default()
+            .xds()
+            .xds_port(<span class="self">self</span>.xds_port)
+            .mds()
+            .mds_port(<span class="self">self</span>.mds_port)
+            .spawn_services(<span class="kw-2">&amp;</span>config, <span class="kw-2">&amp;</span>shutdown_rx)<span class="question-mark">?</span>;
+
+        shutdown_rx.changed().<span class="kw">await</span>.map_err(From::from)
     }
 }
 </code></pre></div></section></main></body></html>
