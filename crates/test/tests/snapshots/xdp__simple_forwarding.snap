@@ -45,7 +45,7 @@ PacketHeaders {
                 ),
                 time_to_live: 63,
                 protocol: 17 (UDP - User Datagram),
-                header_checksum: 0,
+                header_checksum: 30145,
                 source: [
                     2,
                     2,
