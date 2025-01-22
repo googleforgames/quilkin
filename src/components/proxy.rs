@@ -270,14 +270,26 @@ impl Proxy {
                 .expect("failed to spawn proxy-subscription thread");
         }
 
-        let router_shutdown = self.spawn_packet_router(config.clone()).await?;
-        crate::codec::qcmp::spawn(self.qcmp, shutdown_rx.clone())?;
-        crate::net::phoenix::spawn(
-            self.phoenix,
-            config.clone(),
-            shutdown_rx.clone(),
-            crate::net::phoenix::Phoenix::new(crate::codec::qcmp::QcmpMeasurement::new()?),
-        )?;
+        // TODO: Remove this once the CLI is fully moved over.
+        let udp_port = crate::net::socket_port(&self.socket.take().unwrap());
+        let qcmp_port = crate::net::socket_port(&std::mem::replace(
+            &mut self.qcmp,
+            crate::net::raw_socket_with_reuse(0).unwrap(),
+        ));
+        let phoenix_port = std::mem::replace(
+            &mut self.phoenix,
+            crate::net::TcpListener::bind(None).unwrap(),
+        )
+        .port();
+
+        crate::cli::Service::default()
+            .udp()
+            .udp_port(udp_port)
+            .qcmp()
+            .qcmp_port(qcmp_port)
+            .phoenix()
+            .phoenix_port(phoenix_port)
+            .spawn_services(&config, &shutdown_rx)?;
 
         tracing::info!("Quilkin is ready");
         if let Some(initialized) = initialized {
@@ -288,8 +300,6 @@ impl Proxy {
             .changed()
             .await
             .map_err(|error| eyre::eyre!(error))?;
-
-        (router_shutdown)(shutdown_rx);
 
         Ok(())
     }
@@ -347,8 +357,7 @@ impl Proxy {
             worker_sends,
             &sessions,
             buffer_pool,
-        )
-        .await?;
+        )?;
 
         Ok(Box::new(move |shutdown_rx: crate::ShutdownRx| {
             sessions.shutdown(*shutdown_rx.borrow() == crate::ShutdownKind::Normal);

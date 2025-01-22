@@ -157,7 +157,7 @@ pub struct DownstreamReceiveWorkerConfig {
 /// This function also spawns the set of worker tasks responsible for consuming packets
 /// off the aforementioned queue and processing them through the filter chain and session
 /// pipeline.
-pub async fn spawn_receivers(
+pub fn spawn_receivers(
     config: Arc<Config>,
     socket: socket2::Socket,
     worker_sends: Vec<crate::net::PacketQueue>,
@@ -175,7 +175,7 @@ pub async fn spawn_receivers(
             buffer_pool: buffer_pool.clone(),
         };
 
-        worker.spawn(ws).await?;
+        worker.spawn(ws)?;
     }
 
     Ok(())
