@@ -214,7 +214,7 @@ Options:
   -c, --config &lt;CONFIG&gt;          The path to the configuration file for the Quilkin instance [env: QUILKIN_CONFIG=] [default: quilkin.yaml]
   -q, --quiet                    Whether Quilkin will report any results to stdout/stderr [env: QUIET=]
       --log-format &lt;LOG_FORMAT&gt;  [default: auto] [possible values: auto, json, plain, pretty]
-  -h, --help                     Print help
+  -h, --help                     Print help (see more with '--help')
   -V, --version                  Print version
 
 Administration Options:
@@ -228,6 +228,40 @@ Locality Options:
           The `zone` in the `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_LOCALITY_ZONE=]
       --locality.region.sub_zone &lt;SUB_ZONE&gt;
           The `sub_zone` in the `zone` in the `region` to set in the cluster map for any provider endpoints discovered [env: QUILKIN_LOCALITY_SUB_ZONE=]
+
+Service Options:
+      --service.mds
+          Whether to serve mDS requests [env: QUILKIN_PUBLISH_MDS=]
+      --service.mds.port &lt;MDS_PORT&gt;
+          The TCP port to listen to serve xDS requests [env: QUILKIN_PUBLISH_MDS_PORT=] [default: 7900]
+      --service.phoenix
+          Whether to serve UDP requests [env: QUILKIN_PUBLISH_PHOENIX=]
+      --service.phoenix.port &lt;PHOENIX_PORT&gt;
+          The UDP port to listen for UDP packets [env: QUILKIN_PUBLISH_PHOENIX_PORT=] [default: 7600]
+      --service.qcmp
+          Whether to serve UDP requests [env: QUILKIN_PUBLISH_QCMP=]
+      --service.qcmp.port &lt;QCMP_PORT&gt;
+          The UDP port to listen for UDP packets [env: QUILKIN_PUBLISH_QCMP_PORT=] [default: 7600]
+      --service.udp
+          Whether to serve UDP requests [env: QUILKIN_PUBLISH_UDP=]
+      --service.udp.port &lt;UDP_PORT&gt;
+          The UDP port to listen for UDP packets [env: QUILKIN_PUBLISH_UDP_PORT=] [default: 7777]
+      --service.udp.xdp.network-interface &lt;NETWORK_INTERFACE&gt;
+          The name of the network interface to bind the XDP socket(s) to
+      --service.udp.xdp
+          Forces the use of XDP
+      --service.udp.xdp.zerocopy
+          Forces the use of [`XDP_ZEROCOPY`](https://www.kernel.org/doc/html/latest/networking/af_xdp.html#xdp-copy-and-xdp-zerocopy-bind-flags)
+      --service.udp.xdp.tco
+          Forces the use of [TX checksum offload](https://docs.kernel.org/6.8/networking/xsk-tx-metadata.html)
+      --service.udp.xdp.memory-limit &lt;MAXIMUM_MEMORY&gt;
+          The maximum amount of memory mapped for packet buffers, in bytes
+      --service.udp.workers &lt;UDP_WORKERS&gt;
+          Amount of UDP workers to run [env: QUILKIN_PUBLISH_UDP_WORKERS=] [default: 4]
+      --service.xds
+          Whether to serve xDS requests [env: QUILKIN_PUBLISH_XDS=]
+      --service.xds.port &lt;XDS_PORT&gt;
+          The TCP port to listen to serve xDS requests [env: QUILKIN_PUBLISH_XDS_PORT=] [default: 7800]
 </code></pre>
 
                     </main>

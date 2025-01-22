@@ -66,7 +66,7 @@
 </span><span class="kw">use </span>eyre::Context <span class="kw">as _</span>;
 
 <span class="kw">impl </span><span class="kw">super</span>::DownstreamReceiveWorkerConfig {
-    <span class="kw">pub async fn </span>spawn(<span class="self">self</span>, pending_sends: <span class="kw">crate</span>::net::PacketQueue) -&gt; eyre::Result&lt;()&gt; {
+    <span class="kw">pub fn </span>spawn(<span class="self">self</span>, pending_sends: <span class="kw">crate</span>::net::PacketQueue) -&gt; eyre::Result&lt;()&gt; {
         <span class="kw">use </span><span class="kw">crate</span>::net::io_uring;
 
         <span class="kw">let </span><span class="self">Self </span>{

@@ -396,7 +396,16 @@
 <a href="#395" id="395">395</a>
 <a href="#396" id="396">396</a>
 <a href="#397" id="397">397</a>
-<a href="#398" id="398">398</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -668,14 +677,26 @@
                 .expect(<span class="string">"failed to spawn proxy-subscription thread"</span>);
         }
 
-        <span class="kw">let </span>router_shutdown = <span class="self">self</span>.spawn_packet_router(config.clone()).<span class="kw">await</span><span class="question-mark">?</span>;
-        <span class="kw">crate</span>::codec::qcmp::spawn(<span class="self">self</span>.qcmp, shutdown_rx.clone())<span class="question-mark">?</span>;
-        <span class="kw">crate</span>::net::phoenix::spawn(
-            <span class="self">self</span>.phoenix,
-            config.clone(),
-            shutdown_rx.clone(),
-            <span class="kw">crate</span>::net::phoenix::Phoenix::new(<span class="kw">crate</span>::codec::qcmp::QcmpMeasurement::new()<span class="question-mark">?</span>),
-        )<span class="question-mark">?</span>;
+        <span class="comment">// TODO: Remove this once the CLI is fully moved over.
+        </span><span class="kw">let </span>udp_port = <span class="kw">crate</span>::net::socket_port(<span class="kw-2">&amp;</span><span class="self">self</span>.socket.take().unwrap());
+        <span class="kw">let </span>qcmp_port = <span class="kw">crate</span>::net::socket_port(<span class="kw-2">&amp;</span>std::mem::replace(
+            <span class="kw-2">&amp;mut </span><span class="self">self</span>.qcmp,
+            <span class="kw">crate</span>::net::raw_socket_with_reuse(<span class="number">0</span>).unwrap(),
+        ));
+        <span class="kw">let </span>phoenix_port = std::mem::replace(
+            <span class="kw-2">&amp;mut </span><span class="self">self</span>.phoenix,
+            <span class="kw">crate</span>::net::TcpListener::bind(<span class="prelude-val">None</span>).unwrap(),
+        )
+        .port();
+
+        <span class="kw">crate</span>::cli::Service::default()
+            .udp()
+            .udp_port(udp_port)
+            .qcmp()
+            .qcmp_port(qcmp_port)
+            .phoenix()
+            .phoenix_port(phoenix_port)
+            .spawn_services(<span class="kw-2">&amp;</span>config, <span class="kw-2">&amp;</span>shutdown_rx)<span class="question-mark">?</span>;
 
         <span class="macro">tracing::info!</span>(<span class="string">"Quilkin is ready"</span>);
         <span class="kw">if let </span><span class="prelude-val">Some</span>(initialized) = initialized {
@@ -686,8 +707,6 @@
             .changed()
             .<span class="kw">await
             </span>.map_err(|error| <span class="macro">eyre::eyre!</span>(error))<span class="question-mark">?</span>;
-
-        (router_shutdown)(shutdown_rx);
 
         <span class="prelude-val">Ok</span>(())
     }
@@ -745,8 +764,7 @@
             worker_sends,
             <span class="kw-2">&amp;</span>sessions,
             buffer_pool,
-        )
-        .<span class="kw">await</span><span class="question-mark">?</span>;
+        )<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(Box::new(<span class="kw">move </span>|shutdown_rx: <span class="kw">crate</span>::ShutdownRx| {
             sessions.shutdown(<span class="kw-2">*</span>shutdown_rx.borrow() == <span class="kw">crate</span>::ShutdownKind::Normal);

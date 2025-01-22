@@ -334,7 +334,10 @@
 <a href="#333" id="333">333</a>
 <a href="#334" id="334">334</a>
 <a href="#335" id="335">335</a>
-<a href="#336" id="336">336</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#336" id="336">336</a>
+<a href="#337" id="337">337</a>
+<a href="#338" id="338">338</a>
+<a href="#339" id="339">339</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -364,7 +367,7 @@
 
 <span class="kw">pub use </span><span class="self">self</span>::{
     agent::Agent, generate_config_schema::GenerateConfigSchema, manage::Manage, proxy::Proxy,
-    qcmp::Qcmp, relay::Relay,
+    qcmp::Qcmp, relay::Relay, service::Service,
 };
 
 <span class="macro">macro_rules!</span> define_port {
@@ -383,6 +386,7 @@
 <span class="kw">pub mod </span>proxy;
 <span class="kw">pub mod </span>qcmp;
 <span class="kw">pub mod </span>relay;
+<span class="kw">mod </span>service;
 
 <span class="kw">const </span>ETC_CONFIG_PATH: <span class="kw-2">&amp;</span>str = <span class="string">"/etc/quilkin/quilkin.yaml"</span>;
 <span class="kw">const </span>PORT_ENV_VAR: <span class="kw-2">&amp;</span>str = <span class="string">"QUILKIN_PORT"</span>;
@@ -457,6 +461,8 @@
     </span><span class="kw">pub </span>admin: AdminCli,
     <span class="attr">#[command(flatten)]
     </span><span class="kw">pub </span>locality: LocalityCli,
+    <span class="attr">#[command(flatten)]
+    </span><span class="kw">pub </span>service: Service,
 }
 
 <span class="doccomment">/// The various log format options

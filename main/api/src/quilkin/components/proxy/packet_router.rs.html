@@ -339,7 +339,7 @@
 /// This function also spawns the set of worker tasks responsible for consuming packets
 /// off the aforementioned queue and processing them through the filter chain and session
 /// pipeline.
-</span><span class="kw">pub async fn </span>spawn_receivers(
+</span><span class="kw">pub fn </span>spawn_receivers(
     config: Arc&lt;Config&gt;,
     socket: socket2::Socket,
     worker_sends: Vec&lt;<span class="kw">crate</span>::net::PacketQueue&gt;,
@@ -357,7 +357,7 @@
             buffer_pool: buffer_pool.clone(),
         };
 
-        worker.spawn(ws).<span class="kw">await</span><span class="question-mark">?</span>;
+        worker.spawn(ws)<span class="question-mark">?</span>;
     }
 
     <span class="prelude-val">Ok</span>(())
