@@ -165,8 +165,8 @@ else
 endif
 	docker run --rm $(common_rust_args) \
 		--entrypoint=bash $(BUILD_IMAGE_TAG) -c './image/archive_dependencies.sh'
-	docker build --platform=linux/amd64 --build-arg TARGETPLATFORM=linux/amd64 -t $(IMAGE_TAG_AMD64) -f $(project_path)/image/Dockerfile $(project_path) 
-	docker build --platform=linux/arm64 --build-arg TARGETPLATFORM=linux/arm64 -t $(IMAGE_TAG_ARM64) -f $(project_path)/image/Dockerfile $(project_path) 
+	docker buildx build --platform=linux/amd64 --build-arg TARGETPLATFORM=linux/amd64 -t $(IMAGE_TAG_AMD64) -f $(project_path)/image/Dockerfile $(project_path) 
+	docker buildx build --platform=linux/arm64 --build-arg TARGETPLATFORM=linux/arm64 -t $(IMAGE_TAG_ARM64) -f $(project_path)/image/Dockerfile $(project_path) 
 	docker push $(IMAGE_TAG_AMD64)
 	docker push $(IMAGE_TAG_ARM64)
 	docker manifest create $(IMAGE_TAG) $(IMAGE_TAG_AMD64) $(IMAGE_TAG_ARM64)
