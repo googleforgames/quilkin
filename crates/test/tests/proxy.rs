@@ -109,7 +109,6 @@ trace_test!(uring_receiver, {
         ),
     }
     .spawn(pending_sends)
-    .await
     .expect("failed to spawn task");
 
     // Drop the socket, otherwise it can
@@ -161,7 +160,6 @@ trace_test!(
             &sessions,
             BUFFER_POOL.clone(),
         )
-        .await
         .unwrap();
 
         let socket = std::sync::Arc::new(sb.client());

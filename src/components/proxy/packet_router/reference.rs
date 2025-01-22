@@ -17,7 +17,7 @@
 //! The reference implementation is used for non-Linux targets
 
 impl super::DownstreamReceiveWorkerConfig {
-    pub async fn spawn(self, packet_queue: crate::net::PacketQueue) -> eyre::Result<()> {
+    pub fn spawn(self, packet_queue: crate::net::PacketQueue) -> eyre::Result<()> {
         let Self {
             worker_id,
             port,

@@ -28,7 +28,7 @@ use strum_macros::{Display, EnumString};
 
 pub use self::{
     agent::Agent, generate_config_schema::GenerateConfigSchema, manage::Manage, proxy::Proxy,
-    qcmp::Qcmp, relay::Relay,
+    qcmp::Qcmp, relay::Relay, service::Service,
 };
 
 macro_rules! define_port {
@@ -47,6 +47,7 @@ pub mod manage;
 pub mod proxy;
 pub mod qcmp;
 pub mod relay;
+mod service;
 
 const ETC_CONFIG_PATH: &str = "/etc/quilkin/quilkin.yaml";
 const PORT_ENV_VAR: &str = "QUILKIN_PORT";
@@ -121,6 +122,8 @@ pub struct Cli {
     pub admin: AdminCli,
     #[command(flatten)]
     pub locality: LocalityCli,
+    #[command(flatten)]
+    pub service: Service,
 }
 
 /// The various log format options

@@ -17,7 +17,7 @@
 use eyre::Context as _;
 
 impl super::DownstreamReceiveWorkerConfig {
-    pub async fn spawn(self, pending_sends: crate::net::PacketQueue) -> eyre::Result<()> {
+    pub fn spawn(self, pending_sends: crate::net::PacketQueue) -> eyre::Result<()> {
         use crate::net::io_uring;
 
         let Self {
