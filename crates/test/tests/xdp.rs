@@ -430,7 +430,7 @@ async fn packet_manipulation() {
         let mut server_packet = unsafe { umem.alloc().unwrap() };
         etherparse::PacketBuilder::ethernet2([3, 3, 3, 3, 3, 3], [4, 4, 4, 4, 4, 4])
             .ipv4(SERVER.ip().octets(), PROXY.ip().octets(), 64)
-            .udp(SERVER.port(), udp.source.port.host())
+            .udp(SERVER.port(), udp.src_port.host())
             .write(&mut server_packet, &pdata)
             .unwrap();
 
@@ -593,14 +593,10 @@ async fn many_sessions() {
         let udp = nt::UdpPacket::parse_packet(packet).unwrap().unwrap();
 
         let new = nt::UdpPacket {
-            source: nt::FullAddress {
-                mac: udp.destination.mac,
-                port: udp.destination.port,
-            },
-            destination: nt::FullAddress {
-                mac: udp.source.mac,
-                port: udp.source.port,
-            },
+            src_mac: udp.dst_mac,
+            src_port: udp.dst_port,
+            dst_mac: udp.src_mac,
+            dst_port: udp.src_port,
             ips: match udp.ips {
                 nt::IpAddresses::V4 {
                     source,
@@ -618,7 +614,7 @@ async fn many_sessions() {
         };
 
         new.set_packet_headers(packet).unwrap();
-        xdp::packet::csum::recalc_udp(packet).unwrap();
+        packet.calc_udp_checksum().unwrap();
     }
 
     let mut rx_slab = xdp::HeapSlab::with_capacity(1);
@@ -652,20 +648,10 @@ async fn many_sessions() {
             &client_packet[udp.data_offset..udp.data_offset + udp.data_length],
             &data
         );
-        assert_eq!(
-            udp.destination,
-            nt::FullAddress {
-                mac: nt::MacAddress([3, 3, 3, 3, 3, 3]),
-                port: (i as u16).into(),
-            }
-        );
-        assert_eq!(
-            udp.source,
-            nt::FullAddress {
-                mac: nt::MacAddress([4, 4, 4, 4, 4, 4]),
-                port: PROXY.port().into(),
-            }
-        );
+        assert_eq!(udp.dst_mac, nt::MacAddress([3, 3, 3, 3, 3, 3]));
+        assert_eq!(udp.dst_port, (i as u16).into());
+        assert_eq!(udp.src_mac, nt::MacAddress([4, 4, 4, 4, 4, 4]));
+        assert_eq!(udp.src_port.host(), PROXY.port());
         assert_eq!(
             udp.ips,
             nt::IpAddresses::V4 {

@@ -8,7 +8,7 @@ pub use quilkin_xdp::xdp;
 use quilkin_xdp::xdp::{
     packet::{
         csum,
-        net_types::{FullAddress, IpAddresses, NetworkU16, UdpPacket},
+        net_types::{IpAddresses, NetworkU16, UdpPacket},
         Packet, PacketError,
     },
     HeapSlab, Umem,
@@ -371,7 +371,7 @@ pub fn process_packets(
             unreachable!("we somehow got a non-UDP packet, this should be impossible with the eBPF program we use to route packets");
         };
 
-        let is_client = udp.destination.port == state.external_port;
+        let is_client = udp.dst_port == state.external_port;
         let direction = if is_client {
             metrics::READ
         } else {
@@ -427,7 +427,7 @@ fn process_client_packet(
     state: &mut State,
     tx_slab: &mut HeapSlab,
 ) -> Result<(), PipelineError> {
-    let source_addr = SocketAddr::from((packet.udp.ips.source(), packet.udp.source.port.host()));
+    let source_addr = SocketAddr::from((packet.udp.ips.source(), packet.udp.src_port.host()));
     let mut ctx =
         filters::ReadContext::new(cm, source_addr.into(), packet, &mut state.destinations);
 
@@ -462,14 +462,10 @@ fn process_client_packet(
             let src_port = state.session(source_addr, dest_addr);
 
             let mut headers = UdpPacket {
-                source: FullAddress {
-                    mac: packet.udp.destination.mac,
-                    port: src_port,
-                },
-                destination: FullAddress {
-                    mac: packet.udp.source.mac,
-                    port: dest_addr.port().into(),
-                },
+                src_mac: packet.udp.dst_mac,
+                src_port,
+                dst_mac: packet.udp.src_mac,
+                dst_port: dest_addr.port().into(),
                 ips: state.ips(dest_addr.ip()),
                 data_offset: packet.udp.data_offset,
                 data_length: packet.udp.data_length,
@@ -499,14 +495,10 @@ fn process_client_packet(
     let src_port = state.session(source_addr, dest_addr);
 
     let mut headers = UdpPacket {
-        source: FullAddress {
-            mac: packet.udp.destination.mac,
-            port: src_port,
-        },
-        destination: FullAddress {
-            mac: packet.udp.source.mac,
-            port: dest_addr.port().into(),
-        },
+        src_mac: packet.udp.dst_mac,
+        src_port,
+        dst_mac: packet.udp.src_mac,
+        dst_port: dest_addr.port().into(),
         ips: state.ips(dest_addr.ip()),
         data_offset: packet.udp.data_offset,
         data_length: packet.udp.data_length,
@@ -532,9 +524,9 @@ fn process_server_packet(
     state: &mut State,
     tx_slab: &mut HeapSlab,
 ) -> Result<(), PipelineError> {
-    let server_addr = SocketAddr::new(packet.udp.ips.source(), packet.udp.source.port.host());
+    let server_addr = SocketAddr::new(packet.udp.ips.source(), packet.udp.src_port.host());
 
-    let Some(client_addr) = state.lookup_client(server_addr, packet.udp.destination.port) else {
+    let Some(client_addr) = state.lookup_client(server_addr, packet.udp.dst_port) else {
         tracing::debug!(address = %server_addr, "received traffic from a server that has no downstream");
         return Ok(());
     };
@@ -548,14 +540,10 @@ fn process_server_packet(
     } = ctx;
 
     let headers = UdpPacket {
-        source: FullAddress {
-            mac: packet.udp.destination.mac,
-            port: state.external_port,
-        },
-        destination: FullAddress {
-            mac: packet.udp.source.mac,
-            port: client_addr.port().into(),
-        },
+        src_mac: packet.udp.dst_mac,
+        src_port: state.external_port,
+        dst_mac: packet.udp.src_mac,
+        dst_port: client_addr.port().into(),
         ips: state.ips(client_addr.ip()),
         data_offset: packet.udp.data_offset,
         data_length: packet.udp.data_length,
@@ -566,7 +554,7 @@ fn process_server_packet(
     push_packet(
         metrics::Direction::Write,
         modify_packet_headers(&packet.udp, &headers, &mut packet.inner).map(|_| {
-            let _ = csum::recalc_udp(&mut packet.inner);
+            let _ = packet.inner.calc_udp_checksum();
             packet.inner
         }),
         tx_slab,
