@@ -594,7 +594,13 @@
 <a href="#593" id="593">593</a>
 <a href="#594" id="594">594</a>
 <a href="#595" id="595">595</a>
-<a href="#596" id="596">596</a></pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a></pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
     components::proxy::PipelineError,
     filters::{<span class="self">self</span>, Filter <span class="kw">as _</span>},
     metrics,
@@ -982,14 +988,22 @@
             <span class="kw">if </span>is_client {
                 process_client_packet(packet, umem, <span class="kw-2">&amp;</span>filters, <span class="kw-2">&amp;</span>cm, state, tx_slab)
             } <span class="kw">else </span>{
-                process_server_packet(packet, <span class="kw-2">&amp;</span>filters, state, tx_slab)
+                process_server_packet(packet, umem, <span class="kw-2">&amp;</span>filters, state, tx_slab)
             }
         };
 
-        <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = res {
-            <span class="kw">let </span>discriminant = error.discriminant();
-            metrics::errors_total(direction, discriminant, <span class="kw-2">&amp;</span>metrics::EMPTY).inc();
-            metrics::packets_dropped_total(direction, discriminant, <span class="kw-2">&amp;</span>metrics::EMPTY).inc();
+        <span class="kw">match </span>res {
+            <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; {}
+            <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(packet)) =&gt; {
+                umem.free_packet(packet);
+            }
+            <span class="prelude-val">Err</span>((error, packet)) =&gt; {
+                <span class="kw">let </span>discriminant = error.discriminant();
+                metrics::errors_total(direction, discriminant, <span class="kw-2">&amp;</span>metrics::EMPTY).inc();
+                metrics::packets_dropped_total(direction, discriminant, <span class="kw-2">&amp;</span>metrics::EMPTY).inc();
+
+                umem.free_packet(packet);
+            }
         }
     }
 }
@@ -997,19 +1011,23 @@
 <span class="attr">#[inline]
 </span><span class="kw">fn </span>push_packet(
     direction: metrics::Direction,
-    res: <span class="prelude-ty">Result</span>&lt;Packet, PacketError&gt;,
+    packet: Packet,
+    res: <span class="prelude-ty">Result</span>&lt;(), PacketError&gt;,
     tx_slab: <span class="kw-2">&amp;mut </span>HeapSlab,
+    umem: <span class="kw-2">&amp;mut </span>Umem,
 ) {
     <span class="kw">match </span>res {
-        <span class="prelude-val">Ok</span>(frame) =&gt; {
-            <span class="kw">if </span>tx_slab.push_back(frame).is_some() {
+        <span class="prelude-val">Ok</span>(()) =&gt; {
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(packet) = tx_slab.push_back(packet) {
                 metrics::packets_dropped_total(direction, <span class="string">"tx slab full"</span>, <span class="kw-2">&amp;</span>metrics::EMPTY).inc();
+                umem.free_packet(packet);
             }
         }
         <span class="prelude-val">Err</span>(err) =&gt; {
             <span class="kw">let </span>discriminant = err.discriminant();
             metrics::errors_total(direction, discriminant, <span class="kw-2">&amp;</span>metrics::EMPTY).inc();
             metrics::packets_dropped_total(direction, discriminant, <span class="kw-2">&amp;</span>metrics::EMPTY).inc();
+            umem.free_packet(packet);
         }
     }
 }
@@ -1022,20 +1040,20 @@
     cm: <span class="kw-2">&amp;</span><span class="kw">crate</span>::net::ClusterMap,
     state: <span class="kw-2">&amp;mut </span>State,
     tx_slab: <span class="kw-2">&amp;mut </span>HeapSlab,
-) -&gt; <span class="prelude-ty">Result</span>&lt;(), PipelineError&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Packet&gt;, (PipelineError, Packet)&gt; {
     <span class="kw">let </span>source_addr = SocketAddr::from((packet.udp.ips.source(), packet.udp.src_port.host()));
     <span class="kw">let </span><span class="kw-2">mut </span>ctx =
         filters::ReadContext::new(cm, source_addr.into(), packet, <span class="kw-2">&amp;mut </span>state.destinations);
 
-    filters.read(<span class="kw-2">&amp;mut </span>ctx).map_err(PipelineError::Filter)<span class="question-mark">?</span>;
-
-    <span class="kw">let </span>filters::ReadContext {
-        contents: <span class="kw-2">mut </span>packet,
-        ..
-    } = ctx;
+    <span class="kw">let </span><span class="kw-2">mut </span>packet = <span class="kw">match </span>filters.read(<span class="kw-2">&amp;mut </span>ctx) {
+        <span class="prelude-val">Ok</span>(()) =&gt; ctx.contents,
+        <span class="prelude-val">Err</span>(err) =&gt; {
+            <span class="kw">return </span><span class="prelude-val">Err</span>((PipelineError::Filter(err), ctx.contents.inner));
+        }
+    };
 
     <span class="kw">let </span><span class="prelude-val">Some</span>(dest_addr) = state.destinations.pop() <span class="kw">else </span>{
-        <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+        <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(packet.inner));
     };
 
     <span class="kw">let </span>data = packet
@@ -1070,23 +1088,20 @@
             };
 
             <span class="comment">// SAFETY: the umem outlives the frame
-            </span><span class="kw">let </span><span class="kw-2">mut </span>new_frame = <span class="kw">unsafe </span>{
-                <span class="kw">let </span><span class="prelude-val">Some</span>(new_frame) = umem.alloc() <span class="kw">else </span>{
+            </span><span class="kw">let </span><span class="kw-2">mut </span>new_packet = <span class="kw">unsafe </span>{
+                <span class="kw">let </span><span class="prelude-val">Some</span>(new_packet) = umem.alloc() <span class="kw">else </span>{
                     <span class="kw">continue</span>;
                 };
-                new_frame
+                new_packet
             };
 
-            push_packet(
-                metrics::Direction::Read,
-                fill_packet(<span class="kw-2">&amp;mut </span>headers, data, data_checksum, <span class="kw-2">&amp;mut </span>new_frame).map(|<span class="kw">_</span>| new_frame),
-                tx_slab,
-            );
+            <span class="kw">let </span>res = fill_packet(<span class="kw-2">&amp;mut </span>headers, data, data_checksum, <span class="kw-2">&amp;mut </span>new_packet);
+            push_packet(metrics::Direction::Read, new_packet, res, tx_slab, umem);
         }
     }
 
     <span class="kw">let </span><span class="prelude-val">Ok</span>(dest_addr) = dest_addr.to_socket_addr() <span class="kw">else </span>{
-        <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+        <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(packet.inner));
     };
     <span class="kw">let </span>src_port = state.session(source_addr, dest_addr);
 
@@ -1104,36 +1119,35 @@
 
     headers.calc_checksum(data.len(), data_checksum);
 
-    push_packet(
-        metrics::Direction::Read,
-        modify_packet_headers(<span class="kw-2">&amp;</span>packet.udp, <span class="kw-2">&amp;</span>headers, <span class="kw-2">&amp;mut </span>packet.inner).map(|<span class="kw">_</span>| packet.inner),
-        tx_slab,
-    );
+    <span class="kw">let </span>res = modify_packet_headers(<span class="kw-2">&amp;</span>packet.udp, <span class="kw-2">&amp;</span>headers, <span class="kw-2">&amp;mut </span>packet.inner);
+    push_packet(metrics::Direction::Read, packet.inner, res, tx_slab, umem);
 
-    <span class="prelude-val">Ok</span>(())
+    <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
 }
 
 <span class="attr">#[inline]
 </span><span class="kw">fn </span>process_server_packet(
     packet: PacketWrapper,
+    umem: <span class="kw-2">&amp;mut </span>Umem,
     filters: <span class="kw-2">&amp;</span><span class="kw">crate</span>::filters::FilterChain,
     state: <span class="kw-2">&amp;mut </span>State,
     tx_slab: <span class="kw-2">&amp;mut </span>HeapSlab,
-) -&gt; <span class="prelude-ty">Result</span>&lt;(), PipelineError&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Packet&gt;, (PipelineError, Packet)&gt; {
     <span class="kw">let </span>server_addr = SocketAddr::new(packet.udp.ips.source(), packet.udp.src_port.host());
 
     <span class="kw">let </span><span class="prelude-val">Some</span>(client_addr) = state.lookup_client(server_addr, packet.udp.dst_port) <span class="kw">else </span>{
         <span class="macro">tracing::debug!</span>(address = %server_addr, <span class="string">"received traffic from a server that has no downstream"</span>);
-        <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+        <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(packet.inner));
     };
 
     <span class="kw">let </span><span class="kw-2">mut </span>ctx = filters::WriteContext::new(server_addr.into(), client_addr.into(), packet);
-    filters.write(<span class="kw-2">&amp;mut </span>ctx).map_err(PipelineError::Filter)<span class="question-mark">?</span>;
 
-    <span class="kw">let </span>filters::WriteContext {
-        contents: <span class="kw-2">mut </span>packet,
-        ..
-    } = ctx;
+    <span class="kw">let </span><span class="kw-2">mut </span>packet = <span class="kw">match </span>filters.write(<span class="kw-2">&amp;mut </span>ctx) {
+        <span class="prelude-val">Ok</span>(()) =&gt; ctx.contents,
+        <span class="prelude-val">Err</span>(err) =&gt; {
+            <span class="kw">return </span><span class="prelude-val">Err</span>((PipelineError::Filter(err), ctx.contents.inner));
+        }
+    };
 
     <span class="kw">let </span>headers = UdpPacket {
         src_mac: packet.udp.dst_mac,
@@ -1147,15 +1161,13 @@
         checksum: NetworkU16(<span class="number">0</span>),
     };
 
-    push_packet(
-        metrics::Direction::Write,
-        modify_packet_headers(<span class="kw-2">&amp;</span>packet.udp, <span class="kw-2">&amp;</span>headers, <span class="kw-2">&amp;mut </span>packet.inner).map(|<span class="kw">_</span>| {
-            <span class="kw">let _ </span>= packet.inner.calc_udp_checksum();
-            packet.inner
-        }),
-        tx_slab,
-    );
-    <span class="prelude-val">Ok</span>(())
+    <span class="kw">let </span>res = modify_packet_headers(<span class="kw-2">&amp;</span>packet.udp, <span class="kw-2">&amp;</span>headers, <span class="kw-2">&amp;mut </span>packet.inner);
+    <span class="kw">if </span>res.is_ok() {
+        <span class="kw">let _ </span>= packet.inner.calc_udp_checksum();
+    }
+
+    push_packet(metrics::Direction::Write, packet.inner, res, tx_slab, umem);
+    <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
 }
 
 <span class="doccomment">/// Modifies the headers of an existing well formed packet to a new source and destination,
