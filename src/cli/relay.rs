@@ -60,7 +60,7 @@ impl Relay {
         self,
         config: Arc<Config>,
         ready: Ready,
-        shutdown_rx: crate::ShutdownRx,
+        shutdown_rx: crate::signal::ShutdownRx,
     ) -> crate::Result<()> {
         relay::Relay {
             xds_port: self.xds_port,

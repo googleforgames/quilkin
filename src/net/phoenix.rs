@@ -44,7 +44,7 @@ use crate::config::IcaoCode;
 pub fn spawn<M: Clone + Measurement + Sync + Send + 'static>(
     listener: crate::net::TcpListener,
     config: Arc<crate::Config>,
-    mut shutdown_rx: crate::ShutdownRx,
+    mut shutdown_rx: crate::signal::ShutdownRx,
     phoenix: Phoenix<M>,
 ) -> crate::Result<()> {
     use eyre::WrapErr as _;
@@ -848,7 +848,7 @@ mod tests {
             },
         );
 
-        let (_tx, rx) = crate::make_shutdown_channel(Default::default());
+        let (_tx, rx) = crate::signal::channel(Default::default());
         let socket = raw_socket_with_reuse(qcmp_port).unwrap();
         crate::codec::qcmp::spawn(socket, rx.clone()).unwrap();
         tokio::time::sleep(Duration::from_millis(150)).await;

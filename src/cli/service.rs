@@ -168,7 +168,7 @@ impl Service {
     pub fn spawn_services(
         self,
         config: &Arc<Config>,
-        shutdown_rx: &crate::ShutdownRx,
+        shutdown_rx: &crate::signal::ShutdownRx,
     ) -> crate::Result<tokio::task::JoinHandle<crate::Result<()>>> {
         let shutdown_rx = shutdown_rx.clone();
         let config = config.clone();
@@ -199,7 +199,7 @@ impl Service {
     fn publish_phoenix(
         &self,
         config: &Arc<Config>,
-        shutdown_rx: &crate::ShutdownRx,
+        shutdown_rx: &crate::signal::ShutdownRx,
     ) -> crate::Result<impl std::future::Future<Output = crate::Result<()>>> {
         if self.phoenix_enabled {
             let phoenix = crate::net::TcpListener::bind(Some(self.phoenix_port))?;
@@ -217,7 +217,7 @@ impl Service {
     /// Spawns an QCMP server if enabled, otherwise returns a future which never completes.
     fn publish_qcmp(
         &self,
-        shutdown_rx: &crate::ShutdownRx,
+        shutdown_rx: &crate::signal::ShutdownRx,
     ) -> crate::Result<impl Future<Output = crate::Result<()>>> {
         if self.qcmp_enabled {
             let qcmp = crate::net::raw_socket_with_reuse(self.qcmp_port)?;
@@ -285,7 +285,7 @@ impl Service {
         config: &Arc<crate::config::Config>,
     ) -> eyre::Result<(
         impl Future<Output = crate::Result<()>>,
-        Option<Box<dyn FnOnce(crate::ShutdownRx) + Send>>,
+        Option<Box<dyn FnOnce(crate::signal::ShutdownRx) + Send>>,
     )> {
         if !self.udp_enabled {
             return Ok((either::Left(std::future::pending()), None));
@@ -322,7 +322,7 @@ impl Service {
         config: Arc<crate::config::Config>,
     ) -> crate::Result<(
         impl Future<Output = crate::Result<()>>,
-        Box<dyn FnOnce(crate::ShutdownRx) + Send>,
+        Box<dyn FnOnce(crate::signal::ShutdownRx) + Send>,
     )> {
         let socket = crate::net::raw_socket_with_reuse(self.udp_port)?;
         let workers = self.udp_workers.get();
@@ -348,8 +348,8 @@ impl Service {
 
         Ok((
             std::future::pending(),
-            Box::from(move |shutdown_rx: crate::ShutdownRx| {
-                sessions.shutdown(*shutdown_rx.borrow() == crate::ShutdownKind::Normal);
+            Box::from(move |shutdown_rx: crate::signal::ShutdownRx| {
+                sessions.shutdown(*shutdown_rx.borrow() == crate::signal::ShutdownKind::Normal);
             }),
         ))
     }
@@ -359,7 +359,7 @@ impl Service {
         &self,
         config: Arc<crate::config::Config>,
         force_xdp: bool,
-    ) -> eyre::Result<Box<dyn FnOnce(crate::ShutdownRx) + Send>> {
+    ) -> eyre::Result<Box<dyn FnOnce(crate::signal::ShutdownRx) + Send>> {
         use crate::net::xdp;
         use eyre::Context as _;
 
@@ -382,8 +382,8 @@ impl Service {
         .context("failed to setup XDP")?;
 
         let io_loop = xdp::spawn(workers, config).context("failed to spawn XDP I/O loop")?;
-        Ok(Box::new(move |srx: crate::ShutdownRx| {
-            io_loop.shutdown(*srx.borrow() == crate::ShutdownKind::Normal);
+        Ok(Box::new(move |srx: crate::signal::ShutdownRx| {
+            io_loop.shutdown(*srx.borrow() == crate::signal::ShutdownKind::Normal);
         }))
     }
 }

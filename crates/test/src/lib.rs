@@ -3,8 +3,9 @@ use quilkin::{
     components::{self, RunArgs},
     config::Providers,
     net::TcpListener,
+    signal::ShutdownTx,
     test::TestConfig,
-    Config, ShutdownTx,
+    Config,
 };
 pub use serde_json::json;
 use std::{net::SocketAddr, num::NonZeroUsize, path::PathBuf, sync::Arc};
@@ -318,7 +319,7 @@ impl Pail {
                 let config_path = path.clone();
 
                 let (shutdown, shutdown_rx) =
-                    quilkin::make_shutdown_channel(quilkin::ShutdownKind::Testing);
+                    quilkin::signal::channel(quilkin::signal::ShutdownKind::Testing);
 
                 let config = Arc::new(Config::default_non_agent());
                 config.id.store(Arc::new(spc.name.into()));
@@ -387,7 +388,7 @@ impl Pail {
                     .collect();
 
                 let (shutdown, shutdown_rx) =
-                    quilkin::make_shutdown_channel(quilkin::ShutdownKind::Testing);
+                    quilkin::signal::channel(quilkin::signal::ShutdownKind::Testing);
 
                 let port = quilkin::net::socket_port(
                     &quilkin::net::raw_socket_with_reuse(0).expect("failed to bind qcmp socket"),
@@ -452,7 +453,7 @@ impl Pail {
                     .collect();
 
                 let (shutdown, shutdown_rx) =
-                    quilkin::make_shutdown_channel(quilkin::ShutdownKind::Testing);
+                    quilkin::signal::channel(quilkin::signal::ShutdownKind::Testing);
 
                 let (tx, orx) = tokio::sync::oneshot::channel();
 
