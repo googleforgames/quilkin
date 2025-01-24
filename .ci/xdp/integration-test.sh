@@ -34,7 +34,7 @@ spec:
     ports:
     - containerPort: 7777
       hostPort: 7777
-    args: ["proxy", "--to", "${server_ip}:8078", "--publish.udp.xdp"]
+    args: ["proxy", "--to", "${server_ip}:8078", "--service.udp.xdp"]
     securityContext:
       capabilities:
         add:
