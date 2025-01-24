@@ -663,3 +663,117 @@ async fn many_sessions() {
         umem.free_packet(client_packet);
     }
 }
+
+/// Ensures that we free packets back to the umem when we drop packets instead of forward them
+#[tokio::test]
+async fn frees_dropped_packets() {
+    const SERVER: SocketAddrV4 = SocketAddrV4::new(Ipv4Addr::new(1, 1, 1, 1), 1111);
+    const PROXY4: SocketAddrV4 = SocketAddrV4::new(Ipv4Addr::new(2, 2, 2, 2), 7777);
+    const PROXY6: SocketAddrV6 =
+        SocketAddrV6::new(Ipv6Addr::new(2, 2, 2, 2, 2, 2, 2, 2), 7777, 0, 0);
+    const CLIENT: SocketAddrV6 =
+        SocketAddrV6::new(Ipv6Addr::new(1, 2, 3, 4, 5, 6, 7, 8), 9999, 0, 0);
+
+    let config = quilkin::Config::default_non_agent();
+    config.filters.store(Arc::new(
+        filters::FilterChain::try_create([
+            filters::Capture::as_filter_config(filters::capture::Config {
+                metadata_key: filters::capture::CAPTURED_BYTES.into(),
+                strategy: filters::capture::Strategy::Suffix(filters::capture::Suffix {
+                    size: 1,
+                    remove: false,
+                }),
+            })
+            .unwrap(),
+            filters::TokenRouter::as_filter_config(None).unwrap(),
+        ])
+        .unwrap(),
+    ));
+    config.clusters.modify(|clusters| {
+        clusters.insert(None, endpoints(&[(SERVER.into(), &[0xf0])]));
+    });
+
+    let mut state = process::State {
+        external_port: PROXY4.port().into(),
+        config: Arc::new(config),
+        destinations: Vec::with_capacity(1),
+        sessions: Arc::new(Default::default()),
+        local_ipv4: *PROXY4.ip(),
+        local_ipv6: *PROXY6.ip(),
+    };
+
+    let data = [0xf0u8; 11];
+
+    let mut umem = xdp::Umem::map(
+        xdp::umem::UmemCfgBuilder {
+            frame_size: xdp::umem::FrameSize::TwoK,
+            head_room: 0,
+            frame_count: 1,
+            tx_metadata: false,
+        }
+        .build()
+        .unwrap(),
+    )
+    .unwrap();
+
+    let mut rx_slab = xdp::HeapSlab::with_capacity(1);
+    let mut tx_slab = xdp::HeapSlab::with_capacity(1);
+
+    // sanity check the umem won't allow more than 1 packet at a time
+    unsafe {
+        let first = umem.alloc().unwrap();
+        assert!(umem.alloc().is_none());
+        umem.free_packet(first);
+    };
+
+    // Client packet that doesn't have a token
+    {
+        let mut client_packet = unsafe { umem.alloc().unwrap() };
+
+        etherparse::PacketBuilder::ethernet2([3, 3, 3, 3, 3, 3], [4, 4, 4, 4, 4, 4])
+            .ipv6(CLIENT.ip().octets(), PROXY6.ip().octets(), 64)
+            .udp(CLIENT.port(), PROXY6.port())
+            .write(&mut client_packet, &[1])
+            .unwrap();
+
+        rx_slab.push_front(client_packet);
+        process::process_packets(&mut rx_slab, &mut umem, &mut tx_slab, &mut state);
+
+        assert!(tx_slab.is_empty());
+    }
+
+    // Valid client packet
+    {
+        // If this fails, the dropped packet wasn't freed
+        let mut client_packet = unsafe { umem.alloc().expect("umem has no available packets") };
+
+        etherparse::PacketBuilder::ethernet2([3, 3, 3, 3, 3, 3], [4, 4, 4, 4, 4, 4])
+            .ipv6(CLIENT.ip().octets(), PROXY6.ip().octets(), 64)
+            .udp(CLIENT.port(), PROXY6.port())
+            .write(&mut client_packet, &data)
+            .unwrap();
+
+        rx_slab.push_front(client_packet);
+        process::process_packets(&mut rx_slab, &mut umem, &mut tx_slab, &mut state);
+
+        let server_packet = tx_slab.pop_back().unwrap();
+        umem.free_packet(server_packet);
+    }
+
+    // Server packet that doesn't have a session
+    {
+        let mut server_packet = unsafe { umem.alloc().expect("umem has no available packets") };
+
+        etherparse::PacketBuilder::ethernet2([3, 3, 3, 3, 3, 3], [4, 4, 4, 4, 4, 4])
+            .ipv4(SERVER.ip().octets(), PROXY4.ip().octets(), 64)
+            .udp(CLIENT.port(), PROXY4.port())
+            .write(&mut server_packet, &[1, 2, 3])
+            .unwrap();
+
+        rx_slab.push_front(server_packet);
+        process::process_packets(&mut rx_slab, &mut umem, &mut tx_slab, &mut state);
+
+        assert!(tx_slab.is_empty());
+        unsafe { umem.alloc().expect("umem should have available memory") };
+    }
+}
