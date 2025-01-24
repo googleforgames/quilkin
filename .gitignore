@@ -19,6 +19,7 @@
 !.gcloudignore
 !.dockerignore
 !.github
+!.ci
 !xds/ci/.golangci.yaml
 
 *.iml
