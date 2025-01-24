@@ -386,14 +386,22 @@ pub fn process_packets(
             if is_client {
                 process_client_packet(packet, umem, &filters, &cm, state, tx_slab)
             } else {
-                process_server_packet(packet, &filters, state, tx_slab)
+                process_server_packet(packet, umem, &filters, state, tx_slab)
             }
         };
 
-        if let Err(error) = res {
-            let discriminant = error.discriminant();
-            metrics::errors_total(direction, discriminant, &metrics::EMPTY).inc();
-            metrics::packets_dropped_total(direction, discriminant, &metrics::EMPTY).inc();
+        match res {
+            Ok(None) => {}
+            Ok(Some(packet)) => {
+                umem.free_packet(packet);
+            }
+            Err((error, packet)) => {
+                let discriminant = error.discriminant();
+                metrics::errors_total(direction, discriminant, &metrics::EMPTY).inc();
+                metrics::packets_dropped_total(direction, discriminant, &metrics::EMPTY).inc();
+
+                umem.free_packet(packet);
+            }
         }
     }
 }
@@ -401,19 +409,23 @@ pub fn process_packets(
 #[inline]
 fn push_packet(
     direction: metrics::Direction,
-    res: Result<Packet, PacketError>,
+    packet: Packet,
+    res: Result<(), PacketError>,
     tx_slab: &mut HeapSlab,
+    umem: &mut Umem,
 ) {
     match res {
-        Ok(frame) => {
-            if tx_slab.push_back(frame).is_some() {
+        Ok(()) => {
+            if let Some(packet) = tx_slab.push_back(packet) {
                 metrics::packets_dropped_total(direction, "tx slab full", &metrics::EMPTY).inc();
+                umem.free_packet(packet);
             }
         }
         Err(err) => {
             let discriminant = err.discriminant();
             metrics::errors_total(direction, discriminant, &metrics::EMPTY).inc();
             metrics::packets_dropped_total(direction, discriminant, &metrics::EMPTY).inc();
+            umem.free_packet(packet);
         }
     }
 }
@@ -426,20 +438,20 @@ fn process_client_packet(
     cm: &crate::net::ClusterMap,
     state: &mut State,
     tx_slab: &mut HeapSlab,
-) -> Result<(), PipelineError> {
+) -> Result<Option<Packet>, (PipelineError, Packet)> {
     let source_addr = SocketAddr::from((packet.udp.ips.source(), packet.udp.src_port.host()));
     let mut ctx =
         filters::ReadContext::new(cm, source_addr.into(), packet, &mut state.destinations);
 
-    filters.read(&mut ctx).map_err(PipelineError::Filter)?;
-
-    let filters::ReadContext {
-        contents: mut packet,
-        ..
-    } = ctx;
+    let mut packet = match filters.read(&mut ctx) {
+        Ok(()) => ctx.contents,
+        Err(err) => {
+            return Err((PipelineError::Filter(err), ctx.contents.inner));
+        }
+    };
 
     let Some(dest_addr) = state.destinations.pop() else {
-        return Ok(());
+        return Ok(Some(packet.inner));
     };
 
     let data = packet
@@ -474,23 +486,20 @@ fn process_client_packet(
             };
 
             // SAFETY: the umem outlives the frame
-            let mut new_frame = unsafe {
-                let Some(new_frame) = umem.alloc() else {
+            let mut new_packet = unsafe {
+                let Some(new_packet) = umem.alloc() else {
                     continue;
                 };
-                new_frame
+                new_packet
             };
 
-            push_packet(
-                metrics::Direction::Read,
-                fill_packet(&mut headers, data, data_checksum, &mut new_frame).map(|_| new_frame),
-                tx_slab,
-            );
+            let res = fill_packet(&mut headers, data, data_checksum, &mut new_packet);
+            push_packet(metrics::Direction::Read, new_packet, res, tx_slab, umem);
         }
     }
 
     let Ok(dest_addr) = dest_addr.to_socket_addr() else {
-        return Ok(());
+        return Ok(Some(packet.inner));
     };
     let src_port = state.session(source_addr, dest_addr);
 
@@ -508,36 +517,35 @@ fn process_client_packet(
 
     headers.calc_checksum(data.len(), data_checksum);
 
-    push_packet(
-        metrics::Direction::Read,
-        modify_packet_headers(&packet.udp, &headers, &mut packet.inner).map(|_| packet.inner),
-        tx_slab,
-    );
+    let res = modify_packet_headers(&packet.udp, &headers, &mut packet.inner);
+    push_packet(metrics::Direction::Read, packet.inner, res, tx_slab, umem);
 
-    Ok(())
+    Ok(None)
 }
 
 #[inline]
 fn process_server_packet(
     packet: PacketWrapper,
+    umem: &mut Umem,
     filters: &crate::filters::FilterChain,
     state: &mut State,
     tx_slab: &mut HeapSlab,
-) -> Result<(), PipelineError> {
+) -> Result<Option<Packet>, (PipelineError, Packet)> {
     let server_addr = SocketAddr::new(packet.udp.ips.source(), packet.udp.src_port.host());
 
     let Some(client_addr) = state.lookup_client(server_addr, packet.udp.dst_port) else {
         tracing::debug!(address = %server_addr, "received traffic from a server that has no downstream");
-        return Ok(());
+        return Ok(Some(packet.inner));
     };
 
     let mut ctx = filters::WriteContext::new(server_addr.into(), client_addr.into(), packet);
-    filters.write(&mut ctx).map_err(PipelineError::Filter)?;
 
-    let filters::WriteContext {
-        contents: mut packet,
-        ..
-    } = ctx;
+    let mut packet = match filters.write(&mut ctx) {
+        Ok(()) => ctx.contents,
+        Err(err) => {
+            return Err((PipelineError::Filter(err), ctx.contents.inner));
+        }
+    };
 
     let headers = UdpPacket {
         src_mac: packet.udp.dst_mac,
@@ -551,15 +559,13 @@ fn process_server_packet(
         checksum: NetworkU16(0),
     };
 
-    push_packet(
-        metrics::Direction::Write,
-        modify_packet_headers(&packet.udp, &headers, &mut packet.inner).map(|_| {
-            let _ = packet.inner.calc_udp_checksum();
-            packet.inner
-        }),
-        tx_slab,
-    );
-    Ok(())
+    let res = modify_packet_headers(&packet.udp, &headers, &mut packet.inner);
+    if res.is_ok() {
+        let _ = packet.inner.calc_udp_checksum();
+    }
+
+    push_packet(metrics::Direction::Write, packet.inner, res, tx_slab, umem);
+    Ok(None)
 }
 
 /// Modifies the headers of an existing well formed packet to a new source and destination,
