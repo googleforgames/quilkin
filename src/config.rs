@@ -43,6 +43,7 @@ pub use self::{
 mod config_type;
 mod error;
 pub mod providers;
+pub mod providersv2;
 mod slot;
 pub mod watch;
 

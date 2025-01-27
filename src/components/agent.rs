@@ -71,16 +71,23 @@ impl Agent {
         }
 
         let _mds_task = if !self.relay_servers.is_empty() {
-            let _provider_task = match self.provider {
-                Some(provider) => Some(provider.spawn(
-                    config.clone(),
-                    ready.provider_is_healthy.clone(),
-                    self.locality,
-                    self.address_selector,
-                    true,
-                )),
-                None => return Err(eyre::eyre!("no configuration provider given")),
+            let Some(provider) = self.provider else {
+                return Err(eyre::eyre!("no configuration provider given"));
             };
+
+            let _provider_task = match provider {
+                Providers::Agones {
+                    gameservers_namespace,
+                    ..
+                } => crate::config::providersv2::Providers::default()
+                    .agones()
+                    .agones_namespace(gameservers_namespace),
+
+                Providers::File { path } => crate::config::providersv2::Providers::default()
+                    .fs()
+                    .fs_path(path),
+            }
+            .spawn_providers(&config, ready.provider_is_healthy.clone(), self.locality);
 
             let task = crate::net::xds::client::MdsClient::connect(
                 String::clone(&config.id.load()),
