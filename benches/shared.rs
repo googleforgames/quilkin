@@ -296,7 +296,7 @@ impl<const N: usize> Writer<N> {
 }
 
 pub struct QuilkinLoop {
-    shutdown: Option<quilkin::ShutdownTx>,
+    shutdown: Option<quilkin::signal::ShutdownTx>,
     thread: Option<std::thread::JoinHandle<()>>,
     port: u16,
     endpoint: SocketAddr,
@@ -320,7 +320,7 @@ impl QuilkinLoop {
 
     fn spinup_inner(port: u16, endpoint: SocketAddr) -> Self {
         let (shutdown_tx, shutdown_rx) =
-            quilkin::make_shutdown_channel(quilkin::ShutdownKind::Benching);
+            quilkin::signal::channel(quilkin::signal::ShutdownKind::Benching);
 
         let thread = spawn("quilkin", move || {
             let runtime = tokio::runtime::Runtime::new().unwrap();
@@ -362,7 +362,7 @@ impl Drop for QuilkinLoop {
         let Some(stx) = self.shutdown.take() else {
             return;
         };
-        stx.send(quilkin::ShutdownKind::Benching).unwrap();
+        stx.send(quilkin::signal::ShutdownKind::Benching).unwrap();
         self.thread.take().unwrap().join().unwrap();
     }
 }

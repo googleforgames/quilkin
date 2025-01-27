@@ -21,7 +21,6 @@ use std::{
 
 use clap::builder::TypedValueParser;
 use clap::crate_version;
-use tokio::signal;
 
 use crate::{components::admin::Admin, Config};
 use strum_macros::{Display, EnumString};
@@ -96,6 +95,18 @@ pub struct LocalityCli {
     pub sub_zone: Option<String>,
 }
 
+impl LocalityCli {
+    fn locality(&self) -> Option<crate::net::endpoint::Locality> {
+        self.region.as_deref().map(|region| {
+            crate::net::endpoint::Locality::new(
+                region,
+                self.zone.as_deref().unwrap_or_default(),
+                self.sub_zone.as_deref().unwrap_or_default(),
+            )
+        })
+    }
+}
+
 /// Quilkin: a non-transparent UDP proxy specifically designed for use with
 /// large scale multiplayer dedicated game servers deployments, to
 /// ensure security, access control, telemetry data, metrics and more.
@@ -140,6 +151,34 @@ pub enum LogFormats {
     Pretty,
 }
 
+impl LogFormats {
+    /// Creates the tracing subscriber that pulls from the env for filters
+    /// and outputs based on [Self].
+    fn init_tracing_subscriber(self) {
+        let env_filter = tracing_subscriber::EnvFilter::builder()
+            .with_default_directive(tracing_subscriber::filter::LevelFilter::INFO.into())
+            .from_env_lossy();
+        let subscriber = tracing_subscriber::fmt()
+            .with_file(true)
+            .with_thread_ids(true)
+            .with_env_filter(env_filter);
+
+        match self {
+            LogFormats::Auto => {
+                use std::io::IsTerminal;
+                if !std::io::stdout().is_terminal() {
+                    subscriber.with_ansi(false).json().init();
+                } else {
+                    subscriber.init();
+                }
+            }
+            LogFormats::Json => subscriber.with_ansi(false).json().init(),
+            LogFormats::Plain => subscriber.init(),
+            LogFormats::Pretty => subscriber.pretty().init(),
+        }
+    }
+}
+
 /// The various Quilkin commands.
 #[derive(Clone, Debug, clap::Subcommand)]
 pub enum Commands {
@@ -158,27 +197,7 @@ impl Cli {
     #[tracing::instrument(skip_all)]
     pub async fn drive(self, tx: Option<tokio::sync::oneshot::Sender<()>>) -> crate::Result<()> {
         if !self.quiet {
-            let env_filter = tracing_subscriber::EnvFilter::builder()
-                .with_default_directive(tracing_subscriber::filter::LevelFilter::INFO.into())
-                .from_env_lossy();
-            let subscriber = tracing_subscriber::fmt()
-                .with_file(true)
-                .with_thread_ids(true)
-                .with_env_filter(env_filter);
-
-            match self.log_format {
-                LogFormats::Auto => {
-                    use std::io::IsTerminal;
-                    if !std::io::stdout().is_terminal() {
-                        subscriber.with_ansi(false).json().init();
-                    } else {
-                        subscriber.init();
-                    }
-                }
-                LogFormats::Json => subscriber.with_ansi(false).json().init(),
-                LogFormats::Plain => subscriber.init(),
-                LogFormats::Pretty => subscriber.pretty().init(),
-            }
+            self.log_format.init_tracing_subscriber();
         }
 
         tracing::info!(
@@ -261,44 +280,16 @@ impl Cli {
             mode.server(config.clone(), self.admin.address);
         }
 
-        let locality = self.locality.region.map(|region| {
-            crate::net::endpoint::Locality::new(
-                region,
-                self.locality.zone.unwrap_or_default(),
-                self.locality.sub_zone.unwrap_or_default(),
-            )
-        });
+        let shutdown_rx = crate::signal::spawn_handler();
 
-        let (shutdown_tx, shutdown_rx) = crate::make_shutdown_channel(Default::default());
         crate::alloc::spawn_heap_stats_updates(
             std::time::Duration::from_secs(10),
             shutdown_rx.clone(),
         );
 
-        #[cfg(target_os = "linux")]
-        let mut sig_term_fut = signal::unix::signal(signal::unix::SignalKind::terminate())?;
-
-        crate::metrics::shutdown_initiated().set(false as _);
-        tokio::spawn(async move {
-            #[cfg(target_os = "linux")]
-            let sig_term = sig_term_fut.recv();
-            #[cfg(not(target_os = "linux"))]
-            let sig_term = std::future::pending();
-
-            let signal = tokio::select! {
-                _ = signal::ctrl_c() => "SIGINT",
-                _ = sig_term => "SIGTERM",
-            };
-
-            crate::metrics::shutdown_initiated().set(true as _);
-            tracing::info!(%signal, "shutting down from signal");
-            // Don't unwrap in order to ensure that we execute
-            // any subsequent shutdown tasks.
-            shutdown_tx.send(crate::ShutdownKind::Normal).ok();
-        });
-
         self.service.spawn_services(&config, &shutdown_rx)?;
 
+        let locality = self.locality.locality();
         match (self.command, mode) {
             (Commands::Agent(agent), Admin::Agent(ready)) => {
                 agent.run(locality, config, ready, shutdown_rx).await

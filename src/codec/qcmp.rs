@@ -192,7 +192,10 @@ impl Measurement for QcmpMeasurement {
     }
 }
 
-pub fn spawn(socket: socket2::Socket, mut shutdown_rx: crate::ShutdownRx) -> crate::Result<()> {
+pub fn spawn(
+    socket: socket2::Socket,
+    mut shutdown_rx: crate::signal::ShutdownRx,
+) -> crate::Result<()> {
     use tracing::{instrument::WithSubscriber as _, Instrument as _};
 
     let port = crate::net::socket_port(&socket);
@@ -675,7 +678,7 @@ mod tests {
         let socket = raw_socket_with_reuse(0).unwrap();
         let addr = socket.local_addr().unwrap().as_socket().unwrap();
 
-        let (_tx, rx) = crate::make_shutdown_channel(Default::default());
+        let (_tx, rx) = crate::signal::channel(Default::default());
         spawn(socket, rx).unwrap();
 
         let delay = Duration::from_millis(50);
