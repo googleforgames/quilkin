@@ -301,7 +301,7 @@ impl Cli {
                 manager.run(locality, config, ready, shutdown_rx).await
             }
             (Commands::Relay(relay), Admin::Relay(ready)) => {
-                relay.run(config, ready, shutdown_rx).await
+                relay.run(locality, config, ready, shutdown_rx).await
             }
             _ => unreachable!(),
         }
