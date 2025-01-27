@@ -109,7 +109,14 @@
 <a href="#108" id="108">108</a>
 <a href="#109" id="109">109</a>
 <a href="#110" id="110">110</a>
-<a href="#111" id="111">111</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -182,16 +189,23 @@
         }
 
         <span class="kw">let </span>_mds_task = <span class="kw">if </span>!<span class="self">self</span>.relay_servers.is_empty() {
-            <span class="kw">let </span>_provider_task = <span class="kw">match </span><span class="self">self</span>.provider {
-                <span class="prelude-val">Some</span>(provider) =&gt; <span class="prelude-val">Some</span>(provider.spawn(
-                    config.clone(),
-                    ready.provider_is_healthy.clone(),
-                    <span class="self">self</span>.locality,
-                    <span class="self">self</span>.address_selector,
-                    <span class="bool-val">true</span>,
-                )),
-                <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">"no configuration provider given"</span>)),
+            <span class="kw">let </span><span class="prelude-val">Some</span>(provider) = <span class="self">self</span>.provider <span class="kw">else </span>{
+                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(<span class="string">"no configuration provider given"</span>));
             };
+
+            <span class="kw">let </span>_provider_task = <span class="kw">match </span>provider {
+                Providers::Agones {
+                    gameservers_namespace,
+                    ..
+                } =&gt; <span class="kw">crate</span>::config::providersv2::Providers::default()
+                    .agones()
+                    .agones_namespace(gameservers_namespace),
+
+                Providers::File { path } =&gt; <span class="kw">crate</span>::config::providersv2::Providers::default()
+                    .fs()
+                    .fs_path(path),
+            }
+            .spawn_providers(<span class="kw-2">&amp;</span>config, ready.provider_is_healthy.clone(), <span class="self">self</span>.locality);
 
             <span class="kw">let </span>task = <span class="kw">crate</span>::net::xds::client::MdsClient::connect(
                 String::clone(<span class="kw-2">&amp;</span>config.id.load()),
