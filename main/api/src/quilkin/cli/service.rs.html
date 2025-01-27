@@ -606,7 +606,7 @@
     </span><span class="kw">pub fn </span>spawn_services(
         <span class="self">self</span>,
         config: <span class="kw-2">&amp;</span>Arc&lt;Config&gt;,
-        shutdown_rx: <span class="kw-2">&amp;</span><span class="kw">crate</span>::ShutdownRx,
+        shutdown_rx: <span class="kw-2">&amp;</span><span class="kw">crate</span>::signal::ShutdownRx,
     ) -&gt; <span class="kw">crate</span>::Result&lt;tokio::task::JoinHandle&lt;<span class="kw">crate</span>::Result&lt;()&gt;&gt;&gt; {
         <span class="kw">let </span>shutdown_rx = shutdown_rx.clone();
         <span class="kw">let </span>config = config.clone();
@@ -637,7 +637,7 @@
     </span><span class="kw">fn </span>publish_phoenix(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         config: <span class="kw-2">&amp;</span>Arc&lt;Config&gt;,
-        shutdown_rx: <span class="kw-2">&amp;</span><span class="kw">crate</span>::ShutdownRx,
+        shutdown_rx: <span class="kw-2">&amp;</span><span class="kw">crate</span>::signal::ShutdownRx,
     ) -&gt; <span class="kw">crate</span>::Result&lt;<span class="kw">impl </span>std::future::Future&lt;Output = <span class="kw">crate</span>::Result&lt;()&gt;&gt;&gt; {
         <span class="kw">if </span><span class="self">self</span>.phoenix_enabled {
             <span class="kw">let </span>phoenix = <span class="kw">crate</span>::net::TcpListener::bind(<span class="prelude-val">Some</span>(<span class="self">self</span>.phoenix_port))<span class="question-mark">?</span>;
@@ -655,7 +655,7 @@
     <span class="doccomment">/// Spawns an QCMP server if enabled, otherwise returns a future which never completes.
     </span><span class="kw">fn </span>publish_qcmp(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        shutdown_rx: <span class="kw-2">&amp;</span><span class="kw">crate</span>::ShutdownRx,
+        shutdown_rx: <span class="kw-2">&amp;</span><span class="kw">crate</span>::signal::ShutdownRx,
     ) -&gt; <span class="kw">crate</span>::Result&lt;<span class="kw">impl </span>Future&lt;Output = <span class="kw">crate</span>::Result&lt;()&gt;&gt;&gt; {
         <span class="kw">if </span><span class="self">self</span>.qcmp_enabled {
             <span class="kw">let </span>qcmp = <span class="kw">crate</span>::net::raw_socket_with_reuse(<span class="self">self</span>.qcmp_port)<span class="question-mark">?</span>;
@@ -723,7 +723,7 @@
         config: <span class="kw-2">&amp;</span>Arc&lt;<span class="kw">crate</span>::config::Config&gt;,
     ) -&gt; eyre::Result&lt;(
         <span class="kw">impl </span>Future&lt;Output = <span class="kw">crate</span>::Result&lt;()&gt;&gt;,
-        <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>FnOnce(<span class="kw">crate</span>::ShutdownRx) + Send&gt;&gt;,
+        <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>FnOnce(<span class="kw">crate</span>::signal::ShutdownRx) + Send&gt;&gt;,
     )&gt; {
         <span class="kw">if </span>!<span class="self">self</span>.udp_enabled {
             <span class="kw">return </span><span class="prelude-val">Ok</span>((either::Left(std::future::pending()), <span class="prelude-val">None</span>));
@@ -760,7 +760,7 @@
         config: Arc&lt;<span class="kw">crate</span>::config::Config&gt;,
     ) -&gt; <span class="kw">crate</span>::Result&lt;(
         <span class="kw">impl </span>Future&lt;Output = <span class="kw">crate</span>::Result&lt;()&gt;&gt;,
-        Box&lt;<span class="kw">dyn </span>FnOnce(<span class="kw">crate</span>::ShutdownRx) + Send&gt;,
+        Box&lt;<span class="kw">dyn </span>FnOnce(<span class="kw">crate</span>::signal::ShutdownRx) + Send&gt;,
     )&gt; {
         <span class="kw">let </span>socket = <span class="kw">crate</span>::net::raw_socket_with_reuse(<span class="self">self</span>.udp_port)<span class="question-mark">?</span>;
         <span class="kw">let </span>workers = <span class="self">self</span>.udp_workers.get();
@@ -786,8 +786,8 @@
 
         <span class="prelude-val">Ok</span>((
             std::future::pending(),
-            Box::from(<span class="kw">move </span>|shutdown_rx: <span class="kw">crate</span>::ShutdownRx| {
-                sessions.shutdown(<span class="kw-2">*</span>shutdown_rx.borrow() == <span class="kw">crate</span>::ShutdownKind::Normal);
+            Box::from(<span class="kw">move </span>|shutdown_rx: <span class="kw">crate</span>::signal::ShutdownRx| {
+                sessions.shutdown(<span class="kw-2">*</span>shutdown_rx.borrow() == <span class="kw">crate</span>::signal::ShutdownKind::Normal);
             }),
         ))
     }
@@ -797,7 +797,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         config: Arc&lt;<span class="kw">crate</span>::config::Config&gt;,
         force_xdp: bool,
-    ) -&gt; eyre::Result&lt;Box&lt;<span class="kw">dyn </span>FnOnce(<span class="kw">crate</span>::ShutdownRx) + Send&gt;&gt; {
+    ) -&gt; eyre::Result&lt;Box&lt;<span class="kw">dyn </span>FnOnce(<span class="kw">crate</span>::signal::ShutdownRx) + Send&gt;&gt; {
         <span class="kw">use </span><span class="kw">crate</span>::net::xdp;
         <span class="kw">use </span>eyre::Context <span class="kw">as _</span>;
 
@@ -820,8 +820,8 @@
         .context(<span class="string">"failed to setup XDP"</span>)<span class="question-mark">?</span>;
 
         <span class="kw">let </span>io_loop = xdp::spawn(workers, config).context(<span class="string">"failed to spawn XDP I/O loop"</span>)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(Box::new(<span class="kw">move </span>|srx: <span class="kw">crate</span>::ShutdownRx| {
-            io_loop.shutdown(<span class="kw-2">*</span>srx.borrow() == <span class="kw">crate</span>::ShutdownKind::Normal);
+        <span class="prelude-val">Ok</span>(Box::new(<span class="kw">move </span>|srx: <span class="kw">crate</span>::signal::ShutdownRx| {
+            io_loop.shutdown(<span class="kw-2">*</span>srx.borrow() == <span class="kw">crate</span>::signal::ShutdownKind::Normal);
         }))
     }
 }

@@ -120,7 +120,7 @@
 
 </span><span class="doccomment">/// Spawns a task to periodically update the heap stat metrics from our tracking allocator
 </span><span class="attr">#[cfg(feature = <span class="string">"heap-stats"</span>)]
-</span><span class="kw">pub fn </span>spawn_heap_stats_updates(period: std::time::Duration, <span class="kw-2">mut </span>srx: <span class="kw">crate</span>::ShutdownRx) {
+</span><span class="kw">pub fn </span>spawn_heap_stats_updates(period: std::time::Duration, <span class="kw-2">mut </span>srx: <span class="kw">crate</span>::signal::ShutdownRx) {
     <span class="kw">use </span><span class="kw">crate</span>::metrics::registry;
     <span class="kw">use </span>once_cell::sync::Lazy;
     <span class="kw">use </span>prometheus::{IntCounterVec, IntGaugeVec};
@@ -205,5 +205,5 @@
 }
 
 <span class="attr">#[cfg(not(feature = <span class="string">"heap-stats"</span>))]
-</span><span class="kw">pub fn </span>spawn_heap_stats_updates(_period: std::time::Duration, _srx: <span class="kw">crate</span>::ShutdownRx) {}
+</span><span class="kw">pub fn </span>spawn_heap_stats_updates(_period: std::time::Duration, _srx: <span class="kw">crate</span>::signal::ShutdownRx) {}
 </code></pre></div></section></main></body></html>

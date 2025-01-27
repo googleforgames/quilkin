@@ -726,13 +726,15 @@
 <a href="#725" id="725">725</a>
 <a href="#726" id="726">726</a>
 <a href="#727" id="727">727</a>
-<a href="#728" id="728">728</a></pre></div><pre class="rust"><code><span class="kw">use </span>quilkin::{
+<a href="#728" id="728">728</a>
+<a href="#729" id="729">729</a></pre></div><pre class="rust"><code><span class="kw">use </span>quilkin::{
     collections::{BufferPool, PoolBuffer},
     components::{<span class="self">self</span>, RunArgs},
     config::Providers,
     net::TcpListener,
+    signal::ShutdownTx,
     test::TestConfig,
-    Config, ShutdownTx,
+    Config,
 };
 <span class="kw">pub use </span>serde_json::json;
 <span class="kw">use </span>std::{net::SocketAddr, num::NonZeroUsize, path::PathBuf, sync::Arc};
@@ -1046,7 +1048,7 @@
                 <span class="kw">let </span>config_path = path.clone();
 
                 <span class="kw">let </span>(shutdown, shutdown_rx) =
-                    quilkin::make_shutdown_channel(quilkin::ShutdownKind::Testing);
+                    quilkin::signal::channel(quilkin::signal::ShutdownKind::Testing);
 
                 <span class="kw">let </span>config = Arc::new(Config::default_non_agent());
                 config.id.store(Arc::new(spc.name.into()));
@@ -1115,7 +1117,7 @@
                     .collect();
 
                 <span class="kw">let </span>(shutdown, shutdown_rx) =
-                    quilkin::make_shutdown_channel(quilkin::ShutdownKind::Testing);
+                    quilkin::signal::channel(quilkin::signal::ShutdownKind::Testing);
 
                 <span class="kw">let </span>port = quilkin::net::socket_port(
                     <span class="kw-2">&amp;</span>quilkin::net::raw_socket_with_reuse(<span class="number">0</span>).expect(<span class="string">"failed to bind qcmp socket"</span>),
@@ -1180,7 +1182,7 @@
                     .collect();
 
                 <span class="kw">let </span>(shutdown, shutdown_rx) =
-                    quilkin::make_shutdown_channel(quilkin::ShutdownKind::Testing);
+                    quilkin::signal::channel(quilkin::signal::ShutdownKind::Testing);
 
                 <span class="kw">let </span>(tx, orx) = tokio::sync::oneshot::channel();
 

@@ -947,7 +947,7 @@
 <span class="kw">pub fn </span>spawn&lt;M: Clone + Measurement + Sync + Send + <span class="lifetime">'static</span>&gt;(
     listener: <span class="kw">crate</span>::net::TcpListener,
     config: Arc&lt;<span class="kw">crate</span>::Config&gt;,
-    <span class="kw-2">mut </span>shutdown_rx: <span class="kw">crate</span>::ShutdownRx,
+    <span class="kw-2">mut </span>shutdown_rx: <span class="kw">crate</span>::signal::ShutdownRx,
     phoenix: Phoenix&lt;M&gt;,
 ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
     <span class="kw">use </span>eyre::WrapErr <span class="kw">as _</span>;
@@ -1751,7 +1751,7 @@
             },
         );
 
-        <span class="kw">let </span>(_tx, rx) = <span class="kw">crate</span>::make_shutdown_channel(Default::default());
+        <span class="kw">let </span>(_tx, rx) = <span class="kw">crate</span>::signal::channel(Default::default());
         <span class="kw">let </span>socket = raw_socket_with_reuse(qcmp_port).unwrap();
         <span class="kw">crate</span>::codec::qcmp::spawn(socket, rx.clone()).unwrap();
         tokio::time::sleep(Duration::from_millis(<span class="number">150</span>)).<span class="kw">await</span>;

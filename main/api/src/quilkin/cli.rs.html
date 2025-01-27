@@ -330,16 +330,7 @@
 <a href="#329" id="329">329</a>
 <a href="#330" id="330">330</a>
 <a href="#331" id="331">331</a>
-<a href="#332" id="332">332</a>
-<a href="#333" id="333">333</a>
-<a href="#334" id="334">334</a>
-<a href="#335" id="335">335</a>
-<a href="#336" id="336">336</a>
-<a href="#337" id="337">337</a>
-<a href="#338" id="338">338</a>
-<a href="#339" id="339">339</a>
-<a href="#340" id="340">340</a>
-<a href="#341" id="341">341</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#332" id="332">332</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -362,7 +353,6 @@
 
 <span class="kw">use </span>clap::builder::TypedValueParser;
 <span class="kw">use </span>clap::crate_version;
-<span class="kw">use </span>tokio::signal;
 
 <span class="kw">use crate</span>::{components::admin::Admin, Config};
 <span class="kw">use </span>strum_macros::{Display, EnumString};
@@ -437,6 +427,18 @@
     </span><span class="kw">pub </span>sub_zone: <span class="prelude-ty">Option</span>&lt;String&gt;,
 }
 
+<span class="kw">impl </span>LocalityCli {
+    <span class="kw">fn </span>locality(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::net::endpoint::Locality&gt; {
+        <span class="self">self</span>.region.as_deref().map(|region| {
+            <span class="kw">crate</span>::net::endpoint::Locality::new(
+                region,
+                <span class="self">self</span>.zone.as_deref().unwrap_or_default(),
+                <span class="self">self</span>.sub_zone.as_deref().unwrap_or_default(),
+            )
+        })
+    }
+}
+
 <span class="doccomment">/// Quilkin: a non-transparent UDP proxy specifically designed for use with
 /// large scale multiplayer dedicated game servers deployments, to
 /// ensure security, access control, telemetry data, metrics and more.
@@ -481,6 +483,34 @@
     </span>Pretty,
 }
 
+<span class="kw">impl </span>LogFormats {
+    <span class="doccomment">/// Creates the tracing subscriber that pulls from the env for filters
+    /// and outputs based on [Self].
+    </span><span class="kw">fn </span>init_tracing_subscriber(<span class="self">self</span>) {
+        <span class="kw">let </span>env_filter = tracing_subscriber::EnvFilter::builder()
+            .with_default_directive(tracing_subscriber::filter::LevelFilter::INFO.into())
+            .from_env_lossy();
+        <span class="kw">let </span>subscriber = tracing_subscriber::fmt()
+            .with_file(<span class="bool-val">true</span>)
+            .with_thread_ids(<span class="bool-val">true</span>)
+            .with_env_filter(env_filter);
+
+        <span class="kw">match </span><span class="self">self </span>{
+            LogFormats::Auto =&gt; {
+                <span class="kw">use </span>std::io::IsTerminal;
+                <span class="kw">if </span>!std::io::stdout().is_terminal() {
+                    subscriber.with_ansi(<span class="bool-val">false</span>).json().init();
+                } <span class="kw">else </span>{
+                    subscriber.init();
+                }
+            }
+            LogFormats::Json =&gt; subscriber.with_ansi(<span class="bool-val">false</span>).json().init(),
+            LogFormats::Plain =&gt; subscriber.init(),
+            LogFormats::Pretty =&gt; subscriber.pretty().init(),
+        }
+    }
+}
+
 <span class="doccomment">/// The various Quilkin commands.
 </span><span class="attr">#[derive(Clone, Debug, clap::Subcommand)]
 </span><span class="kw">pub enum </span>Commands {
@@ -499,27 +529,7 @@
     </span><span class="attr">#[tracing::instrument(skip_all)]
     </span><span class="kw">pub async fn </span>drive(<span class="self">self</span>, tx: <span class="prelude-ty">Option</span>&lt;tokio::sync::oneshot::Sender&lt;()&gt;&gt;) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
         <span class="kw">if </span>!<span class="self">self</span>.quiet {
-            <span class="kw">let </span>env_filter = tracing_subscriber::EnvFilter::builder()
-                .with_default_directive(tracing_subscriber::filter::LevelFilter::INFO.into())
-                .from_env_lossy();
-            <span class="kw">let </span>subscriber = tracing_subscriber::fmt()
-                .with_file(<span class="bool-val">true</span>)
-                .with_thread_ids(<span class="bool-val">true</span>)
-                .with_env_filter(env_filter);
-
-            <span class="kw">match </span><span class="self">self</span>.log_format {
-                LogFormats::Auto =&gt; {
-                    <span class="kw">use </span>std::io::IsTerminal;
-                    <span class="kw">if </span>!std::io::stdout().is_terminal() {
-                        subscriber.with_ansi(<span class="bool-val">false</span>).json().init();
-                    } <span class="kw">else </span>{
-                        subscriber.init();
-                    }
-                }
-                LogFormats::Json =&gt; subscriber.with_ansi(<span class="bool-val">false</span>).json().init(),
-                LogFormats::Plain =&gt; subscriber.init(),
-                LogFormats::Pretty =&gt; subscriber.pretty().init(),
-            }
+            <span class="self">self</span>.log_format.init_tracing_subscriber();
         }
 
         <span class="macro">tracing::info!</span>(
@@ -602,44 +612,16 @@
             mode.server(config.clone(), <span class="self">self</span>.admin.address);
         }
 
-        <span class="kw">let </span>locality = <span class="self">self</span>.locality.region.map(|region| {
-            <span class="kw">crate</span>::net::endpoint::Locality::new(
-                region,
-                <span class="self">self</span>.locality.zone.unwrap_or_default(),
-                <span class="self">self</span>.locality.sub_zone.unwrap_or_default(),
-            )
-        });
+        <span class="kw">let </span>shutdown_rx = <span class="kw">crate</span>::signal::spawn_handler();
 
-        <span class="kw">let </span>(shutdown_tx, shutdown_rx) = <span class="kw">crate</span>::make_shutdown_channel(Default::default());
         <span class="kw">crate</span>::alloc::spawn_heap_stats_updates(
             std::time::Duration::from_secs(<span class="number">10</span>),
             shutdown_rx.clone(),
         );
 
-        <span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)]
-        </span><span class="kw">let </span><span class="kw-2">mut </span>sig_term_fut = signal::unix::signal(signal::unix::SignalKind::terminate())<span class="question-mark">?</span>;
-
-        <span class="kw">crate</span>::metrics::shutdown_initiated().set(<span class="bool-val">false </span><span class="kw">as _</span>);
-        tokio::spawn(<span class="kw">async move </span>{
-            <span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)]
-            </span><span class="kw">let </span>sig_term = sig_term_fut.recv();
-            <span class="attr">#[cfg(not(target_os = <span class="string">"linux"</span>))]
-            </span><span class="kw">let </span>sig_term = std::future::pending();
-
-            <span class="kw">let </span>signal = <span class="macro">tokio::select!</span> {
-                <span class="kw">_ </span>= signal::ctrl_c() =&gt; <span class="string">"SIGINT"</span>,
-                <span class="kw">_ </span>= sig_term =&gt; <span class="string">"SIGTERM"</span>,
-            };
-
-            <span class="kw">crate</span>::metrics::shutdown_initiated().set(<span class="bool-val">true </span><span class="kw">as _</span>);
-            <span class="macro">tracing::info!</span>(%signal, <span class="string">"shutting down from signal"</span>);
-            <span class="comment">// Don't unwrap in order to ensure that we execute
-            // any subsequent shutdown tasks.
-            </span>shutdown_tx.send(<span class="kw">crate</span>::ShutdownKind::Normal).ok();
-        });
-
         <span class="self">self</span>.service.spawn_services(<span class="kw-2">&amp;</span>config, <span class="kw-2">&amp;</span>shutdown_rx)<span class="question-mark">?</span>;
 
+        <span class="kw">let </span>locality = <span class="self">self</span>.locality.locality();
         <span class="kw">match </span>(<span class="self">self</span>.command, mode) {
             (Commands::Agent(agent), Admin::Agent(ready)) =&gt; {
                 agent.run(locality, config, ready, shutdown_rx).<span class="kw">await

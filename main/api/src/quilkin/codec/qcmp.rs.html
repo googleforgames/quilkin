@@ -704,7 +704,10 @@
 <a href="#703" id="703">703</a>
 <a href="#704" id="704">704</a>
 <a href="#705" id="705">705</a>
-<a href="#706" id="706">706</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#706" id="706">706</a>
+<a href="#707" id="707">707</a>
+<a href="#708" id="708">708</a>
+<a href="#709" id="709">709</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -898,7 +901,10 @@
     }
 }
 
-<span class="kw">pub fn </span>spawn(socket: socket2::Socket, <span class="kw-2">mut </span>shutdown_rx: <span class="kw">crate</span>::ShutdownRx) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
+<span class="kw">pub fn </span>spawn(
+    socket: socket2::Socket,
+    <span class="kw-2">mut </span>shutdown_rx: <span class="kw">crate</span>::signal::ShutdownRx,
+) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
     <span class="kw">use </span>tracing::{instrument::WithSubscriber <span class="kw">as _</span>, Instrument <span class="kw">as _</span>};
 
     <span class="kw">let </span>port = <span class="kw">crate</span>::net::socket_port(<span class="kw-2">&amp;</span>socket);
@@ -1381,7 +1387,7 @@
         <span class="kw">let </span>socket = raw_socket_with_reuse(<span class="number">0</span>).unwrap();
         <span class="kw">let </span>addr = socket.local_addr().unwrap().as_socket().unwrap();
 
-        <span class="kw">let </span>(_tx, rx) = <span class="kw">crate</span>::make_shutdown_channel(Default::default());
+        <span class="kw">let </span>(_tx, rx) = <span class="kw">crate</span>::signal::channel(Default::default());
         spawn(socket, rx).unwrap();
 
         <span class="kw">let </span>delay = Duration::from_millis(<span class="number">50</span>);

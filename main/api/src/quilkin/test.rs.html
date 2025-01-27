@@ -535,7 +535,8 @@
 <a href="#534" id="534">534</a>
 <a href="#535" id="535">535</a>
 <a href="#536" id="536">536</a>
-<a href="#537" id="537">537</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -565,7 +566,7 @@
     net::endpoint::metadata::Value,
     net::endpoint::{Endpoint, EndpointAddress},
     net::DualStackEpollSocket <span class="kw">as </span>DualStackLocalSocket,
-    ShutdownKind, ShutdownRx, ShutdownTx,
+    signal::{ShutdownKind, ShutdownRx, ShutdownTx},
 };
 
 <span class="kw">static </span>LOG_ONCE: Once = Once::new();
@@ -825,7 +826,8 @@
         server: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::components::proxy::Proxy&gt;,
         with_admin: <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Option</span>&lt;SocketAddr&gt;&gt;,
     ) -&gt; u16 {
-        <span class="kw">let </span>(shutdown_tx, shutdown_rx) = <span class="kw">crate</span>::make_shutdown_channel(<span class="kw">crate</span>::ShutdownKind::Testing);
+        <span class="kw">let </span>(shutdown_tx, shutdown_rx) =
+            <span class="kw">crate</span>::signal::channel(<span class="kw">crate</span>::signal::ShutdownKind::Testing);
         <span class="self">self</span>.server_shutdown_tx.push(<span class="prelude-val">Some</span>(shutdown_tx));
         <span class="kw">let </span>mode = <span class="kw">crate</span>::components::admin::Admin::Proxy(&lt;<span class="kw">_</span>&gt;::default());
 
@@ -874,7 +876,7 @@
         </span><span class="kw">match </span><span class="self">self</span>.shutdown_ch {
             <span class="prelude-val">Some</span>((<span class="kw">_</span>, <span class="kw-2">ref </span>rx)) =&gt; rx.clone(),
             <span class="prelude-val">None </span>=&gt; {
-                <span class="kw">let </span>ch = <span class="kw">crate</span>::make_shutdown_channel(<span class="kw">crate</span>::ShutdownKind::Testing);
+                <span class="kw">let </span>ch = <span class="kw">crate</span>::signal::channel(ShutdownKind::Testing);
                 <span class="kw">let </span>recv = ch.<span class="number">1</span>.clone();
                 <span class="self">self</span>.shutdown_ch = <span class="prelude-val">Some</span>(ch);
                 recv

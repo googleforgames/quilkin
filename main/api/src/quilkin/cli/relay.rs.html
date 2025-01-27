@@ -137,7 +137,7 @@
         <span class="self">self</span>,
         config: Arc&lt;Config&gt;,
         ready: Ready,
-        shutdown_rx: <span class="kw">crate</span>::ShutdownRx,
+        shutdown_rx: <span class="kw">crate</span>::signal::ShutdownRx,
     ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
         relay::Relay {
             xds_port: <span class="self">self</span>.xds_port,

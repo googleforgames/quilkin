@@ -118,7 +118,7 @@
         locality: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::net::endpoint::Locality&gt;,
         config: std::sync::Arc&lt;<span class="kw">crate</span>::Config&gt;,
         ready: Ready,
-        shutdown_rx: <span class="kw">crate</span>::ShutdownRx,
+        shutdown_rx: <span class="kw">crate</span>::signal::ShutdownRx,
     ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
         manage::Manage {
             locality,
