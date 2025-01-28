@@ -121,7 +121,7 @@ pub struct Cli {
     #[clap(short, long, env)]
     pub quiet: bool,
     #[clap(subcommand)]
-    pub command: Commands,
+    pub command: Option<Commands>,
     #[clap(
      long,
      default_value_t = LogFormats::Auto,
@@ -133,6 +133,8 @@ pub struct Cli {
     pub admin: AdminCli,
     #[command(flatten)]
     pub locality: LocalityCli,
+    #[command(flatten)]
+    pub providers: crate::config::providersv2::Providers,
     #[command(flatten)]
     pub service: Service,
 }
@@ -209,47 +211,55 @@ impl Cli {
         // Non-long running commands (e.g. ones with no administration server)
         // are executed here.
         use crate::components::{self, admin as admin_server};
-        let mode = match &self.command {
-            Commands::Qcmp(Qcmp::Ping(ping)) => return ping.run().await,
-            Commands::GenerateConfigSchema(generator) => {
-                return generator.generate_config_schema();
-            }
-            Commands::Agent(_) => Admin::Agent(<_>::default()),
-            Commands::Proxy(proxy) => {
-                let ready = components::proxy::Ready {
-                    idle_request_interval: proxy
-                        .idle_request_interval_secs
-                        .map(std::time::Duration::from_secs)
-                        .unwrap_or(admin_server::IDLE_REQUEST_INTERVAL),
-                    ..Default::default()
-                };
-                Admin::Proxy(ready)
-            }
-            Commands::Manage(_mng) => {
-                let ready = components::manage::Ready {
-                    is_manage: true,
-                    ..Default::default()
-                };
-                Admin::Manage(ready)
-            }
-            Commands::Relay(relay) => {
-                let ready = components::relay::Ready {
-                    idle_request_interval: relay
-                        .idle_request_interval_secs
-                        .map(std::time::Duration::from_secs)
-                        .unwrap_or(admin_server::IDLE_REQUEST_INTERVAL),
-                    ..Default::default()
-                };
-                Admin::Relay(ready)
-            }
+        let mode = if let Some(command) = &self.command {
+            Some(match command {
+                Commands::Qcmp(Qcmp::Ping(ping)) => return ping.run().await,
+                Commands::GenerateConfigSchema(generator) => {
+                    return generator.generate_config_schema();
+                }
+                Commands::Agent(_) => Admin::Agent(<_>::default()),
+                Commands::Proxy(proxy) => {
+                    let ready = components::proxy::Ready {
+                        idle_request_interval: proxy
+                            .idle_request_interval_secs
+                            .map(std::time::Duration::from_secs)
+                            .unwrap_or(admin_server::IDLE_REQUEST_INTERVAL),
+                        ..Default::default()
+                    };
+                    Admin::Proxy(ready)
+                }
+                Commands::Manage(_mng) => {
+                    let ready = components::manage::Ready {
+                        is_manage: true,
+                        ..Default::default()
+                    };
+                    Admin::Manage(ready)
+                }
+                Commands::Relay(relay) => {
+                    let ready = components::relay::Ready {
+                        idle_request_interval: relay
+                            .idle_request_interval_secs
+                            .map(std::time::Duration::from_secs)
+                            .unwrap_or(admin_server::IDLE_REQUEST_INTERVAL),
+                        ..Default::default()
+                    };
+                    Admin::Relay(ready)
+                }
+            })
+        } else {
+            None
         };
+
+        if !self.service.any_service_enabled() && mode.is_none() {
+            eyre::bail!("no service specified, shutting down");
+        }
 
         tracing::debug!(cli = ?self, "config parameters");
 
         let config = Arc::new(match Self::read_config(self.config)? {
             Some(mut config) => {
                 // Workaround deficiency in serde flatten + untagged
-                if matches!(self.command, Commands::Agent(..)) {
+                if matches!(self.command, Some(Commands::Agent(..))) {
                     config.datacenter = match config.datacenter {
                         crate::config::DatacenterConfig::Agent {
                             icao_code,
@@ -272,38 +282,47 @@ impl Cli {
 
                 config
             }
-            None if matches!(self.command, Commands::Agent(..)) => Config::default_agent(),
+            None if matches!(self.command, Some(Commands::Agent(..))) => Config::default_agent(),
             None => Config::default_non_agent(),
         });
 
         if self.admin.enabled {
-            mode.server(config.clone(), self.admin.address);
+            if let Some(mode) = mode.as_ref() {
+                mode.server(config.clone(), self.admin.address);
+            }
         }
 
-        let shutdown_rx = crate::signal::spawn_handler();
+        let mut shutdown_rx = crate::signal::spawn_handler();
 
         crate::alloc::spawn_heap_stats_updates(
             std::time::Duration::from_secs(10),
             shutdown_rx.clone(),
         );
 
+        let ready = <_>::default();
+        let locality = self.locality.locality();
+        self.providers
+            .spawn_providers(&config, ready, locality.clone());
         self.service.spawn_services(&config, &shutdown_rx)?;
 
-        let locality = self.locality.locality();
-        match (self.command, mode) {
-            (Commands::Agent(agent), Admin::Agent(ready)) => {
-                agent.run(locality, config, ready, shutdown_rx).await
+        if let Some(mode) = mode {
+            match (self.command.unwrap(), mode) {
+                (Commands::Agent(agent), Admin::Agent(ready)) => {
+                    agent.run(locality, config, ready, shutdown_rx).await
+                }
+                (Commands::Proxy(runner), Admin::Proxy(ready)) => {
+                    runner.run(config, ready, tx, shutdown_rx).await
+                }
+                (Commands::Manage(manager), Admin::Manage(ready)) => {
+                    manager.run(locality, config, ready, shutdown_rx).await
+                }
+                (Commands::Relay(relay), Admin::Relay(ready)) => {
+                    relay.run(locality, config, ready, shutdown_rx).await
+                }
+                _ => unreachable!(),
             }
-            (Commands::Proxy(runner), Admin::Proxy(ready)) => {
-                runner.run(config, ready, tx, shutdown_rx).await
-            }
-            (Commands::Manage(manager), Admin::Manage(ready)) => {
-                manager.run(locality, config, ready, shutdown_rx).await
-            }
-            (Commands::Relay(relay), Admin::Relay(ready)) => {
-                relay.run(locality, config, ready, shutdown_rx).await
-            }
-            _ => unreachable!(),
+        } else {
+            shutdown_rx.changed().await.map_err(From::from)
         }
     }
 
