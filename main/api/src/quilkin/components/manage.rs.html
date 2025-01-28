@@ -84,7 +84,14 @@
 <a href="#83" id="83">83</a>
 <a href="#84" id="84">84</a>
 <a href="#85" id="85">85</a>
-<a href="#86" id="86">86</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -131,13 +138,20 @@
                 .modify(|map| map.update_unlocated_endpoints(locality.clone()));
         }
 
-        <span class="kw">let </span>provider_task = <span class="self">self</span>.provider.spawn(
-            config.clone(),
-            ready.provider_is_healthy.clone(),
-            <span class="self">self</span>.locality,
-            <span class="self">self</span>.address_selector,
-            <span class="bool-val">false</span>,
-        );
+        <span class="kw">let </span>provider_task = <span class="kw">match </span><span class="self">self</span>.provider {
+            Providers::Agones {
+                config_namespace,
+                gameservers_namespace,
+            } =&gt; <span class="kw">crate</span>::config::providersv2::Providers::default()
+                .k8s()
+                .k8s_namespace(config_namespace.unwrap_or_default())
+                .agones()
+                .agones_namespace(gameservers_namespace),
+            Providers::File { path } =&gt; <span class="kw">crate</span>::config::providersv2::Providers::default()
+                .fs()
+                .fs_path(path),
+        }
+        .spawn_providers(<span class="kw-2">&amp;</span>config, ready.provider_is_healthy.clone(), <span class="self">self</span>.locality);
 
         <span class="kw">let </span>_relay_stream = <span class="kw">if </span>!<span class="self">self</span>.relay_servers.is_empty() {
             <span class="macro">tracing::info!</span>(<span class="string">"connecting to relay server"</span>);

@@ -633,7 +633,7 @@
                 manager.run(locality, config, ready, shutdown_rx).<span class="kw">await
             </span>}
             (Commands::Relay(relay), Admin::Relay(ready)) =&gt; {
-                relay.run(config, ready, shutdown_rx).<span class="kw">await
+                relay.run(locality, config, ready, shutdown_rx).<span class="kw">await
             </span>}
             <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(),
         }
