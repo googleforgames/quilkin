@@ -45,13 +45,20 @@ impl Manage {
                 .modify(|map| map.update_unlocated_endpoints(locality.clone()));
         }
 
-        let provider_task = self.provider.spawn(
-            config.clone(),
-            ready.provider_is_healthy.clone(),
-            self.locality,
-            self.address_selector,
-            false,
-        );
+        let provider_task = match self.provider {
+            Providers::Agones {
+                config_namespace,
+                gameservers_namespace,
+            } => crate::config::providersv2::Providers::default()
+                .k8s()
+                .k8s_namespace(config_namespace.unwrap_or_default())
+                .agones()
+                .agones_namespace(gameservers_namespace),
+            Providers::File { path } => crate::config::providersv2::Providers::default()
+                .fs()
+                .fs_path(path),
+        }
+        .spawn_providers(&config, ready.provider_is_healthy.clone(), self.locality);
 
         let _relay_stream = if !self.relay_servers.is_empty() {
             tracing::info!("connecting to relay server");

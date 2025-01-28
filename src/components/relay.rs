@@ -46,6 +46,7 @@ impl Ready {
 pub struct Relay {
     pub xds_port: u16,
     pub mds_port: u16,
+    pub locality: Option<crate::net::endpoint::Locality>,
     pub provider: Option<Providers>,
 }
 
@@ -59,71 +60,21 @@ impl Relay {
             mut shutdown_rx,
         }: RunArgs<Ready>,
     ) -> crate::Result<()> {
-        let _provider_task = self.provider.map(|provider| {
-            let config = config.clone();
-            let provider_is_healthy = ready.provider_is_healthy.clone();
+        let _provider_task = match self.provider {
+            Some(Providers::Agones {
+                config_namespace, ..
+            }) => crate::config::providersv2::Providers::default()
+                .k8s()
+                .k8s_namespace(config_namespace.unwrap_or_default())
+                .spawn_providers(&config, ready.provider_is_healthy.clone(), self.locality),
 
-            match provider {
-                Providers::Agones {
-                    config_namespace, ..
-                } => {
-                    let config_namespace = config_namespace.unwrap_or_else(|| "default".into());
-                    let fut = Providers::task(provider_is_healthy.clone(), move || {
-                        let config = config.clone();
-                        let config_namespace = config_namespace.clone();
-                        let provider_is_healthy = provider_is_healthy.clone();
-                        async move {
-                            let client = tokio::time::timeout(
-                                std::time::Duration::from_secs(5),
-                                kube::Client::try_default(),
-                            )
-                            .await??;
+            Some(Providers::File { path }) => crate::config::providersv2::Providers::default()
+                .fs()
+                .fs_path(path)
+                .spawn_providers(&config, ready.provider_is_healthy.clone(), self.locality),
 
-                            let configmap_reflector =
-                                crate::config::providers::k8s::update_filters_from_configmap(
-                                    client.clone(),
-                                    &config_namespace,
-                                    config.clone(),
-                                );
-
-                            use tokio_stream::StreamExt;
-                            tokio::pin!(configmap_reflector);
-
-                            loop {
-                                match configmap_reflector.next().await {
-                                    Some(Ok(_)) => {
-                                        provider_is_healthy.store(true, Ordering::SeqCst);
-                                    }
-                                    Some(Err(error)) => {
-                                        provider_is_healthy.store(false, Ordering::SeqCst);
-                                        return Err(error);
-                                    }
-                                    None => {
-                                        provider_is_healthy.store(false, Ordering::SeqCst);
-                                        break;
-                                    }
-                                }
-                            }
-
-                            tracing::info!("configmap stream ending");
-                            Ok(())
-                        }
-                    });
-
-                    tokio::spawn(fut)
-                }
-                Providers::File { path } => {
-                    tokio::spawn(Providers::task(provider_is_healthy.clone(), move || {
-                        let config = config.clone();
-                        let path = path.clone();
-                        let provider_is_healthy = provider_is_healthy.clone();
-                        async move {
-                            crate::config::watch::fs(config, provider_is_healthy, path, None).await
-                        }
-                    }))
-                }
-            }
-        });
+            None => tokio::spawn(std::future::pending()),
+        };
 
         crate::cli::Service::default()
             .xds()

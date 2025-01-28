@@ -328,6 +328,7 @@ impl Pail {
                     relay::Relay {
                         xds_port,
                         mds_port,
+                        locality: None,
                         provider: Some(Providers::File { path }),
                     }
                     .run(RunArgs {

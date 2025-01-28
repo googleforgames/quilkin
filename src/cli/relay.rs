@@ -58,6 +58,7 @@ impl Default for Relay {
 impl Relay {
     pub async fn run(
         self,
+        locality: Option<crate::net::endpoint::Locality>,
         config: Arc<Config>,
         ready: Ready,
         shutdown_rx: crate::signal::ShutdownRx,
@@ -65,6 +66,7 @@ impl Relay {
         relay::Relay {
             xds_port: self.xds_port,
             mds_port: self.mds_port,
+            locality,
             provider: self.providers,
         }
         .run(crate::components::RunArgs {
