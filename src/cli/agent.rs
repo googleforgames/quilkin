@@ -83,7 +83,7 @@ impl Agent {
         locality: Option<crate::net::endpoint::Locality>,
         config: Arc<Config>,
         ready: Ready,
-        shutdown_rx: crate::ShutdownRx,
+        shutdown_rx: crate::signal::ShutdownRx,
     ) -> crate::Result<()> {
         let icao_code = Some(self.icao_code);
 

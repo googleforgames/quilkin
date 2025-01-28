@@ -20,7 +20,7 @@ use tonic::transport::Endpoint;
 #[cfg(doc)]
 use crate::filters::FilterFactory;
 
-use crate::ShutdownRx;
+use crate::signal::ShutdownRx;
 
 pub use crate::components::proxy::Ready;
 

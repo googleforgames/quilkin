@@ -16,7 +16,7 @@
 
 /// Spawns a task to periodically update the heap stat metrics from our tracking allocator
 #[cfg(feature = "heap-stats")]
-pub fn spawn_heap_stats_updates(period: std::time::Duration, mut srx: crate::ShutdownRx) {
+pub fn spawn_heap_stats_updates(period: std::time::Duration, mut srx: crate::signal::ShutdownRx) {
     use crate::metrics::registry;
     use once_cell::sync::Lazy;
     use prometheus::{IntCounterVec, IntGaugeVec};
@@ -101,4 +101,4 @@ pub fn spawn_heap_stats_updates(period: std::time::Duration, mut srx: crate::Shu
 }
 
 #[cfg(not(feature = "heap-stats"))]
-pub fn spawn_heap_stats_updates(_period: std::time::Duration, _srx: crate::ShutdownRx) {}
+pub fn spawn_heap_stats_updates(_period: std::time::Duration, _srx: crate::signal::ShutdownRx) {}

@@ -22,6 +22,8 @@ use std::sync::{
 
 use crate::{net::endpoint::Locality, Config};
 
+pub use crate::config::providers::k8s::update_endpoints_from_gameservers as watch_gameservers;
+
 pub async fn watch(
     gameservers_namespace: String,
     config_namespace: Option<String>,

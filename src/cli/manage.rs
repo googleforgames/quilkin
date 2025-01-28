@@ -48,7 +48,7 @@ impl Manage {
         locality: Option<crate::net::endpoint::Locality>,
         config: std::sync::Arc<crate::Config>,
         ready: Ready,
-        shutdown_rx: crate::ShutdownRx,
+        shutdown_rx: crate::signal::ShutdownRx,
     ) -> crate::Result<()> {
         manage::Manage {
             locality,

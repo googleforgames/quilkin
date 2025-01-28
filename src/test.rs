@@ -28,7 +28,7 @@ use crate::{
     net::endpoint::metadata::Value,
     net::endpoint::{Endpoint, EndpointAddress},
     net::DualStackEpollSocket as DualStackLocalSocket,
-    ShutdownKind, ShutdownRx, ShutdownTx,
+    signal::{ShutdownKind, ShutdownRx, ShutdownTx},
 };
 
 static LOG_ONCE: Once = Once::new();
@@ -288,7 +288,8 @@ impl TestHelper {
         server: Option<crate::components::proxy::Proxy>,
         with_admin: Option<Option<SocketAddr>>,
     ) -> u16 {
-        let (shutdown_tx, shutdown_rx) = crate::make_shutdown_channel(crate::ShutdownKind::Testing);
+        let (shutdown_tx, shutdown_rx) =
+            crate::signal::channel(crate::signal::ShutdownKind::Testing);
         self.server_shutdown_tx.push(Some(shutdown_tx));
         let mode = crate::components::admin::Admin::Proxy(<_>::default());
 
@@ -337,7 +338,7 @@ impl TestHelper {
         match self.shutdown_ch {
             Some((_, ref rx)) => rx.clone(),
             None => {
-                let ch = crate::make_shutdown_channel(crate::ShutdownKind::Testing);
+                let ch = crate::signal::channel(ShutdownKind::Testing);
                 let recv = ch.1.clone();
                 self.shutdown_ch = Some(ch);
                 recv
