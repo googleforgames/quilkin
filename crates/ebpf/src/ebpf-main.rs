@@ -46,6 +46,9 @@ static mut COUNTER: u32 = 0;
 /// The external port used by clients. Network order.
 #[no_mangle]
 static EXTERNAL_PORT_NO: u16 = u16::to_be(7777);
+/// The port used to respond to QCMP messages. Network order.
+#[no_mangle]
+static QCMP_PORT_NO: u16 = u16::to_be(7600);
 
 /// The beginning of the port range quilkin will use for server sessions, we
 /// take advantage of the fact that, by default, the range Linux uses for
@@ -116,6 +119,7 @@ pub fn packet_router(ctx: &XdpContext) -> Result<(), ()> {
 
     if dest_port == unsafe { core::ptr::read_volatile(&EXTERNAL_PORT_NO) }
         || u16::from_be(dest_port) >= EPHEMERAL_PORT_START
+        || dest_port == unsafe { core::ptr::read_volatile(&QCMP_PORT_NO) }
     {
         Ok(())
     } else {
