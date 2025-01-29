@@ -361,6 +361,7 @@ use xdp::packet::net_types::NetworkU16;
 /// All of the ring operations are done in this loop so that the actual
 /// [`process::process_packets`] code can be cleanly tested without relying on
 /// a fully setup XDP socket/rings, relying only on a `Umem` (memory map)
+#[allow(clippy::too_many_arguments)]
 fn io_loop(
     worker: quilkin_xdp::XdpWorker,
     external_port: NetworkU16,
