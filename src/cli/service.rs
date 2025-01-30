@@ -8,75 +8,75 @@ pub struct Service {
     /// Whether to serve mDS requests.
     #[arg(
         long = "service.mds",
-        env = "QUILKIN_PUBLISH_MDS",
+        env = "QUILKIN_SERVICE_MDS",
         default_value_t = false
     )]
     mds_enabled: bool,
     /// The TCP port to listen to serve xDS requests.
     #[clap(
         long = "service.mds.port",
-        env = "QUILKIN_PUBLISH_MDS_PORT",
+        env = "QUILKIN_SERVICE_MDS_PORT",
         default_value_t = 7900
     )]
     mds_port: u16,
     /// Whether to serve UDP requests.
     #[arg(
         long = "service.phoenix",
-        env = "QUILKIN_PUBLISH_PHOENIX",
+        env = "QUILKIN_SERVICE_PHOENIX",
         default_value_t = false
     )]
     phoenix_enabled: bool,
     /// The UDP port to listen for UDP packets.
     #[clap(
         long = "service.phoenix.port",
-        env = "QUILKIN_PUBLISH_PHOENIX_PORT",
+        env = "QUILKIN_SERVICE_PHOENIX_PORT",
         default_value_t = 7600
     )]
     phoenix_port: u16,
     /// Whether to serve UDP requests.
     #[arg(
         long = "service.qcmp",
-        env = "QUILKIN_PUBLISH_QCMP",
+        env = "QUILKIN_SERVICE_QCMP",
         default_value_t = false
     )]
     qcmp_enabled: bool,
     /// The UDP port to listen for UDP packets.
     #[clap(
         long = "service.qcmp.port",
-        env = "QUILKIN_PUBLISH_QCMP_PORT",
+        env = "QUILKIN_SERVICE_QCMP_PORT",
         default_value_t = 7600
     )]
     qcmp_port: u16,
     /// Whether to serve UDP requests.
     #[arg(
         long = "service.udp",
-        env = "QUILKIN_PUBLISH_UDP",
+        env = "QUILKIN_SERVICE_UDP",
         default_value_t = false
     )]
     udp_enabled: bool,
     /// The UDP port to listen for UDP packets.
     #[clap(
         long = "service.udp.port",
-        env = "QUILKIN_PUBLISH_UDP_PORT",
+        env = "QUILKIN_SERVICE_UDP_PORT",
         default_value_t = 7777
     )]
     udp_port: u16,
     #[clap(flatten)]
     pub xdp: XdpOptions,
     /// Amount of UDP workers to run.
-    #[clap(long = "service.udp.workers", env = "QUILKIN_PUBLISH_UDP_WORKERS", default_value_t = std::num::NonZeroUsize::new(num_cpus::get()).unwrap())]
+    #[clap(long = "service.udp.workers", env = "QUILKIN_SERVICE_UDP_WORKERS", default_value_t = std::num::NonZeroUsize::new(num_cpus::get()).unwrap())]
     pub udp_workers: std::num::NonZeroUsize,
     /// Whether to serve xDS requests.
     #[arg(
         long = "service.xds",
-        env = "QUILKIN_PUBLISH_XDS",
+        env = "QUILKIN_SERVICE_XDS",
         default_value_t = false
     )]
     xds_enabled: bool,
     /// The TCP port to listen to serve xDS requests.
     #[clap(
         long = "service.xds.port",
-        env = "QUILKIN_PUBLISH_XDS_PORT",
+        env = "QUILKIN_SERVICE_XDS_PORT",
         default_value_t = 7800
     )]
     xds_port: u16,
