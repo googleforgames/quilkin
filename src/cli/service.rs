@@ -395,7 +395,7 @@ impl Service {
                 .as_deref()
                 .map_or(xdp::NicConfig::Default, xdp::NicConfig::Name),
             external_port: self.udp_port,
-            qcmp_port: self.qcmp_port,
+            qcmp_port: if self.qcmp_enabled { self.qcmp_port } else { 0 },
             maximum_packet_memory: self.xdp.maximum_memory,
             require_zero_copy: self.xdp.force_zerocopy,
             require_tx_checksum: self.xdp.force_tx_checksum_offload,
