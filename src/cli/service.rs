@@ -301,7 +301,7 @@ impl Service {
         impl Future<Output = crate::Result<()>>,
         Option<Box<dyn FnOnce(crate::signal::ShutdownRx) + Send>>,
     )> {
-        if !self.udp_enabled {
+        if !self.udp_enabled && !self.qcmp_enabled {
             return Ok((either::Left(std::future::pending()), None));
         }
 
@@ -325,6 +325,10 @@ impl Service {
                     );
                 }
             }
+        }
+
+        if !self.udp_enabled {
+            return Ok((either::Left(std::future::pending()), None));
         }
 
         self.spawn_user_space_router(config.clone())
@@ -394,7 +398,7 @@ impl Service {
                 .network_interface
                 .as_deref()
                 .map_or(xdp::NicConfig::Default, xdp::NicConfig::Name),
-            external_port: self.udp_port,
+            external_port: if self.udp_enabled { self.udp_port } else { 0 },
             qcmp_port: if self.qcmp_enabled { self.qcmp_port } else { 0 },
             maximum_packet_memory: self.xdp.maximum_memory,
             require_zero_copy: self.xdp.force_zerocopy,
