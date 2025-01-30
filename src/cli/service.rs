@@ -162,6 +162,15 @@ impl Service {
         self
     }
 
+    /// Sets the xDS service port.
+    pub fn any_service_enabled(&self) -> bool {
+        self.udp_enabled
+            || self.qcmp_enabled
+            || self.phoenix_enabled
+            || self.xds_enabled
+            || self.mds_enabled
+    }
+
     /// The main entrypoint for listening network servers. When called will
     /// spawn any and all enabled services, if successful returning a future
     /// that can be await to wait on services to be cancelled.
@@ -202,6 +211,7 @@ impl Service {
         shutdown_rx: &crate::signal::ShutdownRx,
     ) -> crate::Result<impl std::future::Future<Output = crate::Result<()>>> {
         if self.phoenix_enabled {
+            tracing::info!(port=%self.qcmp_port, "starting phoenix service");
             let phoenix = crate::net::TcpListener::bind(Some(self.phoenix_port))?;
             crate::net::phoenix::spawn(
                 phoenix,
@@ -220,6 +230,7 @@ impl Service {
         shutdown_rx: &crate::signal::ShutdownRx,
     ) -> crate::Result<impl Future<Output = crate::Result<()>>> {
         if self.qcmp_enabled {
+            tracing::info!(port=%self.qcmp_port, "starting qcmp service");
             let qcmp = crate::net::raw_socket_with_reuse(self.qcmp_port)?;
             crate::codec::qcmp::spawn(qcmp, shutdown_rx.clone())?;
         }
@@ -238,6 +249,7 @@ impl Service {
 
         use futures::TryFutureExt as _;
 
+        tracing::info!(port=%self.mds_port, "starting mds service");
         let listener = crate::net::TcpListener::bind(Some(self.mds_port))?;
 
         Ok(either::Right(
@@ -290,6 +302,8 @@ impl Service {
         if !self.udp_enabled {
             return Ok((either::Left(std::future::pending()), None));
         }
+
+        tracing::info!(port=%self.udp_port, "starting udp service");
 
         #[cfg(target_os = "linux")]
         {
@@ -368,6 +382,7 @@ impl Service {
             eyre::bail!("XDP currently disabled by default");
         }
 
+        tracing::info!(port=%self.mds_port, "setting up xdp module");
         let workers = xdp::setup_xdp_io(xdp::XdpConfig {
             nic: self
                 .xdp
@@ -396,31 +411,40 @@ pub struct XdpOptions {
     /// If not specified quilkin will attempt to determine the most appropriate
     /// network interface to use. Quilkin will exit with an error if the network
     /// interface does not exist, or a suitable default cannot be determined.
-    #[clap(long = "service.udp.xdp.network-interface")]
+    #[clap(
+        long = "service.udp.xdp.network-interface",
+        env = "QUILKIN_SERVICE_UDP_XDP_NETWORK_INTERFACE"
+    )]
     pub network_interface: Option<String>,
     /// Forces the use of XDP.
     ///
     /// If XDP is not available on the chosen NIC, Quilkin exits with an error.
     /// If false, io-uring will be used as the fallback implementation.
-    #[clap(long = "service.udp.xdp")]
+    #[clap(long = "service.udp.xdp", env = "QUILKIN_SERVICE_UDP_XDP")]
     pub force_xdp: bool,
     /// Forces the use of [`XDP_ZEROCOPY`](https://www.kernel.org/doc/html/latest/networking/af_xdp.html#xdp-copy-and-xdp-zerocopy-bind-flags)
     ///
     /// If zero copy is not available on the chosen NIC, Quilkin exits with an error
-    #[clap(long = "service.udp.xdp.zerocopy")]
+    #[clap(
+        long = "service.udp.xdp.zerocopy",
+        env = "QUILKIN_SERVICE_UDP_XDP_ZEROCOPY"
+    )]
     pub force_zerocopy: bool,
     /// Forces the use of [TX checksum offload](https://docs.kernel.org/6.8/networking/xsk-tx-metadata.html)
     ///
     /// TX checksum offload is an optional feature allowing the data portion of
     /// a packet to have its internet checksum calculation offloaded to the NIC,
     /// as otherwise this is done in software
-    #[clap(long = "service.udp.xdp.tco")]
+    #[clap(long = "service.udp.xdp.tco", env = "QUILKIN_SERVICE_UDP_XDP_TCO")]
     pub force_tx_checksum_offload: bool,
     /// The maximum amount of memory mapped for packet buffers, in bytes
     ///
     /// If not specified, this defaults to 4MiB (2k allocated packets of 2k each at a time)
     /// per NIC queue, ie 128MiB on a 32 queue NIC
-    #[clap(long = "service.udp.xdp.memory-limit")]
+    #[clap(
+        long = "service.udp.xdp.memory-limit",
+        env = "QUILKIN_SERVICE_UDP_XDP_MEMORY_LIMIT"
+    )]
     pub maximum_memory: Option<u64>,
 }
 

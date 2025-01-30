@@ -29,20 +29,20 @@ const RETRIES: u32 = 25;
 const BACKOFF_STEP: std::time::Duration = std::time::Duration::from_millis(250);
 const MAX_DELAY: std::time::Duration = std::time::Duration::from_secs(2);
 
-/// The available xDS source providers.
+/// The available xDS source provider.
 #[derive(Clone, Debug, Default, clap::Args)]
 pub struct Providers {
     /// Watches Agones' game server CRDs for `Allocated` game server endpoints,
     /// and for a `ConfigMap` that specifies the filter configuration.
     #[arg(
-        long = "providers.k8s",
+        long = "provider.k8s",
         env = "QUILKIN_PROVIDERS_K8S",
         default_value_t = false
     )]
     k8s_enabled: bool,
 
     #[arg(
-        long = "providers.k8s.namespace",
+        long = "provider.k8s.namespace",
         env = "QUILKIN_PROVIDERS_K8S_NAMESPACE",
         default_value_t = From::from("default"),
         requires("k8s_enabled"),
@@ -50,14 +50,14 @@ pub struct Providers {
     k8s_namespace: String,
 
     #[arg(
-        long = "providers.k8s.agones",
+        long = "provider.k8s.agones",
         env = "QUILKIN_PROVIDERS_K8S_AGONES",
         default_value_t = false
     )]
     agones_enabled: bool,
 
     #[arg(
-        long = "providers.k8s.agones.namespace",
+        long = "provider.k8s.agones.namespace",
         env = "QUILKIN_PROVIDERS_K8S_AGONES_NAMESPACE",
         default_value_t = From::from("default"),
         requires("agones_enabled"),
@@ -67,14 +67,14 @@ pub struct Providers {
     /// If specified, filters the available gameserver addresses to the one that
     /// matches the specified type
     #[arg(
-        long = "providers.k8s.agones.address_type",
+        long = "provider.k8s.agones.address_type",
         env = "QUILKIN_PROVIDERS_K8S_AGONES_ADDRESS_TYPE",
         requires("agones_enabled")
     )]
     pub address_type: Option<String>,
     /// If specified, additionally filters the gameserver address by its ip kind
     #[arg(
-        long = "providers.k8s.agones.ip_kind",
+        long = "provider.k8s.agones.ip_kind",
         env = "QUILKIN_PROVIDERS_K8S_AGONES_IP_KIND",
         requires("address_type"),
         value_enum
@@ -82,7 +82,7 @@ pub struct Providers {
     pub ip_kind: Option<crate::config::AddrKind>,
 
     #[arg(
-        long = "providers.fs",
+        long = "provider.fs",
         env = "QUILKIN_PROVIDERS_FS",
         conflicts_with("k8s_enabled"),
         default_value_t = false
@@ -90,7 +90,7 @@ pub struct Providers {
     fs_enabled: bool,
 
     #[arg(
-        long = "providers.fs",
+        long = "provider.fs.path",
         env = "QUILKIN_PROVIDERS_FS_PATH",
         requires("fs_enabled"),
         default_value = "/etc/quilkin/config.yaml"
@@ -98,32 +98,31 @@ pub struct Providers {
     fs_path: std::path::PathBuf,
     /// One or more `quilkin relay` endpoints to push configuration changes to.
     #[clap(
-        long = "providers.mds.endpoints",
+        long = "provider.mds.endpoints",
         env = "QUILKIN_PROVIDERS_MDS_ENDPOINTS"
     )]
     pub relay: Vec<tonic::transport::Endpoint>,
     /// The remote URL or local file path to retrieve the Maxmind database.
     #[clap(
-        long = "providers.mmdb.endpoints",
+        long = "provider.mmdb.endpoints",
         env = "QUILKIN_PROVIDERS_MMDB_ENDPOINTS"
     )]
     pub mmdb: Option<crate::net::maxmind_db::Source>,
     /// One or more socket addresses to forward packets to.
     #[clap(
-        long = "providers.static.endpoints",
+        long = "provider.static.endpoints",
         env = "QUILKIN_PROVIDERS_STATIC_ENDPOINTS"
     )]
-    pub to: Vec<SocketAddr>,
+    pub endpoints: Vec<SocketAddr>,
     /// Assigns dynamic tokens to each address in the `--to` argument
     ///
     /// Format is `<number of unique tokens>:<length of token suffix for each packet>`
-    #[clap(long, env = "QUILKIN_DEST_TOKENS", requires("to"))]
     #[clap(
-        long = "providers.static.endpoint_tokens",
+        long = "provider.static.endpoint_tokens",
         env = "QUILKIN_PROVIDERS_STATIC_ENDPOINT_TOKENS",
-        requires("to")
+        requires("endpoints")
     )]
-    pub to_tokens: Option<String>,
+    pub endpoint_tokens: Option<String>,
 }
 
 impl Providers {
@@ -155,6 +154,107 @@ impl Providers {
     pub fn k8s_namespace(mut self, ns: impl Into<String>) -> Self {
         self.k8s_namespace = ns.into();
         self
+    }
+
+    fn static_enabled(&self) -> bool {
+        !self.endpoints.is_empty()
+    }
+
+    pub fn spawn_static_provider(
+        &self,
+        config: Arc<crate::config::Config>,
+    ) -> crate::Result<JoinHandle<crate::Result<()>>> {
+        let endpoint_tokens = self
+            .endpoint_tokens
+            .as_ref()
+            .map(|tt| {
+                let Some((count, length)) = tt.split_once(':') else {
+                    eyre::bail!("--to-tokens `{tt}` is invalid, it must have a `:` separator")
+                };
+
+                let count = count.parse()?;
+                let length = length.parse()?;
+
+                Ok(crate::components::proxy::ToTokens { count, length })
+            })
+            .transpose()?;
+
+        let endpoints = if let Some(tt) = endpoint_tokens {
+            let (unique, overflow) = 256u64.overflowing_pow(tt.length as _);
+            if overflow {
+                panic!(
+                    "can't generate {} tokens of length {} maximum is {}",
+                    self.endpoints.len() * tt.count,
+                    tt.length,
+                    u64::MAX,
+                );
+            }
+
+            if unique < (self.endpoints.len() * tt.count) as u64 {
+                panic!(
+                    "we require {} unique tokens but only {unique} can be generated",
+                    self.endpoints.len() * tt.count,
+                );
+            }
+
+            {
+                use crate::filters::StaticFilter as _;
+                config.filters.store(Arc::new(
+                    crate::filters::FilterChain::try_create([
+                        crate::filters::Capture::as_filter_config(
+                            crate::filters::capture::Config {
+                                metadata_key: crate::filters::capture::CAPTURED_BYTES.into(),
+                                strategy: crate::filters::capture::Strategy::Suffix(
+                                    crate::filters::capture::Suffix {
+                                        size: tt.length as _,
+                                        remove: true,
+                                    },
+                                ),
+                            },
+                        )
+                        .unwrap(),
+                        crate::filters::TokenRouter::as_filter_config(None).unwrap(),
+                    ])
+                    .unwrap(),
+                ));
+            }
+
+            let count = tt.count as u64;
+
+            self.endpoints
+                .iter()
+                .enumerate()
+                .map(|(ind, sa)| {
+                    let mut tokens = std::collections::BTreeSet::new();
+                    let start = ind as u64 * count;
+                    for i in start..(start + count) {
+                        tokens.insert(i.to_le_bytes()[..tt.length].to_vec());
+                    }
+
+                    crate::net::endpoint::Endpoint::with_metadata(
+                        (*sa).into(),
+                        crate::net::endpoint::Metadata { tokens },
+                    )
+                })
+                .collect()
+        } else {
+            self.endpoints
+                .iter()
+                .cloned()
+                .map(crate::net::endpoint::Endpoint::from)
+                .collect()
+        };
+
+        tracing::info!(
+            provider = "static",
+            endpoints = serde_json::to_string(&endpoints).unwrap(),
+            "setting endpoints"
+        );
+        config.clusters.modify(|clusters| {
+            clusters.insert(None, endpoints);
+        });
+
+        Ok(tokio::spawn(std::future::pending()))
     }
 
     pub fn spawn_k8s_provider(
@@ -275,6 +375,8 @@ impl Providers {
                     )
                 }
             }))
+        } else if self.static_enabled() {
+            self.spawn_static_provider(config.clone()).unwrap()
         } else {
             tokio::spawn(async move { Ok(()) })
         }
