@@ -470,75 +470,75 @@
     <span class="doccomment">/// Whether to serve mDS requests.
     </span><span class="attr">#[arg(
         long = <span class="string">"service.mds"</span>,
-        env = <span class="string">"QUILKIN_PUBLISH_MDS"</span>,
+        env = <span class="string">"QUILKIN_SERVICE_MDS"</span>,
         default_value_t = <span class="bool-val">false
     </span>)]
     </span>mds_enabled: bool,
     <span class="doccomment">/// The TCP port to listen to serve xDS requests.
     </span><span class="attr">#[clap(
         long = <span class="string">"service.mds.port"</span>,
-        env = <span class="string">"QUILKIN_PUBLISH_MDS_PORT"</span>,
+        env = <span class="string">"QUILKIN_SERVICE_MDS_PORT"</span>,
         default_value_t = <span class="number">7900
     </span>)]
     </span>mds_port: u16,
     <span class="doccomment">/// Whether to serve UDP requests.
     </span><span class="attr">#[arg(
         long = <span class="string">"service.phoenix"</span>,
-        env = <span class="string">"QUILKIN_PUBLISH_PHOENIX"</span>,
+        env = <span class="string">"QUILKIN_SERVICE_PHOENIX"</span>,
         default_value_t = <span class="bool-val">false
     </span>)]
     </span>phoenix_enabled: bool,
     <span class="doccomment">/// The UDP port to listen for UDP packets.
     </span><span class="attr">#[clap(
         long = <span class="string">"service.phoenix.port"</span>,
-        env = <span class="string">"QUILKIN_PUBLISH_PHOENIX_PORT"</span>,
+        env = <span class="string">"QUILKIN_SERVICE_PHOENIX_PORT"</span>,
         default_value_t = <span class="number">7600
     </span>)]
     </span>phoenix_port: u16,
     <span class="doccomment">/// Whether to serve UDP requests.
     </span><span class="attr">#[arg(
         long = <span class="string">"service.qcmp"</span>,
-        env = <span class="string">"QUILKIN_PUBLISH_QCMP"</span>,
+        env = <span class="string">"QUILKIN_SERVICE_QCMP"</span>,
         default_value_t = <span class="bool-val">false
     </span>)]
     </span>qcmp_enabled: bool,
     <span class="doccomment">/// The UDP port to listen for UDP packets.
     </span><span class="attr">#[clap(
         long = <span class="string">"service.qcmp.port"</span>,
-        env = <span class="string">"QUILKIN_PUBLISH_QCMP_PORT"</span>,
+        env = <span class="string">"QUILKIN_SERVICE_QCMP_PORT"</span>,
         default_value_t = <span class="number">7600
     </span>)]
     </span>qcmp_port: u16,
     <span class="doccomment">/// Whether to serve UDP requests.
     </span><span class="attr">#[arg(
         long = <span class="string">"service.udp"</span>,
-        env = <span class="string">"QUILKIN_PUBLISH_UDP"</span>,
+        env = <span class="string">"QUILKIN_SERVICE_UDP"</span>,
         default_value_t = <span class="bool-val">false
     </span>)]
     </span>udp_enabled: bool,
     <span class="doccomment">/// The UDP port to listen for UDP packets.
     </span><span class="attr">#[clap(
         long = <span class="string">"service.udp.port"</span>,
-        env = <span class="string">"QUILKIN_PUBLISH_UDP_PORT"</span>,
+        env = <span class="string">"QUILKIN_SERVICE_UDP_PORT"</span>,
         default_value_t = <span class="number">7777
     </span>)]
     </span>udp_port: u16,
     <span class="attr">#[clap(flatten)]
     </span><span class="kw">pub </span>xdp: XdpOptions,
     <span class="doccomment">/// Amount of UDP workers to run.
-    </span><span class="attr">#[clap(long = <span class="string">"service.udp.workers"</span>, env = <span class="string">"QUILKIN_PUBLISH_UDP_WORKERS"</span>, default_value_t = std::num::NonZeroUsize::new(num_cpus::get()).unwrap())]
+    </span><span class="attr">#[clap(long = <span class="string">"service.udp.workers"</span>, env = <span class="string">"QUILKIN_SERVICE_UDP_WORKERS"</span>, default_value_t = std::num::NonZeroUsize::new(num_cpus::get()).unwrap())]
     </span><span class="kw">pub </span>udp_workers: std::num::NonZeroUsize,
     <span class="doccomment">/// Whether to serve xDS requests.
     </span><span class="attr">#[arg(
         long = <span class="string">"service.xds"</span>,
-        env = <span class="string">"QUILKIN_PUBLISH_XDS"</span>,
+        env = <span class="string">"QUILKIN_SERVICE_XDS"</span>,
         default_value_t = <span class="bool-val">false
     </span>)]
     </span>xds_enabled: bool,
     <span class="doccomment">/// The TCP port to listen to serve xDS requests.
     </span><span class="attr">#[clap(
         long = <span class="string">"service.xds.port"</span>,
-        env = <span class="string">"QUILKIN_PUBLISH_XDS_PORT"</span>,
+        env = <span class="string">"QUILKIN_SERVICE_XDS_PORT"</span>,
         default_value_t = <span class="number">7800
     </span>)]
     </span>xds_port: u16,
