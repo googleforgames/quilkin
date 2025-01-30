@@ -302,7 +302,109 @@
 <a href="#301" id="301">301</a>
 <a href="#302" id="302">302</a>
 <a href="#303" id="303">303</a>
-<a href="#304" id="304">304</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
+<a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
+<a href="#336" id="336">336</a>
+<a href="#337" id="337">337</a>
+<a href="#338" id="338">338</a>
+<a href="#339" id="339">339</a>
+<a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
+<a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a>
+<a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
+<a href="#350" id="350">350</a>
+<a href="#351" id="351">351</a>
+<a href="#352" id="352">352</a>
+<a href="#353" id="353">353</a>
+<a href="#354" id="354">354</a>
+<a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -333,20 +435,20 @@
 <span class="kw">const </span>BACKOFF_STEP: std::time::Duration = std::time::Duration::from_millis(<span class="number">250</span>);
 <span class="kw">const </span>MAX_DELAY: std::time::Duration = std::time::Duration::from_secs(<span class="number">2</span>);
 
-<span class="doccomment">/// The available xDS source providers.
+<span class="doccomment">/// The available xDS source provider.
 </span><span class="attr">#[derive(Clone, Debug, Default, clap::Args)]
 </span><span class="kw">pub struct </span>Providers {
     <span class="doccomment">/// Watches Agones' game server CRDs for `Allocated` game server endpoints,
     /// and for a `ConfigMap` that specifies the filter configuration.
     </span><span class="attr">#[arg(
-        long = <span class="string">"providers.k8s"</span>,
+        long = <span class="string">"provider.k8s"</span>,
         env = <span class="string">"QUILKIN_PROVIDERS_K8S"</span>,
         default_value_t = <span class="bool-val">false
     </span>)]
     </span>k8s_enabled: bool,
 
     <span class="attr">#[arg(
-        long = <span class="string">"providers.k8s.namespace"</span>,
+        long = <span class="string">"provider.k8s.namespace"</span>,
         env = <span class="string">"QUILKIN_PROVIDERS_K8S_NAMESPACE"</span>,
         default_value_t = From::from(<span class="string">"default"</span>),
         requires(<span class="string">"k8s_enabled"</span>),
@@ -354,14 +456,14 @@
     </span>k8s_namespace: String,
 
     <span class="attr">#[arg(
-        long = <span class="string">"providers.k8s.agones"</span>,
+        long = <span class="string">"provider.k8s.agones"</span>,
         env = <span class="string">"QUILKIN_PROVIDERS_K8S_AGONES"</span>,
         default_value_t = <span class="bool-val">false
     </span>)]
     </span>agones_enabled: bool,
 
     <span class="attr">#[arg(
-        long = <span class="string">"providers.k8s.agones.namespace"</span>,
+        long = <span class="string">"provider.k8s.agones.namespace"</span>,
         env = <span class="string">"QUILKIN_PROVIDERS_K8S_AGONES_NAMESPACE"</span>,
         default_value_t = From::from(<span class="string">"default"</span>),
         requires(<span class="string">"agones_enabled"</span>),
@@ -371,14 +473,14 @@
     <span class="doccomment">/// If specified, filters the available gameserver addresses to the one that
     /// matches the specified type
     </span><span class="attr">#[arg(
-        long = <span class="string">"providers.k8s.agones.address_type"</span>,
+        long = <span class="string">"provider.k8s.agones.address_type"</span>,
         env = <span class="string">"QUILKIN_PROVIDERS_K8S_AGONES_ADDRESS_TYPE"</span>,
         requires(<span class="string">"agones_enabled"</span>)
     )]
     </span><span class="kw">pub </span>address_type: <span class="prelude-ty">Option</span>&lt;String&gt;,
     <span class="doccomment">/// If specified, additionally filters the gameserver address by its ip kind
     </span><span class="attr">#[arg(
-        long = <span class="string">"providers.k8s.agones.ip_kind"</span>,
+        long = <span class="string">"provider.k8s.agones.ip_kind"</span>,
         env = <span class="string">"QUILKIN_PROVIDERS_K8S_AGONES_IP_KIND"</span>,
         requires(<span class="string">"address_type"</span>),
         value_enum
@@ -386,7 +488,7 @@
     </span><span class="kw">pub </span>ip_kind: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::config::AddrKind&gt;,
 
     <span class="attr">#[arg(
-        long = <span class="string">"providers.fs"</span>,
+        long = <span class="string">"provider.fs"</span>,
         env = <span class="string">"QUILKIN_PROVIDERS_FS"</span>,
         conflicts_with(<span class="string">"k8s_enabled"</span>),
         default_value_t = <span class="bool-val">false
@@ -394,7 +496,7 @@
     </span>fs_enabled: bool,
 
     <span class="attr">#[arg(
-        long = <span class="string">"providers.fs"</span>,
+        long = <span class="string">"provider.fs.path"</span>,
         env = <span class="string">"QUILKIN_PROVIDERS_FS_PATH"</span>,
         requires(<span class="string">"fs_enabled"</span>),
         default_value = <span class="string">"/etc/quilkin/config.yaml"
@@ -402,32 +504,31 @@
     </span>fs_path: std::path::PathBuf,
     <span class="doccomment">/// One or more `quilkin relay` endpoints to push configuration changes to.
     </span><span class="attr">#[clap(
-        long = <span class="string">"providers.mds.endpoints"</span>,
+        long = <span class="string">"provider.mds.endpoints"</span>,
         env = <span class="string">"QUILKIN_PROVIDERS_MDS_ENDPOINTS"
     </span>)]
     </span><span class="kw">pub </span>relay: Vec&lt;tonic::transport::Endpoint&gt;,
     <span class="doccomment">/// The remote URL or local file path to retrieve the Maxmind database.
     </span><span class="attr">#[clap(
-        long = <span class="string">"providers.mmdb.endpoints"</span>,
+        long = <span class="string">"provider.mmdb.endpoints"</span>,
         env = <span class="string">"QUILKIN_PROVIDERS_MMDB_ENDPOINTS"
     </span>)]
     </span><span class="kw">pub </span>mmdb: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::net::maxmind_db::Source&gt;,
     <span class="doccomment">/// One or more socket addresses to forward packets to.
     </span><span class="attr">#[clap(
-        long = <span class="string">"providers.static.endpoints"</span>,
+        long = <span class="string">"provider.static.endpoints"</span>,
         env = <span class="string">"QUILKIN_PROVIDERS_STATIC_ENDPOINTS"
     </span>)]
-    </span><span class="kw">pub </span>to: Vec&lt;SocketAddr&gt;,
+    </span><span class="kw">pub </span>endpoints: Vec&lt;SocketAddr&gt;,
     <span class="doccomment">/// Assigns dynamic tokens to each address in the `--to` argument
     ///
     /// Format is `&lt;number of unique tokens&gt;:&lt;length of token suffix for each packet&gt;`
-    </span><span class="attr">#[clap(long, env = <span class="string">"QUILKIN_DEST_TOKENS"</span>, requires(<span class="string">"to"</span>))]
-    #[clap(
-        long = <span class="string">"providers.static.endpoint_tokens"</span>,
+    </span><span class="attr">#[clap(
+        long = <span class="string">"provider.static.endpoint_tokens"</span>,
         env = <span class="string">"QUILKIN_PROVIDERS_STATIC_ENDPOINT_TOKENS"</span>,
-        requires(<span class="string">"to"</span>)
+        requires(<span class="string">"endpoints"</span>)
     )]
-    </span><span class="kw">pub </span>to_tokens: <span class="prelude-ty">Option</span>&lt;String&gt;,
+    </span><span class="kw">pub </span>endpoint_tokens: <span class="prelude-ty">Option</span>&lt;String&gt;,
 }
 
 <span class="kw">impl </span>Providers {
@@ -460,6 +561,107 @@
         <span class="self">self</span>.k8s_namespace = ns.into();
         <span class="self">self
     </span>}
+
+    <span class="kw">fn </span>static_enabled(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        !<span class="self">self</span>.endpoints.is_empty()
+    }
+
+    <span class="kw">pub fn </span>spawn_static_provider(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        config: Arc&lt;<span class="kw">crate</span>::config::Config&gt;,
+    ) -&gt; <span class="kw">crate</span>::Result&lt;JoinHandle&lt;<span class="kw">crate</span>::Result&lt;()&gt;&gt;&gt; {
+        <span class="kw">let </span>endpoint_tokens = <span class="self">self
+            </span>.endpoint_tokens
+            .as_ref()
+            .map(|tt| {
+                <span class="kw">let </span><span class="prelude-val">Some</span>((count, length)) = tt.split_once(<span class="string">':'</span>) <span class="kw">else </span>{
+                    <span class="macro">eyre::bail!</span>(<span class="string">"--to-tokens `{tt}` is invalid, it must have a `:` separator"</span>)
+                };
+
+                <span class="kw">let </span>count = count.parse()<span class="question-mark">?</span>;
+                <span class="kw">let </span>length = length.parse()<span class="question-mark">?</span>;
+
+                <span class="prelude-val">Ok</span>(<span class="kw">crate</span>::components::proxy::ToTokens { count, length })
+            })
+            .transpose()<span class="question-mark">?</span>;
+
+        <span class="kw">let </span>endpoints = <span class="kw">if let </span><span class="prelude-val">Some</span>(tt) = endpoint_tokens {
+            <span class="kw">let </span>(unique, overflow) = <span class="number">256u64</span>.overflowing_pow(tt.length <span class="kw">as _</span>);
+            <span class="kw">if </span>overflow {
+                <span class="macro">panic!</span>(
+                    <span class="string">"can't generate {} tokens of length {} maximum is {}"</span>,
+                    <span class="self">self</span>.endpoints.len() * tt.count,
+                    tt.length,
+                    u64::MAX,
+                );
+            }
+
+            <span class="kw">if </span>unique &lt; (<span class="self">self</span>.endpoints.len() * tt.count) <span class="kw">as </span>u64 {
+                <span class="macro">panic!</span>(
+                    <span class="string">"we require {} unique tokens but only {unique} can be generated"</span>,
+                    <span class="self">self</span>.endpoints.len() * tt.count,
+                );
+            }
+
+            {
+                <span class="kw">use </span><span class="kw">crate</span>::filters::StaticFilter <span class="kw">as _</span>;
+                config.filters.store(Arc::new(
+                    <span class="kw">crate</span>::filters::FilterChain::try_create([
+                        <span class="kw">crate</span>::filters::Capture::as_filter_config(
+                            <span class="kw">crate</span>::filters::capture::Config {
+                                metadata_key: <span class="kw">crate</span>::filters::capture::CAPTURED_BYTES.into(),
+                                strategy: <span class="kw">crate</span>::filters::capture::Strategy::Suffix(
+                                    <span class="kw">crate</span>::filters::capture::Suffix {
+                                        size: tt.length <span class="kw">as _</span>,
+                                        remove: <span class="bool-val">true</span>,
+                                    },
+                                ),
+                            },
+                        )
+                        .unwrap(),
+                        <span class="kw">crate</span>::filters::TokenRouter::as_filter_config(<span class="prelude-val">None</span>).unwrap(),
+                    ])
+                    .unwrap(),
+                ));
+            }
+
+            <span class="kw">let </span>count = tt.count <span class="kw">as </span>u64;
+
+            <span class="self">self</span>.endpoints
+                .iter()
+                .enumerate()
+                .map(|(ind, sa)| {
+                    <span class="kw">let </span><span class="kw-2">mut </span>tokens = std::collections::BTreeSet::new();
+                    <span class="kw">let </span>start = ind <span class="kw">as </span>u64 * count;
+                    <span class="kw">for </span>i <span class="kw">in </span>start..(start + count) {
+                        tokens.insert(i.to_le_bytes()[..tt.length].to_vec());
+                    }
+
+                    <span class="kw">crate</span>::net::endpoint::Endpoint::with_metadata(
+                        (<span class="kw-2">*</span>sa).into(),
+                        <span class="kw">crate</span>::net::endpoint::Metadata { tokens },
+                    )
+                })
+                .collect()
+        } <span class="kw">else </span>{
+            <span class="self">self</span>.endpoints
+                .iter()
+                .cloned()
+                .map(<span class="kw">crate</span>::net::endpoint::Endpoint::from)
+                .collect()
+        };
+
+        <span class="macro">tracing::info!</span>(
+            provider = <span class="string">"static"</span>,
+            endpoints = serde_json::to_string(<span class="kw-2">&amp;</span>endpoints).unwrap(),
+            <span class="string">"setting endpoints"
+        </span>);
+        config.clusters.modify(|clusters| {
+            clusters.insert(<span class="prelude-val">None</span>, endpoints);
+        });
+
+        <span class="prelude-val">Ok</span>(tokio::spawn(std::future::pending()))
+    }
 
     <span class="kw">pub fn </span>spawn_k8s_provider(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
@@ -579,6 +781,8 @@
                     )
                 }
             }))
+        } <span class="kw">else if </span><span class="self">self</span>.static_enabled() {
+            <span class="self">self</span>.spawn_static_provider(config.clone()).unwrap()
         } <span class="kw">else </span>{
             tokio::spawn(<span class="kw">async move </span>{ <span class="prelude-val">Ok</span>(()) })
         }
