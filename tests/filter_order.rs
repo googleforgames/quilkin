@@ -14,94 +14,15 @@
  *  limitations under the License.
  */
 
-use std::{net::Ipv4Addr, str::from_utf8};
+use std::net::Ipv4Addr;
 
 use tokio::time::{timeout, Duration};
 
 use quilkin::{
     config::Filter,
-    filters::{Compress, Concatenate, StaticFilter},
     net::endpoint::Endpoint,
     test::{AddressType, TestHelper},
 };
-
-#[tokio::test]
-#[cfg_attr(target_os = "macos", ignore)]
-async fn filter_order() {
-    let mut t = TestHelper::default();
-
-    let yaml_concat_read = "
-on_read: APPEND
-bytes: eHl6 #xyz
-";
-
-    let yaml_concat_write = "
-on_write: APPEND
-bytes: YWJj #abc
-";
-
-    let yaml_compress = "
-on_read: COMPRESS
-on_write: DECOMPRESS
-";
-
-    let mut echo = t
-        .run_echo_server_with_tap(AddressType::Random, move |_, bytes, _| {
-            assert!(
-                from_utf8(bytes).is_err(),
-                "Should be compressed, and therefore unable to be turned into a string"
-            );
-        })
-        .await;
-
-    quilkin::test::map_to_localhost(&mut echo);
-    let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
-    server_config
-        .clusters
-        .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
-    server_config.filters.store(
-        quilkin::filters::FilterChain::try_create([
-            Filter {
-                name: Concatenate::factory().name().into(),
-                label: None,
-                config: serde_yaml::from_str(yaml_concat_read).unwrap(),
-            },
-            Filter {
-                name: Concatenate::factory().name().into(),
-                label: None,
-                config: serde_yaml::from_str(yaml_concat_write).unwrap(),
-            },
-            Filter {
-                name: Compress::factory().name().into(),
-                label: None,
-                config: serde_yaml::from_str(yaml_compress).unwrap(),
-            },
-        ])
-        .map(std::sync::Arc::new)
-        .unwrap(),
-    );
-
-    let server_port = t.run_server(server_config, None, None).await;
-
-    // let's send the packet
-    let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;
-
-    let buf = b"hello".repeat(98);
-
-    let local_addr = (Ipv4Addr::LOCALHOST, server_port);
-    socket.send_to(&buf, &local_addr).await.unwrap();
-
-    let received = timeout(Duration::from_millis(500), recv_chan.recv())
-        .await
-        .expect("should have received a packet")
-        .unwrap();
-
-    let hellos = received
-        .strip_suffix("xyzabc")
-        .expect("expected appended data");
-
-    assert_eq!(&buf, hellos.as_bytes());
-}
 
 #[tokio::test]
 #[cfg_attr(target_os = "macos", ignore)]

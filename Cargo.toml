@@ -59,11 +59,6 @@ name = "read_write"
 harness = false
 test = false
 
-[[bench]]
-name = "compression"
-harness = false
-test = false
-
 # [[bench]]
 # name = "cluster_map"
 # harness = false
@@ -109,7 +104,6 @@ hyper-rustls = { version = "0.27", default-features = false, features = [
 ] }
 ipnetwork = "0.20.0"
 k8s-openapi.workspace = true
-lz4_flex = { version = "0.11", default-features = false }
 maxminddb = "0.24.0"
 notify = "7.0.0"
 num_cpus = "1.16.0"
@@ -128,7 +122,6 @@ serde_json.workspace = true
 serde_regex = "1.1.0"
 serde_stacker = "0.1.11"
 serde_yaml = "0.9.34"
-snap = "1.1.1"
 socket2.workspace = true
 stable-eyre = "0.2.2"
 thiserror.workspace = true
