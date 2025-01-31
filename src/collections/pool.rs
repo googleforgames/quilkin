@@ -289,16 +289,6 @@ impl PacketMut for PoolBuffer {
     type FrozenPacket = FrozenPoolBuffer;
 
     #[inline]
-    fn alloc_sized(&self, size: usize) -> Option<Self> {
-        Some(self.owner.clone().alloc_sized(size))
-    }
-
-    #[inline]
-    fn as_mut_slice(&mut self) -> &mut [u8] {
-        self.as_mut_slice(0..self.capacity())
-    }
-
-    #[inline]
     fn remove_head(&mut self, length: usize) {
         self.split_prefix(length);
     }
@@ -321,11 +311,6 @@ impl PacketMut for PoolBuffer {
     #[inline]
     fn freeze(self) -> FrozenPoolBuffer {
         self.freeze()
-    }
-
-    #[inline]
-    fn set_len(&mut self, len: usize) {
-        self.truncate(len);
     }
 }
 

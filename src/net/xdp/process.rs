@@ -45,15 +45,6 @@ impl filters::Packet for PacketWrapper {
 impl filters::PacketMut for PacketWrapper {
     type FrozenPacket = PacketWrapper;
 
-    fn alloc_sized(&self, _size: usize) -> Option<Self> {
-        // Only used by compress filter, which we don't support
-        None
-    }
-
-    fn as_mut_slice(&mut self) -> &mut [u8] {
-        unimplemented!("only used by compress filter, which this impl doesn't wish to support")
-    }
-
     #[inline]
     fn extend_head(&mut self, bytes: &[u8]) {
         self.inner
@@ -101,10 +92,7 @@ impl filters::PacketMut for PacketWrapper {
         self.udp.data_length -= length;
     }
 
-    fn set_len(&mut self, _len: usize) {
-        unimplemented!("only used by compression/io_uring");
-    }
-
+    // Only used in the io-uring implementation
     fn freeze(self) -> Self::FrozenPacket {
         unreachable!();
     }
