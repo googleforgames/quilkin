@@ -156,34 +156,20 @@ struct Listener {
 impl GenResource for Listener {
     fn generate(&mut self, _slim: bool) -> prost_types::Any {
         use quilkin::filters::{self, StaticFilter};
-        let filters = [
-            quilkin::config::Filter {
-                name: filters::capture::Capture::NAME.into(),
-                label: None,
-                config: Some(
-                    serde_json::to_value(&filters::capture::Config {
-                        metadata_key: "boop".into(),
-                        strategy: filters::capture::Strategy::Suffix(filters::capture::Suffix {
-                            size: 3,
-                            remove: true,
-                        }),
-                    })
-                    .unwrap(),
-                ),
-            },
-            quilkin::config::Filter {
-                name: filters::compress::Compress::NAME.into(),
-                label: Some("a label".into()),
-                config: Some(
-                    serde_json::to_value(filters::compress::Config {
-                        mode: filters::compress::Mode::Lz4,
-                        on_read: filters::compress::Action::Decompress,
-                        on_write: filters::compress::Action::Compress,
-                    })
-                    .unwrap(),
-                ),
-            },
-        ];
+        let filters = [quilkin::config::Filter {
+            name: filters::capture::Capture::NAME.into(),
+            label: None,
+            config: Some(
+                serde_json::to_value(&filters::capture::Config {
+                    metadata_key: "boop".into(),
+                    strategy: filters::capture::Strategy::Suffix(filters::capture::Suffix {
+                        size: 3,
+                        remove: true,
+                    }),
+                })
+                .unwrap(),
+            ),
+        }];
 
         Resource::FilterChain(quilkin::net::cluster::proto::FilterChain {
             filters: filters
