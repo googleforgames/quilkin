@@ -80,6 +80,36 @@ pub struct Service {
         default_value_t = 7800
     )]
     xds_port: u16,
+    /// A PEM encoded certificate, if supplied, applies to the mds and xds service(s)
+    #[clap(
+        long = "service.tls.cert",
+        env = "QUILKIN_SERVICE_TLS_CERT",
+        requires("service.tls.key")
+    )]
+    tls_cert: Option<Vec<u8>>,
+    /// The private key for the cert
+    #[clap(
+        long = "service.tls.key",
+        env = "QUILKIN_SERVICE_TLS_KEY",
+        requires("service.tls.cert")
+    )]
+    tls_key: Option<Vec<u8>>,
+    /// Path to a PEM encoded certificate, if supplied, applies to the mds and xds service(s)
+    #[clap(
+        long = "service.tls.cert-path",
+        env = "QUILKIN_SERVICE_TLS_CERT_PATH",
+        requires("service.tls.key-path"),
+        conflicts_with("service.tls.cert")
+    )]
+    tls_cert_path: Option<std::path::PathBuf>,
+    /// Path to the private key for the cert
+    #[clap(
+        long = "service.tls.key-path",
+        env = "QUILKIN_SERVICE_TLS_KEY_PATH",
+        requires("service.tls.cert-path"),
+        conflicts_with("service.tls.key")
+    )]
+    tls_key_path: Option<std::path::PathBuf>,
 }
 
 impl Default for Service {
@@ -97,6 +127,10 @@ impl Default for Service {
             xds_enabled: <_>::default(),
             xds_port: 7800,
             xdp: <_>::default(),
+            tls_cert: None,
+            tls_key: None,
+            tls_cert_path: None,
+            tls_key_path: None,
         }
     }
 }
@@ -169,6 +203,20 @@ impl Service {
             || self.phoenix_enabled
             || self.xds_enabled
             || self.mds_enabled
+    }
+
+    fn tls_identity(&self) -> crate::Result<Option<quilkin_xds::server::TlsIdentity>> {
+        if let Some((cert, key)) = self.tls_cert.as_ref().zip(self.tls_key.as_ref()) {
+            Ok(Some(quilkin_xds::server::TlsIdentity::from_raw(cert, key)))
+        } else if let Some((certp, keyp)) =
+            self.tls_cert_path.as_ref().zip(self.tls_key_path.as_ref())
+        {
+            Ok(Some(quilkin_xds::server::TlsIdentity::from_files(
+                certp, keyp,
+            )?))
+        } else {
+            Ok(None)
+        }
     }
 
     /// The main entrypoint for listening network servers. When called will
@@ -260,7 +308,7 @@ impl Service {
                     config.clone(),
                     crate::components::admin::IDLE_REQUEST_INTERVAL,
                 )
-                .relay_server(listener)?,
+                .relay_server(listener, self.tls_identity()?)?,
             )
             .map_err(From::from)
             .and_then(std::future::ready),
@@ -286,7 +334,7 @@ impl Service {
                     config.clone(),
                     crate::components::admin::IDLE_REQUEST_INTERVAL,
                 )
-                .management_server(listener)?,
+                .management_server(listener, self.tls_identity()?)?,
             )
             .map_err(From::from)
             .and_then(std::future::ready),

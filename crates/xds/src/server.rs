@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use std::{io, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 
 use futures::{Stream, TryFutureExt};
 use tokio_stream::StreamExt;
@@ -33,6 +33,30 @@ use crate::{
     metrics,
     net::TcpListener,
 };
+
+#[derive(Clone)]
+pub struct TlsIdentity {
+    identity: tonic::transport::Identity,
+}
+
+impl TlsIdentity {
+    pub fn from_raw(cert: &[u8], key: &[u8]) -> Self {
+        Self {
+            identity: tonic::transport::Identity::from_pem(cert, key),
+        }
+    }
+
+    pub fn from_files(cert: &std::path::Path, key: &std::path::Path) -> eyre::Result<Self> {
+        use eyre::WrapErr as _;
+        let cert = std::fs::read(cert)
+            .with_context(|| format!("failed to read PEM certificate from {cert:?}"))?;
+        let key = std::fs::read(key).with_context(|| format!("failed to read key from {key:?}"))?;
+
+        Ok(Self {
+            identity: tonic::transport::Identity::from_pem(cert, key),
+        })
+    }
+}
 
 const VERSION_INFO: &str = "9";
 
@@ -69,7 +93,8 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
     pub fn management_server(
         mut self,
         listener: TcpListener,
-    ) -> io::Result<impl std::future::Future<Output = crate::Result<()>>> {
+        tls: Option<TlsIdentity>,
+    ) -> eyre::Result<impl std::future::Future<Output = crate::Result<()>>> {
         self.is_relay = false;
         tokio::spawn({
             let this = self.clone();
@@ -78,7 +103,15 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
 
         let server = AggregatedDiscoveryServiceServer::new(self)
             .max_encoding_message_size(crate::config::max_grpc_message_size());
-        let server = tonic::transport::Server::builder().add_service(server);
+        let builder = tonic::transport::Server::builder();
+
+        let mut builder = if let Some(tls) = tls {
+            builder.tls_config(tonic::transport::ServerTlsConfig::new().identity(tls.identity))?
+        } else {
+            builder
+        };
+
+        let server = builder.add_service(server);
         tracing::info!("serving management server on port `{}`", listener.port());
         Ok(server
             .serve_with_incoming(listener.into_stream()?)
@@ -88,7 +121,8 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
     pub fn relay_server(
         mut self,
         listener: TcpListener,
-    ) -> io::Result<impl std::future::Future<Output = crate::Result<()>>> {
+        tls: Option<TlsIdentity>,
+    ) -> eyre::Result<impl std::future::Future<Output = crate::Result<()>>> {
         self.is_relay = true;
         tokio::spawn({
             let this = self.clone();
@@ -97,7 +131,15 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
 
         let server = AggregatedControlPlaneDiscoveryServiceServer::new(self)
             .max_encoding_message_size(crate::config::max_grpc_message_size());
-        let server = tonic::transport::Server::builder().add_service(server);
+        let builder = tonic::transport::Server::builder();
+
+        let mut builder = if let Some(tls) = tls {
+            builder.tls_config(tonic::transport::ServerTlsConfig::new().identity(tls.identity))?
+        } else {
+            builder
+        };
+
+        let server = builder.add_service(server);
         tracing::info!("serving relay server on port `{}`", listener.port());
         Ok(server
             .serve_with_incoming(listener.into_stream()?)
