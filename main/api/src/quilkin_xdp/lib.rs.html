@@ -263,7 +263,13 @@
 <a href="#262" id="262">262</a>
 <a href="#263" id="263">263</a>
 <a href="#264" id="264">264</a>
-<a href="#265" id="265">265</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -352,6 +358,8 @@
     /// be the same port used in the I/O loop to determine if the packet is sent
     /// from a client or a server
     </span><span class="kw">pub </span>external_port: xdp::packet::net_types::NetworkU16,
+    <span class="doccomment">/// The port QCMP packets are sent to
+    </span><span class="kw">pub </span>qcmp_port: xdp::packet::net_types::NetworkU16,
 }
 
 <span class="kw">impl </span>EbpfProgram {
@@ -359,10 +367,13 @@
     ///
     /// The external port, the port used by clients, must be passed in due to
     /// how globals work in eBPF.
-    </span><span class="kw">pub fn </span>load(external_port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, LoadError&gt; {
+    </span><span class="kw">pub fn </span>load(external_port: u16, qcmp_port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, LoadError&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>loader = aya::EbpfLoader::new();
         <span class="kw">let </span>external_port_no = external_port.to_be();
         loader.set_global(<span class="string">"EXTERNAL_PORT_NO"</span>, <span class="kw-2">&amp;</span>external_port_no, <span class="bool-val">true</span>);
+
+        <span class="kw">let </span>qcmp_port_no = qcmp_port.to_be();
+        loader.set_global(<span class="string">"QCMP_PORT_NO"</span>, <span class="kw-2">&amp;</span>qcmp_port_no, <span class="bool-val">true</span>);
 
         <span class="comment">// We exploit the fact that Linux by default does not assign ephemeral
         // ports in the full range allowed by IANA, but we want to sanity check
@@ -398,6 +409,7 @@
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             bpf: loader.load(PROGRAM)<span class="question-mark">?</span>,
             external_port: xdp::packet::net_types::NetworkU16(external_port_no),
+            qcmp_port: xdp::packet::net_types::NetworkU16(qcmp_port_no),
         })
     }
 
