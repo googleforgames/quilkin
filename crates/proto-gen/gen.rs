@@ -200,7 +200,6 @@ fn execute(which: &str) {
                 "relay/v1alpha1/relay",
                 "config/v1alpha1/config",
                 "filters/capture/v1alpha1/capture",
-                "filters/compress/v1alpha1/compress",
                 "filters/concatenate/v1alpha1/concatenate",
                 "filters/debug/v1alpha1/debug",
                 "filters/drop/v1alpha1/drop",

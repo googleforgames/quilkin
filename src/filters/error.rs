@@ -27,7 +27,6 @@ use filters::{Filter, FilterFactory};
 pub enum FilterError {
     NoValueCaptured,
     TokenRouter(filters::token_router::RouterError),
-    Compression(filters::compress::CompressionError),
     Io(std::io::Error),
     FirewallDenied,
     MatchNoMetadata,
@@ -41,7 +40,6 @@ impl FilterError {
         match self {
             Self::NoValueCaptured => "filter::capture::no value captured",
             Self::TokenRouter(tr) => tr.discriminant(),
-            Self::Compression(_) => "filter::compression::io",
             Self::Io(..) => "filter::io",
             Self::FirewallDenied => "filter::firewall::denied",
             Self::MatchNoMetadata => "filter::match::no metadata",
@@ -59,7 +57,6 @@ impl fmt::Display for FilterError {
         match self {
             Self::NoValueCaptured => f.write_str("no value captured"),
             Self::TokenRouter(tr) => write!(f, "{tr}"),
-            Self::Compression(comp) => write!(f, "{comp}"),
             Self::Io(io) => write!(f, "{io}"),
             Self::FirewallDenied => f.write_str("packet denied by firewall"),
             Self::MatchNoMetadata => f.write_str("expected metadata key for match not present"),
@@ -83,7 +80,6 @@ impl PartialEq for FilterError {
         match (self, other) {
             (Self::NoValueCaptured, Self::NoValueCaptured) => true,
             (Self::TokenRouter(tra), Self::TokenRouter(trb)) => tra.eq(trb),
-            (Self::Compression(ca), Self::Compression(cb)) => ca.eq(cb),
             (Self::Io(ia), Self::Io(ib)) => ia.kind().eq(&ib.kind()),
             (Self::FirewallDenied, Self::FirewallDenied) => true,
             (Self::MatchNoMetadata, Self::MatchNoMetadata) => true,
@@ -104,7 +100,6 @@ impl Hash for FilterError {
 
         match self {
             Self::TokenRouter(re) => Hash::hash(&re, state),
-            Self::Compression(ce) => Hash::hash(&ce, state),
             Self::Io(io) => Hash::hash(&io.kind(), state),
             Self::Custom(ce) => state.write(ce.as_bytes()),
             Self::NoValueCaptured

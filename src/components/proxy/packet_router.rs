@@ -50,9 +50,6 @@ pub trait Packet: Sized {
 /// provides an abstraction over however the packet was received (epoll, io-uring, xdp)
 pub trait PacketMut: Sized + Packet {
     type FrozenPacket: Packet;
-    fn alloc_sized(&self, size: usize) -> Option<Self>;
-    fn as_mut_slice(&mut self) -> &mut [u8];
-    fn set_len(&mut self, len: usize);
     fn remove_head(&mut self, length: usize);
     fn remove_tail(&mut self, length: usize);
     fn extend_head(&mut self, bytes: &[u8]);

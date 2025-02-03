@@ -15,7 +15,6 @@
     - [Configuration File](./services/proxy/configuration.md)
     - [Filters](./services/proxy/filters.md)
         - [Capture](./services/proxy/filters/capture.md)
-        - [Compress](./services/proxy/filters/compress.md)
         - [Concatenate](./services/proxy/filters/concatenate.md)
         - [Debug](./services/proxy/filters/debug.md)
         - [Drop](./services/proxy/filters/drop.md)
