@@ -154,9 +154,7 @@
 <a href="#153" id="153">153</a>
 <a href="#154" id="154">154</a>
 <a href="#155" id="155">155</a>
-<a href="#156" id="156">156</a>
-<a href="#157" id="157">157</a>
-<a href="#158" id="158">158</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#156" id="156">156</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -192,7 +190,6 @@
 /// - [`capture`][filters::capture]
 /// - [`token_router`][filters::token_router]
 /// - [`hashed_token_router`][filters::token_router]
-/// - [`compress`][filters::compress]
 </span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>FilterSet(FilterMap);
 
@@ -204,7 +201,6 @@
         <span class="self">Self</span>::with(
             [
                 filters::Capture::factory(),
-                filters::Compress::factory(),
                 filters::Concatenate::factory(),
                 filters::Debug::factory(),
                 filters::Drop::factory(),

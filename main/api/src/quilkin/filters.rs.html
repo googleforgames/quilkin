@@ -220,10 +220,7 @@
 <a href="#219" id="219">219</a>
 <a href="#220" id="220">220</a>
 <a href="#221" id="221">221</a>
-<a href="#222" id="222">222</a>
-<a href="#223" id="223">223</a>
-<a href="#224" id="224">224</a>
-<a href="#225" id="225">225</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#222" id="222">222</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -250,7 +247,6 @@
 <span class="kw">mod </span>write;
 
 <span class="kw">pub mod </span>capture;
-<span class="kw">pub mod </span>compress;
 <span class="kw">pub mod </span>concatenate;
 <span class="kw">pub mod </span>debug;
 <span class="kw">pub mod </span>drop;
@@ -276,7 +272,6 @@
 </span><span class="attr">#[doc(inline)]
 </span><span class="kw">pub use </span><span class="self">self</span>::{
     capture::Capture,
-    compress::Compress,
     concatenate::Concatenate,
     debug::Debug,
     drop::Drop,
@@ -303,7 +298,6 @@
 <span class="attr">#[enum_dispatch::enum_dispatch(Filter)]
 </span><span class="kw">pub enum </span>FilterKind {
     Capture,
-    Compress,
     Concatenate,
     Debug,
     Drop,

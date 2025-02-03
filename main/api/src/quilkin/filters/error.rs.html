@@ -205,12 +205,7 @@
 <a href="#204" id="204">204</a>
 <a href="#205" id="205">205</a>
 <a href="#206" id="206">206</a>
-<a href="#207" id="207">207</a>
-<a href="#208" id="208">208</a>
-<a href="#209" id="209">209</a>
-<a href="#210" id="210">210</a>
-<a href="#211" id="211">211</a>
-<a href="#212" id="212">212</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#207" id="207">207</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -239,7 +234,6 @@
 </span><span class="kw">pub enum </span>FilterError {
     NoValueCaptured,
     TokenRouter(filters::token_router::RouterError),
-    Compression(filters::compress::CompressionError),
     Io(std::io::Error),
     FirewallDenied,
     MatchNoMetadata,
@@ -253,7 +247,6 @@
         <span class="kw">match </span><span class="self">self </span>{
             <span class="self">Self</span>::NoValueCaptured =&gt; <span class="string">"filter::capture::no value captured"</span>,
             <span class="self">Self</span>::TokenRouter(tr) =&gt; tr.discriminant(),
-            <span class="self">Self</span>::Compression(<span class="kw">_</span>) =&gt; <span class="string">"filter::compression::io"</span>,
             <span class="self">Self</span>::Io(..) =&gt; <span class="string">"filter::io"</span>,
             <span class="self">Self</span>::FirewallDenied =&gt; <span class="string">"filter::firewall::denied"</span>,
             <span class="self">Self</span>::MatchNoMetadata =&gt; <span class="string">"filter::match::no metadata"</span>,
@@ -271,7 +264,6 @@
         <span class="kw">match </span><span class="self">self </span>{
             <span class="self">Self</span>::NoValueCaptured =&gt; f.write_str(<span class="string">"no value captured"</span>),
             <span class="self">Self</span>::TokenRouter(tr) =&gt; <span class="macro">write!</span>(f, <span class="string">"{tr}"</span>),
-            <span class="self">Self</span>::Compression(comp) =&gt; <span class="macro">write!</span>(f, <span class="string">"{comp}"</span>),
             <span class="self">Self</span>::Io(io) =&gt; <span class="macro">write!</span>(f, <span class="string">"{io}"</span>),
             <span class="self">Self</span>::FirewallDenied =&gt; f.write_str(<span class="string">"packet denied by firewall"</span>),
             <span class="self">Self</span>::MatchNoMetadata =&gt; f.write_str(<span class="string">"expected metadata key for match not present"</span>),
@@ -295,7 +287,6 @@
         <span class="kw">match </span>(<span class="self">self</span>, other) {
             (<span class="self">Self</span>::NoValueCaptured, <span class="self">Self</span>::NoValueCaptured) =&gt; <span class="bool-val">true</span>,
             (<span class="self">Self</span>::TokenRouter(tra), <span class="self">Self</span>::TokenRouter(trb)) =&gt; tra.eq(trb),
-            (<span class="self">Self</span>::Compression(ca), <span class="self">Self</span>::Compression(cb)) =&gt; ca.eq(cb),
             (<span class="self">Self</span>::Io(ia), <span class="self">Self</span>::Io(ib)) =&gt; ia.kind().eq(<span class="kw-2">&amp;</span>ib.kind()),
             (<span class="self">Self</span>::FirewallDenied, <span class="self">Self</span>::FirewallDenied) =&gt; <span class="bool-val">true</span>,
             (<span class="self">Self</span>::MatchNoMetadata, <span class="self">Self</span>::MatchNoMetadata) =&gt; <span class="bool-val">true</span>,
@@ -316,7 +307,6 @@
 
         <span class="kw">match </span><span class="self">self </span>{
             <span class="self">Self</span>::TokenRouter(re) =&gt; Hash::hash(<span class="kw-2">&amp;</span>re, state),
-            <span class="self">Self</span>::Compression(ce) =&gt; Hash::hash(<span class="kw-2">&amp;</span>ce, state),
             <span class="self">Self</span>::Io(io) =&gt; Hash::hash(<span class="kw-2">&amp;</span>io.kind(), state),
             <span class="self">Self</span>::Custom(ce) =&gt; state.write(ce.as_bytes()),
             <span class="self">Self</span>::NoValueCaptured

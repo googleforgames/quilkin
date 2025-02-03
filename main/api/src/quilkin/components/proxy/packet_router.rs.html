@@ -177,10 +177,7 @@
 <a href="#176" id="176">176</a>
 <a href="#177" id="177">177</a>
 <a href="#178" id="178">178</a>
-<a href="#179" id="179">179</a>
-<a href="#180" id="180">180</a>
-<a href="#181" id="181">181</a>
-<a href="#182" id="182">182</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#179" id="179">179</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -232,9 +229,6 @@
 /// provides an abstraction over however the packet was received (epoll, io-uring, xdp)
 </span><span class="kw">pub trait </span>PacketMut: Sized + Packet {
     <span class="kw">type </span>FrozenPacket: Packet;
-    <span class="kw">fn </span>alloc_sized(<span class="kw-2">&amp;</span><span class="self">self</span>, size: usize) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>&gt;;
-    <span class="kw">fn </span>as_mut_slice(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>[u8];
-    <span class="kw">fn </span>set_len(<span class="kw-2">&amp;mut </span><span class="self">self</span>, len: usize);
     <span class="kw">fn </span>remove_head(<span class="kw-2">&amp;mut </span><span class="self">self</span>, length: usize);
     <span class="kw">fn </span>remove_tail(<span class="kw-2">&amp;mut </span><span class="self">self</span>, length: usize);
     <span class="kw">fn </span>extend_head(<span class="kw-2">&amp;mut </span><span class="self">self</span>, bytes: <span class="kw-2">&amp;</span>[u8]);

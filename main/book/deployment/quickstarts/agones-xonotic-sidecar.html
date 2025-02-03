@@ -204,23 +204,8 @@ command. This will forward the <a href="../admin.html">admin</a> interface to lo
 <p>Run the following to delete the Fleet and the accompanying ConfigMap:</p>
 <pre><code class="language-shell">kubectl delete -f  https://raw.githubusercontent.com/googleforgames/quilkin/main/examples/agones-xonotic-sidecar/sidecar.yaml
 </code></pre>
-<h2 id="6-agones-fleet-but-with-compression"><a class="header" href="#6-agones-fleet-but-with-compression">6. Agones Fleet, but with Compression</a></h2>
-<p>Let's take this one step further and compress the data between the Xonotic client and the server, without having to
-change either of them!</p>
-<p>Let's create a new Xonotic Fleet on our Agones cluster, but this time configured such that Quilkin will decompress
-packets that are incoming.</p>
-<p>Run the following:</p>
-<pre><code class="language-shell">kubectl apply -f https://raw.githubusercontent.com/googleforgames/quilkin/main/examples/agones-xonotic-sidecar/sidecar-compress.yaml
-</code></pre>
-<p>This will implement the <a href="../../services/proxy/filters/compress.html">Compress</a> filter in our Quilkin sidecar proxy in our new
-Fleet.</p>
-<p>Now you can run <code>kubectl get gameservers</code> until all your Agones <code>GameServers</code> are marked as <code>Ready</code> like so:</p>
-<pre><code class="language-shell">$ kubectl get gameservers
-NAME                                   STATE   ADDRESS         PORT   NODE                                    AGE
-xonotic-sidecar-compress-htc2x-84mzm   Ready   34.94.107.201   7534   gke-agones-default-pool-0f7d8adc-7w3c   7m25s
-xonotic-sidecar-compress-htc2x-sdp4k   Ready   34.94.107.201   7592   gke-agones-default-pool-0f7d8adc-7w3c   7m25s
-</code></pre>
-<h2 id="4-play-xonotic-through-quilkin"><a class="header" href="#4-play-xonotic-through-quilkin">4. Play Xonotic, through Quilkin</a></h2>
+<h2 id="6-play-xonotic-through-quilkin"><a class="header" href="#6-play-xonotic-through-quilkin">6. Play Xonotic, through Quilkin</a></h2>
+<p>Note: compression has been removed.</p>
 <p>What we will do in this step, is run Quilkin locally as a client-side proxy to compress the UDP data before it is
 sent up to our Xonotic servers that are expecting compressed data.</p>
 <p>First, grab a copy of the Quilkin configuration

@@ -160,14 +160,13 @@
 <p>As an example, say we would like to perform the following steps in our processing pipeline to the packets we receive.</p>
 <ul>
 <li>Append a predetermined byte to the packet.</li>
-<li>Compress the packet.</li>
-<li>Do not forward (drop) the packet if its compressed length is over 512 bytes.</li>
+<li>Do not forward (drop) the packet if its length is over 512 bytes.</li>
 </ul>
 <p>We would create a filter corresponding to each step either by leveraging any <a href="#built-in-filters">existing filters</a>
 that do what we want or and connect them to form the following filter chain:</p>
-<pre><code class="language-bash">append | compress | drop
+<pre><code class="language-bash">append | drop
 </code></pre>
-<p>When Quilkin consults our filter chain, it feeds the received packet into <code>append</code> and forwards the packet it receives (if any) from <code>drop</code> - i.e the output of <code>append</code> becomes the <code>input</code> into <code>compress</code> and so on in that order.</p>
+<p>When Quilkin consults our filter chain, it feeds the received packet into <code>append</code> and forwards the packet it receives (if any) from <code>drop</code> - i.e the output of <code>append</code> becomes the <code>input</code> into <code>drop</code> and so on in that order.</p>
 <p>There are a few things we note here:</p>
 <ul>
 <li>
@@ -227,7 +226,6 @@ Consequently, we can build a filter chain with a [CaptureBytes] filter preceedin
 <p>Quilkin includes several filters out of the box.</p>
 <div class="table-wrapper"><table><thead><tr><th>Filter</th><th>Description</th></tr></thead><tbody>
 <tr><td><a href="./filters/capture.html">Capture</a></td><td>Capture specific bytes from a packet and store them in <a href="#filter-dynamic-metadata">filter dynamic metadata</a>.</td></tr>
-<tr><td><a href="./filters/compress.html">Compress</a></td><td>Compress and decompress packets data.</td></tr>
 <tr><td><a href="./filters/concatenate.html">Concatenate</a></td><td>Add authentication tokens to packets.</td></tr>
 <tr><td><a href="./filters/debug.html">Debug</a></td><td>Logs every packet.</td></tr>
 <tr><td><a href="./filters/drop.html">Drop</a></td><td>Drop all packets</td></tr>
