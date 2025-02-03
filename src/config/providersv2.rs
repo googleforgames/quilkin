@@ -414,6 +414,8 @@ impl Providers {
                     .await
                     .map_err(|_| eyre::eyre!("failed to acquire delta stream"))?;
 
+                health_check.store(true, Ordering::SeqCst);
+
                 std::future::pending().await
             }
         }))
