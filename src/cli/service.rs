@@ -84,30 +84,30 @@ pub struct Service {
     #[clap(
         long = "service.tls.cert",
         env = "QUILKIN_SERVICE_TLS_CERT",
-        requires("service.tls.key")
+        requires("tls_key")
     )]
     tls_cert: Option<Vec<u8>>,
     /// The private key for the cert
     #[clap(
         long = "service.tls.key",
         env = "QUILKIN_SERVICE_TLS_KEY",
-        requires("service.tls.cert")
+        requires("tls_cert")
     )]
     tls_key: Option<Vec<u8>>,
     /// Path to a PEM encoded certificate, if supplied, applies to the mds and xds service(s)
     #[clap(
         long = "service.tls.cert-path",
         env = "QUILKIN_SERVICE_TLS_CERT_PATH",
-        requires("service.tls.key-path"),
-        conflicts_with("service.tls.cert")
+        requires("tls_key_path"),
+        conflicts_with("tls_cert")
     )]
     tls_cert_path: Option<std::path::PathBuf>,
     /// Path to the private key for the cert
     #[clap(
         long = "service.tls.key-path",
         env = "QUILKIN_SERVICE_TLS_KEY_PATH",
-        requires("service.tls.cert-path"),
-        conflicts_with("service.tls.key")
+        requires("tls_cert_path"),
+        conflicts_with("tls_key")
     )]
     tls_key_path: Option<std::path::PathBuf>,
 }
