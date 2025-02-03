@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["PORT"],"enum":["Admin"]};
+window.SIDEBAR_ITEMS = {"constant":["PORT"],"fn":["server"]};

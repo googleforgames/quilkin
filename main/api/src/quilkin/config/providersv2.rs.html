@@ -475,7 +475,12 @@
 <a href="#474" id="474">474</a>
 <a href="#475" id="475">475</a>
 <a href="#476" id="476">476</a>
-<a href="#477" id="477">477</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
+<a href="#479" id="479">479</a>
+<a href="#480" id="480">480</a>
+<a href="#481" id="481">481</a>
+<a href="#482" id="482">482</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -677,6 +682,7 @@
     <span class="kw">pub fn </span>spawn_static_provider(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         config: Arc&lt;<span class="kw">crate</span>::config::Config&gt;,
+        health_check: <span class="kw-2">&amp;</span>AtomicBool,
     ) -&gt; <span class="kw">crate</span>::Result&lt;JoinHandle&lt;<span class="kw">crate</span>::Result&lt;()&gt;&gt;&gt; {
         <span class="kw">let </span>endpoint_tokens = <span class="self">self
             </span>.endpoint_tokens
@@ -767,6 +773,8 @@
         config.clusters.modify(|clusters| {
             clusters.insert(<span class="prelude-val">None</span>, endpoints);
         });
+
+        health_check.store(<span class="bool-val">true</span>, Ordering::SeqCst);
 
         <span class="prelude-val">Ok</span>(tokio::spawn(std::future::pending()))
     }
@@ -924,8 +932,10 @@
                 }
             }))
         } <span class="kw">else if </span><span class="self">self</span>.static_enabled() {
-            <span class="self">self</span>.spawn_static_provider(config.clone()).unwrap()
+            <span class="self">self</span>.spawn_static_provider(config.clone(), <span class="kw-2">&amp;</span>health_check)
+                .unwrap()
         } <span class="kw">else </span>{
+            health_check.store(<span class="bool-val">true</span>, Ordering::SeqCst);
             tokio::spawn(<span class="kw">async move </span>{ <span class="prelude-val">Ok</span>(()) })
         }
     }

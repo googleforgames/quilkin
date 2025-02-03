@@ -334,22 +334,7 @@
 <a href="#333" id="333">333</a>
 <a href="#334" id="334">334</a>
 <a href="#335" id="335">335</a>
-<a href="#336" id="336">336</a>
-<a href="#337" id="337">337</a>
-<a href="#338" id="338">338</a>
-<a href="#339" id="339">339</a>
-<a href="#340" id="340">340</a>
-<a href="#341" id="341">341</a>
-<a href="#342" id="342">342</a>
-<a href="#343" id="343">343</a>
-<a href="#344" id="344">344</a>
-<a href="#345" id="345">345</a>
-<a href="#346" id="346">346</a>
-<a href="#347" id="347">347</a>
-<a href="#348" id="348">348</a>
-<a href="#349" id="349">349</a>
-<a href="#350" id="350">350</a>
-<a href="#351" id="351">351</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#336" id="336">336</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -373,7 +358,7 @@
 <span class="kw">use </span>clap::builder::TypedValueParser;
 <span class="kw">use </span>clap::crate_version;
 
-<span class="kw">use crate</span>::{components::admin::Admin, Config};
+<span class="kw">use </span><span class="kw">crate</span>::Config;
 <span class="kw">use </span>strum_macros::{Display, EnumString};
 
 <span class="kw">pub use </span><span class="self">self</span>::{
@@ -548,7 +533,7 @@
     <span class="doccomment">/// Drives the main quilkin application lifecycle using the command line
     /// arguments.
     </span><span class="attr">#[tracing::instrument(skip_all)]
-    </span><span class="kw">pub async fn </span>drive(<span class="self">self</span>, tx: <span class="prelude-ty">Option</span>&lt;tokio::sync::oneshot::Sender&lt;()&gt;&gt;) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
+    </span><span class="kw">pub async fn </span>drive(<span class="self">self</span>) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
         <span class="kw">if </span>!<span class="self">self</span>.quiet {
             <span class="self">self</span>.log_format.init_tracing_subscriber();
         }
@@ -561,47 +546,15 @@
 
         <span class="comment">// Non-long running commands (e.g. ones with no administration server)
         // are executed here.
-        </span><span class="kw">use </span><span class="kw">crate</span>::components::{<span class="self">self</span>, admin <span class="kw">as </span>admin_server};
-        <span class="kw">let </span>mode = <span class="kw">if let </span><span class="prelude-val">Some</span>(command) = <span class="kw-2">&amp;</span><span class="self">self</span>.command {
-            <span class="prelude-val">Some</span>(<span class="kw">match </span>command {
-                Commands::Qcmp(Qcmp::Ping(ping)) =&gt; <span class="kw">return </span>ping.run().<span class="kw">await</span>,
-                Commands::GenerateConfigSchema(generator) =&gt; {
-                    <span class="kw">return </span>generator.generate_config_schema();
-                }
-                Commands::Agent(<span class="kw">_</span>) =&gt; Admin::Agent(&lt;<span class="kw">_</span>&gt;::default()),
-                Commands::Proxy(proxy) =&gt; {
-                    <span class="kw">let </span>ready = components::proxy::Ready {
-                        idle_request_interval: proxy
-                            .idle_request_interval_secs
-                            .map(std::time::Duration::from_secs)
-                            .unwrap_or(admin_server::IDLE_REQUEST_INTERVAL),
-                        ..Default::default()
-                    };
-                    Admin::Proxy(ready)
-                }
-                Commands::Manage(_mng) =&gt; {
-                    <span class="kw">let </span>ready = components::manage::Ready {
-                        is_manage: <span class="bool-val">true</span>,
-                        ..Default::default()
-                    };
-                    Admin::Manage(ready)
-                }
-                Commands::Relay(relay) =&gt; {
-                    <span class="kw">let </span>ready = components::relay::Ready {
-                        idle_request_interval: relay
-                            .idle_request_interval_secs
-                            .map(std::time::Duration::from_secs)
-                            .unwrap_or(admin_server::IDLE_REQUEST_INTERVAL),
-                        ..Default::default()
-                    };
-                    Admin::Relay(ready)
-                }
-            })
-        } <span class="kw">else </span>{
-            <span class="prelude-val">None
-        </span>};
+        </span><span class="kw">match </span><span class="self">self</span>.command {
+            <span class="prelude-val">Some</span>(Commands::Qcmp(Qcmp::Ping(ping))) =&gt; <span class="kw">return </span>ping.run().<span class="kw">await</span>,
+            <span class="prelude-val">Some</span>(Commands::GenerateConfigSchema(generator)) =&gt; {
+                <span class="kw">return </span>generator.generate_config_schema();
+            }
+            <span class="kw">_ </span>=&gt; {}
+        }
 
-        <span class="kw">if </span>!<span class="self">self</span>.service.any_service_enabled() &amp;&amp; mode.is_none() {
+        <span class="kw">if </span>!<span class="self">self</span>.service.any_service_enabled() &amp;&amp; <span class="self">self</span>.command.is_none() {
             <span class="macro">eyre::bail!</span>(<span class="string">"no service specified, shutting down"</span>);
         }
 
@@ -637,10 +590,9 @@
             <span class="prelude-val">None </span>=&gt; Config::default_non_agent(),
         });
 
+        <span class="kw">let </span>ready = Arc::&lt;std::sync::atomic::AtomicBool&gt;::default();
         <span class="kw">if </span><span class="self">self</span>.admin.enabled {
-            <span class="kw">if let </span><span class="prelude-val">Some</span>(mode) = mode.as_ref() {
-                mode.server(config.clone(), <span class="self">self</span>.admin.address);
-            }
+            <span class="kw">crate</span>::components::admin::server(config.clone(), ready.clone(), <span class="self">self</span>.admin.address);
         }
 
         <span class="kw">let </span><span class="kw-2">mut </span>shutdown_rx = <span class="kw">crate</span>::signal::spawn_handler();
@@ -650,30 +602,48 @@
             shutdown_rx.clone(),
         );
 
-        <span class="kw">let </span>ready = &lt;<span class="kw">_</span>&gt;::default();
         <span class="kw">let </span>locality = <span class="self">self</span>.locality.locality();
         <span class="self">self</span>.providers
-            .spawn_providers(<span class="kw-2">&amp;</span>config, ready, locality.clone());
+            .spawn_providers(<span class="kw-2">&amp;</span>config, ready.clone(), locality.clone());
         <span class="self">self</span>.service.spawn_services(<span class="kw-2">&amp;</span>config, <span class="kw-2">&amp;</span>shutdown_rx)<span class="question-mark">?</span>;
 
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(mode) = mode {
-            <span class="kw">match </span>(<span class="self">self</span>.command.unwrap(), mode) {
-                (Commands::Agent(agent), Admin::Agent(ready)) =&gt; {
-                    agent.run(locality, config, ready, shutdown_rx).<span class="kw">await
-                </span>}
-                (Commands::Proxy(runner), Admin::Proxy(ready)) =&gt; {
-                    runner.run(config, ready, tx, shutdown_rx).<span class="kw">await
-                </span>}
-                (Commands::Manage(manager), Admin::Manage(ready)) =&gt; {
-                    manager.run(locality, config, ready, shutdown_rx).<span class="kw">await
-                </span>}
-                (Commands::Relay(relay), Admin::Relay(ready)) =&gt; {
-                    relay.run(locality, config, ready, shutdown_rx).<span class="kw">await
-                </span>}
-                <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(),
-            }
-        } <span class="kw">else </span>{
-            shutdown_rx.changed().<span class="kw">await</span>.map_err(From::from)
+        <span class="kw">match </span><span class="self">self</span>.command {
+            <span class="prelude-val">Some</span>(Commands::Agent(agent)) =&gt; {
+                <span class="kw">let </span>old_ready = agent::Ready {
+                    provider_is_healthy: ready.clone(),
+                    relay_is_healthy: ready.clone(),
+                    ..&lt;<span class="kw">_</span>&gt;::default()
+                };
+                agent.run(locality, config, old_ready, shutdown_rx).<span class="kw">await
+            </span>}
+
+            <span class="prelude-val">Some</span>(Commands::Proxy(runner)) =&gt; {
+                <span class="kw">let </span>old_ready = proxy::Ready {
+                    xds_is_healthy: parking_lot::RwLock::from(<span class="prelude-val">Some</span>(ready.clone())).into(),
+                    ..&lt;<span class="kw">_</span>&gt;::default()
+                };
+                runner.run(config, old_ready, <span class="prelude-val">None</span>, shutdown_rx).<span class="kw">await
+            </span>}
+
+            <span class="prelude-val">Some</span>(Commands::Manage(manager)) =&gt; {
+                <span class="kw">let </span>old_ready = agent::Ready {
+                    provider_is_healthy: ready.clone(),
+                    is_manage: <span class="bool-val">true</span>,
+                    ..&lt;<span class="kw">_</span>&gt;::default()
+                };
+                manager.run(locality, config, old_ready, shutdown_rx).<span class="kw">await
+            </span>}
+
+            <span class="prelude-val">Some</span>(Commands::Relay(relay)) =&gt; {
+                <span class="kw">let </span>old_ready = relay::Ready {
+                    provider_is_healthy: ready.clone(),
+                    ..&lt;<span class="kw">_</span>&gt;::default()
+                };
+
+                relay.run(locality, config, old_ready, shutdown_rx).<span class="kw">await
+            </span>}
+            <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; <span class="macro">unreachable!</span>(),
+            <span class="prelude-val">None </span>=&gt; shutdown_rx.changed().<span class="kw">await</span>.map_err(From::from),
         }
     }
 
