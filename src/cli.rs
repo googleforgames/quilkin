@@ -22,7 +22,7 @@ use std::{
 use clap::builder::TypedValueParser;
 use clap::crate_version;
 
-use crate::{components::admin::Admin, Config};
+use crate::Config;
 use strum_macros::{Display, EnumString};
 
 pub use self::{
@@ -197,7 +197,7 @@ impl Cli {
     /// Drives the main quilkin application lifecycle using the command line
     /// arguments.
     #[tracing::instrument(skip_all)]
-    pub async fn drive(self, tx: Option<tokio::sync::oneshot::Sender<()>>) -> crate::Result<()> {
+    pub async fn drive(self) -> crate::Result<()> {
         if !self.quiet {
             self.log_format.init_tracing_subscriber();
         }
@@ -210,47 +210,15 @@ impl Cli {
 
         // Non-long running commands (e.g. ones with no administration server)
         // are executed here.
-        use crate::components::{self, admin as admin_server};
-        let mode = if let Some(command) = &self.command {
-            Some(match command {
-                Commands::Qcmp(Qcmp::Ping(ping)) => return ping.run().await,
-                Commands::GenerateConfigSchema(generator) => {
-                    return generator.generate_config_schema();
-                }
-                Commands::Agent(_) => Admin::Agent(<_>::default()),
-                Commands::Proxy(proxy) => {
-                    let ready = components::proxy::Ready {
-                        idle_request_interval: proxy
-                            .idle_request_interval_secs
-                            .map(std::time::Duration::from_secs)
-                            .unwrap_or(admin_server::IDLE_REQUEST_INTERVAL),
-                        ..Default::default()
-                    };
-                    Admin::Proxy(ready)
-                }
-                Commands::Manage(_mng) => {
-                    let ready = components::manage::Ready {
-                        is_manage: true,
-                        ..Default::default()
-                    };
-                    Admin::Manage(ready)
-                }
-                Commands::Relay(relay) => {
-                    let ready = components::relay::Ready {
-                        idle_request_interval: relay
-                            .idle_request_interval_secs
-                            .map(std::time::Duration::from_secs)
-                            .unwrap_or(admin_server::IDLE_REQUEST_INTERVAL),
-                        ..Default::default()
-                    };
-                    Admin::Relay(ready)
-                }
-            })
-        } else {
-            None
-        };
+        match self.command {
+            Some(Commands::Qcmp(Qcmp::Ping(ping))) => return ping.run().await,
+            Some(Commands::GenerateConfigSchema(generator)) => {
+                return generator.generate_config_schema();
+            }
+            _ => {}
+        }
 
-        if !self.service.any_service_enabled() && mode.is_none() {
+        if !self.service.any_service_enabled() && self.command.is_none() {
             eyre::bail!("no service specified, shutting down");
         }
 
@@ -286,10 +254,9 @@ impl Cli {
             None => Config::default_non_agent(),
         });
 
+        let ready = Arc::<std::sync::atomic::AtomicBool>::default();
         if self.admin.enabled {
-            if let Some(mode) = mode.as_ref() {
-                mode.server(config.clone(), self.admin.address);
-            }
+            crate::components::admin::server(config.clone(), ready.clone(), self.admin.address);
         }
 
         let mut shutdown_rx = crate::signal::spawn_handler();
@@ -299,30 +266,48 @@ impl Cli {
             shutdown_rx.clone(),
         );
 
-        let ready = <_>::default();
         let locality = self.locality.locality();
         self.providers
-            .spawn_providers(&config, ready, locality.clone());
+            .spawn_providers(&config, ready.clone(), locality.clone());
         self.service.spawn_services(&config, &shutdown_rx)?;
 
-        if let Some(mode) = mode {
-            match (self.command.unwrap(), mode) {
-                (Commands::Agent(agent), Admin::Agent(ready)) => {
-                    agent.run(locality, config, ready, shutdown_rx).await
-                }
-                (Commands::Proxy(runner), Admin::Proxy(ready)) => {
-                    runner.run(config, ready, tx, shutdown_rx).await
-                }
-                (Commands::Manage(manager), Admin::Manage(ready)) => {
-                    manager.run(locality, config, ready, shutdown_rx).await
-                }
-                (Commands::Relay(relay), Admin::Relay(ready)) => {
-                    relay.run(locality, config, ready, shutdown_rx).await
-                }
-                _ => unreachable!(),
+        match self.command {
+            Some(Commands::Agent(agent)) => {
+                let old_ready = agent::Ready {
+                    provider_is_healthy: ready.clone(),
+                    relay_is_healthy: ready.clone(),
+                    ..<_>::default()
+                };
+                agent.run(locality, config, old_ready, shutdown_rx).await
             }
-        } else {
-            shutdown_rx.changed().await.map_err(From::from)
+
+            Some(Commands::Proxy(runner)) => {
+                let old_ready = proxy::Ready {
+                    xds_is_healthy: parking_lot::RwLock::from(Some(ready.clone())).into(),
+                    ..<_>::default()
+                };
+                runner.run(config, old_ready, None, shutdown_rx).await
+            }
+
+            Some(Commands::Manage(manager)) => {
+                let old_ready = agent::Ready {
+                    provider_is_healthy: ready.clone(),
+                    is_manage: true,
+                    ..<_>::default()
+                };
+                manager.run(locality, config, old_ready, shutdown_rx).await
+            }
+
+            Some(Commands::Relay(relay)) => {
+                let old_ready = relay::Ready {
+                    provider_is_healthy: ready.clone(),
+                    ..<_>::default()
+                };
+
+                relay.run(locality, config, old_ready, shutdown_rx).await
+            }
+            Some(_) => unreachable!(),
+            None => shutdown_rx.changed().await.map_err(From::from),
         }
     }
 

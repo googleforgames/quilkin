@@ -291,10 +291,10 @@ impl TestHelper {
         let (shutdown_tx, shutdown_rx) =
             crate::signal::channel(crate::signal::ShutdownKind::Testing);
         self.server_shutdown_tx.push(Some(shutdown_tx));
-        let mode = crate::components::admin::Admin::Proxy(<_>::default());
+        let ready = <_>::default();
 
         if let Some(address) = with_admin {
-            mode.server(config.clone(), address);
+            crate::components::admin::server(config.clone(), ready, address);
         }
 
         let server = server.unwrap_or_else(|| {

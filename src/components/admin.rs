@@ -16,7 +16,10 @@
 
 mod health;
 
-use std::sync::Arc;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 use std::time::Duration;
 
 use bytes::Bytes;
@@ -27,165 +30,129 @@ type Body = Full<Bytes>;
 use crate::config::Config;
 use health::Health;
 
-use super::{agent, manage, proxy, relay};
-
 pub const PORT: u16 = 8000;
 
 pub(crate) const IDLE_REQUEST_INTERVAL: Duration = Duration::from_secs(30);
 
-/// The runtime mode of Quilkin, which contains various runtime configurations
-/// specific to a mode.
-#[derive(Clone, Debug)]
-pub enum Admin {
-    Proxy(proxy::Ready),
-    Relay(relay::Ready),
-    Manage(manage::Ready),
-    Agent(agent::Ready),
-}
+pub fn server(
+    config: Arc<Config>,
+    ready: Arc<AtomicBool>,
+    address: Option<std::net::SocketAddr>,
+) -> std::thread::JoinHandle<eyre::Result<()>> {
+    let address = address.unwrap_or_else(|| (std::net::Ipv6Addr::UNSPECIFIED, PORT).into());
+    let health = Health::new();
+    tracing::info!(address = %address, "Starting admin endpoint");
 
-impl Admin {
-    pub fn idle_request_interval(&self) -> Duration {
-        match self {
-            Self::Proxy(config) => config.idle_request_interval,
-            Self::Relay(config) => config.idle_request_interval,
-            _ => IDLE_REQUEST_INTERVAL,
-        }
-    }
+    std::thread::Builder::new()
+        .name("admin-http".into())
+        .spawn(move || {
+            let runtime = tokio::runtime::Builder::new_current_thread()
+                .enable_io()
+                .enable_time()
+                .thread_name("admin-http-worker")
+                .build()
+                .expect("couldn't create tokio runtime in thread");
+            runtime.block_on(async move {
+                let accept_stream = tokio::net::TcpListener::bind(address).await?;
+                let http_task: tokio::task::JoinHandle<eyre::Result<()>> =
+                    tokio::task::spawn(async move {
+                        loop {
+                            let (stream, _) = accept_stream.accept().await?;
+                            let stream = hyper_util::rt::TokioIo::new(stream);
 
-    pub fn server(
-        &self,
-        config: Arc<Config>,
-        address: Option<std::net::SocketAddr>,
-    ) -> std::thread::JoinHandle<eyre::Result<()>> {
-        let address = address.unwrap_or_else(|| (std::net::Ipv6Addr::UNSPECIFIED, PORT).into());
-        let health = Health::new();
-        tracing::info!(address = %address, "Starting admin endpoint");
+                            let config = config.clone();
+                            let health = health.clone();
+                            let ready = ready.clone();
+                            tokio::spawn(async move {
+                                let svc = hyper::service::service_fn(move |req| {
+                                    let config = config.clone();
+                                    let health = health.clone();
+                                    let ready = ready.clone();
 
-        let mode = self.clone();
-        std::thread::Builder::new()
-            .name("admin-http".into())
-            .spawn(move || {
-                let runtime = tokio::runtime::Builder::new_current_thread()
-                    .enable_io()
-                    .enable_time()
-                    .thread_name("admin-http-worker")
-                    .build()
-                    .expect("couldn't create tokio runtime in thread");
-                runtime.block_on(async move {
-                    let accept_stream = tokio::net::TcpListener::bind(address).await?;
-                    let http_task: tokio::task::JoinHandle<eyre::Result<()>> =
-                        tokio::task::spawn(async move {
-                            loop {
-                                let (stream, _) = accept_stream.accept().await?;
-                                let stream = hyper_util::rt::TokioIo::new(stream);
-
-                                let config = config.clone();
-                                let health = health.clone();
-                                let mode = mode.clone();
-                                tokio::spawn(async move {
-                                    let svc = hyper::service::service_fn(move |req| {
-                                        let config = config.clone();
-                                        let health = health.clone();
-                                        let mode = mode.clone();
-
-                                        async move {
-                                            Ok::<_, std::convert::Infallible>(
-                                                mode.handle_request(req, config, health).await,
-                                            )
-                                        }
-                                    });
-
-                                    let svc = tower::ServiceBuilder::new().service(svc);
-                                    if let Err(err) = hyper::server::conn::http1::Builder::new()
-                                        .serve_connection(stream, svc)
-                                        .await
-                                    {
-                                        tracing::warn!(
-                                            "failed to reponse to phoenix request: {err}"
-                                        );
+                                    async move {
+                                        Ok::<_, std::convert::Infallible>(
+                                            handle_request(req, config, &ready, health).await,
+                                        )
                                     }
                                 });
-                            }
-                        });
 
-                    http_task.await?
-                })
+                                let svc = tower::ServiceBuilder::new().service(svc);
+                                if let Err(err) = hyper::server::conn::http1::Builder::new()
+                                    .serve_connection(stream, svc)
+                                    .await
+                                {
+                                    tracing::warn!("failed to reponse to phoenix request: {err}");
+                                }
+                            });
+                        }
+                    });
+
+                http_task.await?
             })
-            .expect("failed to spawn admin-http thread")
-    }
+        })
+        .expect("failed to spawn admin-http thread")
+}
 
-    fn is_ready(&self, config: &Config) -> bool {
-        match &self {
-            Self::Proxy(proxy) => proxy
-                .is_ready()
-                .unwrap_or_else(|| config.clusters.read().has_endpoints()),
-            Self::Agent(agent) => agent.is_ready(),
-            Self::Manage(manage) => manage.is_ready(),
-            Self::Relay(relay) => relay.is_ready(),
-        }
-    }
+async fn handle_request(
+    request: Request<hyper::body::Incoming>,
+    config: Arc<Config>,
+    ready: &AtomicBool,
+    health: Health,
+) -> Response<Body> {
+    match (request.method(), request.uri().path()) {
+        (&Method::GET, "/metrics") => collect_metrics(),
+        (&Method::GET, "/live" | "/livez") => health.check_liveness(),
+        #[cfg(target_os = "linux")]
+        (&Method::GET, "/debug/pprof/profile") => {
+            let duration = request.uri().query().and_then(|query| {
+                form_urlencoded::parse(query.as_bytes())
+                    .find(|(k, _)| k == "seconds")
+                    .and_then(|(_, v)| v.parse().ok())
+                    .map(std::time::Duration::from_secs)
+            });
 
-    async fn handle_request(
-        &self,
-        request: Request<hyper::body::Incoming>,
-        config: Arc<Config>,
-        health: Health,
-    ) -> Response<Body> {
-        match (request.method(), request.uri().path()) {
-            (&Method::GET, "/metrics") => collect_metrics(),
-            (&Method::GET, "/live" | "/livez") => health.check_liveness(),
-            #[cfg(target_os = "linux")]
-            (&Method::GET, "/debug/pprof/profile") => {
-                let duration = request.uri().query().and_then(|query| {
-                    form_urlencoded::parse(query.as_bytes())
-                        .find(|(k, _)| k == "seconds")
-                        .and_then(|(_, v)| v.parse().ok())
-                        .map(std::time::Duration::from_secs)
-                });
-
-                match collect_pprof(duration).await {
-                    Ok(value) => value,
-                    Err(error) => {
-                        tracing::warn!(%error, "admin http server error");
-                        Response::builder()
-                            .status(StatusCode::INTERNAL_SERVER_ERROR)
-                            .body(Body::new(Bytes::from("internal error")))
-                            .unwrap()
-                    }
+            match collect_pprof(duration).await {
+                Ok(value) => value,
+                Err(error) => {
+                    tracing::warn!(%error, "admin http server error");
+                    Response::builder()
+                        .status(StatusCode::INTERNAL_SERVER_ERROR)
+                        .body(Body::new(Bytes::from("internal error")))
+                        .unwrap()
                 }
             }
-            (&Method::GET, "/ready" | "/readyz") => check_readiness(|| self.is_ready(&config)),
-            (&Method::GET, "/config") => match serde_json::to_string(&config) {
-                Ok(body) => Response::builder()
-                    .status(StatusCode::OK)
-                    .header(
-                        "Content-Type",
-                        hyper::header::HeaderValue::from_static("application/json"),
-                    )
-                    .body(Body::new(Bytes::from(body)))
-                    .unwrap(),
-                Err(err) => Response::builder()
-                    .status(StatusCode::INTERNAL_SERVER_ERROR)
-                    .body(Body::new(Bytes::from(format!(
-                        "failed to create config dump: {err}"
-                    ))))
-                    .unwrap(),
-            },
-            (_, _) => {
-                let mut response = Response::new(Body::new(Bytes::new()));
-                *response.status_mut() = StatusCode::NOT_FOUND;
-                response
-            }
+        }
+        (&Method::GET, "/ready" | "/readyz") => check_readiness(ready),
+        (&Method::GET, "/config") => match serde_json::to_string(&config) {
+            Ok(body) => Response::builder()
+                .status(StatusCode::OK)
+                .header(
+                    "Content-Type",
+                    hyper::header::HeaderValue::from_static("application/json"),
+                )
+                .body(Body::new(Bytes::from(body)))
+                .unwrap(),
+            Err(err) => Response::builder()
+                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                .body(Body::new(Bytes::from(format!(
+                    "failed to create config dump: {err}"
+                ))))
+                .unwrap(),
+        },
+        (_, _) => {
+            let mut response = Response::new(Body::new(Bytes::new()));
+            *response.status_mut() = StatusCode::NOT_FOUND;
+            response
         }
     }
 }
 
-fn check_readiness(check: impl Fn() -> bool) -> Response<Body> {
-    if (check)() {
+fn check_readiness(check: &AtomicBool) -> Response<Body> {
+    if check.load(Ordering::SeqCst) {
         return Response::new("ok".into());
     }
 
-    let mut response = Response::new(Body::new(Bytes::new()));
+    let mut response = Response::new(bytes::Bytes::from_static(b"NOT READY").into());
     *response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
     response
 }
@@ -251,8 +218,6 @@ async fn collect_pprof(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::net::endpoint::Endpoint;
 
     #[tokio::test]
     async fn collect_metrics() {
@@ -267,21 +232,5 @@ mod tests {
         super::collect_pprof(Some(std::time::Duration::from_millis(1)))
             .await
             .unwrap();
-    }
-
-    #[test]
-    fn check_proxy_readiness() {
-        let config = crate::Config::default_non_agent();
-        assert_eq!(config.clusters.read().endpoints().len(), 0);
-
-        let admin = Admin::Proxy(<_>::default());
-        assert!(!admin.is_ready(&config));
-
-        config
-            .clusters
-            .write()
-            .insert_default([Endpoint::new((std::net::Ipv4Addr::LOCALHOST, 25999).into())].into());
-
-        assert!(admin.is_ready(&config));
     }
 }
