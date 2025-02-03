@@ -404,7 +404,76 @@
 <a href="#403" id="403">403</a>
 <a href="#404" id="404">404</a>
 <a href="#405" id="405">405</a>
-<a href="#406" id="406">406</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
+<a href="#467" id="467">467</a>
+<a href="#468" id="468">468</a>
+<a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
+<a href="#475" id="475">475</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -437,6 +506,7 @@
 
 <span class="doccomment">/// The available xDS source provider.
 </span><span class="attr">#[derive(Clone, Debug, Default, clap::Args)]
+#[command(next_help_heading = <span class="string">"Provider Options"</span>)]
 </span><span class="kw">pub struct </span>Providers {
     <span class="doccomment">/// Watches Agones' game server CRDs for `Allocated` game server endpoints,
     /// and for a `ConfigMap` that specifies the filter configuration.
@@ -507,19 +577,19 @@
         long = <span class="string">"provider.mds.endpoints"</span>,
         env = <span class="string">"QUILKIN_PROVIDERS_MDS_ENDPOINTS"
     </span>)]
-    </span><span class="kw">pub </span>relay: Vec&lt;tonic::transport::Endpoint&gt;,
+    </span>relay: Vec&lt;tonic::transport::Endpoint&gt;,
     <span class="doccomment">/// The remote URL or local file path to retrieve the Maxmind database.
     </span><span class="attr">#[clap(
         long = <span class="string">"provider.mmdb.endpoints"</span>,
         env = <span class="string">"QUILKIN_PROVIDERS_MMDB_ENDPOINTS"
     </span>)]
-    </span><span class="kw">pub </span>mmdb: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::net::maxmind_db::Source&gt;,
+    </span>mmdb: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::net::maxmind_db::Source&gt;,
     <span class="doccomment">/// One or more socket addresses to forward packets to.
     </span><span class="attr">#[clap(
         long = <span class="string">"provider.static.endpoints"</span>,
         env = <span class="string">"QUILKIN_PROVIDERS_STATIC_ENDPOINTS"
     </span>)]
-    </span><span class="kw">pub </span>endpoints: Vec&lt;SocketAddr&gt;,
+    </span>endpoints: Vec&lt;SocketAddr&gt;,
     <span class="doccomment">/// Assigns dynamic tokens to each address in the `--to` argument
     ///
     /// Format is `&lt;number of unique tokens&gt;:&lt;length of token suffix for each packet&gt;`
@@ -528,10 +598,46 @@
         env = <span class="string">"QUILKIN_PROVIDERS_STATIC_ENDPOINT_TOKENS"</span>,
         requires(<span class="string">"endpoints"</span>)
     )]
-    </span><span class="kw">pub </span>endpoint_tokens: <span class="prelude-ty">Option</span>&lt;String&gt;,
+    </span>endpoint_tokens: <span class="prelude-ty">Option</span>&lt;String&gt;,
+
+    <span class="doccomment">/// Enabled the xDS (Discovery Service) provider.
+    </span><span class="attr">#[arg(
+        long = <span class="string">"provider.xds"</span>,
+        env = <span class="string">"QUILKIN_PROVIDERS_XDS"</span>,
+        conflicts_with(<span class="string">"k8s_enabled"</span>),
+        conflicts_with(<span class="string">"fs_enabled"</span>),
+        default_value_t = <span class="bool-val">false
+    </span>)]
+    </span>provider_xds_enabled: bool,
+    <span class="doccomment">/// One or more xDS service endpoints to listen for config changes.
+    </span><span class="attr">#[clap(
+        long = <span class="string">"provider.xds.endpoints"</span>,
+        env = <span class="string">"QUILKIN_PROVIDERS_XDS_ENDPOINTS"
+    </span>)]
+    </span>xds_endpoints: Vec&lt;tonic::transport::Endpoint&gt;,
 }
 
 <span class="kw">impl </span>Providers {
+    <span class="attr">#[allow(clippy::type_complexity)]
+    </span><span class="kw">const </span>SUBS: <span class="kw-2">&amp;</span>[(<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>[(<span class="kw-2">&amp;</span>str, Vec&lt;String&gt;)])] = <span class="kw-2">&amp;</span>[
+        (
+            <span class="string">"9"</span>,
+            <span class="kw-2">&amp;</span>[
+                (<span class="kw">crate</span>::xds::CLUSTER_TYPE, Vec::new()),
+                (<span class="kw">crate</span>::xds::DATACENTER_TYPE, Vec::new()),
+                (<span class="kw">crate</span>::xds::FILTER_CHAIN_TYPE, Vec::new()),
+            ],
+        ),
+        (
+            <span class="string">""</span>,
+            <span class="kw-2">&amp;</span>[
+                (<span class="kw">crate</span>::xds::CLUSTER_TYPE, Vec::new()),
+                (<span class="kw">crate</span>::xds::DATACENTER_TYPE, Vec::new()),
+                (<span class="kw">crate</span>::xds::LISTENER_TYPE, Vec::new()),
+            ],
+        ),
+    ];
+
     <span class="kw">pub fn </span>agones(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
         <span class="self">self</span>.agones_enabled = <span class="bool-val">true</span>;
         <span class="self">self
@@ -758,6 +864,36 @@
         }
     }
 
+    <span class="kw">pub fn </span>spawn_xds_provider(
+        <span class="self">self</span>,
+        config: <span class="kw-2">&amp;</span>std::sync::Arc&lt;<span class="kw">crate</span>::Config&gt;,
+        health_check: Arc&lt;AtomicBool&gt;,
+    ) -&gt; tokio::task::JoinHandle&lt;<span class="kw">crate</span>::Result&lt;()&gt;&gt; {
+        <span class="kw">let </span>config = config.clone();
+        <span class="kw">let </span>endpoints = <span class="self">self</span>.xds_endpoints;
+        <span class="kw">let </span>tx = <span class="prelude-ty">Option</span>::&lt;tokio::sync::mpsc::UnboundedSender&lt;String&gt;&gt;::None;
+        tokio::spawn(<span class="self">Self</span>::task(health_check.clone(), <span class="kw">move </span>|| {
+            <span class="kw">let </span>config = config.clone();
+            <span class="kw">let </span>endpoints = endpoints.clone();
+            <span class="kw">let </span>health_check = health_check.clone();
+            <span class="kw">let </span>tx = tx.clone();
+            <span class="kw">async move </span>{
+                <span class="kw">let </span>client = <span class="kw">crate</span>::net::xds::AdsClient::connect(
+                    String::clone(<span class="kw-2">&amp;</span>config.id.load()),
+                    endpoints,
+                )
+                .<span class="kw">await</span><span class="question-mark">?</span>;
+
+                <span class="kw">let </span>_stream = client
+                    .delta_subscribe(config.clone(), health_check.clone(), tx, <span class="self">Self</span>::SUBS)
+                    .<span class="kw">await
+                    </span>.map_err(|<span class="kw">_</span>| <span class="macro">eyre::eyre!</span>(<span class="string">"failed to acquire delta stream"</span>))<span class="question-mark">?</span>;
+
+                std::future::pending().<span class="kw">await
+            </span>}
+        }))
+    }
+
     <span class="attr">#[tracing::instrument(level = <span class="string">"trace"</span>, skip_all)]
     </span><span class="kw">pub fn </span>spawn_providers(
         <span class="self">self</span>,
@@ -767,6 +903,8 @@
     ) -&gt; tokio::task::JoinHandle&lt;<span class="kw">crate</span>::Result&lt;()&gt;&gt; {
         <span class="kw">if </span><span class="self">self</span>.k8s_enabled || <span class="self">self</span>.agones_enabled {
             <span class="self">self</span>.spawn_k8s_provider(health_check, locality, config.clone())
+        } <span class="kw">else if </span><span class="self">self</span>.provider_xds_enabled {
+            <span class="self">self</span>.spawn_xds_provider(config, health_check)
         } <span class="kw">else if </span><span class="self">self</span>.fs_enabled {
             <span class="kw">let </span>config = config.clone();
             tokio::spawn(<span class="self">Self</span>::task(health_check.clone(), {
