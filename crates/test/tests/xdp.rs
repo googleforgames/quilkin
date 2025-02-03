@@ -5,7 +5,10 @@ use quilkin::{
     filters::{self, StaticFilter as _},
     net::{
         self,
-        xdp::process::{self, xdp},
+        xdp::process::{
+            self,
+            xdp::{self, packet::net_types as nt},
+        },
     },
 };
 use std::{
@@ -56,6 +59,7 @@ async fn simple_forwarding() {
 
     let mut state = process::State {
         external_port: PROXY.port().into(),
+        qcmp_port: 0.into(),
         config: Arc::new(config),
         destinations: Vec::with_capacity(1),
         sessions: Arc::new(Default::default()),
@@ -138,6 +142,7 @@ async fn changes_ip_version() {
 
     let mut state = process::State {
         external_port: PROXY4.port().into(),
+        qcmp_port: 0.into(),
         config: Arc::new(config),
         destinations: Vec::with_capacity(1),
         sessions: Arc::new(Default::default()),
@@ -269,6 +274,7 @@ async fn packet_manipulation() {
 
         let mut state = process::State {
             external_port: PROXY.port().into(),
+            qcmp_port: 0.into(),
             config: Arc::new(config),
             destinations: Vec::with_capacity(1),
             sessions: Arc::new(Default::default()),
@@ -330,6 +336,7 @@ async fn packet_manipulation() {
 
         let mut state = process::State {
             external_port: PROXY.port().into(),
+            qcmp_port: 0.into(),
             config: Arc::new(config),
             destinations: Vec::with_capacity(1),
             sessions: Arc::new(Default::default()),
@@ -399,6 +406,7 @@ async fn packet_manipulation() {
 
         let mut state = process::State {
             external_port: PROXY.port().into(),
+            qcmp_port: 0.into(),
             config: Arc::new(config),
             destinations: Vec::with_capacity(1),
             sessions: Arc::new(Default::default()),
@@ -491,6 +499,7 @@ async fn multiple_servers() {
 
     let mut state = process::State {
         external_port: PROXY.port().into(),
+        qcmp_port: 0.into(),
         config: Arc::new(config),
         destinations: Vec::with_capacity(1),
         sessions: Arc::new(Default::default()),
@@ -542,8 +551,6 @@ async fn multiple_servers() {
 /// Ensures that surpassing the session limits doesn't completely break
 #[tokio::test]
 async fn many_sessions() {
-    use xdp::packet::net_types as nt;
-
     const SERVER: SocketAddrV4 = SocketAddrV4::new(Ipv4Addr::new(1, 1, 1, 1), 1111);
     const PROXY: SocketAddrV4 = SocketAddrV4::new(Ipv4Addr::new(2, 2, 2, 2), 7777);
 
@@ -568,6 +575,7 @@ async fn many_sessions() {
 
     let mut state = process::State {
         external_port: PROXY.port().into(),
+        qcmp_port: 0.into(),
         config: Arc::new(config),
         destinations: Vec::with_capacity(1),
         sessions: Arc::new(Default::default()),
@@ -695,6 +703,7 @@ async fn frees_dropped_packets() {
 
     let mut state = process::State {
         external_port: PROXY4.port().into(),
+        qcmp_port: 0.into(),
         config: Arc::new(config),
         destinations: Vec::with_capacity(1),
         sessions: Arc::new(Default::default()),
@@ -771,6 +780,122 @@ async fn frees_dropped_packets() {
             .unwrap();
 
         rx_slab.push_front(server_packet);
+        process::process_packets(&mut rx_slab, &mut umem, &mut tx_slab, &mut state);
+
+        assert!(tx_slab.is_empty());
+        unsafe { umem.alloc().expect("umem should have available memory") };
+    }
+}
+
+/// Validates we can process QCMP packets with the same loop as regular packets
+#[tokio::test]
+async fn qcmp() {
+    use quilkin::{codec::qcmp, time::UtcTimestamp};
+
+    const PROXY: SocketAddrV4 = SocketAddrV4::new(Ipv4Addr::new(2, 2, 2, 2), 2020);
+    const CLIENT: SocketAddrV4 = SocketAddrV4::new(Ipv4Addr::new(1, 2, 3, 4), 9999);
+
+    let mut state = process::State {
+        external_port: 7777.into(),
+        qcmp_port: PROXY.port().into(),
+        config: Arc::new(quilkin::Config::default_non_agent()),
+        destinations: Vec::with_capacity(1),
+        sessions: Arc::new(Default::default()),
+        local_ipv4: *PROXY.ip(),
+        local_ipv6: Ipv6Addr::from_bits(0),
+    };
+
+    let mut umem = xdp::Umem::map(
+        xdp::umem::UmemCfgBuilder {
+            frame_size: xdp::umem::FrameSize::TwoK,
+            head_room: 0,
+            frame_count: 1,
+            tx_metadata: false,
+        }
+        .build()
+        .unwrap(),
+    )
+    .unwrap();
+
+    let mut rx_slab = xdp::HeapSlab::with_capacity(1);
+    let mut tx_slab = xdp::HeapSlab::with_capacity(1);
+
+    // sanity check the umem won't allow more than 1 packet at a time
+    unsafe {
+        let first = umem.alloc().unwrap();
+        assert!(umem.alloc().is_none());
+        umem.free_packet(first);
+    };
+
+    let mut qp = qcmp::QcmpPacket::default();
+
+    let ping_time = UtcTimestamp::from_nanos(100000);
+
+    // Valid ping packet
+    {
+        // If this fails, the dropped packet wasn't freed
+        let mut ping_packet = unsafe { umem.alloc().expect("umem has no available packets") };
+
+        let ping = qcmp::Protocol::Ping {
+            client_timestamp: ping_time,
+            nonce: 99,
+        };
+
+        ping.encode(&mut qp);
+
+        etherparse::PacketBuilder::ethernet2([3, 3, 3, 3, 3, 3], [4, 4, 4, 4, 4, 4])
+            .ipv4(CLIENT.ip().octets(), PROXY.ip().octets(), 64)
+            .udp(CLIENT.port(), PROXY.port())
+            .write(&mut ping_packet, &qp)
+            .unwrap();
+
+        rx_slab.push_front(ping_packet);
+        process::process_packets(&mut rx_slab, &mut umem, &mut tx_slab, &mut state);
+
+        let pong_packet = tx_slab.pop_back().unwrap();
+        let udp = nt::UdpPacket::parse_packet(&pong_packet).unwrap().unwrap();
+        let pong = qcmp::Protocol::parse(
+            pong_packet
+                .slice_at_offset(udp.data_offset, udp.data_length)
+                .unwrap(),
+        )
+        .unwrap()
+        .unwrap();
+
+        match pong {
+            qcmp::Protocol::PingReply {
+                client_timestamp,
+                nonce,
+                ..
+            } => {
+                assert_eq!(ping_time, client_timestamp);
+                assert_eq!(nonce, 99);
+            }
+            _ => unreachable!(),
+        }
+
+        umem.free_packet(pong_packet);
+    }
+
+    // A pong packet, should be rejected
+    {
+        let mut bad_packet = unsafe { umem.alloc().expect("umem has no available packets") };
+
+        let pong = qcmp::Protocol::PingReply {
+            client_timestamp: ping_time,
+            nonce: 200,
+            server_start_timestamp: UtcTimestamp::from_nanos(100001),
+            server_transmit_timestamp: UtcTimestamp::from_nanos(100002),
+        };
+        pong.encode(&mut qp);
+
+        etherparse::PacketBuilder::ethernet2([3, 3, 3, 3, 3, 3], [4, 4, 4, 4, 4, 4])
+            .ipv4(CLIENT.ip().octets(), PROXY.ip().octets(), 64)
+            .udp(CLIENT.port(), PROXY.port())
+            .write(&mut bad_packet, &qp)
+            .unwrap();
+
+        rx_slab.push_front(bad_packet);
         process::process_packets(&mut rx_slab, &mut umem, &mut tx_slab, &mut state);
 
         assert!(tx_slab.is_empty());

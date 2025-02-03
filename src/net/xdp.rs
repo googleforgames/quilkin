@@ -23,6 +23,8 @@ pub struct XdpConfig<'n> {
     pub nic: NicConfig<'n>,
     /// The external port that downstream clients use to communicate with Quilkin
     pub external_port: u16,
+    /// The port QCMP packets can be sent to
+    pub qcmp_port: u16,
     /// The maximum amount of memory, in bytes, that the memory mappings used for
     /// packet buffers will be allowed to take.
     ///
@@ -50,6 +52,7 @@ impl Default for XdpConfig<'_> {
         Self {
             nic: NicConfig::Default,
             external_port: 7777,
+            qcmp_port: 7600,
             maximum_packet_memory: None,
             require_zero_copy: false,
             require_tx_checksum: false,
@@ -62,6 +65,7 @@ pub struct XdpWorkers {
     workers: Vec<quilkin_xdp::XdpWorker>,
     nic: NicIndex,
     external_port: NetworkU16,
+    qcmp_port: NetworkU16,
     ipv6: std::net::Ipv6Addr,
     ipv4: std::net::Ipv4Addr,
 }
@@ -214,7 +218,7 @@ pub fn setup_xdp_io(config: XdpConfig<'_>) -> Result<XdpWorkers, XdpSetupError> 
         2 * 1024
     };
 
-    let mut ebpf_prog = quilkin_xdp::EbpfProgram::load(config.external_port)?;
+    let mut ebpf_prog = quilkin_xdp::EbpfProgram::load(config.external_port, config.qcmp_port)?;
 
     let umem_cfg = xdp::umem::UmemCfgBuilder {
         frame_size: xdp::umem::FrameSize::TwoK,
@@ -239,7 +243,8 @@ pub fn setup_xdp_io(config: XdpConfig<'_>) -> Result<XdpWorkers, XdpSetupError> 
         ebpf_prog,
         workers,
         nic: nic_index,
-        external_port: NetworkU16(config.external_port.to_be()),
+        external_port: config.external_port.into(),
+        qcmp_port: config.qcmp_port.into(),
         ipv4,
         ipv6,
     })
@@ -293,6 +298,7 @@ impl XdpLoop {
 /// more likely reason for failure is the inability to attach the eBPF program
 pub fn spawn(workers: XdpWorkers, config: Arc<crate::Config>) -> Result<XdpLoop, XdpSpawnError> {
     let external_port = workers.external_port;
+    let qcmp_port = workers.qcmp_port;
     let ipv4 = workers.ipv4;
     let ipv6 = workers.ipv6;
     let session_state = Arc::new(process::SessionState::default());
@@ -311,7 +317,16 @@ pub fn spawn(workers: XdpWorkers, config: Arc<crate::Config>) -> Result<XdpLoop,
                 // SAFETY: we keep the umem alive for as long as the socket is alive
                 unsafe { worker.fill.enqueue(&mut worker.umem, BATCH_SIZE * 2) };
 
-                io_loop(worker, external_port, cfg, ss, ipv4, ipv6, shutdown.clone())
+                io_loop(
+                    worker,
+                    external_port,
+                    qcmp_port,
+                    cfg,
+                    ss,
+                    ipv4,
+                    ipv6,
+                    shutdown.clone(),
+                )
             })
             .map_err(XdpSpawnError::Thread)?;
 
@@ -346,9 +361,11 @@ use xdp::packet::net_types::NetworkU16;
 /// All of the ring operations are done in this loop so that the actual
 /// [`process::process_packets`] code can be cleanly tested without relying on
 /// a fully setup XDP socket/rings, relying only on a `Umem` (memory map)
+#[allow(clippy::too_many_arguments)]
 fn io_loop(
     worker: quilkin_xdp::XdpWorker,
     external_port: NetworkU16,
+    qcmp_port: NetworkU16,
     config: Arc<crate::Config>,
     sessions: Arc<process::SessionState>,
     local_ipv4: std::net::Ipv4Addr,
@@ -369,6 +386,7 @@ fn io_loop(
 
     let mut state = process::State {
         external_port,
+        qcmp_port,
         config,
         destinations: Vec::with_capacity(1),
         sessions,

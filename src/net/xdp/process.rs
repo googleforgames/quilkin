@@ -114,6 +114,7 @@ pub struct State {
     /// The external port is how we determine if packets come from clients (downstream)
     /// or servers (upstream)
     pub external_port: NetworkU16,
+    pub qcmp_port: NetworkU16,
     pub config: Arc<crate::Config>,
     pub destinations: Vec<EndpointAddress>,
     pub sessions: Arc<SessionState>,
@@ -371,6 +372,11 @@ pub fn process_packets(
             unreachable!("we somehow got a non-UDP packet, this should be impossible with the eBPF program we use to route packets");
         };
 
+        if udp.dst_port == state.qcmp_port {
+            process_qcmp_packet(inner, udp, umem, tx_slab);
+            continue;
+        }
+
         let is_client = udp.dst_port == state.external_port;
         let direction = if is_client {
             metrics::READ
@@ -599,4 +605,111 @@ fn fill_packet(
     headers.set_packet_headers(frame)?;
     frame.insert(hdr_len, data)?;
     Ok(())
+}
+
+fn process_qcmp_packet(
+    mut packet: Packet,
+    udp: UdpPacket,
+    umem: &mut Umem,
+    tx_slab: &mut HeapSlab,
+) {
+    use crate::{codec::qcmp, time::UtcTimestamp};
+
+    fn inner(packet: &mut Packet, udp: UdpPacket) -> bool {
+        let received_at = UtcTimestamp::now();
+        let data = match packet.slice_at_offset(udp.data_offset, udp.data_length) {
+            Ok(d) => d,
+            Err(error) => {
+                tracing::debug!(%error, "corrupt UDP packet");
+                return false;
+            }
+        };
+        let command = match qcmp::Protocol::parse(data) {
+            Ok(Some(command)) => command,
+            Ok(None) => {
+                tracing::debug!("rejected non-qcmp packet");
+                return false;
+            }
+            Err(error) => {
+                tracing::debug!(%error, "rejected malformed packet");
+                return false;
+            }
+        };
+
+        let qcmp::Protocol::Ping {
+            client_timestamp,
+            nonce,
+        } = command
+        else {
+            tracing::warn!("rejected unsupported QCMP packet");
+            return false;
+        };
+
+        let mut ob = qcmp::QcmpPacket::default();
+        let buf = qcmp::Protocol::ping_reply(nonce, client_timestamp, received_at).encode(&mut ob);
+
+        if let Err(error) = packet.adjust_tail(-(udp.data_length as i32)) {
+            tracing::debug!(%error, "unable to trim QCMP ping data");
+            return false;
+        }
+
+        if let Err(error) = packet.insert(udp.data_offset, buf) {
+            tracing::debug!(%error, "unable to write QCMP pong data");
+            return false;
+        }
+
+        let new = UdpPacket {
+            src_mac: udp.dst_mac,
+            dst_mac: udp.src_mac,
+            ips: match udp.ips {
+                IpAddresses::V4 {
+                    source,
+                    destination,
+                } => IpAddresses::V4 {
+                    source: destination,
+                    destination: source,
+                },
+                IpAddresses::V6 {
+                    source,
+                    destination,
+                } => IpAddresses::V6 {
+                    source: destination,
+                    destination: source,
+                },
+            },
+            src_port: udp.dst_port,
+            dst_port: udp.src_port,
+            data_offset: udp.data_offset,
+            data_length: buf.len(),
+            hop: udp.hop - 1,
+            checksum: 0.into(),
+        };
+
+        if let Err(error) = modify_packet_headers(&udp, &new, packet) {
+            tracing::debug!(%error, "unable to modify QCMP packet headers");
+            return false;
+        }
+
+        if let Err(error) = packet.calc_udp_checksum() {
+            tracing::debug!(%error, "failed to calculate QCMP packet checksum");
+            return false;
+        }
+
+        true
+    }
+
+    let packet = if inner(&mut packet, udp) {
+        tracing::debug!("sending QCMP pong");
+
+        if let Some(packet) = tx_slab.push_back(packet) {
+            tracing::debug!("tx slab full, unable to send QCMP pong");
+            packet
+        } else {
+            return;
+        }
+    } else {
+        packet
+    };
+
+    umem.free_packet(packet);
 }

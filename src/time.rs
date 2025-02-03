@@ -60,6 +60,12 @@ impl fmt::Debug for UtcTimestamp {
     }
 }
 
+impl PartialEq for UtcTimestamp {
+    fn eq(&self, other: &Self) -> bool {
+        self.inner == other.inner
+    }
+}
+
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 #[cfg_attr(test, derive(Debug))]
 pub struct DurationNanos(i64);

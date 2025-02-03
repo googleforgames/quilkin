@@ -175,7 +175,7 @@ impl Service {
     /// spawn any and all enabled services, if successful returning a future
     /// that can be await to wait on services to be cancelled.
     pub fn spawn_services(
-        self,
+        mut self,
         config: &Arc<Config>,
         shutdown_rx: &crate::signal::ShutdownRx,
     ) -> crate::Result<tokio::task::JoinHandle<crate::Result<()>>> {
@@ -184,8 +184,10 @@ impl Service {
         Ok(tokio::spawn(async move {
             let mds_task = self.publish_mds(&config)?;
             let phoenix_task = self.publish_phoenix(&config, &shutdown_rx)?;
-            let qcmp_task = self.publish_qcmp(&shutdown_rx)?;
+            // We need to call this before qcmp since if we use XDP we handle QCMP
+            // internally without a separate task
             let (udp_task, finalizer) = self.publish_udp(&config)?;
+            let qcmp_task = self.publish_qcmp(&shutdown_rx)?;
             let xds_task = self.publish_xds(&config)?;
 
             let result = tokio::select! {
@@ -293,13 +295,13 @@ impl Service {
 
     #[allow(clippy::type_complexity)]
     pub fn publish_udp(
-        &self,
+        &mut self,
         config: &Arc<crate::config::Config>,
     ) -> eyre::Result<(
         impl Future<Output = crate::Result<()>>,
         Option<Box<dyn FnOnce(crate::signal::ShutdownRx) + Send>>,
     )> {
-        if !self.udp_enabled {
+        if !self.udp_enabled && !self.qcmp_enabled {
             return Ok((either::Left(std::future::pending()), None));
         }
 
@@ -308,7 +310,10 @@ impl Service {
         #[cfg(target_os = "linux")]
         {
             match self.spawn_xdp(config.clone(), self.xdp.force_xdp) {
-                Ok(xdp) => return Ok((either::Left(std::future::pending()), Some(xdp))),
+                Ok(xdp) => {
+                    self.qcmp_enabled = false;
+                    return Ok((either::Left(std::future::pending()), Some(xdp)));
+                }
                 Err(err) => {
                     if self.xdp.force_xdp {
                         return Err(err);
@@ -320,6 +325,10 @@ impl Service {
                     );
                 }
             }
+        }
+
+        if !self.udp_enabled {
+            return Ok((either::Left(std::future::pending()), None));
         }
 
         self.spawn_user_space_router(config.clone())
@@ -389,7 +398,8 @@ impl Service {
                 .network_interface
                 .as_deref()
                 .map_or(xdp::NicConfig::Default, xdp::NicConfig::Name),
-            external_port: self.udp_port,
+            external_port: if self.udp_enabled { self.udp_port } else { 0 },
+            qcmp_port: if self.qcmp_enabled { self.qcmp_port } else { 0 },
             maximum_packet_memory: self.xdp.maximum_memory,
             require_zero_copy: self.xdp.force_zerocopy,
             require_tx_checksum: self.xdp.force_tx_checksum_offload,

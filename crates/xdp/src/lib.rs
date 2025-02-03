@@ -87,6 +87,8 @@ pub struct EbpfProgram {
     /// be the same port used in the I/O loop to determine if the packet is sent
     /// from a client or a server
     pub external_port: xdp::packet::net_types::NetworkU16,
+    /// The port QCMP packets are sent to
+    pub qcmp_port: xdp::packet::net_types::NetworkU16,
 }
 
 impl EbpfProgram {
@@ -94,10 +96,13 @@ impl EbpfProgram {
     ///
     /// The external port, the port used by clients, must be passed in due to
     /// how globals work in eBPF.
-    pub fn load(external_port: u16) -> Result<Self, LoadError> {
+    pub fn load(external_port: u16, qcmp_port: u16) -> Result<Self, LoadError> {
         let mut loader = aya::EbpfLoader::new();
         let external_port_no = external_port.to_be();
         loader.set_global("EXTERNAL_PORT_NO", &external_port_no, true);
+
+        let qcmp_port_no = qcmp_port.to_be();
+        loader.set_global("QCMP_PORT_NO", &qcmp_port_no, true);
 
         // We exploit the fact that Linux by default does not assign ephemeral
         // ports in the full range allowed by IANA, but we want to sanity check
@@ -133,6 +138,7 @@ impl EbpfProgram {
         Ok(Self {
             bpf: loader.load(PROGRAM)?,
             external_port: xdp::packet::net_types::NetworkU16(external_port_no),
+            qcmp_port: xdp::packet::net_types::NetworkU16(qcmp_port_no),
         })
     }
 
