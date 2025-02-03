@@ -473,7 +473,9 @@
 <a href="#472" id="472">472</a>
 <a href="#473" id="473">473</a>
 <a href="#474" id="474">474</a>
-<a href="#475" id="475">475</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#475" id="475">475</a>
+<a href="#476" id="476">476</a>
+<a href="#477" id="477">477</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -888,6 +890,8 @@
                     .delta_subscribe(config.clone(), health_check.clone(), tx, <span class="self">Self</span>::SUBS)
                     .<span class="kw">await
                     </span>.map_err(|<span class="kw">_</span>| <span class="macro">eyre::eyre!</span>(<span class="string">"failed to acquire delta stream"</span>))<span class="question-mark">?</span>;
+
+                health_check.store(<span class="bool-val">true</span>, Ordering::SeqCst);
 
                 std::future::pending().<span class="kw">await
             </span>}
