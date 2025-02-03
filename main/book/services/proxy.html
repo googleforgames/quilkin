@@ -162,7 +162,84 @@
 proxy.</p>
 <p>To view all the options for the <code>proxy</code> subcommand, run:</p>
 <pre><code class="language-shell">$ quilkin proxy --help
-{{#include ../../../target/quilkin.proxy.commands}}
+Run Quilkin as a UDP reverse proxy
+
+Usage: quilkin proxy [OPTIONS]
+
+Options:
+  -m, --management-server &lt;MANAGEMENT_SERVER&gt;
+          One or more `quilkin manage` endpoints to listen to for config changes
+          
+          [env: QUILKIN_MANAGEMENT_SERVER=]
+
+      --mmdb &lt;MMDB&gt;
+          The remote URL or local file path to retrieve the Maxmind database
+          
+          [env: MMDB=]
+
+  -p, --port &lt;PORT&gt;
+          The port to listen on
+          
+          [env: QUILKIN_PORT=]
+          [default: 7777]
+
+  -q, --qcmp-port &lt;QCMP_PORT&gt;
+          The port to listen on
+          
+          [env: QUILKIN_QCMP_PORT=]
+          [default: 7600]
+
+      --to &lt;TO&gt;
+          One or more socket addresses to forward packets to
+          
+          [env: QUILKIN_DEST=]
+
+      --to-tokens &lt;TO_TOKENS&gt;
+          Assigns dynamic tokens to each address in the `--to` argument
+          
+          Format is `&lt;number of unique tokens&gt;:&lt;length of token suffix for each packet&gt;`
+          
+          [env: QUILKIN_DEST_TOKENS=]
+
+      --idle-request-interval-secs &lt;IDLE_REQUEST_INTERVAL_SECS&gt;
+          The interval in seconds at which the relay will send a discovery request to an management server after receiving no updates
+          
+          [env: QUILKIN_IDLE_REQUEST_INTERVAL_SECS=]
+
+  -w, --workers &lt;WORKERS&gt;
+          Number of worker threads used to process packets.
+          
+          If not specified defaults to number of cpus. Has no effect if XDP is used, as the number of workers is always the same as the NIC queue size.
+          
+          [env: QUILKIN_WORKERS=]
+
+      --publish.udp.xdp.network-interface &lt;NETWORK_INTERFACE&gt;
+          The name of the network interface to bind the XDP socket(s) to.
+          
+          If not specified quilkin will attempt to determine the most appropriate network interface to use. Quilkin will exit with an error if the network interface does not exist, or a suitable default cannot be determined.
+
+      --publish.udp.xdp
+          Forces the use of XDP.
+          
+          If XDP is not available on the chosen NIC, Quilkin exits with an error. If false, io-uring will be used as the fallback implementation.
+
+      --publish.udp.xdp.zerocopy
+          Forces the use of [`XDP_ZEROCOPY`](https://www.kernel.org/doc/html/latest/networking/af_xdp.html#xdp-copy-and-xdp-zerocopy-bind-flags)
+          
+          If zero copy is not available on the chosen NIC, Quilkin exits with an error
+
+      --publish.udp.xdp.tco
+          Forces the use of [TX checksum offload](https://docs.kernel.org/6.8/networking/xsk-tx-metadata.html)
+          
+          TX checksum offload is an optional feature allowing the data portion of a packet to have its internet checksum calculation offloaded to the NIC, as otherwise this is done in software
+
+      --publish.udp.xdp.memory-limit &lt;MAXIMUM_MEMORY&gt;
+          The maximum amount of memory mapped for packet buffers, in bytes
+          
+          If not specified, this defaults to 4MiB (2k allocated packets of 2k each at a time) per NIC queue, ie 128MiB on a 32 queue NIC
+
+  -h, --help
+          Print help (see a summary with '-h')
 </code></pre>
 <h2 id="endpoints"><a class="header" href="#endpoints">Endpoints</a></h2>
 <p>An Endpoint represents an address that Quilkin forwards packets to that it has received from the

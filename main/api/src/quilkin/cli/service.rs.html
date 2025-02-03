@@ -604,30 +604,30 @@
     </span><span class="attr">#[clap(
         long = <span class="string">"service.tls.cert"</span>,
         env = <span class="string">"QUILKIN_SERVICE_TLS_CERT"</span>,
-        requires(<span class="string">"service.tls.key"</span>)
+        requires(<span class="string">"tls_key"</span>)
     )]
     </span>tls_cert: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
     <span class="doccomment">/// The private key for the cert
     </span><span class="attr">#[clap(
         long = <span class="string">"service.tls.key"</span>,
         env = <span class="string">"QUILKIN_SERVICE_TLS_KEY"</span>,
-        requires(<span class="string">"service.tls.cert"</span>)
+        requires(<span class="string">"tls_cert"</span>)
     )]
     </span>tls_key: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
     <span class="doccomment">/// Path to a PEM encoded certificate, if supplied, applies to the mds and xds service(s)
     </span><span class="attr">#[clap(
         long = <span class="string">"service.tls.cert-path"</span>,
         env = <span class="string">"QUILKIN_SERVICE_TLS_CERT_PATH"</span>,
-        requires(<span class="string">"service.tls.key-path"</span>),
-        conflicts_with(<span class="string">"service.tls.cert"</span>)
+        requires(<span class="string">"tls_key_path"</span>),
+        conflicts_with(<span class="string">"tls_cert"</span>)
     )]
     </span>tls_cert_path: <span class="prelude-ty">Option</span>&lt;std::path::PathBuf&gt;,
     <span class="doccomment">/// Path to the private key for the cert
     </span><span class="attr">#[clap(
         long = <span class="string">"service.tls.key-path"</span>,
         env = <span class="string">"QUILKIN_SERVICE_TLS_KEY_PATH"</span>,
-        requires(<span class="string">"service.tls.cert-path"</span>),
-        conflicts_with(<span class="string">"service.tls.key"</span>)
+        requires(<span class="string">"tls_cert_path"</span>),
+        conflicts_with(<span class="string">"tls_key"</span>)
     )]
     </span>tls_key_path: <span class="prelude-ty">Option</span>&lt;std::path::PathBuf&gt;,
 }

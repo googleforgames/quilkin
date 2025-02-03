@@ -160,7 +160,17 @@ game server hosting on top of <a href="https://kubernetes.io">Kubernetes</a>.</p
 utilises that information to provide <a href="../../proxy.html#endpoints">Endpoint</a> information to connected Quilkin proxies.</p>
 <p>To view all the options for the agones provider subcommand, run:</p>
 <pre><code class="language-shell">$ quilkin manage agones --help
-{{#include ../../../../../target/quilkin.manage.agones.commands}}
+Watches Agones' game server CRDs for `Allocated` game server endpoints, and for a `ConfigMap` that specifies the filter configuration
+
+Usage: quilkin manage agones [OPTIONS]
+
+Options:
+  -c, --config-namespace &lt;CONFIG_NAMESPACE&gt;
+          The namespace under which the configmap is stored [env: QUILKIN_AGONES_CONFIG_NAMESPACE=]
+  -g, --gameservers-namespace &lt;GAMESERVERS_NAMESPACE&gt;
+          The namespace under which the game servers run [env: QUILKIN_AGONES_GAMESERVERS_NAMESPACE=] [default: default]
+  -h, --help
+          Print help
 </code></pre>
 <blockquote>
 <p>Currently, the Agones provider can only discover resources within the cluster it is running in.</p>

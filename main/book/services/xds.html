@@ -164,7 +164,21 @@ complexity of a full xDS management control plane via integrations with popular
 projects and common architecture patterns.</p>
 <p>To view all the providers and options for the <code>manage</code> subcommand, run:</p>
 <pre><code class="language-shell">$ quilkin manage --help
-{{#include ../../../target/quilkin.manage.commands}}
+Runs Quilkin as a xDS management server, using `provider` as a configuration source
+
+Usage: quilkin manage [OPTIONS] &lt;COMMAND&gt;
+
+Commands:
+  agones  Watches Agones' game server CRDs for `Allocated` game server endpoints, and for a `ConfigMap` that specifies the filter configuration
+  file    Watches for changes to the file located at `path`
+  help    Print this message or the help of the given subcommand(s)
+
+Options:
+  -r, --relay &lt;RELAY&gt;                One or more `quilkin relay` endpoints to push configuration changes to [env: QUILKIN_MANAGEMENT_SERVER=]
+  -p, --port &lt;PORT&gt;                  The TCP port to listen to, to serve discovery responses [env: QUILKIN_PORT=] [default: 7800]
+      --address-type &lt;ADDRESS_TYPE&gt;  If specified, filters the available gameserver addresses to the one that matches the specified type
+      --ip-kind &lt;IP_KIND&gt;            If specified, additionally filters the gameserver address by its ip kind [default: any] [possible values: v4, v6, any]
+  -h, --help                         Print help
 </code></pre>
 <h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
 <p>In addition to static configuration provided upon startup, a Quiklin proxy's configuration can also be updated at

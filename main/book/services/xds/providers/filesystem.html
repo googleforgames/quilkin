@@ -156,7 +156,15 @@
 <p>The filesystem provider watches a configuration file on disk and sends updates to proxies whenever that file changes.</p>
 <p>To view all the options for the file provider subcommand, run:</p>
 <pre><code class="language-shell">$ quilkin manage agones --help
-{{#include ../../../../../target/quilkin.manage.file.commands}}
+Watches for changes to the file located at `path`
+
+Usage: quilkin manage file &lt;PATH&gt;
+
+Arguments:
+  &lt;PATH&gt;  The path to the source config [env: QUILKIN_FS_PATH=]
+
+Options:
+  -h, --help  Print help
 </code></pre>
 <p>For example:</p>
 <pre><code class="language-sh">quilkin manage file quilkin.yaml

@@ -188,7 +188,19 @@ clusters:
 </span><span class="boring">}</span></code></pre></pre>
 <p>View the <a href="capture.html">CaptureBytes</a> filter documentation for more details.</p>
 <h2 id="configuration-options-rust-doc"><a class="header" href="#configuration-options-rust-doc">Configuration Options (<a href="../../../../api/quilkin/filters/token_router/struct.Config.html">Rust Doc</a>)</a></h2>
-<pre><code class="language-yaml">{{#include ../../../../../target/quilkin.filters.token_router.v1alpha1.yaml}}
+<pre><code class="language-yaml">$schema: http://json-schema.org/draft-07/schema#
+title: Config
+type: object
+properties:
+  metadataKey:
+    description: the key to use when retrieving the token from the Filter's dynamic metadata
+    default: quilkin.dev/capture
+    allOf:
+    - $ref: '#/definitions/Key'
+definitions:
+  Key:
+    description: A key in the metadata table.
+    type: string
 </code></pre>
 <h2 id="metrics"><a class="header" href="#metrics">Metrics</a></h2>
 <ul>

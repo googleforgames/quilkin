@@ -176,7 +176,31 @@ clusters:
 <p>The load balancing policy (the strategy to use to select what endpoint to send traffic to) is configurable.
 In the example above, packets will be distributed by selecting endpoints in turn, in round robin fashion.</p>
 <h2 id="configuration-options-rust-doc"><a class="header" href="#configuration-options-rust-doc">Configuration Options (<a href="../../../../api/quilkin/filters/load_balancer/struct.Config.html">Rust Doc</a>)</a></h2>
-<pre><code class="language-yaml">{{#include ../../../../../target/quilkin.filters.load_balancer.v1alpha1.yaml}}
+<pre><code class="language-yaml">$schema: http://json-schema.org/draft-07/schema#
+title: Config
+description: The configuration for [`load_balancer`][super].
+type: object
+properties:
+  policy:
+    default: ROUND_ROBIN
+    allOf:
+    - $ref: '#/definitions/Policy'
+definitions:
+  Policy:
+    description: Policy represents how a [`load_balancer`][super] distributes packets across endpoints.
+    oneOf:
+    - description: Send packets to endpoints in turns.
+      type: string
+      enum:
+      - ROUND_ROBIN
+    - description: Send packets to endpoints chosen at random.
+      type: string
+      enum:
+      - RANDOM
+    - description: Send packets to endpoints based on hash of source IP and port.
+      type: string
+      enum:
+      - HASH
 </code></pre>
 
                     </main>
