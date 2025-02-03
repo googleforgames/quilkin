@@ -198,8 +198,7 @@ proxy. To see a basic usage of the command-line interface run through the
 for deploying quilkin for your game network.</li>
 </ul>
 <pre><code class="language-shell">$ quilkin --help
-{"timestamp":"2025-02-03T12:42:48.657010Z","level":"INFO","fields":{"message":"Starting Quilkin","version":"0.10.0-dev","commit":"43fb30919c25294a7ac13c51b1e6a15accb5ec9e"},"target":"quilkin::cli","filename":"src/cli.rs","threadId":"ThreadId(1)"}
-{"timestamp":"2025-02-03T12:42:48.657143Z","level":"ERROR","fields":{"message":"fatal error","error":"no service specified, shutting down","error_debug":"no service specified, shutting down"},"target":"quilkin","filename":"src/main.rs","threadId":"ThreadId(1)"}
+{{#include ../../target/quilkin.commands}}
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="installation"><a class="header" href="#installation">Installation</a></h1>
 <p>There are variety of automated and manual methods for installing Quilkin onto
@@ -211,7 +210,7 @@ your local machine through <a href="installation.html#cargo">Cargo</a>.</p>
 <dl>
   <dt><strong>Source / Method</strong></dt>
   <dd>
-<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.10.0-dev-43fb309
+<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.10.0-dev-258eae8
 </code></pre>
   </dd>
   <dt><strong>Notes</strong></dt>
@@ -918,84 +917,7 @@ proxies will route to the Allocated GameServer, and you can play a gamee!</p>
 proxy.</p>
 <p>To view all the options for the <code>proxy</code> subcommand, run:</p>
 <pre><code class="language-shell">$ quilkin proxy --help
-Run Quilkin as a UDP reverse proxy
-
-Usage: quilkin proxy [OPTIONS]
-
-Options:
-  -m, --management-server &lt;MANAGEMENT_SERVER&gt;
-          One or more `quilkin manage` endpoints to listen to for config changes
-          
-          [env: QUILKIN_MANAGEMENT_SERVER=]
-
-      --mmdb &lt;MMDB&gt;
-          The remote URL or local file path to retrieve the Maxmind database
-          
-          [env: MMDB=]
-
-  -p, --port &lt;PORT&gt;
-          The port to listen on
-          
-          [env: QUILKIN_PORT=]
-          [default: 7777]
-
-  -q, --qcmp-port &lt;QCMP_PORT&gt;
-          The port to listen on
-          
-          [env: QUILKIN_QCMP_PORT=]
-          [default: 7600]
-
-      --to &lt;TO&gt;
-          One or more socket addresses to forward packets to
-          
-          [env: QUILKIN_DEST=]
-
-      --to-tokens &lt;TO_TOKENS&gt;
-          Assigns dynamic tokens to each address in the `--to` argument
-          
-          Format is `&lt;number of unique tokens&gt;:&lt;length of token suffix for each packet&gt;`
-          
-          [env: QUILKIN_DEST_TOKENS=]
-
-      --idle-request-interval-secs &lt;IDLE_REQUEST_INTERVAL_SECS&gt;
-          The interval in seconds at which the relay will send a discovery request to an management server after receiving no updates
-          
-          [env: QUILKIN_IDLE_REQUEST_INTERVAL_SECS=]
-
-  -w, --workers &lt;WORKERS&gt;
-          Number of worker threads used to process packets.
-          
-          If not specified defaults to number of cpus. Has no effect if XDP is used, as the number of workers is always the same as the NIC queue size.
-          
-          [env: QUILKIN_WORKERS=]
-
-      --publish.udp.xdp.network-interface &lt;NETWORK_INTERFACE&gt;
-          The name of the network interface to bind the XDP socket(s) to.
-          
-          If not specified quilkin will attempt to determine the most appropriate network interface to use. Quilkin will exit with an error if the network interface does not exist, or a suitable default cannot be determined.
-
-      --publish.udp.xdp
-          Forces the use of XDP.
-          
-          If XDP is not available on the chosen NIC, Quilkin exits with an error. If false, io-uring will be used as the fallback implementation.
-
-      --publish.udp.xdp.zerocopy
-          Forces the use of [`XDP_ZEROCOPY`](https://www.kernel.org/doc/html/latest/networking/af_xdp.html#xdp-copy-and-xdp-zerocopy-bind-flags)
-          
-          If zero copy is not available on the chosen NIC, Quilkin exits with an error
-
-      --publish.udp.xdp.tco
-          Forces the use of [TX checksum offload](https://docs.kernel.org/6.8/networking/xsk-tx-metadata.html)
-          
-          TX checksum offload is an optional feature allowing the data portion of a packet to have its internet checksum calculation offloaded to the NIC, as otherwise this is done in software
-
-      --publish.udp.xdp.memory-limit &lt;MAXIMUM_MEMORY&gt;
-          The maximum amount of memory mapped for packet buffers, in bytes
-          
-          If not specified, this defaults to 4MiB (2k allocated packets of 2k each at a time) per NIC queue, ie 128MiB on a 32 queue NIC
-
-  -h, --help
-          Print help (see a summary with '-h')
+{{#include ../../../target/quilkin.proxy.commands}}
 </code></pre>
 <h2 id="endpoints"><a class="header" href="#endpoints">Endpoints</a></h2>
 <p>An Endpoint represents an address that Quilkin forwards packets to that it has received from the
@@ -1290,79 +1212,7 @@ clusters:
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
 </span><span class="boring">}</span></code></pre></pre>
 <h2 id="configuration-options-rust-doc"><a class="header" href="#configuration-options-rust-doc">Configuration Options (<a href="services/proxy/filters/../../../../api/quilkin/filters/capture/struct.Config.html">Rust Doc</a>)</a></h2>
-<pre><code class="language-yaml">$schema: http://json-schema.org/draft-07/schema#
-title: Config
-type: object
-required:
-- metadata_key
-- strategy
-properties:
-  metadata_key:
-    description: The key to use when storing the captured value in the filter context. If a match was found it is available under `{{metadata_key}}/is_present`.
-    allOf:
-    - $ref: '#/definitions/Key'
-  strategy:
-    description: The capture strategy.
-    allOf:
-    - $ref: '#/definitions/Strategy'
-definitions:
-  Key:
-    description: A key in the metadata table.
-    type: string
-  Strategy:
-    description: Strategy to apply for acquiring a set of bytes in the UDP packet
-    oneOf:
-    - description: Looks for the set of bytes at the beginning of the packet
-      type: object
-      required:
-      - kind
-      - size
-      properties:
-        kind:
-          type: string
-          enum:
-          - PREFIX
-        remove:
-          description: Whether captured bytes are removed from the original packet.
-          default: false
-          type: boolean
-        size:
-          description: The number of bytes to capture.
-          type: integer
-          format: uint32
-          minimum: 0.0
-    - description: Look for the set of bytes at the end of the packet
-      type: object
-      required:
-      - kind
-      - size
-      properties:
-        kind:
-          type: string
-          enum:
-          - SUFFIX
-        remove:
-          description: The number of bytes to capture.
-          default: false
-          type: boolean
-        size:
-          description: Whether captured bytes are removed from the original packet.
-          type: integer
-          format: uint32
-          minimum: 0.0
-    - description: Look for the set of bytes at the end of the packet
-      type: object
-      required:
-      - kind
-      - pattern
-      properties:
-        kind:
-          type: string
-          enum:
-          - REGEX
-        pattern:
-          description: The regular expression to use for capture.
-          type: string
+<pre><code class="language-yaml">{{#include ../../../../../target/quilkin.filters.capture.v1alpha1.yaml}}
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="concatenate"><a class="header" href="#concatenate">Concatenate</a></h1>
 <p>The <code>Concatenate</code> filter's job is to add a byte packet to either the beginning or end of each UDP packet that passes
@@ -1389,36 +1239,7 @@ clusters:
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
 </span><span class="boring">}</span></code></pre></pre>
 <h2 id="configuration-options-rust-doc-1"><a class="header" href="#configuration-options-rust-doc-1">Configuration Options (<a href="services/proxy/filters/../../../../api/quilkin/filters/concatenate/struct.Config.html">Rust Doc</a>)</a></h2>
-<pre><code class="language-yaml">$schema: http://json-schema.org/draft-07/schema#
-title: Config
-description: Config represents a `Concatenate` filter configuration.
-type: object
-required:
-- bytes
-properties:
-  bytes:
-    type: array
-    items:
-      type: integer
-      format: uint8
-      minimum: 0.0
-  on_read:
-    description: Whether or not to `append` or `prepend` or `do nothing` on Filter `Read`
-    default: DO_NOTHING
-    allOf:
-    - $ref: '#/definitions/Strategy'
-  on_write:
-    description: Whether or not to `append` or `prepend` or `do nothing` on Filter `Write`
-    default: DO_NOTHING
-    allOf:
-    - $ref: '#/definitions/Strategy'
-definitions:
-  Strategy:
-    type: string
-    enum:
-    - APPEND
-    - PREPEND
-    - DO_NOTHING
+<pre><code class="language-yaml">{{#include ../../../../../target/quilkin.filters.concatenate.v1alpha1.yaml}}
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="debug"><a class="header" href="#debug">Debug</a></h1>
 <p>The Debug filter logs all incoming and outgoing packets to standard output.</p>
@@ -1443,16 +1264,7 @@ clusters:
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
 </span><span class="boring">}</span></code></pre></pre>
 <h2 id="configuration-options-rust-doc-2"><a class="header" href="#configuration-options-rust-doc-2">Configuration Options (<a href="services/proxy/filters/../../../../api/quilkin/filters/debug/struct.Config.html">Rust Doc</a>)</a></h2>
-<pre><code class="language-yaml">$schema: http://json-schema.org/draft-07/schema#
-title: Config
-description: A Debug filter's configuration.
-type: object
-properties:
-  id:
-    description: Identifier that will be optionally included with each log message.
-    type:
-    - string
-    - 'null'
+<pre><code class="language-yaml">{{#include ../../../../../target/quilkin.filters.debug.v1alpha1.yaml}}
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="drop"><a class="header" href="#drop">Drop</a></h1>
 <p>The <code>Drop</code> filter always drops any packet passed through it. This is useful in
@@ -1526,74 +1338,7 @@ clusters:
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
 </span><span class="boring">}</span></code></pre></pre>
 <h2 id="configuration-options-rust-doc-3"><a class="header" href="#configuration-options-rust-doc-3">Configuration Options (<a href="services/proxy/filters/../../../../api/quilkin/filters/firewall/struct.Config.html">Rust Doc</a>)</a></h2>
-<pre><code class="language-yaml">$schema: http://json-schema.org/draft-07/schema#
-title: Config
-description: Represents how a Firewall filter is configured for read and write operations.
-type: object
-required:
-- on_read
-- on_write
-properties:
-  on_read:
-    type: array
-    items:
-      $ref: '#/definitions/Rule'
-  on_write:
-    type: array
-    items:
-      $ref: '#/definitions/Rule'
-definitions:
-  Action:
-    description: Whether or not a matching [Rule] should Allow or Deny access
-    oneOf:
-    - description: Matching rules will allow packets through.
-      type: string
-      enum:
-      - ALLOW
-    - description: Matching rules will block packets.
-      type: string
-      enum:
-      - DENY
-  Cidr:
-    description: Cidr notation for an ipv6 or ipv4 netmask
-    type: string
-  PortRange:
-    description: Range of matching ports that are configured against a [Rule].
-    allOf:
-    - $ref: '#/definitions/Range_of_uint16'
-  Range_of_uint16:
-    type: object
-    required:
-    - end
-    - start
-    properties:
-      end:
-        type: integer
-        format: uint16
-        minimum: 0.0
-      start:
-        type: integer
-        format: uint16
-        minimum: 0.0
-  Rule:
-    description: Combination of CIDR range, port range and action to take.
-    type: object
-    required:
-    - action
-    - ports
-    - sources
-    properties:
-      action:
-        $ref: '#/definitions/Action'
-      ports:
-        type: array
-        items:
-          $ref: '#/definitions/PortRange'
-      sources:
-        description: ipv4 or ipv6 CIDR address.
-        type: array
-        items:
-          $ref: '#/definitions/Cidr'
+<pre><code class="language-yaml">{{#include ../../../../../target/quilkin.filters.firewall.v1alpha1.yaml}}
 </code></pre>
 <h3 id="rule-evaluation"><a class="header" href="#rule-evaluation">Rule Evaluation</a></h3>
 <p>The Firewall filter supports DENY and ALLOW actions for access control. When multiple DENY and ALLOW actions are used
@@ -1628,31 +1373,7 @@ clusters:
 <p>The load balancing policy (the strategy to use to select what endpoint to send traffic to) is configurable.
 In the example above, packets will be distributed by selecting endpoints in turn, in round robin fashion.</p>
 <h2 id="configuration-options-rust-doc-4"><a class="header" href="#configuration-options-rust-doc-4">Configuration Options (<a href="services/proxy/filters/../../../../api/quilkin/filters/load_balancer/struct.Config.html">Rust Doc</a>)</a></h2>
-<pre><code class="language-yaml">$schema: http://json-schema.org/draft-07/schema#
-title: Config
-description: The configuration for [`load_balancer`][super].
-type: object
-properties:
-  policy:
-    default: ROUND_ROBIN
-    allOf:
-    - $ref: '#/definitions/Policy'
-definitions:
-  Policy:
-    description: Policy represents how a [`load_balancer`][super] distributes packets across endpoints.
-    oneOf:
-    - description: Send packets to endpoints in turns.
-      type: string
-      enum:
-      - ROUND_ROBIN
-    - description: Send packets to endpoints chosen at random.
-      type: string
-      enum:
-      - RANDOM
-    - description: Send packets to endpoints based on hash of source IP and port.
-      type: string
-      enum:
-      - HASH
+<pre><code class="language-yaml">{{#include ../../../../../target/quilkin.filters.load_balancer.v1alpha1.yaml}}
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="localratelimit"><a class="header" href="#localratelimit">LocalRateLimit</a></h1>
 <p>The LocalRateLimit filter controls the frequency at which packets received downstream are forwarded upstream by the proxy.
@@ -1690,24 +1411,7 @@ For example, a configuration allowing 1000 packets per second could potentially 
 <p>Packets that that exceeds the maximum configured rate are dropped.</p>
 </blockquote>
 <h2 id="configuration-options-rust-doc-5"><a class="header" href="#configuration-options-rust-doc-5">Configuration Options (<a href="services/proxy/filters/../../../../api/quilkin/filters/local_rate_limit/struct.Config.html">Rust Doc</a>)</a></h2>
-<pre><code class="language-yaml">$schema: http://json-schema.org/draft-07/schema#
-title: Config
-description: Config represents a [self]'s configuration.
-type: object
-required:
-- max_packets
-- period
-properties:
-  max_packets:
-    description: The maximum number of packets allowed to be forwarded by the rate limiter in a given duration.
-    type: integer
-    format: uint
-    minimum: 0.0
-  period:
-    description: The duration in seconds during which max_packets applies. If none is provided, it defaults to one second.
-    type: integer
-    format: uint32
-    minimum: 0.0
+<pre><code class="language-yaml">{{#include ../../../../../target/quilkin.filters.local_rate_limit.v1alpha1.yaml}}
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="match"><a class="header" href="#match">Match</a></h1>
 <p>The <code>Match</code> filter's job is to provide a mechanism to change behaviour based
@@ -1748,97 +1452,7 @@ filters:
 </span><span class="boring">}</span></code></pre></pre>
 <!--  ANCHOR_END: example -->
 <h2 id="configuration-options-rust-doc-6"><a class="header" href="#configuration-options-rust-doc-6">Configuration Options (<a href="services/proxy/filters/../../../../api/quilkin/filters/match/struct.Config.html">Rust Doc</a>)</a></h2>
-<pre><code class="language-yaml">$schema: http://json-schema.org/draft-07/schema#
-title: Config
-description: Configuration for [`Match`][super::Match].
-type: object
-properties:
-  on_read:
-    description: Configuration for [`Filter::read`][crate::filters::Filter::read].
-    anyOf:
-    - $ref: '#/definitions/DirectionalConfig'
-    - type: 'null'
-  on_write:
-    description: Configuration for [`Filter::write`][crate::filters::Filter::write].
-    anyOf:
-    - $ref: '#/definitions/DirectionalConfig'
-    - type: 'null'
-additionalProperties: false
-definitions:
-  Branch:
-    description: A specific match branch. The filter is run when `value` matches the value defined in `metadata_key`.
-    type: object
-    required:
-    - name
-    - value
-    properties:
-      config: true
-      label:
-        type:
-        - string
-        - 'null'
-      name:
-        type: string
-      value:
-        description: The value to compare against the dynamic metadata.
-        allOf:
-        - $ref: '#/definitions/Value'
-  DirectionalConfig:
-    description: Configuration for a specific direction.
-    type: object
-    required:
-    - branches
-    - metadataKey
-    properties:
-      branches:
-        description: List of filters to compare and potentially run if any match.
-        type: array
-        items:
-          $ref: '#/definitions/Branch'
-      fallthrough:
-        description: The behaviour for when none of the `branches` match.
-        default:
-          config: null
-          label: null
-          name: quilkin.filters.drop.v1alpha1.Drop
-        allOf:
-        - $ref: '#/definitions/Filter'
-      metadataKey:
-        description: The key for the metadata to compare against.
-        allOf:
-        - $ref: '#/definitions/Key'
-  Filter:
-    description: Filter is the configuration for a single filter
-    type: object
-    required:
-    - name
-    properties:
-      config: true
-      label:
-        type:
-        - string
-        - 'null'
-      name:
-        type: string
-    additionalProperties: false
-  Key:
-    description: A key in the metadata table.
-    type: string
-  Value:
-    anyOf:
-    - type: boolean
-    - type: integer
-      format: uint64
-      minimum: 0.0
-    - type: array
-      items:
-        $ref: '#/definitions/Value'
-    - type: string
-    - type: array
-      items:
-        type: integer
-        format: uint8
-        minimum: 0.0
+<pre><code class="language-yaml">{{#include ../../../../../target/quilkin.filters.match.v1alpha1.yaml}}
 </code></pre>
 <p>View the <a href="services/proxy/filters/../../../../api/quilkin/filters/match/struct.Config.html">Match</a> filter documentation for more details.</p>
 <h2 id="metrics"><a class="header" href="#metrics">Metrics</a></h2>
@@ -1914,21 +1528,7 @@ clusters:
 </span><span class="boring">let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
 </span><span class="boring">}</span></code></pre></pre>
 <h2 id="configuration-options-rust-doc-7"><a class="header" href="#configuration-options-rust-doc-7">Configuration Options (<a href="services/proxy/filters/../../../../api/quilkin/filters/timestamp/struct.Config.html">Rust Doc</a>)</a></h2>
-<pre><code class="language-yaml">$schema: http://json-schema.org/draft-07/schema#
-title: Config
-description: Config represents a [self]'s configuration.
-type: object
-required:
-- metadataKey
-properties:
-  metadataKey:
-    description: The metadata key to read the UTC UNIX Timestamp from.
-    allOf:
-    - $ref: '#/definitions/Key'
-definitions:
-  Key:
-    description: A key in the metadata table.
-    type: string
+<pre><code class="language-yaml">{{#include ../../../../../target/quilkin.filters.timestamp.v1alpha1.yaml}}
 </code></pre>
 <h2 id="metrics-1"><a class="header" href="#metrics-1">Metrics</a></h2>
 <ul>
@@ -1971,19 +1571,7 @@ clusters:
 </span><span class="boring">}</span></code></pre></pre>
 <p>View the <a href="services/proxy/filters/capture.html">CaptureBytes</a> filter documentation for more details.</p>
 <h2 id="configuration-options-rust-doc-8"><a class="header" href="#configuration-options-rust-doc-8">Configuration Options (<a href="services/proxy/filters/../../../../api/quilkin/filters/token_router/struct.Config.html">Rust Doc</a>)</a></h2>
-<pre><code class="language-yaml">$schema: http://json-schema.org/draft-07/schema#
-title: Config
-type: object
-properties:
-  metadataKey:
-    description: the key to use when retrieving the token from the Filter's dynamic metadata
-    default: quilkin.dev/capture
-    allOf:
-    - $ref: '#/definitions/Key'
-definitions:
-  Key:
-    description: A key in the metadata table.
-    type: string
+<pre><code class="language-yaml">{{#include ../../../../../target/quilkin.filters.token_router.v1alpha1.yaml}}
 </code></pre>
 <h2 id="metrics-2"><a class="header" href="#metrics-2">Metrics</a></h2>
 <ul>
@@ -2310,21 +1898,7 @@ complexity of a full xDS management control plane via integrations with popular
 projects and common architecture patterns.</p>
 <p>To view all the providers and options for the <code>manage</code> subcommand, run:</p>
 <pre><code class="language-shell">$ quilkin manage --help
-Runs Quilkin as a xDS management server, using `provider` as a configuration source
-
-Usage: quilkin manage [OPTIONS] &lt;COMMAND&gt;
-
-Commands:
-  agones  Watches Agones' game server CRDs for `Allocated` game server endpoints, and for a `ConfigMap` that specifies the filter configuration
-  file    Watches for changes to the file located at `path`
-  help    Print this message or the help of the given subcommand(s)
-
-Options:
-  -r, --relay &lt;RELAY&gt;                One or more `quilkin relay` endpoints to push configuration changes to [env: QUILKIN_MANAGEMENT_SERVER=]
-  -p, --port &lt;PORT&gt;                  The TCP port to listen to, to serve discovery responses [env: QUILKIN_PORT=] [default: 7800]
-      --address-type &lt;ADDRESS_TYPE&gt;  If specified, filters the available gameserver addresses to the one that matches the specified type
-      --ip-kind &lt;IP_KIND&gt;            If specified, additionally filters the gameserver address by its ip kind [default: any] [possible values: v4, v6, any]
-  -h, --help                         Print help
+{{#include ../../../target/quilkin.manage.commands}}
 </code></pre>
 <h2 id="overview-1"><a class="header" href="#overview-1">Overview</a></h2>
 <p>In addition to static configuration provided upon startup, a Quiklin proxy's configuration can also be updated at
@@ -2430,17 +2004,7 @@ game server hosting on top of <a href="https://kubernetes.io">Kubernetes</a>.</p
 utilises that information to provide <a href="services/xds/providers/../../proxy.html#endpoints">Endpoint</a> information to connected Quilkin proxies.</p>
 <p>To view all the options for the agones provider subcommand, run:</p>
 <pre><code class="language-shell">$ quilkin manage agones --help
-Watches Agones' game server CRDs for `Allocated` game server endpoints, and for a `ConfigMap` that specifies the filter configuration
-
-Usage: quilkin manage agones [OPTIONS]
-
-Options:
-  -c, --config-namespace &lt;CONFIG_NAMESPACE&gt;
-          The namespace under which the configmap is stored [env: QUILKIN_AGONES_CONFIG_NAMESPACE=]
-  -g, --gameservers-namespace &lt;GAMESERVERS_NAMESPACE&gt;
-          The namespace under which the game servers run [env: QUILKIN_AGONES_GAMESERVERS_NAMESPACE=] [default: default]
-  -h, --help
-          Print help
+{{#include ../../../../../target/quilkin.manage.agones.commands}}
 </code></pre>
 <blockquote>
 <p>Currently, the Agones provider can only discover resources within the cluster it is running in.</p>
@@ -2503,15 +2067,7 @@ and <a href="https://kubernetes.io/docs/reference/access-authn-authz/rbac/">RBAC
 <p>The filesystem provider watches a configuration file on disk and sends updates to proxies whenever that file changes.</p>
 <p>To view all the options for the file provider subcommand, run:</p>
 <pre><code class="language-shell">$ quilkin manage agones --help
-Watches for changes to the file located at `path`
-
-Usage: quilkin manage file &lt;PATH&gt;
-
-Arguments:
-  &lt;PATH&gt;  The path to the source config [env: QUILKIN_FS_PATH=]
-
-Options:
-  -h, --help  Print help
+{{#include ../../../../../target/quilkin.manage.file.commands}}
 </code></pre>
 <p>For example:</p>
 <pre><code class="language-sh">quilkin manage file quilkin.yaml
@@ -2979,24 +2535,7 @@ relay's ADS endpoint, you use the same <code>--management-server</code> argument
 connecting to control planes.</p>
 <p>To view all options for the <code>relay</code> subcommand, run:</p>
 <pre><code class="language-shell">$ quilkin relay --help
-Runs Quilkin as a relay service that runs a Manager Discovery Service (mDS) for accepting cluster and configuration information from xDS management services, and exposing it as a single merged xDS service for proxy services
-
-Usage: quilkin relay [OPTIONS] [COMMAND]
-
-Commands:
-  agones  Watches Agones' game server CRDs for `Allocated` game server endpoints, and for a `ConfigMap` that specifies the filter configuration
-  file    Watches for changes to the file located at `path`
-  help    Print this message or the help of the given subcommand(s)
-
-Options:
-  -m, --mds-port &lt;MDS_PORT&gt;
-          Port for mDS service [env: QUILKIN_MDS_PORT=] [default: 7900]
-  -x, --xds-port &lt;XDS_PORT&gt;
-          Port for xDS management_server service [env: QUILKIN_PORT=] [default: 7800]
-      --idle-request-interval-secs &lt;IDLE_REQUEST_INTERVAL_SECS&gt;
-          The interval in seconds at which the relay will send a discovery request to an management server after receiving no updates [env: QUILKIN_IDLE_REQUEST_INTERVAL_SECS=]
-  -h, --help
-          Print help
+{{#include ../../../target/quilkin.relay.commands}}
 </code></pre>
 <blockquote>
 <p>Each sub-control planes (<code>file</code>, <code>agones</code>, etc) matches the <code>quilkin manage</code> providers capabilities.
@@ -3072,22 +2611,7 @@ configuration information to a <code>relay</code> service.</p>
 <a href="services/./xds/providers/filesystem.html">Filesystem</a> and <a href="services/./xds/providers/agones.html">Agones</a>.</p>
 <p>To view all options for the <code>agent</code> subcommand, run:</p>
 <pre><code class="language-shell">$ quilkin agent --help
-Runs Quilkin as a relay service that runs a Manager Discovery Service (mDS) for accepting cluster and configuration information from xDS management services, and exposing it as a single merged xDS service for proxy services
-
-Usage: quilkin agent [OPTIONS] [COMMAND]
-
-Commands:
-  agones  Watches Agones' game server CRDs for `Allocated` game server endpoints, and for a `ConfigMap` that specifies the filter configuration
-  file    Watches for changes to the file located at `path`
-  help    Print this message or the help of the given subcommand(s)
-
-Options:
-  -q, --qcmp-port &lt;QCMP_PORT&gt;        Port for QCMP service [env: QCMP_PORT=] [default: 7600]
-  -r, --relay &lt;RELAY&gt;                One or more `quilkin relay` endpoints to push configuration changes to [env: QUILKIN_MANAGEMENT_SERVER=]
-      --address-type &lt;ADDRESS_TYPE&gt;  If specified, filters the available gameserver addresses to the one that matches the specified type
-      --ip-kind &lt;IP_KIND&gt;            If specified, additionally filters the gameserver address by its ip kind [possible values: v4, v6, any]
-  -i, --icao-code &lt;ICAO_CODE&gt;        The ICAO code for the agent [env: ICAO_CODE=] [default: XXXX]
-  -h, --help                         Print help
+{{#include ../../../target/quilkin.agent.commands}}
 </code></pre>
 <h2 id="quickstart-1"><a class="header" href="#quickstart-1">Quickstart</a></h2>
 <p>The simplest version of the <code>agent</code> service is just running <code>quilkin agent</code>,

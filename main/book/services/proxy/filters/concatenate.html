@@ -177,36 +177,7 @@ clusters:
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
 </span><span class="boring">}</span></code></pre></pre>
 <h2 id="configuration-options-rust-doc"><a class="header" href="#configuration-options-rust-doc">Configuration Options (<a href="../../../../api/quilkin/filters/concatenate/struct.Config.html">Rust Doc</a>)</a></h2>
-<pre><code class="language-yaml">$schema: http://json-schema.org/draft-07/schema#
-title: Config
-description: Config represents a `Concatenate` filter configuration.
-type: object
-required:
-- bytes
-properties:
-  bytes:
-    type: array
-    items:
-      type: integer
-      format: uint8
-      minimum: 0.0
-  on_read:
-    description: Whether or not to `append` or `prepend` or `do nothing` on Filter `Read`
-    default: DO_NOTHING
-    allOf:
-    - $ref: '#/definitions/Strategy'
-  on_write:
-    description: Whether or not to `append` or `prepend` or `do nothing` on Filter `Write`
-    default: DO_NOTHING
-    allOf:
-    - $ref: '#/definitions/Strategy'
-definitions:
-  Strategy:
-    type: string
-    enum:
-    - APPEND
-    - PREPEND
-    - DO_NOTHING
+<pre><code class="language-yaml">{{#include ../../../../../target/quilkin.filters.concatenate.v1alpha1.yaml}}
 </code></pre>
 
                     </main>

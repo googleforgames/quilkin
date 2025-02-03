@@ -175,16 +175,7 @@ clusters:
 </span><span class="boring">assert_eq!(config.filters.load().len(), 1);
 </span><span class="boring">}</span></code></pre></pre>
 <h2 id="configuration-options-rust-doc"><a class="header" href="#configuration-options-rust-doc">Configuration Options (<a href="../../../../api/quilkin/filters/debug/struct.Config.html">Rust Doc</a>)</a></h2>
-<pre><code class="language-yaml">$schema: http://json-schema.org/draft-07/schema#
-title: Config
-description: A Debug filter's configuration.
-type: object
-properties:
-  id:
-    description: Identifier that will be optionally included with each log message.
-    type:
-    - string
-    - 'null'
+<pre><code class="language-yaml">{{#include ../../../../../target/quilkin.filters.debug.v1alpha1.yaml}}
 </code></pre>
 
                     </main>

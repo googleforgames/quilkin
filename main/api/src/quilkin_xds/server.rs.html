@@ -498,7 +498,49 @@
 <a href="#497" id="497">497</a>
 <a href="#498" id="498">498</a>
 <a href="#499" id="499">499</a>
-<a href="#500" id="500">500</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#500" id="500">500</a>
+<a href="#501" id="501">501</a>
+<a href="#502" id="502">502</a>
+<a href="#503" id="503">503</a>
+<a href="#504" id="504">504</a>
+<a href="#505" id="505">505</a>
+<a href="#506" id="506">506</a>
+<a href="#507" id="507">507</a>
+<a href="#508" id="508">508</a>
+<a href="#509" id="509">509</a>
+<a href="#510" id="510">510</a>
+<a href="#511" id="511">511</a>
+<a href="#512" id="512">512</a>
+<a href="#513" id="513">513</a>
+<a href="#514" id="514">514</a>
+<a href="#515" id="515">515</a>
+<a href="#516" id="516">516</a>
+<a href="#517" id="517">517</a>
+<a href="#518" id="518">518</a>
+<a href="#519" id="519">519</a>
+<a href="#520" id="520">520</a>
+<a href="#521" id="521">521</a>
+<a href="#522" id="522">522</a>
+<a href="#523" id="523">523</a>
+<a href="#524" id="524">524</a>
+<a href="#525" id="525">525</a>
+<a href="#526" id="526">526</a>
+<a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
+<a href="#532" id="532">532</a>
+<a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -514,7 +556,7 @@
  * limitations under the License.
  */
 
-</span><span class="kw">use </span>std::{io, sync::Arc, time::Duration};
+</span><span class="kw">use </span>std::{sync::Arc, time::Duration};
 
 <span class="kw">use </span>futures::{Stream, TryFutureExt};
 <span class="kw">use </span>tokio_stream::StreamExt;
@@ -533,6 +575,30 @@
     metrics,
     net::TcpListener,
 };
+
+<span class="attr">#[derive(Clone)]
+</span><span class="kw">pub struct </span>TlsIdentity {
+    identity: tonic::transport::Identity,
+}
+
+<span class="kw">impl </span>TlsIdentity {
+    <span class="kw">pub fn </span>from_raw(cert: <span class="kw-2">&amp;</span>[u8], key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            identity: tonic::transport::Identity::from_pem(cert, key),
+        }
+    }
+
+    <span class="kw">pub fn </span>from_files(cert: <span class="kw-2">&amp;</span>std::path::Path, key: <span class="kw-2">&amp;</span>std::path::Path) -&gt; eyre::Result&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">use </span>eyre::WrapErr <span class="kw">as _</span>;
+        <span class="kw">let </span>cert = std::fs::read(cert)
+            .with_context(|| <span class="macro">format!</span>(<span class="string">"failed to read PEM certificate from {cert:?}"</span>))<span class="question-mark">?</span>;
+        <span class="kw">let </span>key = std::fs::read(key).with_context(|| <span class="macro">format!</span>(<span class="string">"failed to read key from {key:?}"</span>))<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            identity: tonic::transport::Identity::from_pem(cert, key),
+        })
+    }
+}
 
 <span class="kw">const </span>VERSION_INFO: <span class="kw-2">&amp;</span>str = <span class="string">"9"</span>;
 
@@ -569,7 +635,8 @@
     <span class="kw">pub fn </span>management_server(
         <span class="kw-2">mut </span><span class="self">self</span>,
         listener: TcpListener,
-    ) -&gt; io::Result&lt;<span class="kw">impl </span>std::future::Future&lt;Output = <span class="kw">crate</span>::Result&lt;()&gt;&gt;&gt; {
+        tls: <span class="prelude-ty">Option</span>&lt;TlsIdentity&gt;,
+    ) -&gt; eyre::Result&lt;<span class="kw">impl </span>std::future::Future&lt;Output = <span class="kw">crate</span>::Result&lt;()&gt;&gt;&gt; {
         <span class="self">self</span>.is_relay = <span class="bool-val">false</span>;
         tokio::spawn({
             <span class="kw">let </span>this = <span class="self">self</span>.clone();
@@ -578,7 +645,15 @@
 
         <span class="kw">let </span>server = AggregatedDiscoveryServiceServer::new(<span class="self">self</span>)
             .max_encoding_message_size(<span class="kw">crate</span>::config::max_grpc_message_size());
-        <span class="kw">let </span>server = tonic::transport::Server::builder().add_service(server);
+        <span class="kw">let </span>builder = tonic::transport::Server::builder();
+
+        <span class="kw">let </span><span class="kw-2">mut </span>builder = <span class="kw">if let </span><span class="prelude-val">Some</span>(tls) = tls {
+            builder.tls_config(tonic::transport::ServerTlsConfig::new().identity(tls.identity))<span class="question-mark">?
+        </span>} <span class="kw">else </span>{
+            builder
+        };
+
+        <span class="kw">let </span>server = builder.add_service(server);
         <span class="macro">tracing::info!</span>(<span class="string">"serving management server on port `{}`"</span>, listener.port());
         <span class="prelude-val">Ok</span>(server
             .serve_with_incoming(listener.into_stream()<span class="question-mark">?</span>)
@@ -588,7 +663,8 @@
     <span class="kw">pub fn </span>relay_server(
         <span class="kw-2">mut </span><span class="self">self</span>,
         listener: TcpListener,
-    ) -&gt; io::Result&lt;<span class="kw">impl </span>std::future::Future&lt;Output = <span class="kw">crate</span>::Result&lt;()&gt;&gt;&gt; {
+        tls: <span class="prelude-ty">Option</span>&lt;TlsIdentity&gt;,
+    ) -&gt; eyre::Result&lt;<span class="kw">impl </span>std::future::Future&lt;Output = <span class="kw">crate</span>::Result&lt;()&gt;&gt;&gt; {
         <span class="self">self</span>.is_relay = <span class="bool-val">true</span>;
         tokio::spawn({
             <span class="kw">let </span>this = <span class="self">self</span>.clone();
@@ -597,7 +673,15 @@
 
         <span class="kw">let </span>server = AggregatedControlPlaneDiscoveryServiceServer::new(<span class="self">self</span>)
             .max_encoding_message_size(<span class="kw">crate</span>::config::max_grpc_message_size());
-        <span class="kw">let </span>server = tonic::transport::Server::builder().add_service(server);
+        <span class="kw">let </span>builder = tonic::transport::Server::builder();
+
+        <span class="kw">let </span><span class="kw-2">mut </span>builder = <span class="kw">if let </span><span class="prelude-val">Some</span>(tls) = tls {
+            builder.tls_config(tonic::transport::ServerTlsConfig::new().identity(tls.identity))<span class="question-mark">?
+        </span>} <span class="kw">else </span>{
+            builder
+        };
+
+        <span class="kw">let </span>server = builder.add_service(server);
         <span class="macro">tracing::info!</span>(<span class="string">"serving relay server on port `{}`"</span>, listener.port());
         <span class="prelude-val">Ok</span>(server
             .serve_with_incoming(listener.into_stream()<span class="question-mark">?</span>)
