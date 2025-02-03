@@ -74,6 +74,15 @@ jobs:
       - name: Build
         run: cargo build -p qt -p quilkin -p quilkin-xds --tests
       - run: cargo nextest run --no-tests=pass -p qt -p quilkin -p quilkin-xds quilkin
+      - name: Validate Quilkin's clap arguments
+        run: |
+          set +e # don't fail on error, we expect the command to fail since we aren't providing arguments
+          cargo run -p quilkin
+          if [ $? -ne 255 ]; then
+            echo "::error ::clap arguments seem to have an error"
+            exit 1
+          fi
+          exit 0
 
   build:
     name: Build
