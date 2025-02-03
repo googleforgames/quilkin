@@ -200,6 +200,7 @@ impl Providers {
     pub fn spawn_static_provider(
         &self,
         config: Arc<crate::config::Config>,
+        health_check: &AtomicBool,
     ) -> crate::Result<JoinHandle<crate::Result<()>>> {
         let endpoint_tokens = self
             .endpoint_tokens
@@ -290,6 +291,8 @@ impl Providers {
         config.clusters.modify(|clusters| {
             clusters.insert(None, endpoints);
         });
+
+        health_check.store(true, Ordering::SeqCst);
 
         Ok(tokio::spawn(std::future::pending()))
     }
@@ -447,8 +450,10 @@ impl Providers {
                 }
             }))
         } else if self.static_enabled() {
-            self.spawn_static_provider(config.clone()).unwrap()
+            self.spawn_static_provider(config.clone(), &health_check)
+                .unwrap()
         } else {
+            health_check.store(true, Ordering::SeqCst);
             tokio::spawn(async move { Ok(()) })
         }
     }
