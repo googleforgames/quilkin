@@ -102,7 +102,9 @@ impl Ping {
                     "final results"
                 );
             }
-            None => tracing::error!("no successful results"),
+            None => {
+                eyre::bail!("no successful results");
+            }
         }
 
         Ok(())

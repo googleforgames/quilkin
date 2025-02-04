@@ -285,6 +285,7 @@ impl Proxy {
         crate::cli::Service::default()
             .udp()
             .udp_port(udp_port)
+            .xdp(self.xdp)
             .qcmp()
             .qcmp_port(qcmp_port)
             .phoenix()

@@ -269,7 +269,6 @@ impl Cli {
         let locality = self.locality.locality();
         self.providers
             .spawn_providers(&config, ready.clone(), locality.clone());
-        self.service.spawn_services(&config, &shutdown_rx)?;
 
         match self.command {
             Some(Commands::Agent(agent)) => {
@@ -307,7 +306,10 @@ impl Cli {
                 relay.run(locality, config, old_ready, shutdown_rx).await
             }
             Some(_) => unreachable!(),
-            None => shutdown_rx.changed().await.map_err(From::from),
+            None => {
+                self.service.spawn_services(&config, &shutdown_rx)?;
+                shutdown_rx.changed().await.map_err(From::from)
+            }
         }
     }
 

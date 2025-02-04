@@ -196,6 +196,11 @@ impl Service {
         self
     }
 
+    pub fn xdp(mut self, xdp_opts: XdpOptions) -> Self {
+        self.xdp = xdp_opts;
+        self
+    }
+
     /// Sets the xDS service port.
     pub fn any_service_enabled(&self) -> bool {
         self.udp_enabled
@@ -367,7 +372,7 @@ impl Service {
                         return Err(err);
                     }
 
-                    tracing::debug!(
+                    tracing::warn!(
                         ?err,
                         "failed to spawn XDP I/O loop, falling back to io-uring"
                     );
@@ -439,15 +444,18 @@ impl Service {
             eyre::bail!("XDP currently disabled by default");
         }
 
-        tracing::info!(port=%self.mds_port, "setting up xdp module");
+        let udp_port = if self.udp_enabled { self.udp_port } else { 0 };
+        let qcmp_port = if self.qcmp_enabled { self.qcmp_port } else { 0 };
+
+        tracing::info!(udp_port, qcmp_port, "setting up xdp module");
         let workers = xdp::setup_xdp_io(xdp::XdpConfig {
             nic: self
                 .xdp
                 .network_interface
                 .as_deref()
                 .map_or(xdp::NicConfig::Default, xdp::NicConfig::Name),
-            external_port: if self.udp_enabled { self.udp_port } else { 0 },
-            qcmp_port: if self.qcmp_enabled { self.qcmp_port } else { 0 },
+            external_port: udp_port,
+            qcmp_port,
             maximum_packet_memory: self.xdp.maximum_memory,
             require_zero_copy: self.xdp.force_zerocopy,
             require_tx_checksum: self.xdp.force_tx_checksum_offload,
