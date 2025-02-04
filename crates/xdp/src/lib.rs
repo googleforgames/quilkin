@@ -187,9 +187,10 @@ impl EbpfProgram {
         nic: NicIndex,
         flags: aya::programs::XdpFlags,
     ) -> Result<aya::programs::xdp::XdpLinkId, aya::programs::ProgramError> {
-        // Would be good to enable this if we do end up adding log messages to
-        // the eBPF program
         if let Err(_error) = aya_log::EbpfLogger::init(&mut self.bpf) {
+            // Would be good to enable this if we do end up adding log messages to
+            // the eBPF program, right now we don't so this will error as the ring
+            // buffer used to transfer log messages is not created if there are none
             //tracing::warn!(%error, "failed to initialize eBPF logging");
         }
 
