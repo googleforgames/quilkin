@@ -269,7 +269,8 @@
 <a href="#268" id="268">268</a>
 <a href="#269" id="269">269</a>
 <a href="#270" id="270">270</a>
-<a href="#271" id="271">271</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -458,10 +459,11 @@
         nic: NicIndex,
         flags: aya::programs::XdpFlags,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;aya::programs::xdp::XdpLinkId, aya::programs::ProgramError&gt; {
-        <span class="comment">// Would be good to enable this if we do end up adding log messages to
-        // the eBPF program
-        </span><span class="kw">if let </span><span class="prelude-val">Err</span>(_error) = aya_log::EbpfLogger::init(<span class="kw-2">&amp;mut </span><span class="self">self</span>.bpf) {
-            <span class="comment">//tracing::warn!(%error, "failed to initialize eBPF logging");
+        <span class="kw">if let </span><span class="prelude-val">Err</span>(_error) = aya_log::EbpfLogger::init(<span class="kw-2">&amp;mut </span><span class="self">self</span>.bpf) {
+            <span class="comment">// Would be good to enable this if we do end up adding log messages to
+            // the eBPF program, right now we don't so this will error as the ring
+            // buffer used to transfer log messages is not created if there are none
+            //tracing::warn!(%error, "failed to initialize eBPF logging");
         </span>}
 
         <span class="comment">// We use this entrypoint for now, but in the future we could also use

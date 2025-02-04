@@ -198,8 +198,8 @@ proxy. To see a basic usage of the command-line interface run through the
 for deploying quilkin for your game network.</li>
 </ul>
 <pre><code class="language-shell">$ quilkin --help
-{"timestamp":"2025-02-03T16:36:01.256043Z","level":"INFO","fields":{"message":"Starting Quilkin","version":"0.10.0-dev","commit":"089fe1deb222ac36843319210bc0275bae8e1f06"},"target":"quilkin::cli","filename":"src/cli.rs","threadId":"ThreadId(1)"}
-{"timestamp":"2025-02-03T16:36:01.256220Z","level":"ERROR","fields":{"message":"fatal error","error":"no service specified, shutting down","error_debug":"no service specified, shutting down"},"target":"quilkin","filename":"src/main.rs","threadId":"ThreadId(1)"}
+{"timestamp":"2025-02-04T17:05:35.023057Z","level":"INFO","fields":{"message":"Starting Quilkin","version":"0.10.0-dev","commit":"8958c4ee4177e48c3de989284c86089cc83d19f4"},"target":"quilkin::cli","filename":"src/cli.rs","threadId":"ThreadId(1)"}
+{"timestamp":"2025-02-04T17:05:35.023251Z","level":"ERROR","fields":{"message":"fatal error","error":"no service specified, shutting down","error_debug":"no service specified, shutting down"},"target":"quilkin","filename":"src/main.rs","threadId":"ThreadId(1)"}
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="installation"><a class="header" href="#installation">Installation</a></h1>
 <p>There are variety of automated and manual methods for installing Quilkin onto
@@ -211,7 +211,7 @@ your local machine through <a href="installation.html#cargo">Cargo</a>.</p>
 <dl>
   <dt><strong>Source / Method</strong></dt>
   <dd>
-<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.10.0-dev-089fe1d
+<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.10.0-dev-8958c4e
 </code></pre>
   </dd>
   <dt><strong>Notes</strong></dt>
@@ -969,30 +969,40 @@ Options:
           
           [env: QUILKIN_WORKERS=]
 
-      --publish.udp.xdp.network-interface &lt;NETWORK_INTERFACE&gt;
+      --service.udp.xdp.network-interface &lt;NETWORK_INTERFACE&gt;
           The name of the network interface to bind the XDP socket(s) to.
           
           If not specified quilkin will attempt to determine the most appropriate network interface to use. Quilkin will exit with an error if the network interface does not exist, or a suitable default cannot be determined.
+          
+          [env: QUILKIN_SERVICE_UDP_XDP_NETWORK_INTERFACE=]
 
-      --publish.udp.xdp
+      --service.udp.xdp
           Forces the use of XDP.
           
           If XDP is not available on the chosen NIC, Quilkin exits with an error. If false, io-uring will be used as the fallback implementation.
+          
+          [env: QUILKIN_SERVICE_UDP_XDP=]
 
-      --publish.udp.xdp.zerocopy
+      --service.udp.xdp.zerocopy
           Forces the use of [`XDP_ZEROCOPY`](https://www.kernel.org/doc/html/latest/networking/af_xdp.html#xdp-copy-and-xdp-zerocopy-bind-flags)
           
           If zero copy is not available on the chosen NIC, Quilkin exits with an error
+          
+          [env: QUILKIN_SERVICE_UDP_XDP_ZEROCOPY=]
 
-      --publish.udp.xdp.tco
+      --service.udp.xdp.tco
           Forces the use of [TX checksum offload](https://docs.kernel.org/6.8/networking/xsk-tx-metadata.html)
           
           TX checksum offload is an optional feature allowing the data portion of a packet to have its internet checksum calculation offloaded to the NIC, as otherwise this is done in software
+          
+          [env: QUILKIN_SERVICE_UDP_XDP_TCO=]
 
-      --publish.udp.xdp.memory-limit &lt;MAXIMUM_MEMORY&gt;
+      --service.udp.xdp.memory-limit &lt;MAXIMUM_MEMORY&gt;
           The maximum amount of memory mapped for packet buffers, in bytes
           
           If not specified, this defaults to 4MiB (2k allocated packets of 2k each at a time) per NIC queue, ie 128MiB on a 32 queue NIC
+          
+          [env: QUILKIN_SERVICE_UDP_XDP_MEMORY_LIMIT=]
 
   -h, --help
           Print help (see a summary with '-h')

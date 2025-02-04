@@ -304,7 +304,8 @@
 <a href="#303" id="303">303</a>
 <a href="#304" id="304">304</a>
 <a href="#305" id="305">305</a>
-<a href="#306" id="306">306</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -591,6 +592,7 @@
         <span class="kw">crate</span>::cli::Service::default()
             .udp()
             .udp_port(udp_port)
+            .xdp(<span class="self">self</span>.xdp)
             .qcmp()
             .qcmp_port(qcmp_port)
             .phoenix()

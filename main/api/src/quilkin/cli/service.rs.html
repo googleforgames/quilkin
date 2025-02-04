@@ -518,7 +518,15 @@
 <a href="#517" id="517">517</a>
 <a href="#518" id="518">518</a>
 <a href="#519" id="519">519</a>
-<a href="#520" id="520">520</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::{future::Future, sync::Arc};
+<a href="#520" id="520">520</a>
+<a href="#521" id="521">521</a>
+<a href="#522" id="522">522</a>
+<a href="#523" id="523">523</a>
+<a href="#524" id="524">524</a>
+<a href="#525" id="525">525</a>
+<a href="#526" id="526">526</a>
+<a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::{future::Future, sync::Arc};
 
 <span class="kw">use crate</span>::{components::proxy::SessionPool, config::Config};
 
@@ -716,6 +724,11 @@
         <span class="self">self
     </span>}
 
+    <span class="kw">pub fn </span>xdp(<span class="kw-2">mut </span><span class="self">self</span>, xdp_opts: XdpOptions) -&gt; <span class="self">Self </span>{
+        <span class="self">self</span>.xdp = xdp_opts;
+        <span class="self">self
+    </span>}
+
     <span class="doccomment">/// Sets the xDS service port.
     </span><span class="kw">pub fn </span>any_service_enabled(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
         <span class="self">self</span>.udp_enabled
@@ -887,7 +900,7 @@
                         <span class="kw">return </span><span class="prelude-val">Err</span>(err);
                     }
 
-                    <span class="macro">tracing::debug!</span>(
+                    <span class="macro">tracing::warn!</span>(
                         <span class="question-mark">?</span>err,
                         <span class="string">"failed to spawn XDP I/O loop, falling back to io-uring"
                     </span>);
@@ -959,15 +972,18 @@
             <span class="macro">eyre::bail!</span>(<span class="string">"XDP currently disabled by default"</span>);
         }
 
-        <span class="macro">tracing::info!</span>(port=%<span class="self">self</span>.mds_port, <span class="string">"setting up xdp module"</span>);
+        <span class="kw">let </span>udp_port = <span class="kw">if </span><span class="self">self</span>.udp_enabled { <span class="self">self</span>.udp_port } <span class="kw">else </span>{ <span class="number">0 </span>};
+        <span class="kw">let </span>qcmp_port = <span class="kw">if </span><span class="self">self</span>.qcmp_enabled { <span class="self">self</span>.qcmp_port } <span class="kw">else </span>{ <span class="number">0 </span>};
+
+        <span class="macro">tracing::info!</span>(udp_port, qcmp_port, <span class="string">"setting up xdp module"</span>);
         <span class="kw">let </span>workers = xdp::setup_xdp_io(xdp::XdpConfig {
             nic: <span class="self">self
                 </span>.xdp
                 .network_interface
                 .as_deref()
                 .map_or(xdp::NicConfig::Default, xdp::NicConfig::Name),
-            external_port: <span class="kw">if </span><span class="self">self</span>.udp_enabled { <span class="self">self</span>.udp_port } <span class="kw">else </span>{ <span class="number">0 </span>},
-            qcmp_port: <span class="kw">if </span><span class="self">self</span>.qcmp_enabled { <span class="self">self</span>.qcmp_port } <span class="kw">else </span>{ <span class="number">0 </span>},
+            external_port: udp_port,
+            qcmp_port,
             maximum_packet_memory: <span class="self">self</span>.xdp.maximum_memory,
             require_zero_copy: <span class="self">self</span>.xdp.force_zerocopy,
             require_tx_checksum: <span class="self">self</span>.xdp.force_tx_checksum_offload,

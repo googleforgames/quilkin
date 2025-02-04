@@ -334,7 +334,9 @@
 <a href="#333" id="333">333</a>
 <a href="#334" id="334">334</a>
 <a href="#335" id="335">335</a>
-<a href="#336" id="336">336</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#336" id="336">336</a>
+<a href="#337" id="337">337</a>
+<a href="#338" id="338">338</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -605,7 +607,6 @@
         <span class="kw">let </span>locality = <span class="self">self</span>.locality.locality();
         <span class="self">self</span>.providers
             .spawn_providers(<span class="kw-2">&amp;</span>config, ready.clone(), locality.clone());
-        <span class="self">self</span>.service.spawn_services(<span class="kw-2">&amp;</span>config, <span class="kw-2">&amp;</span>shutdown_rx)<span class="question-mark">?</span>;
 
         <span class="kw">match </span><span class="self">self</span>.command {
             <span class="prelude-val">Some</span>(Commands::Agent(agent)) =&gt; {
@@ -643,7 +644,10 @@
                 relay.run(locality, config, old_ready, shutdown_rx).<span class="kw">await
             </span>}
             <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; <span class="macro">unreachable!</span>(),
-            <span class="prelude-val">None </span>=&gt; shutdown_rx.changed().<span class="kw">await</span>.map_err(From::from),
+            <span class="prelude-val">None </span>=&gt; {
+                <span class="self">self</span>.service.spawn_services(<span class="kw-2">&amp;</span>config, <span class="kw-2">&amp;</span>shutdown_rx)<span class="question-mark">?</span>;
+                shutdown_rx.changed().<span class="kw">await</span>.map_err(From::from)
+            }
         }
     }
 

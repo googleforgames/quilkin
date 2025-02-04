@@ -158,7 +158,9 @@
 <a href="#157" id="157">157</a>
 <a href="#158" id="158">158</a>
 <a href="#159" id="159">159</a>
-<a href="#160" id="160">160</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -262,7 +264,9 @@
                     <span class="string">"final results"
                 </span>);
             }
-            <span class="prelude-val">None </span>=&gt; <span class="macro">tracing::error!</span>(<span class="string">"no successful results"</span>),
+            <span class="prelude-val">None </span>=&gt; {
+                <span class="macro">eyre::bail!</span>(<span class="string">"no successful results"</span>);
+            }
         }
 
         <span class="prelude-val">Ok</span>(())
