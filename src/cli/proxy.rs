@@ -22,7 +22,7 @@ use crate::filters::FilterFactory;
 
 use crate::signal::ShutdownRx;
 
-pub use crate::components::proxy::Ready;
+pub use crate::{cli::service::XdpOptions, components::proxy::Ready};
 
 define_port!(7777);
 
@@ -63,55 +63,6 @@ pub struct Proxy {
     pub workers: Option<std::num::NonZeroUsize>,
     #[clap(flatten)]
     pub xdp_opts: XdpOptions,
-}
-
-/// XDP (eXpress Data Path) options
-#[derive(clap::Args, Clone, Debug)]
-pub struct XdpOptions {
-    /// The name of the network interface to bind the XDP socket(s) to.
-    ///
-    /// If not specified quilkin will attempt to determine the most appropriate
-    /// network interface to use. Quilkin will exit with an error if the network
-    /// interface does not exist, or a suitable default cannot be determined.
-    #[clap(long = "publish.udp.xdp.network-interface")]
-    pub network_interface: Option<String>,
-    /// Forces the use of XDP.
-    ///
-    /// If XDP is not available on the chosen NIC, Quilkin exits with an error.
-    /// If false, io-uring will be used as the fallback implementation.
-    #[clap(long = "publish.udp.xdp")]
-    pub force_xdp: bool,
-    /// Forces the use of [`XDP_ZEROCOPY`](https://www.kernel.org/doc/html/latest/networking/af_xdp.html#xdp-copy-and-xdp-zerocopy-bind-flags)
-    ///
-    /// If zero copy is not available on the chosen NIC, Quilkin exits with an error
-    #[clap(long = "publish.udp.xdp.zerocopy")]
-    pub force_zerocopy: bool,
-    /// Forces the use of [TX checksum offload](https://docs.kernel.org/6.8/networking/xsk-tx-metadata.html)
-    ///
-    /// TX checksum offload is an optional feature allowing the data portion of
-    /// a packet to have its internet checksum calculation offloaded to the NIC,
-    /// as otherwise this is done in software
-    #[clap(long = "publish.udp.xdp.tco")]
-    pub force_tx_checksum_offload: bool,
-    /// The maximum amount of memory mapped for packet buffers, in bytes
-    ///
-    /// If not specified, this defaults to 4MiB (2k allocated packets of 2k each at a time)
-    /// per NIC queue, ie 128MiB on a 32 queue NIC
-    #[clap(long = "publish.udp.xdp.memory-limit")]
-    pub maximum_memory: Option<u64>,
-}
-
-#[allow(clippy::derivable_impls)]
-impl Default for XdpOptions {
-    fn default() -> Self {
-        Self {
-            network_interface: None,
-            force_xdp: false,
-            force_zerocopy: false,
-            force_tx_checksum_offload: false,
-            maximum_memory: None,
-        }
-    }
 }
 
 impl Default for Proxy {
