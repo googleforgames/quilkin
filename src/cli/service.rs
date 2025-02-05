@@ -5,6 +5,9 @@ use crate::{components::proxy::SessionPool, config::Config};
 #[derive(Debug, clap::Parser)]
 #[command(next_help_heading = "Service Options")]
 pub struct Service {
+    /// The identifier for an instance.
+    #[arg(long = "service.id", env = "QUILKIN_SERVICE_ID")]
+    id: Option<String>,
     /// Whether to serve mDS requests.
     #[arg(
         long = "service.mds",
@@ -115,6 +118,7 @@ pub struct Service {
 impl Default for Service {
     fn default() -> Self {
         Self {
+            id: None,
             mds_enabled: <_>::default(),
             mds_port: 7900,
             phoenix_enabled: <_>::default(),
@@ -232,6 +236,10 @@ impl Service {
         config: &Arc<Config>,
         shutdown_rx: &crate::signal::ShutdownRx,
     ) -> crate::Result<tokio::task::JoinHandle<crate::Result<()>>> {
+        if let Some(id) = self.id.clone() {
+            config.id.store(id.into());
+        }
+
         let shutdown_rx = shutdown_rx.clone();
         let mds_task = self.publish_mds(config)?;
         let phoenix_task = self.publish_phoenix(config, &shutdown_rx)?;
