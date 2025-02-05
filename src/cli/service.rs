@@ -233,16 +233,15 @@ impl Service {
         shutdown_rx: &crate::signal::ShutdownRx,
     ) -> crate::Result<tokio::task::JoinHandle<crate::Result<()>>> {
         let shutdown_rx = shutdown_rx.clone();
-        let config = config.clone();
-        Ok(tokio::spawn(async move {
-            let mds_task = self.publish_mds(&config)?;
-            let phoenix_task = self.publish_phoenix(&config, &shutdown_rx)?;
-            // We need to call this before qcmp since if we use XDP we handle QCMP
-            // internally without a separate task
-            let (udp_task, finalizer) = self.publish_udp(&config)?;
-            let qcmp_task = self.publish_qcmp(&shutdown_rx)?;
-            let xds_task = self.publish_xds(&config)?;
+        let mds_task = self.publish_mds(&config)?;
+        let phoenix_task = self.publish_phoenix(&config, &shutdown_rx)?;
+        // We need to call this before qcmp since if we use XDP we handle QCMP
+        // internally without a separate task
+        let (udp_task, finalizer) = self.publish_udp(&config)?;
+        let qcmp_task = self.publish_qcmp(&shutdown_rx)?;
+        let xds_task = self.publish_xds(&config)?;
 
+        Ok(tokio::spawn(async move {
             let result = tokio::select! {
                 result = mds_task => result,
                 result = phoenix_task => result,
