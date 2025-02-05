@@ -525,8 +525,7 @@
 <a href="#524" id="524">524</a>
 <a href="#525" id="525">525</a>
 <a href="#526" id="526">526</a>
-<a href="#527" id="527">527</a>
-<a href="#528" id="528">528</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::{future::Future, sync::Arc};
+<a href="#527" id="527">527</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::{future::Future, sync::Arc};
 
 <span class="kw">use crate</span>::{components::proxy::SessionPool, config::Config};
 
@@ -761,16 +760,15 @@
         shutdown_rx: <span class="kw-2">&amp;</span><span class="kw">crate</span>::signal::ShutdownRx,
     ) -&gt; <span class="kw">crate</span>::Result&lt;tokio::task::JoinHandle&lt;<span class="kw">crate</span>::Result&lt;()&gt;&gt;&gt; {
         <span class="kw">let </span>shutdown_rx = shutdown_rx.clone();
-        <span class="kw">let </span>config = config.clone();
-        <span class="prelude-val">Ok</span>(tokio::spawn(<span class="kw">async move </span>{
-            <span class="kw">let </span>mds_task = <span class="self">self</span>.publish_mds(<span class="kw-2">&amp;</span>config)<span class="question-mark">?</span>;
-            <span class="kw">let </span>phoenix_task = <span class="self">self</span>.publish_phoenix(<span class="kw-2">&amp;</span>config, <span class="kw-2">&amp;</span>shutdown_rx)<span class="question-mark">?</span>;
-            <span class="comment">// We need to call this before qcmp since if we use XDP we handle QCMP
-            // internally without a separate task
-            </span><span class="kw">let </span>(udp_task, finalizer) = <span class="self">self</span>.publish_udp(<span class="kw-2">&amp;</span>config)<span class="question-mark">?</span>;
-            <span class="kw">let </span>qcmp_task = <span class="self">self</span>.publish_qcmp(<span class="kw-2">&amp;</span>shutdown_rx)<span class="question-mark">?</span>;
-            <span class="kw">let </span>xds_task = <span class="self">self</span>.publish_xds(<span class="kw-2">&amp;</span>config)<span class="question-mark">?</span>;
+        <span class="kw">let </span>mds_task = <span class="self">self</span>.publish_mds(config)<span class="question-mark">?</span>;
+        <span class="kw">let </span>phoenix_task = <span class="self">self</span>.publish_phoenix(config, <span class="kw-2">&amp;</span>shutdown_rx)<span class="question-mark">?</span>;
+        <span class="comment">// We need to call this before qcmp since if we use XDP we handle QCMP
+        // internally without a separate task
+        </span><span class="kw">let </span>(udp_task, finalizer) = <span class="self">self</span>.publish_udp(config)<span class="question-mark">?</span>;
+        <span class="kw">let </span>qcmp_task = <span class="self">self</span>.publish_qcmp(<span class="kw-2">&amp;</span>shutdown_rx)<span class="question-mark">?</span>;
+        <span class="kw">let </span>xds_task = <span class="self">self</span>.publish_xds(config)<span class="question-mark">?</span>;
 
+        <span class="prelude-val">Ok</span>(tokio::spawn(<span class="kw">async move </span>{
             <span class="kw">let </span>result = <span class="macro">tokio::select!</span> {
                 result = mds_task =&gt; result,
                 result = phoenix_task =&gt; result,
