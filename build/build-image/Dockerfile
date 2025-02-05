@@ -28,7 +28,7 @@ ENV RUSTUP_HOME=/usr/local/rustup \
 RUN set -eux && \
     apt-get update && \
     apt-get install -y lsb-release jq curl wget zip git build-essential software-properties-common protobuf-compiler \
-        libssl-dev pkg-config nodejs npm bash-completion g++-x86-64-linux-gnu g++-mingw-w64-x86-64 && \
+        libssl-dev pkg-config nodejs npm bash-completion g++-x86-64-linux-gnu g++-mingw-w64-x86-64 g++-aarch64-linux-gnu && \
     npm install -g browser-sync && \
     echo "source /etc/bash_completion" >> /root/.bashrc
 
