@@ -525,13 +525,24 @@
 <a href="#524" id="524">524</a>
 <a href="#525" id="525">525</a>
 <a href="#526" id="526">526</a>
-<a href="#527" id="527">527</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::{future::Future, sync::Arc};
+<a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
+<a href="#532" id="532">532</a>
+<a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::{future::Future, sync::Arc};
 
 <span class="kw">use crate</span>::{components::proxy::SessionPool, config::Config};
 
 <span class="attr">#[derive(Debug, clap::Parser)]
 #[command(next_help_heading = <span class="string">"Service Options"</span>)]
 </span><span class="kw">pub struct </span>Service {
+    <span class="doccomment">/// The identifier for an instance.
+    </span><span class="attr">#[arg(long = <span class="string">"service.id"</span>, env = <span class="string">"QUILKIN_SERVICE_ID"</span>)]
+    </span>id: <span class="prelude-ty">Option</span>&lt;String&gt;,
     <span class="doccomment">/// Whether to serve mDS requests.
     </span><span class="attr">#[arg(
         long = <span class="string">"service.mds"</span>,
@@ -642,6 +653,7 @@
 <span class="kw">impl </span>Default <span class="kw">for </span>Service {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
+            id: <span class="prelude-val">None</span>,
             mds_enabled: &lt;<span class="kw">_</span>&gt;::default(),
             mds_port: <span class="number">7900</span>,
             phoenix_enabled: &lt;<span class="kw">_</span>&gt;::default(),
@@ -759,6 +771,10 @@
         config: <span class="kw-2">&amp;</span>Arc&lt;Config&gt;,
         shutdown_rx: <span class="kw-2">&amp;</span><span class="kw">crate</span>::signal::ShutdownRx,
     ) -&gt; <span class="kw">crate</span>::Result&lt;tokio::task::JoinHandle&lt;<span class="kw">crate</span>::Result&lt;()&gt;&gt;&gt; {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = <span class="self">self</span>.id.clone() {
+            config.id.store(id.into());
+        }
+
         <span class="kw">let </span>shutdown_rx = shutdown_rx.clone();
         <span class="kw">let </span>mds_task = <span class="self">self</span>.publish_mds(config)<span class="question-mark">?</span>;
         <span class="kw">let </span>phoenix_task = <span class="self">self</span>.publish_phoenix(config, <span class="kw-2">&amp;</span>shutdown_rx)<span class="question-mark">?</span>;

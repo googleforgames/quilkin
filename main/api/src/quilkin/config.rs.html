@@ -1199,7 +1199,13 @@
 <a href="#1198" id="1198">1198</a>
 <a href="#1199" id="1199">1199</a>
 <a href="#1200" id="1200">1200</a>
-<a href="#1201" id="1201">1201</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#1201" id="1201">1201</a>
+<a href="#1202" id="1202">1202</a>
+<a href="#1203" id="1203">1203</a>
+<a href="#1204" id="1204">1204</a>
+<a href="#1205" id="1205">1205</a>
+<a href="#1206" id="1206">1206</a>
+<a href="#1207" id="1207">1207</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -2048,14 +2054,20 @@
     }
 }
 
-<span class="attr">#[cfg(not(target_os = <span class="string">"linux"</span>))]
-</span><span class="kw">fn </span>default_proxy_id() -&gt; Slot&lt;String&gt; {
-    Slot::from(Uuid::new_v4().as_hyphenated().to_string())
-}
-
-<span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)]
-</span><span class="kw">fn </span>default_proxy_id() -&gt; Slot&lt;String&gt; {
-    Slot::from(sys_info::hostname().unwrap_or_else(|<span class="kw">_</span>| Uuid::new_v4().as_hyphenated().to_string()))
+<span class="kw">fn </span>default_proxy_id() -&gt; Slot&lt;String&gt; {
+    Slot::from(
+        std::env::var(<span class="string">"QUILKIN_SERVICE_ID"</span>)
+            .or_else(|<span class="kw">_</span>| {
+                <span class="macro">cfg_if::cfg_if!</span> {
+                    <span class="kw">if </span><span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)] </span>{
+                        sys_info::hostname()
+                    } <span class="kw">else </span>{
+                        <span class="macro">eyre::bail!</span>(<span class="string">"no sys_info support"</span>)
+                    }
+                }
+            })
+            .unwrap_or_else(|<span class="kw">_</span>| Uuid::new_v4().as_hyphenated().to_string()),
+    )
 }
 
 <span class="doccomment">/// Filter is the configuration for a single filter
