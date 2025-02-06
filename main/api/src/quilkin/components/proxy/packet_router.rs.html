@@ -169,15 +169,7 @@
 <a href="#168" id="168">168</a>
 <a href="#169" id="169">169</a>
 <a href="#170" id="170">170</a>
-<a href="#171" id="171">171</a>
-<a href="#172" id="172">172</a>
-<a href="#173" id="173">173</a>
-<a href="#174" id="174">174</a>
-<a href="#175" id="175">175</a>
-<a href="#176" id="176">176</a>
-<a href="#177" id="177">177</a>
-<a href="#178" id="178">178</a>
-<a href="#179" id="179">179</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#171" id="171">171</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -264,15 +256,7 @@
         <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = <span class="self">self</span>.process_inner(config, sessions, destinations) {
             <span class="kw">let </span>discriminant = error.discriminant();
 
-            <span class="comment">// We only want to mark potential I/O errors as errors, as they
-            // can indicate something wrong with the system, error variants
-            // from packets being bad aren't errors from quilkin's perspective.
-            </span><span class="kw">if </span><span class="macro">matches!</span>(
-                error,
-                PipelineError::Io(<span class="kw">_</span>) | PipelineError::Filter(<span class="kw">crate</span>::filters::FilterError::Io(<span class="kw">_</span>))
-            ) {
-                metrics::errors_total(metrics::READ, discriminant, <span class="kw-2">&amp;</span>metrics::EMPTY).inc();
-            }
+            error.inc_system_errors_total(metrics::READ, <span class="kw-2">&amp;</span>metrics::EMPTY);
             metrics::packets_dropped_total(metrics::READ, discriminant, <span class="kw-2">&amp;</span>metrics::EMPTY).inc();
         }
 

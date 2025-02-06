@@ -87,7 +87,23 @@
 <a href="#86" id="86">86</a>
 <a href="#87" id="87">87</a>
 <a href="#88" id="88">88</a>
-<a href="#89" id="89">89</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -114,6 +130,22 @@
 }
 
 <span class="kw">impl </span>PipelineError {
+    <span class="doccomment">/// We only want to mark potential I/O errors as errors, as they
+    /// can indicate something wrong with the system, error variants
+    /// from packets being bad aren't errors from quilkin's perspective.
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>inc_system_errors_total(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        direction: <span class="kw">crate</span>::metrics::Direction,
+        asn_info: <span class="kw-2">&amp;</span><span class="kw">crate</span>::metrics::AsnInfo,
+    ) {
+        <span class="kw">if </span><span class="macro">matches!</span>(
+            <span class="self">self</span>,
+            PipelineError::Io(<span class="kw">_</span>) | PipelineError::Filter(<span class="kw">crate</span>::filters::FilterError::Io(<span class="kw">_</span>))
+        ) {
+            <span class="kw">crate</span>::metrics::errors_total(direction, <span class="kw-2">&amp;</span><span class="self">self</span>.to_string(), asn_info).inc();
+        }
+    }
+
     <span class="kw">pub fn </span>discriminant(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
         <span class="kw">match </span><span class="self">self </span>{
             <span class="self">Self</span>::NoUpstreamEndpoints =&gt; <span class="string">"no upstream endpoints"</span>,

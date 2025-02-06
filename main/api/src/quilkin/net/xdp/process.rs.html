@@ -1094,7 +1094,7 @@
             }
             <span class="prelude-val">Err</span>((error, packet)) =&gt; {
                 <span class="kw">let </span>discriminant = error.discriminant();
-                metrics::errors_total(direction, discriminant, <span class="kw-2">&amp;</span>metrics::EMPTY).inc();
+                error.inc_system_errors_total(direction, <span class="kw-2">&amp;</span>metrics::EMPTY);
                 metrics::packets_dropped_total(direction, discriminant, <span class="kw-2">&amp;</span>metrics::EMPTY).inc();
 
                 umem.free_packet(packet);
