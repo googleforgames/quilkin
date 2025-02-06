@@ -450,7 +450,14 @@ impl<M: Measurement + 'static> Phoenix<M> {
         let crate::config::DatacenterConfig::NonAgent { datacenters } = &config.datacenter else {
             unreachable!("this shouldn't be called by an agent")
         };
-        for entry in datacenters.write().iter() {
+
+        let dcs = datacenters.write();
+
+        for removed in dcs.removed() {
+            self.nodes.remove(&removed);
+        }
+
+        for entry in dcs.iter() {
             let addr = (*entry.key(), entry.value().qcmp_port).into();
             self.add_node_if_not_exists(addr, entry.value().icao_code);
         }
