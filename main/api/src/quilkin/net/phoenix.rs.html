@@ -901,7 +901,14 @@
 <a href="#900" id="900">900</a>
 <a href="#901" id="901">901</a>
 <a href="#902" id="902">902</a>
-<a href="#903" id="903">903</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#903" id="903">903</a>
+<a href="#904" id="904">904</a>
+<a href="#905" id="905">905</a>
+<a href="#906" id="906">906</a>
+<a href="#907" id="907">907</a>
+<a href="#908" id="908">908</a>
+<a href="#909" id="909">909</a>
+<a href="#910" id="910">910</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -1353,7 +1360,14 @@
         <span class="kw">let </span><span class="kw">crate</span>::config::DatacenterConfig::NonAgent { datacenters } = <span class="kw-2">&amp;</span>config.datacenter <span class="kw">else </span>{
             <span class="macro">unreachable!</span>(<span class="string">"this shouldn't be called by an agent"</span>)
         };
-        <span class="kw">for </span>entry <span class="kw">in </span>datacenters.write().iter() {
+
+        <span class="kw">let </span>dcs = datacenters.write();
+
+        <span class="kw">for </span>removed <span class="kw">in </span>dcs.removed() {
+            <span class="self">self</span>.nodes.remove(<span class="kw-2">&amp;</span>removed);
+        }
+
+        <span class="kw">for </span>entry <span class="kw">in </span>dcs.iter() {
             <span class="kw">let </span>addr = (<span class="kw-2">*</span>entry.key(), entry.value().qcmp_port).into();
             <span class="self">self</span>.add_node_if_not_exists(addr, entry.value().icao_code);
         }

@@ -1166,7 +1166,40 @@
 <a href="#1165" id="1165">1165</a>
 <a href="#1166" id="1166">1166</a>
 <a href="#1167" id="1167">1167</a>
-<a href="#1168" id="1168">1168</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#1168" id="1168">1168</a>
+<a href="#1169" id="1169">1169</a>
+<a href="#1170" id="1170">1170</a>
+<a href="#1171" id="1171">1171</a>
+<a href="#1172" id="1172">1172</a>
+<a href="#1173" id="1173">1173</a>
+<a href="#1174" id="1174">1174</a>
+<a href="#1175" id="1175">1175</a>
+<a href="#1176" id="1176">1176</a>
+<a href="#1177" id="1177">1177</a>
+<a href="#1178" id="1178">1178</a>
+<a href="#1179" id="1179">1179</a>
+<a href="#1180" id="1180">1180</a>
+<a href="#1181" id="1181">1181</a>
+<a href="#1182" id="1182">1182</a>
+<a href="#1183" id="1183">1183</a>
+<a href="#1184" id="1184">1184</a>
+<a href="#1185" id="1185">1185</a>
+<a href="#1186" id="1186">1186</a>
+<a href="#1187" id="1187">1187</a>
+<a href="#1188" id="1188">1188</a>
+<a href="#1189" id="1189">1189</a>
+<a href="#1190" id="1190">1190</a>
+<a href="#1191" id="1191">1191</a>
+<a href="#1192" id="1192">1192</a>
+<a href="#1193" id="1193">1193</a>
+<a href="#1194" id="1194">1194</a>
+<a href="#1195" id="1195">1195</a>
+<a href="#1196" id="1196">1196</a>
+<a href="#1197" id="1197">1197</a>
+<a href="#1198" id="1198">1198</a>
+<a href="#1199" id="1199">1199</a>
+<a href="#1200" id="1200">1200</a>
+<a href="#1201" id="1201">1201</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -1185,7 +1218,7 @@
 </span><span class="doccomment">//! Quilkin configuration.
 
 </span><span class="kw">use </span>std::{
-    net::IpAddr,
+    net::{IpAddr, SocketAddr},
     sync::{
         atomic::{AtomicU64, Ordering::Relaxed},
         Arc,
@@ -1615,6 +1648,8 @@
                 datacenters.modify(|wg| {
                     <span class="kw">let </span>remote_addr = remote_addr.map(|ra| ra.ip().to_canonical());
 
+                    wg.remove(removed_resources);
+
                     <span class="kw">for </span>res <span class="kw">in </span>resources {
                         <span class="kw">let </span><span class="prelude-val">Some</span>(resource) = res.resource <span class="kw">else </span>{
                             <span class="macro">eyre::bail!</span>(<span class="string">"a datacenter resource could not be applied because it didn't contain an actual payload"</span>);
@@ -1763,6 +1798,8 @@
 <span class="attr">#[derive(Default, Debug, Deserialize, Serialize)]
 </span><span class="kw">pub struct </span>DatacenterMap {
     map: dashmap::DashMap&lt;IpAddr, Datacenter&gt;,
+    <span class="attr">#[serde(skip)]
+    </span>removed: parking_lot::Mutex&lt;Vec&lt;SocketAddr&gt;&gt;,
     version: AtomicU64,
 }
 
@@ -1798,6 +1835,34 @@
     </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; dashmap::iter::Iter&lt;IpAddr, Datacenter&gt; {
         <span class="self">self</span>.map.iter()
     }
+
+    <span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>remove(<span class="kw-2">&amp;</span><span class="self">self</span>, removed: <span class="kw-2">&amp;</span>[String]) {
+        <span class="kw">if </span>removed.is_empty() {
+            <span class="kw">return</span>;
+        }
+
+        <span class="kw">let </span><span class="kw-2">mut </span>lock = <span class="self">self</span>.removed.lock();
+        <span class="kw">let </span><span class="kw-2">mut </span>version = <span class="number">0</span>;
+        <span class="kw">for </span>addr <span class="kw">in </span>removed {
+            <span class="kw">let </span><span class="prelude-val">Ok</span>(ip) = addr.parse() <span class="kw">else </span>{
+                <span class="kw">continue</span>;
+            };
+            <span class="kw">let </span><span class="prelude-val">Some</span>((_k, v)) = <span class="self">self</span>.map.remove(<span class="kw-2">&amp;</span>ip) <span class="kw">else </span>{
+                <span class="kw">continue</span>;
+            };
+
+            lock.push((ip, v.qcmp_port).into());
+            version += <span class="number">1</span>;
+        }
+
+        <span class="self">self</span>.version.fetch_add(version, Relaxed);
+    }
+
+    <span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>removed(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;SocketAddr&gt; {
+        std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.removed.lock())
+    }
 }
 
 <span class="kw">impl </span>Clone <span class="kw">for </span>DatacenterMap {
@@ -1806,6 +1871,7 @@
         <span class="self">Self </span>{
             map,
             version: &lt;<span class="kw">_</span>&gt;::default(),
+            removed: Default::default(),
         }
     }
 }
