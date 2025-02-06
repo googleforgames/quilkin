@@ -1,8 +1,8 @@
 use crate::{
-    components::proxy::PipelineError,
+    components::proxy::{sessions::inner_metrics as session_metrics, PipelineError},
     filters::{self, Filter as _},
     metrics,
-    net::EndpointAddress,
+    net::{maxmind_db, EndpointAddress},
 };
 pub use quilkin_xdp::xdp;
 use quilkin_xdp::xdp::{
@@ -19,6 +19,7 @@ use std::{
         atomic::{AtomicU16, Ordering},
         Arc,
     },
+    time::Instant,
 };
 
 /// Wrapper around the actual packet buffer and the UDP metadata it parsed to
@@ -245,10 +246,17 @@ impl PortMap {
     }
 }
 
+struct ClientInfo {
+    asn_info: Option<maxmind_db::IpNetEntry>,
+    created_at: Instant,
+    /// The port used to identify this unique session to the IP owning this map
+    port: NetworkU16,
+}
+
 struct PortMapper {
     /// Maps a client endpoint to the port used as the source port for sending
     /// to the server endpoint `Self` is associated with
-    client_to_port: Arc<parking_lot::Mutex<std::collections::HashMap<SocketAddr, NetworkU16>>>,
+    client_to_port: Arc<parking_lot::Mutex<std::collections::HashMap<SocketAddr, ClientInfo>>>,
     port_to_client: Arc<parking_lot::RwLock<PortMap>>,
     port: AtomicU16,
 }
@@ -266,7 +274,7 @@ impl PortMapper {
     #[inline]
     fn get_or_alloc(&self, client_addr: SocketAddr) -> Option<NetworkU16> {
         match self.client_to_port.lock().entry(client_addr) {
-            std::collections::hash_map::Entry::Occupied(entry) => Some(*entry.get()),
+            std::collections::hash_map::Entry::Occupied(entry) => Some(entry.get().port),
             std::collections::hash_map::Entry::Vacant(entry) => {
                 let port = self.port.fetch_add(1, Ordering::Relaxed);
 
@@ -275,10 +283,19 @@ impl PortMapper {
                     return None;
                 }
 
+                session_metrics::total_sessions().inc();
+
+                let asn_info = maxmind_db::MaxmindDb::lookup(client_addr.ip());
+                session_metrics::active_sessions(asn_info.as_ref()).inc();
+
                 self.port_to_client.write().insert(client_addr, port);
 
                 let port = port.into();
-                entry.insert(port);
+                entry.insert(ClientInfo {
+                    asn_info,
+                    created_at: Instant::now(),
+                    port,
+                });
                 Some(port)
             }
         }
@@ -287,6 +304,20 @@ impl PortMapper {
     #[inline]
     fn get_client(&self, port: NetworkU16) -> Option<SocketAddr> {
         self.port_to_client.read().get(port)
+    }
+}
+
+impl Drop for PortMapper {
+    fn drop(&mut self) {
+        let lock = self.client_to_port.lock();
+
+        let now = Instant::now();
+
+        for client_info in lock.values() {
+            session_metrics::active_sessions(client_info.asn_info.as_ref()).dec();
+            session_metrics::duration_secs()
+                .observe(now.duration_since(client_info.created_at).as_secs_f64());
+        }
     }
 }
 
