@@ -502,7 +502,7 @@ pub fn gen_endpoints(
     hasher: &mut Hasher,
     mut tg: Option<&mut TokenGenerator>,
 ) -> BTreeSet<Endpoint> {
-    let num_endpoints = rng.gen_range(100..10_000);
+    let num_endpoints = rng.random_range(100..10_000);
     hasher.write_u16(num_endpoints);
 
     let mut endpoints = BTreeSet::new();
@@ -623,18 +623,18 @@ impl Iterator for TokenGenerator {
         let mut set = Self::Item::new();
 
         let count = if let Some(range) = self.range.clone() {
-            self.rng.gen_range(range)
+            self.rng.random_range(range)
         } else {
             1
         };
 
         if let Some(prev) = &mut self.previous {
             for _ in 0..count {
-                if !prev.is_empty() && self.rng.gen_ratio(1, 10) {
-                    let prev = &prev[self.rng.gen_range(0..prev.len())];
+                if !prev.is_empty() && self.rng.random_ratio(1, 10) {
+                    let prev = &prev[self.rng.random_range(0..prev.len())];
                     set.insert(prev.clone());
                 } else {
-                    let count = self.rng.gen_range(4..20);
+                    let count = self.rng.random_range(4..20);
                     let mut v = vec![0; count];
                     self.rng.fill_bytes(&mut v);
                     prev.push(v.clone());
@@ -643,7 +643,7 @@ impl Iterator for TokenGenerator {
             }
         } else {
             for _ in 0..count {
-                let count = self.rng.gen_range(4..20);
+                let count = self.rng.random_range(4..20);
                 let mut v = vec![0; count];
                 self.rng.fill_bytes(&mut v);
                 set.insert(v);
@@ -662,7 +662,7 @@ pub fn gen_cluster_map<const S: u64>(token_kind: TokenKind) -> GenCluster {
     let mut hasher = Hasher::with_seed(S);
     let mut total_endpoints = 0;
 
-    let num_locals = rng.gen_range(10..LOCALITIES.len());
+    let num_locals = rng.random_range(10..LOCALITIES.len());
 
     // Select how many localities we want, note we add 1 since we always have a default cluster
     hasher.write_usize(num_locals + 1);
