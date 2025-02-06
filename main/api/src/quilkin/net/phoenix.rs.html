@@ -1283,7 +1283,7 @@
                 .iter()
                 .map(|entry| <span class="kw-2">*</span>entry.key())
                 .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-            nodes.shuffle(<span class="kw-2">&amp;mut </span>rand::thread_rng());
+            nodes.shuffle(<span class="kw-2">&amp;mut </span>rand::rng());
             <span class="kw">let </span>subset_size = (nodes.len() <span class="kw">as </span>f64 * <span class="self">self</span>.subset_percentage).abs() <span class="kw">as </span>usize;
 
             nodes[..subset_size].to_vec()

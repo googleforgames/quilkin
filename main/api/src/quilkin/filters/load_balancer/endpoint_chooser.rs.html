@@ -123,7 +123,7 @@
 
 </span><span class="kw">use </span>std::sync::atomic::{AtomicUsize, Ordering};
 
-<span class="kw">use </span>rand::{thread_rng, Rng};
+<span class="kw">use </span>rand::Rng;
 
 <span class="kw">use </span>std::{
     collections::hash_map::DefaultHasher,
@@ -186,7 +186,7 @@
         _src: <span class="kw-2">&amp;</span>EndpointAddress,
     ) {
         <span class="comment">// The index is guaranteed to be in range.
-        </span><span class="kw">let </span>index = thread_rng().gen_range(<span class="number">0</span>..endpoints.num_of_endpoints());
+        </span><span class="kw">let </span>index = rand::rng().random_range(<span class="number">0</span>..endpoints.num_of_endpoints());
         destinations.push(endpoints.nth_endpoint(index).unwrap().address.clone());
     }
 }
