@@ -17,7 +17,7 @@
 //! Quilkin configuration.
 
 use std::{
-    net::IpAddr,
+    net::{IpAddr, SocketAddr},
     sync::{
         atomic::{AtomicU64, Ordering::Relaxed},
         Arc,
@@ -447,6 +447,8 @@ impl Config {
                 datacenters.modify(|wg| {
                     let remote_addr = remote_addr.map(|ra| ra.ip().to_canonical());
 
+                    wg.remove(removed_resources);
+
                     for res in resources {
                         let Some(resource) = res.resource else {
                             eyre::bail!("a datacenter resource could not be applied because it didn't contain an actual payload");
@@ -595,6 +597,8 @@ impl Config {
 #[derive(Default, Debug, Deserialize, Serialize)]
 pub struct DatacenterMap {
     map: dashmap::DashMap<IpAddr, Datacenter>,
+    #[serde(skip)]
+    removed: parking_lot::Mutex<Vec<SocketAddr>>,
     version: AtomicU64,
 }
 
@@ -630,6 +634,34 @@ impl DatacenterMap {
     pub fn iter(&self) -> dashmap::iter::Iter<IpAddr, Datacenter> {
         self.map.iter()
     }
+
+    #[inline]
+    pub fn remove(&self, removed: &[String]) {
+        if removed.is_empty() {
+            return;
+        }
+
+        let mut lock = self.removed.lock();
+        let mut version = 0;
+        for addr in removed {
+            let Ok(ip) = addr.parse() else {
+                continue;
+            };
+            let Some((_k, v)) = self.map.remove(&ip) else {
+                continue;
+            };
+
+            lock.push((ip, v.qcmp_port).into());
+            version += 1;
+        }
+
+        self.version.fetch_add(version, Relaxed);
+    }
+
+    #[inline]
+    pub fn removed(&self) -> Vec<SocketAddr> {
+        std::mem::take(&mut self.removed.lock())
+    }
 }
 
 impl Clone for DatacenterMap {
@@ -638,6 +670,7 @@ impl Clone for DatacenterMap {
         Self {
             map,
             version: <_>::default(),
+            removed: Default::default(),
         }
     }
 }
