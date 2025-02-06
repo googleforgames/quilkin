@@ -41,16 +41,17 @@ deny = [
 multiple-versions = "deny"
 skip = [
     { crate = "object@0.32.2", reason = "transitive dependency due to backtrace, backtrace is updated, but stable-eyre using a feature that doesn't exist any longer, and can't update, sigh" },
+    { crate = "hostname@0.3.1", reason = "hickory-resolver -> resolve-conf uses this old version, since resolve-conf hasn't been updated in 5 years I assume this will continue this way" },
+    { crate = "hashbrown@0.14.5", reason = "many crates use this old version" },
 
 ]
 skip-tree = [
     { crate = "regex-automata@0.1", reason = "matchers is using an old version, https://github.com/hawkw/matchers/pull/5, but it's also barely maintained..." },
     # Much like trust-dns this pulls in a ton of outdated dependencies, but it's _slightly_ better
-    { crate = "hickory-resolver@0.24.1", reason = "Uses _many_ outdated crates" },
+    #{ crate = "hickory-resolver@0.24.1", reason = "Uses _many_ outdated crates" },
     { crate = "instant@0.1.13", reason = "several crates use this old version" },
+    { crate = "thiserror@1.0.69", reason = "many crates use this old version" },
     { crate = "tower@0.4.13", reason = "several crates use this old version" },
-    { crate = "sync_wrapper@0.1.2", reason = "several crates use this old version" },
-    { crate = "bitflags@1.3.2", reason = "several crates use this old version" },
 ]
 
 [bans.workspace-dependencies]
