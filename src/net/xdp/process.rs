@@ -391,7 +391,7 @@ pub fn process_packets(
             }
             Err((error, packet)) => {
                 let discriminant = error.discriminant();
-                metrics::errors_total(direction, discriminant, &metrics::EMPTY).inc();
+                error.inc_system_errors_total(direction, &metrics::EMPTY);
                 metrics::packets_dropped_total(direction, discriminant, &metrics::EMPTY).inc();
 
                 umem.free_packet(packet);
