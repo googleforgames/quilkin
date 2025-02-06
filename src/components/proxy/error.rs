@@ -25,6 +25,22 @@ pub enum PipelineError {
 }
 
 impl PipelineError {
+    /// We only want to mark potential I/O errors as errors, as they
+    /// can indicate something wrong with the system, error variants
+    /// from packets being bad aren't errors from quilkin's perspective.
+    pub(crate) fn inc_system_errors_total(
+        &self,
+        direction: crate::metrics::Direction,
+        asn_info: &crate::metrics::AsnInfo,
+    ) {
+        if matches!(
+            self,
+            PipelineError::Io(_) | PipelineError::Filter(crate::filters::FilterError::Io(_))
+        ) {
+            crate::metrics::errors_total(direction, &self.to_string(), asn_info).inc();
+        }
+    }
+
     pub fn discriminant(&self) -> &'static str {
         match self {
             Self::NoUpstreamEndpoints => "no upstream endpoints",
