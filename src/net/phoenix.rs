@@ -373,7 +373,7 @@ impl<M: Measurement + 'static> Phoenix<M> {
                 .iter()
                 .map(|entry| *entry.key())
                 .collect::<Vec<_>>();
-            nodes.shuffle(&mut rand::thread_rng());
+            nodes.shuffle(&mut rand::rng());
             let subset_size = (nodes.len() as f64 * self.subset_percentage).abs() as usize;
 
             nodes[..subset_size].to_vec()

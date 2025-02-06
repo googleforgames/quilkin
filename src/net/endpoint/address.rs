@@ -21,7 +21,7 @@ use std::{
     str::FromStr,
 };
 
-use hickory_resolver::TokioAsyncResolver;
+use hickory_resolver::TokioResolver;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
@@ -61,8 +61,8 @@ impl EndpointAddress {
     /// Returns the socket address for the endpoint, resolving any DNS entries
     /// if present.
     pub fn to_socket_addr(&self) -> std::io::Result<SocketAddr> {
-        static DNS: Lazy<TokioAsyncResolver> =
-            Lazy::new(|| TokioAsyncResolver::tokio_from_system_conf().unwrap());
+        static DNS: Lazy<TokioResolver> =
+            Lazy::new(|| TokioResolver::tokio_from_system_conf().unwrap());
 
         let ip = match &self.host {
             AddressKind::Ip(ip) => *ip,
