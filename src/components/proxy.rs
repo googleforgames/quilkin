@@ -16,7 +16,7 @@
 
 pub(crate) mod error;
 pub mod packet_router;
-mod sessions;
+pub(crate) mod sessions;
 
 use super::RunArgs;
 pub use error::PipelineError;
