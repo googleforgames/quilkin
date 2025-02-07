@@ -145,7 +145,7 @@ impl<C: ServiceClient> Client<C> {
             // max delay + jitter of up to 2 seconds
             let mut delay = backoff.delay(attempt, &error).min(BACKOFF_MAX_DELAY);
             delay += Duration::from_millis(
-                rand::thread_rng().gen_range(0..BACKOFF_MAX_JITTER.as_millis() as _),
+                rand::rng().random_range(0..BACKOFF_MAX_JITTER.as_millis() as _),
             );
 
             match error {

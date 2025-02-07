@@ -847,14 +847,20 @@ impl Default for Version {
     }
 }
 
-#[cfg(not(target_os = "linux"))]
 fn default_proxy_id() -> Slot<String> {
-    Slot::from(Uuid::new_v4().as_hyphenated().to_string())
-}
-
-#[cfg(target_os = "linux")]
-fn default_proxy_id() -> Slot<String> {
-    Slot::from(sys_info::hostname().unwrap_or_else(|_| Uuid::new_v4().as_hyphenated().to_string()))
+    Slot::from(
+        std::env::var("QUILKIN_SERVICE_ID")
+            .or_else(|_| {
+                cfg_if::cfg_if! {
+                    if #[cfg(target_os = "linux")] {
+                        sys_info::hostname()
+                    } else {
+                        eyre::bail!("no sys_info support")
+                    }
+                }
+            })
+            .unwrap_or_else(|_| Uuid::new_v4().as_hyphenated().to_string()),
+    )
 }
 
 /// Filter is the configuration for a single filter

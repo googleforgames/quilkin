@@ -124,16 +124,6 @@ pub struct Providers {
         requires("endpoints")
     )]
     endpoint_tokens: Option<String>,
-
-    /// Enabled the xDS (Discovery Service) provider.
-    #[arg(
-        long = "provider.xds",
-        env = "QUILKIN_PROVIDERS_XDS",
-        conflicts_with("k8s_enabled"),
-        conflicts_with("fs_enabled"),
-        default_value_t = false
-    )]
-    provider_xds_enabled: bool,
     /// One or more xDS service endpoints to listen for config changes.
     #[clap(
         long = "provider.xds.endpoints",
@@ -433,7 +423,7 @@ impl Providers {
     ) -> tokio::task::JoinHandle<crate::Result<()>> {
         if self.k8s_enabled || self.agones_enabled {
             self.spawn_k8s_provider(health_check, locality, config.clone())
-        } else if self.provider_xds_enabled {
+        } else if !self.xds_endpoints.is_empty() {
             self.spawn_xds_provider(config, health_check)
         } else if self.fs_enabled {
             let config = config.clone();

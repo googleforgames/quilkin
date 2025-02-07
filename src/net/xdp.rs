@@ -389,6 +389,7 @@ fn io_loop(
         qcmp_port,
         config,
         destinations: Vec::with_capacity(1),
+        addr_to_asn: Default::default(),
         sessions,
         local_ipv4,
         local_ipv6,

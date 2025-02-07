@@ -15,7 +15,7 @@ trace_test!(relay_routing, {
         fn new(rng: &mut rand::rngs::SmallRng) -> Self {
             const CHARS: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-            use rand::prelude::SliceRandom;
+            use rand::prelude::IndexedRandom;
 
             let mut inner = [0; 3];
             for (v, slot) in CHARS

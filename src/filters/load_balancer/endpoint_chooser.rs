@@ -16,7 +16,7 @@
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use rand::{thread_rng, Rng};
+use rand::Rng;
 
 use std::{
     collections::hash_map::DefaultHasher,
@@ -79,7 +79,7 @@ impl EndpointChooser for RandomEndpointChooser {
         _src: &EndpointAddress,
     ) {
         // The index is guaranteed to be in range.
-        let index = thread_rng().gen_range(0..endpoints.num_of_endpoints());
+        let index = rand::rng().random_range(0..endpoints.num_of_endpoints());
         destinations.push(endpoints.nth_endpoint(index).unwrap().address.clone());
     }
 }

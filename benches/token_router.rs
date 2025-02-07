@@ -28,7 +28,7 @@ fn token_router(b: Bencher, token_kind: &str) {
     let mut rand = rand::rngs::SmallRng::seed_from_u64(42);
 
     b.with_inputs(|| {
-        use rand::seq::SliceRandom as _;
+        use rand::seq::IndexedRandom as _;
         let tok = tokens.choose(&mut rand).unwrap();
 
         let mut metadata = quilkin::net::endpoint::DynamicMetadata::default();

@@ -111,7 +111,8 @@ test-docs:
 	docker run --rm $(common_rust_args) \
 		-e GITHUB_REF_NAME=$(GITHUB_REF_NAME) -e QUILKIN_VERSION=$(QUILKIN_VERSION) \
 		--entrypoint=bash $(BUILD_IMAGE_TAG) -c \
-			'export RUSTDOCFLAGS="-Dwarnings" && mkdir /tmp/docs && \
+			'if ! [git diff --quiet --exit-code origin/main -- docs]; then echo "docs unchanged, skipping docs test" && exit 0; fi; \
+			export RUSTDOCFLAGS="-Dwarnings" && mkdir /tmp/docs && \
 			mkdir -p "$(CARGO_TARGET_DIR)/doc"; \
 			cargo doc --workspace --no-deps && cd docs && mdbook build --dest-dir /tmp/docs/book && \
 			cp -r "$(CARGO_TARGET_DIR)/doc" /tmp/docs/api && \

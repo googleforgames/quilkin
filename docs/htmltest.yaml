@@ -15,7 +15,7 @@
 TestFilesConcurrently: false
 IgnoreInternalEmptyHash: true
 IgnoreEmptyHref: true
-CheckExternal: true
+CheckExternal: false # this can be useful occasionally to find dead links, but generally it's not useful as any external link could give an error code and fail CI
 ExternalTimeout: 60
 IgnoreURLs:
   - "http://localhost:9091/"

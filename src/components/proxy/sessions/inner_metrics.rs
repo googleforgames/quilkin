@@ -38,7 +38,7 @@ pub(crate) fn active_sessions(asn: Option<&crate::net::maxmind_db::IpNetEntry>) 
 
     if let Some(asnfo) = asn {
         let mut asn = [0u8; 10];
-        let len = crate::metrics::itoa(asnfo.id, &mut asn);
+        let len = crate::net::maxmind_db::itoa(asnfo.id, &mut asn);
 
         ACTIVE_SESSIONS.with_label_values(&[
             // SAFETY: itoa only writes ASCII
