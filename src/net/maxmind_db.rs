@@ -175,16 +175,68 @@ pub struct IpNetEntry {
 #[derive(Clone)]
 pub struct MetricsIpNetEntry {
     pub prefix: String,
-    pub id: u64,
+    pub asn: Asn,
 }
+
+#[derive(Copy, Clone)]
+pub struct Asn {
+    /// This is a 32-bit number, but there are only ~90000 asn's worldwide
+    asn: [u8; 10],
+    asn_len: u8,
+}
+
+impl Asn {
+    pub(crate) fn new(id: u64) -> Self {
+        let mut asn = [0u8; 10];
+        let asn_len = itoa(id, &mut asn);
+
+        Self { asn, asn_len }
+    }
+
+    pub(crate) fn as_str(&self) -> &str {
+        // SAFETY: the asn only has ASCII bytes
+        unsafe { std::str::from_utf8_unchecked(&self.asn[..self.asn_len as usize]) }
+    }
+}
+
+impl MetricsIpNetEntry {}
 
 impl<'a> From<&'a IpNetEntry> for MetricsIpNetEntry {
     fn from(value: &'a IpNetEntry) -> Self {
         Self {
             prefix: value.prefix.clone(),
-            id: value.id,
+            asn: Asn::new(value.id),
         }
     }
+}
+
+impl From<IpNetEntry> for MetricsIpNetEntry {
+    fn from(value: IpNetEntry) -> Self {
+        Self {
+            prefix: value.prefix,
+            asn: Asn::new(value.id),
+        }
+    }
+}
+
+#[inline]
+pub(crate) fn itoa(mut num: u64, asn: &mut [u8]) -> u8 {
+    let mut index = 0;
+
+    loop {
+        let rem = (num % 10) as u8;
+        asn[index] = rem + b'0';
+        index += 1;
+        num /= 10;
+
+        if num == 0 {
+            break;
+        }
+    }
+
+    asn[..index].reverse();
+
+    index as u8
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -198,4 +250,27 @@ pub enum Error {
 
     #[error(transparent)]
     Io(#[from] std::io::Error),
+}
+
+#[cfg(test)]
+mod test {
+    fn check(num: u64, exp: &str) {
+        let mut asn = [0u8; 10];
+        let len = super::itoa(num, &mut asn);
+
+        // SAFETY: itoa only writes ASCII
+        let asn_str = unsafe { std::str::from_utf8_unchecked(&asn[..len as _]) };
+
+        assert_eq!(asn_str, exp);
+    }
+
+    #[test]
+    fn itoa() {
+        check(0, "0");
+        check(1, "1");
+        check(10, "10");
+        check((u32::MAX >> 1) as _, &(u32::MAX >> 1).to_string());
+        check((u32::MAX - 1) as _, &(u32::MAX - 1).to_string());
+        check(u32::MAX as _, &u32::MAX.to_string());
+    }
 }

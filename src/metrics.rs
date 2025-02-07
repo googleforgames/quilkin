@@ -77,45 +77,14 @@ impl Direction {
 }
 
 pub struct AsnInfo<'a> {
-    /// This is a 32-bit number, but there are only ~90000 asn's worldwide
-    asn: [u8; 10],
-    asn_len: u8,
-    prefix: &'a str,
-}
-
-impl AsnInfo<'_> {
-    #[inline]
-    fn asn_str(&self) -> &str {
-        // SAFETY: we only write ASCII in itoa
-        unsafe { std::str::from_utf8_unchecked(&self.asn[..self.asn_len as _]) }
-    }
+    pub asn: &'a str,
+    pub prefix: &'a str,
 }
 
 pub const EMPTY: AsnInfo<'static> = AsnInfo {
-    asn: [0u8; 10],
-    asn_len: 0,
+    asn: "",
     prefix: "",
 };
-
-#[inline]
-pub(crate) fn itoa(mut num: u64, asn: &mut [u8]) -> u8 {
-    let mut index = 0;
-
-    loop {
-        let rem = (num % 10) as u8;
-        asn[index] = rem + b'0';
-        index += 1;
-        num /= 10;
-
-        if num == 0 {
-            break;
-        }
-    }
-
-    asn[..index].reverse();
-
-    index as u8
-}
 
 impl<'a> From<Option<&'a MetricsIpNetEntry>> for AsnInfo<'a> {
     #[inline]
@@ -124,13 +93,9 @@ impl<'a> From<Option<&'a MetricsIpNetEntry>> for AsnInfo<'a> {
             return EMPTY;
         };
 
-        let mut asn = [0u8; 10];
-        let asn_len = itoa(val.id, &mut asn);
-
         Self {
-            asn,
-            asn_len,
             prefix: val.prefix.as_str(),
+            asn: val.asn.as_str(),
         }
     }
 }
@@ -256,7 +221,7 @@ pub(crate) fn bytes_total(direction: Direction, asn: &AsnInfo) -> IntCounter {
         .unwrap()
     });
 
-    BYTES_TOTAL.with_label_values(&[direction.label(), asn.asn_str(), asn.prefix])
+    BYTES_TOTAL.with_label_values(&[direction.label(), asn.asn, asn.prefix])
 }
 
 pub(crate) fn errors_total(direction: Direction, display: &str, asn: &AsnInfo) -> IntCounter {
@@ -272,7 +237,7 @@ pub(crate) fn errors_total(direction: Direction, display: &str, asn: &AsnInfo) -
         .unwrap()
     });
 
-    ERRORS_TOTAL.with_label_values(&[direction.label(), display, asn.asn_str(), asn.prefix])
+    ERRORS_TOTAL.with_label_values(&[direction.label(), display, asn.asn, asn.prefix])
 }
 
 pub(crate) fn packet_jitter(direction: Direction, asn: &AsnInfo) -> IntGauge {
@@ -288,7 +253,7 @@ pub(crate) fn packet_jitter(direction: Direction, asn: &AsnInfo) -> IntGauge {
         .unwrap()
     });
 
-    PACKET_JITTER.with_label_values(&[direction.label(), asn.asn_str(), asn.prefix])
+    PACKET_JITTER.with_label_values(&[direction.label(), asn.asn, asn.prefix])
 }
 
 pub(crate) fn packets_total(direction: Direction, asn: &AsnInfo) -> IntCounter {
@@ -304,7 +269,7 @@ pub(crate) fn packets_total(direction: Direction, asn: &AsnInfo) -> IntCounter {
         .unwrap()
     });
 
-    PACKETS_TOTAL.with_label_values(&[direction.label(), asn.asn_str(), asn.prefix])
+    PACKETS_TOTAL.with_label_values(&[direction.label(), asn.asn, asn.prefix])
 }
 
 pub(crate) fn packets_dropped_total(
@@ -324,7 +289,7 @@ pub(crate) fn packets_dropped_total(
         .unwrap()
     });
 
-    PACKETS_DROPPED.with_label_values(&[direction.label(), source, asn.asn_str(), asn.prefix])
+    PACKETS_DROPPED.with_label_values(&[direction.label(), source, asn.asn, asn.prefix])
 }
 
 /// Create a generic metrics options.
@@ -372,26 +337,3 @@ pub trait CollectorExt: Collector + Clone + Sized + 'static {
 }
 
 impl<C: Collector + Clone + 'static> CollectorExt for C {}
-
-#[cfg(test)]
-mod test {
-    fn check(num: u64, exp: &str) {
-        let mut asn = [0u8; 10];
-        let len = super::itoa(num, &mut asn);
-
-        // SAFETY: itoa only writes ASCII
-        let asn_str = unsafe { std::str::from_utf8_unchecked(&asn[..len as _]) };
-
-        assert_eq!(asn_str, exp);
-    }
-
-    #[test]
-    fn itoa() {
-        check(0, "0");
-        check(1, "1");
-        check(10, "10");
-        check((u32::MAX >> 1) as _, &(u32::MAX >> 1).to_string());
-        check((u32::MAX - 1) as _, &(u32::MAX - 1).to_string());
-        check(u32::MAX as _, &u32::MAX.to_string());
-    }
-}
