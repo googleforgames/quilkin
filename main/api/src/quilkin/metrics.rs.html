@@ -337,65 +337,7 @@
 <a href="#336" id="336">336</a>
 <a href="#337" id="337">337</a>
 <a href="#338" id="338">338</a>
-<a href="#339" id="339">339</a>
-<a href="#340" id="340">340</a>
-<a href="#341" id="341">341</a>
-<a href="#342" id="342">342</a>
-<a href="#343" id="343">343</a>
-<a href="#344" id="344">344</a>
-<a href="#345" id="345">345</a>
-<a href="#346" id="346">346</a>
-<a href="#347" id="347">347</a>
-<a href="#348" id="348">348</a>
-<a href="#349" id="349">349</a>
-<a href="#350" id="350">350</a>
-<a href="#351" id="351">351</a>
-<a href="#352" id="352">352</a>
-<a href="#353" id="353">353</a>
-<a href="#354" id="354">354</a>
-<a href="#355" id="355">355</a>
-<a href="#356" id="356">356</a>
-<a href="#357" id="357">357</a>
-<a href="#358" id="358">358</a>
-<a href="#359" id="359">359</a>
-<a href="#360" id="360">360</a>
-<a href="#361" id="361">361</a>
-<a href="#362" id="362">362</a>
-<a href="#363" id="363">363</a>
-<a href="#364" id="364">364</a>
-<a href="#365" id="365">365</a>
-<a href="#366" id="366">366</a>
-<a href="#367" id="367">367</a>
-<a href="#368" id="368">368</a>
-<a href="#369" id="369">369</a>
-<a href="#370" id="370">370</a>
-<a href="#371" id="371">371</a>
-<a href="#372" id="372">372</a>
-<a href="#373" id="373">373</a>
-<a href="#374" id="374">374</a>
-<a href="#375" id="375">375</a>
-<a href="#376" id="376">376</a>
-<a href="#377" id="377">377</a>
-<a href="#378" id="378">378</a>
-<a href="#379" id="379">379</a>
-<a href="#380" id="380">380</a>
-<a href="#381" id="381">381</a>
-<a href="#382" id="382">382</a>
-<a href="#383" id="383">383</a>
-<a href="#384" id="384">384</a>
-<a href="#385" id="385">385</a>
-<a href="#386" id="386">386</a>
-<a href="#387" id="387">387</a>
-<a href="#388" id="388">388</a>
-<a href="#389" id="389">389</a>
-<a href="#390" id="390">390</a>
-<a href="#391" id="391">391</a>
-<a href="#392" id="392">392</a>
-<a href="#393" id="393">393</a>
-<a href="#394" id="394">394</a>
-<a href="#395" id="395">395</a>
-<a href="#396" id="396">396</a>
-<a href="#397" id="397">397</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#339" id="339">339</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -474,45 +416,14 @@
 }
 
 <span class="kw">pub struct </span>AsnInfo&lt;<span class="lifetime">'a</span>&gt; {
-    <span class="doccomment">/// This is a 32-bit number, but there are only ~90000 asn's worldwide
-    </span>asn: [u8; <span class="number">10</span>],
-    asn_len: u8,
-    prefix: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>str,
-}
-
-<span class="kw">impl </span>AsnInfo&lt;<span class="lifetime">'_</span>&gt; {
-    <span class="attr">#[inline]
-    </span><span class="kw">fn </span>asn_str(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>str {
-        <span class="comment">// SAFETY: we only write ASCII in itoa
-        </span><span class="kw">unsafe </span>{ std::str::from_utf8_unchecked(<span class="kw-2">&amp;</span><span class="self">self</span>.asn[..<span class="self">self</span>.asn_len <span class="kw">as _</span>]) }
-    }
+    <span class="kw">pub </span>asn: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>str,
+    <span class="kw">pub </span>prefix: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>str,
 }
 
 <span class="kw">pub const </span>EMPTY: AsnInfo&lt;<span class="lifetime">'static</span>&gt; = AsnInfo {
-    asn: [<span class="number">0u8</span>; <span class="number">10</span>],
-    asn_len: <span class="number">0</span>,
+    asn: <span class="string">""</span>,
     prefix: <span class="string">""</span>,
 };
-
-<span class="attr">#[inline]
-</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>itoa(<span class="kw-2">mut </span>num: u64, asn: <span class="kw-2">&amp;mut </span>[u8]) -&gt; u8 {
-    <span class="kw">let </span><span class="kw-2">mut </span>index = <span class="number">0</span>;
-
-    <span class="kw">loop </span>{
-        <span class="kw">let </span>rem = (num % <span class="number">10</span>) <span class="kw">as </span>u8;
-        asn[index] = rem + <span class="string">b'0'</span>;
-        index += <span class="number">1</span>;
-        num /= <span class="number">10</span>;
-
-        <span class="kw">if </span>num == <span class="number">0 </span>{
-            <span class="kw">break</span>;
-        }
-    }
-
-    asn[..index].reverse();
-
-    index <span class="kw">as </span>u8
-}
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>MetricsIpNetEntry&gt;&gt; <span class="kw">for </span>AsnInfo&lt;<span class="lifetime">'a</span>&gt; {
     <span class="attr">#[inline]
@@ -521,13 +432,9 @@
             <span class="kw">return </span>EMPTY;
         };
 
-        <span class="kw">let </span><span class="kw-2">mut </span>asn = [<span class="number">0u8</span>; <span class="number">10</span>];
-        <span class="kw">let </span>asn_len = itoa(val.id, <span class="kw-2">&amp;mut </span>asn);
-
         <span class="self">Self </span>{
-            asn,
-            asn_len,
             prefix: val.prefix.as_str(),
+            asn: val.asn.as_str(),
         }
     }
 }
@@ -653,7 +560,7 @@
         .unwrap()
     });
 
-    BYTES_TOTAL.with_label_values(<span class="kw-2">&amp;</span>[direction.label(), asn.asn_str(), asn.prefix])
+    BYTES_TOTAL.with_label_values(<span class="kw-2">&amp;</span>[direction.label(), asn.asn, asn.prefix])
 }
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>errors_total(direction: Direction, display: <span class="kw-2">&amp;</span>str, asn: <span class="kw-2">&amp;</span>AsnInfo) -&gt; IntCounter {
@@ -669,7 +576,7 @@
         .unwrap()
     });
 
-    ERRORS_TOTAL.with_label_values(<span class="kw-2">&amp;</span>[direction.label(), display, asn.asn_str(), asn.prefix])
+    ERRORS_TOTAL.with_label_values(<span class="kw-2">&amp;</span>[direction.label(), display, asn.asn, asn.prefix])
 }
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>packet_jitter(direction: Direction, asn: <span class="kw-2">&amp;</span>AsnInfo) -&gt; IntGauge {
@@ -685,7 +592,7 @@
         .unwrap()
     });
 
-    PACKET_JITTER.with_label_values(<span class="kw-2">&amp;</span>[direction.label(), asn.asn_str(), asn.prefix])
+    PACKET_JITTER.with_label_values(<span class="kw-2">&amp;</span>[direction.label(), asn.asn, asn.prefix])
 }
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>packets_total(direction: Direction, asn: <span class="kw-2">&amp;</span>AsnInfo) -&gt; IntCounter {
@@ -701,7 +608,7 @@
         .unwrap()
     });
 
-    PACKETS_TOTAL.with_label_values(<span class="kw-2">&amp;</span>[direction.label(), asn.asn_str(), asn.prefix])
+    PACKETS_TOTAL.with_label_values(<span class="kw-2">&amp;</span>[direction.label(), asn.asn, asn.prefix])
 }
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>packets_dropped_total(
@@ -721,7 +628,7 @@
         .unwrap()
     });
 
-    PACKETS_DROPPED.with_label_values(<span class="kw-2">&amp;</span>[direction.label(), source, asn.asn_str(), asn.prefix])
+    PACKETS_DROPPED.with_label_values(<span class="kw-2">&amp;</span>[direction.label(), source, asn.asn, asn.prefix])
 }
 
 <span class="doccomment">/// Create a generic metrics options.
@@ -769,27 +676,4 @@
 }
 
 <span class="kw">impl</span>&lt;C: Collector + Clone + <span class="lifetime">'static</span>&gt; CollectorExt <span class="kw">for </span>C {}
-
-<span class="attr">#[cfg(test)]
-</span><span class="kw">mod </span>test {
-    <span class="kw">fn </span>check(num: u64, exp: <span class="kw-2">&amp;</span>str) {
-        <span class="kw">let </span><span class="kw-2">mut </span>asn = [<span class="number">0u8</span>; <span class="number">10</span>];
-        <span class="kw">let </span>len = <span class="kw">super</span>::itoa(num, <span class="kw-2">&amp;mut </span>asn);
-
-        <span class="comment">// SAFETY: itoa only writes ASCII
-        </span><span class="kw">let </span>asn_str = <span class="kw">unsafe </span>{ std::str::from_utf8_unchecked(<span class="kw-2">&amp;</span>asn[..len <span class="kw">as _</span>]) };
-
-        <span class="macro">assert_eq!</span>(asn_str, exp);
-    }
-
-    <span class="attr">#[test]
-    </span><span class="kw">fn </span>itoa() {
-        check(<span class="number">0</span>, <span class="string">"0"</span>);
-        check(<span class="number">1</span>, <span class="string">"1"</span>);
-        check(<span class="number">10</span>, <span class="string">"10"</span>);
-        check((u32::MAX &gt;&gt; <span class="number">1</span>) <span class="kw">as _</span>, <span class="kw-2">&amp;</span>(u32::MAX &gt;&gt; <span class="number">1</span>).to_string());
-        check((u32::MAX - <span class="number">1</span>) <span class="kw">as _</span>, <span class="kw-2">&amp;</span>(u32::MAX - <span class="number">1</span>).to_string());
-        check(u32::MAX <span class="kw">as _</span>, <span class="kw-2">&amp;</span>u32::MAX.to_string());
-    }
-}
 </code></pre></div></section></main></body></html>

@@ -124,7 +124,7 @@
 
     <span class="kw">if let </span><span class="prelude-val">Some</span>(asnfo) = asn {
         <span class="kw">let </span><span class="kw-2">mut </span>asn = [<span class="number">0u8</span>; <span class="number">10</span>];
-        <span class="kw">let </span>len = <span class="kw">crate</span>::metrics::itoa(asnfo.id, <span class="kw-2">&amp;mut </span>asn);
+        <span class="kw">let </span>len = <span class="kw">crate</span>::net::maxmind_db::itoa(asnfo.id, <span class="kw-2">&amp;mut </span>asn);
 
         ACTIVE_SESSIONS.with_label_values(<span class="kw-2">&amp;</span>[
             <span class="comment">// SAFETY: itoa only writes ASCII
