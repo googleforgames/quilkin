@@ -64,7 +64,7 @@ pub struct Proxy {
     #[clap(flatten)]
     pub xdp_opts: XdpOptions,
     #[clap(long = "termination-timeout")]
-    termination_timeout: Option<crate::cli::Timeout>,
+    pub termination_timeout: Option<crate::cli::Timeout>,
 }
 
 impl Default for Proxy {
