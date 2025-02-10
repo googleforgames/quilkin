@@ -115,6 +115,8 @@ pub struct Service {
     tls_key_path: Option<std::path::PathBuf>,
 }
 
+pub type Finalizer = Box<dyn FnOnce(&crate::signal::ShutdownRx) + Send>;
+
 impl Default for Service {
     fn default() -> Self {
         Self {
@@ -240,9 +242,9 @@ impl Service {
             config.id.store(id.into());
         }
 
-        let shutdown_rx = shutdown_rx.clone();
+        let mut shutdown_rx = shutdown_rx.clone();
         let mds_task = self.publish_mds(config)?;
-        let phoenix_task = self.publish_phoenix(config, &shutdown_rx)?;
+        let (phoenix_task, phoenix_finalizer) = self.publish_phoenix(config)?;
         // We need to call this before qcmp since if we use XDP we handle QCMP
         // internally without a separate task
         let (udp_task, finalizer) = self.publish_udp(config)?;
@@ -256,11 +258,18 @@ impl Service {
                 result = qcmp_task => result,
                 result = udp_task => result,
                 result = xds_task => result,
-            };
+                _ = shutdown_rx.changed() => {
+                    if let Some(finalizer) = finalizer {
+                        (finalizer)(&shutdown_rx);
 
-            if let Some(finalizer) = finalizer {
-                (finalizer)(shutdown_rx.clone());
-            }
+                        if let Some(pfin) = phoenix_finalizer {
+                            (pfin)(&shutdown_rx)
+                        }
+                    }
+
+                    Ok(())
+                }
+            };
 
             result
         }))
@@ -270,20 +279,23 @@ impl Service {
     fn publish_phoenix(
         &self,
         config: &Arc<Config>,
-        shutdown_rx: &crate::signal::ShutdownRx,
-    ) -> crate::Result<impl std::future::Future<Output = crate::Result<()>>> {
+    ) -> crate::Result<(
+        impl std::future::Future<Output = crate::Result<()>>,
+        Option<Finalizer>,
+    )> {
         if self.phoenix_enabled {
             tracing::info!(port=%self.qcmp_port, "starting phoenix service");
             let phoenix = crate::net::TcpListener::bind(Some(self.phoenix_port))?;
-            crate::net::phoenix::spawn(
+            let finalizer = crate::net::phoenix::spawn(
                 phoenix,
                 config.clone(),
-                shutdown_rx.clone(),
                 crate::net::phoenix::Phoenix::new(crate::codec::qcmp::QcmpMeasurement::new()?),
-            )?
+            )?;
+
+            return Ok((std::future::pending(), Some(finalizer)));
         }
 
-        Ok(std::future::pending())
+        Ok((std::future::pending(), None))
     }
 
     /// Spawns an QCMP server if enabled, otherwise returns a future which never completes.
@@ -357,10 +369,7 @@ impl Service {
     pub fn publish_udp(
         &mut self,
         config: &Arc<crate::config::Config>,
-    ) -> eyre::Result<(
-        impl Future<Output = crate::Result<()>>,
-        Option<Box<dyn FnOnce(crate::signal::ShutdownRx) + Send>>,
-    )> {
+    ) -> eyre::Result<(impl Future<Output = crate::Result<()>>, Option<Finalizer>)> {
         if !self.udp_enabled && !self.qcmp_enabled {
             return Ok((either::Left(std::future::pending()), None));
         }
@@ -403,10 +412,7 @@ impl Service {
     pub fn spawn_user_space_router(
         &self,
         config: Arc<crate::config::Config>,
-    ) -> crate::Result<(
-        impl Future<Output = crate::Result<()>>,
-        Box<dyn FnOnce(crate::signal::ShutdownRx) + Send>,
-    )> {
+    ) -> crate::Result<(impl Future<Output = crate::Result<()>>, Finalizer)> {
         let socket = crate::net::raw_socket_with_reuse(self.udp_port)?;
         let workers = self.udp_workers.get();
         let buffer_pool = Arc::new(crate::collections::BufferPool::new(workers, 2 * 1024));
@@ -431,7 +437,7 @@ impl Service {
 
         Ok((
             std::future::pending(),
-            Box::from(move |shutdown_rx: crate::signal::ShutdownRx| {
+            Box::from(move |shutdown_rx: &crate::signal::ShutdownRx| {
                 sessions.shutdown(*shutdown_rx.borrow() == crate::signal::ShutdownKind::Normal);
             }),
         ))
@@ -442,7 +448,7 @@ impl Service {
         &self,
         config: Arc<crate::config::Config>,
         force_xdp: bool,
-    ) -> eyre::Result<Box<dyn FnOnce(crate::signal::ShutdownRx) + Send>> {
+    ) -> eyre::Result<Finalizer> {
         use crate::net::xdp;
         use eyre::Context as _;
 
@@ -470,7 +476,7 @@ impl Service {
         .context("failed to setup XDP")?;
 
         let io_loop = xdp::spawn(workers, config).context("failed to spawn XDP I/O loop")?;
-        Ok(Box::new(move |srx: crate::signal::ShutdownRx| {
+        Ok(Box::new(move |srx: &crate::signal::ShutdownRx| {
             io_loop.shutdown(*srx.borrow() == crate::signal::ShutdownKind::Normal);
         }))
     }

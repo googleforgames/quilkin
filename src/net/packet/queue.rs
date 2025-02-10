@@ -38,10 +38,10 @@ impl PacketQueueSender {
         push(&self.notify);
     }
 
-    /// Called to shutdown the consumer side of the sends (ie the io loop that is
-    /// actually dequing and sending packets)
+    /// Called to inform the I/O loop this sender is tied to to still process
+    /// packets, but not to create new sessions
     #[inline]
-    pub(crate) fn shutdown_receiver(&self) {
+    pub(crate) fn disable_new_sessions(&self) {
         shutdown_receiver(&self.notify)
     }
 
@@ -77,9 +77,11 @@ cfg_if::cfg_if! {
             notify.write(1);
         }
 
+        pub(crate) const SHUTDOWN_TOKEN: u64 = 0xdeadbeef;
+
         #[inline]
         fn shutdown_receiver(notify: &PacketQueueNotifier) {
-            notify.write(0xdeadbeef);
+            notify.write(SHUTDOWN_TOKEN);
         }
     } else {
         pub type PacketQueueReceiver = tokio::sync::watch::Receiver<bool>;

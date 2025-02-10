@@ -282,7 +282,7 @@ impl Proxy {
         )
         .port();
 
-        crate::cli::Service::default()
+        let svc_task = crate::cli::Service::default()
             .udp()
             .udp_port(udp_port)
             .xdp(self.xdp)
@@ -301,6 +301,10 @@ impl Proxy {
             .changed()
             .await
             .map_err(|error| eyre::eyre!(error))?;
+
+        if let Ok(Err(error)) = svc_task.await {
+            tracing::error!(%error, "Quilkin proxy services exited with error");
+        }
 
         Ok(())
     }

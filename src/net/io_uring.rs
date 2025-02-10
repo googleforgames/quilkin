@@ -228,6 +228,7 @@ fn process_packet(
     ctx: &mut PacketProcessorCtx,
     packet: RecvPacket,
     last_received_at: &mut Option<UtcTimestamp>,
+    deny_new_sessions: bool,
 ) {
     match ctx {
         PacketProcessorCtx::Router {
@@ -248,7 +249,13 @@ fn process_packet(
                 source: packet.source,
             };
 
-            ds_packet.process(*worker_id, config, sessions, destinations);
+            ds_packet.process(
+                *worker_id,
+                config,
+                sessions,
+                destinations,
+                deny_new_sessions,
+            );
         }
         PacketProcessorCtx::SessionPool { pool, port, .. } => {
             let mut last_received_at = None;
@@ -472,6 +479,7 @@ impl IoUringLoop {
                 loop_ctx.sync();
 
                 let mut last_received_at = None;
+                let mut deny_new_sessions = false;
 
                 // The core io uring loop
                 'io: loop {
@@ -513,24 +521,17 @@ impl IoUringLoop {
                                 }
 
                                 let packet = packet.finalize_recv(ret as usize);
-                                process_packet(&mut ctx, packet, &mut last_received_at);
+                                process_packet(
+                                    &mut ctx,
+                                    packet,
+                                    &mut last_received_at,
+                                    deny_new_sessions,
+                                );
 
                                 loop_ctx.enqueue_recv(buffer_pool.clone().alloc());
                             }
                             Token::PendingsSends => {
-                                if pending_sends_event.val < 0xdeadbeef {
-                                    double_pending_sends = pending_sends.swap(double_pending_sends);
-                                    loop_ctx.push_with_token(
-                                        pending_sends_event.io_uring_entry(),
-                                        Token::PendingsSends,
-                                    );
-
-                                    for pending in
-                                        double_pending_sends.drain(0..double_pending_sends.len())
-                                    {
-                                        loop_ctx.enqueue_send(pending);
-                                    }
-                                } else {
+                                if pending_sends_event.val >= crate::net::queue::SHUTDOWN_TOKEN {
                                     if matches!(ctx, PacketProcessorCtx::Router { .. }) {
                                         tracing::info!(
                                             "downstream io-uring loop shutdown requested"
@@ -538,7 +539,20 @@ impl IoUringLoop {
                                     } else {
                                         tracing::info!("session io-uring loop shutdown requested");
                                     }
-                                    break 'io;
+                                    //break 'io;
+                                    deny_new_sessions = true;
+                                }
+
+                                double_pending_sends = pending_sends.swap(double_pending_sends);
+                                loop_ctx.push_with_token(
+                                    pending_sends_event.io_uring_entry(),
+                                    Token::PendingsSends,
+                                );
+
+                                for pending in
+                                    double_pending_sends.drain(0..double_pending_sends.len())
+                                {
+                                    loop_ctx.enqueue_send(pending);
                                 }
                             }
                             Token::Send { key } => {

@@ -26,8 +26,13 @@ use crate::Config;
 use strum_macros::{Display, EnumString};
 
 pub use self::{
-    agent::Agent, generate_config_schema::GenerateConfigSchema, manage::Manage, proxy::Proxy,
-    qcmp::Qcmp, relay::Relay, service::Service,
+    agent::Agent,
+    generate_config_schema::GenerateConfigSchema,
+    manage::Manage,
+    proxy::Proxy,
+    qcmp::Qcmp,
+    relay::Relay,
+    service::{Finalizer, Service},
 };
 
 macro_rules! define_port {
