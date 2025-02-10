@@ -133,9 +133,12 @@ pub fn setup_xdp_io(config: XdpConfig<'_>) -> Result<XdpWorkers, XdpSetupError> 
         NicConfig::Default => quilkin_xdp::get_default_nic()
             .map_err(NicUnavailable::Query)?
             .ok_or(NicUnavailable::NoAvailableDefault)?,
-        NicConfig::Name(name) => xdp::nic::NicIndex::lookup_by_name(name)
-            .map_err(NicUnavailable::Query)?
-            .ok_or_else(|| NicUnavailable::UnknownName(name.to_owned()))?,
+        NicConfig::Name(name) => {
+            let cname = std::ffi::CString::new(name).unwrap();
+            xdp::nic::NicIndex::lookup_by_name(&cname)
+                .map_err(NicUnavailable::Query)?
+                .ok_or_else(|| NicUnavailable::UnknownName(name.to_owned()))?
+        }
         NicConfig::Index(index) => xdp::nic::NicIndex::new(index),
     };
 
@@ -233,6 +236,8 @@ pub fn setup_xdp_io(config: XdpConfig<'_>) -> Result<XdpWorkers, XdpSetupError> 
         // that doesn't change during the course of operation, but for now just
         // do it at runtime
         tx_metadata: device_caps.tx_metadata.checksum(),
+        #[cfg(debug_assertions)]
+        software_checksum: false,
     }
     .build()?;
 
