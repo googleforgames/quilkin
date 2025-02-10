@@ -113,6 +113,8 @@ pub struct Service {
         conflicts_with("tls_key")
     )]
     tls_key_path: Option<std::path::PathBuf>,
+    #[clap(long = "termination-timeout")]
+    termination_timeout: Option<super::Timeout>,
 }
 
 pub type Finalizer = Box<dyn FnOnce(&crate::signal::ShutdownRx) + Send>;
@@ -137,6 +139,7 @@ impl Default for Service {
             tls_key: None,
             tls_cert_path: None,
             tls_key_path: None,
+            termination_timeout: None,
         }
     }
 }
@@ -216,6 +219,11 @@ impl Service {
             || self.mds_enabled
     }
 
+    pub fn termination_timeout(mut self, timeout: Option<super::Timeout>) -> Self {
+        self.termination_timeout = timeout;
+        self
+    }
+
     fn tls_identity(&self) -> crate::Result<Option<quilkin_xds::server::TlsIdentity>> {
         if let Some((cert, key)) = self.tls_cert.as_ref().zip(self.tls_key.as_ref()) {
             Ok(Some(quilkin_xds::server::TlsIdentity::from_raw(cert, key)))
@@ -247,31 +255,63 @@ impl Service {
         let (phoenix_task, phoenix_finalizer) = self.publish_phoenix(config)?;
         // We need to call this before qcmp since if we use XDP we handle QCMP
         // internally without a separate task
-        let (udp_task, finalizer) = self.publish_udp(config)?;
+        let (udp_task, finalizer, session_pool) = self.publish_udp(config)?;
         let qcmp_task = self.publish_qcmp(&shutdown_rx)?;
         let xds_task = self.publish_xds(config)?;
 
         Ok(tokio::spawn(async move {
-            let result = tokio::select! {
-                result = mds_task => result,
-                result = phoenix_task => result,
-                result = qcmp_task => result,
-                result = udp_task => result,
-                result = xds_task => result,
-                _ = shutdown_rx.changed() => {
-                    if let Some(finalizer) = finalizer {
-                        (finalizer)(&shutdown_rx);
+            tokio::task::spawn(async move {
+                let (task, result) = tokio::select! {
+                    result = mds_task => ("mds", result),
+                    result = phoenix_task => ("phoenix", result),
+                    result = qcmp_task => ("qcmp", result),
+                    result = udp_task => ("udp", result),
+                    result = xds_task => ("xds", result),
+                };
 
-                        if let Some(pfin) = phoenix_finalizer {
-                            (pfin)(&shutdown_rx)
+                if let Err(error) = result {
+                    tracing::error!(task, %error, "service task failed");
+                }
+            });
+
+            shutdown_rx.changed().await?;
+
+            if let Some(finalizer) = finalizer {
+                (finalizer)(&shutdown_rx);
+
+                if let Some(session_pool) = session_pool {
+                    tracing::info!(sessions = %session_pool.sessions().len(), "waiting for active sessions to expire");
+                    let start = std::time::Instant::now();
+
+                    let mut sessions_check =
+                        tokio::time::interval(std::time::Duration::from_millis(100));
+
+                    loop {
+                        sessions_check.tick().await;
+                        let elapsed = start.elapsed();
+                        if let Some(tt) = &self.termination_timeout {
+                            if elapsed > tt.0 {
+                                tracing::info!(
+                                    ?elapsed,
+                                    "termination timeout was reached before all sessions expired"
+                                );
+                                break;
+                            }
+                        }
+
+                        if session_pool.sessions().is_empty() {
+                            tracing::info!(shutdown_duration = ?elapsed, "all sessions expired");
+                            break;
                         }
                     }
-
-                    Ok(())
                 }
-            };
 
-            result
+                if let Some(pfin) = phoenix_finalizer {
+                    (pfin)(&shutdown_rx);
+                }
+            }
+
+            Ok(())
         }))
     }
 
@@ -369,9 +409,13 @@ impl Service {
     pub fn publish_udp(
         &mut self,
         config: &Arc<crate::config::Config>,
-    ) -> eyre::Result<(impl Future<Output = crate::Result<()>>, Option<Finalizer>)> {
+    ) -> eyre::Result<(
+        impl Future<Output = crate::Result<()>>,
+        Option<Finalizer>,
+        Option<Arc<crate::components::proxy::SessionPool>>,
+    )> {
         if !self.udp_enabled && !self.qcmp_enabled {
-            return Ok((either::Left(std::future::pending()), None));
+            return Ok((either::Left(std::future::pending()), None, None));
         }
 
         tracing::info!(port=%self.udp_port, "starting udp service");
@@ -381,7 +425,7 @@ impl Service {
             match self.spawn_xdp(config.clone(), self.xdp.force_xdp) {
                 Ok(xdp) => {
                     self.qcmp_enabled = false;
-                    return Ok((either::Left(std::future::pending()), Some(xdp)));
+                    return Ok((either::Left(std::future::pending()), Some(xdp), None));
                 }
                 Err(err) => {
                     if self.xdp.force_xdp {
@@ -397,11 +441,11 @@ impl Service {
         }
 
         if !self.udp_enabled {
-            return Ok((either::Left(std::future::pending()), None));
+            return Ok((either::Left(std::future::pending()), None, None));
         }
 
         self.spawn_user_space_router(config.clone())
-            .map(|(fut, func)| (either::Right(fut), Some(func)))
+            .map(|(fut, func, sp)| (either::Right(fut), Some(func), Some(sp)))
     }
 
     /// Launches the user space implementation of the packet router using
@@ -412,7 +456,11 @@ impl Service {
     pub fn spawn_user_space_router(
         &self,
         config: Arc<crate::config::Config>,
-    ) -> crate::Result<(impl Future<Output = crate::Result<()>>, Finalizer)> {
+    ) -> crate::Result<(
+        impl Future<Output = crate::Result<()>>,
+        Finalizer,
+        Arc<crate::components::proxy::SessionPool>,
+    )> {
         let socket = crate::net::raw_socket_with_reuse(self.udp_port)?;
         let workers = self.udp_workers.get();
         let buffer_pool = Arc::new(crate::collections::BufferPool::new(workers, 2 * 1024));
@@ -437,9 +485,8 @@ impl Service {
 
         Ok((
             std::future::pending(),
-            Box::from(move |shutdown_rx: &crate::signal::ShutdownRx| {
-                sessions.shutdown(*shutdown_rx.borrow() == crate::signal::ShutdownKind::Normal);
-            }),
+            Box::from(move |_shutdown_rx: &crate::signal::ShutdownRx| {}),
+            sessions,
         ))
     }
 

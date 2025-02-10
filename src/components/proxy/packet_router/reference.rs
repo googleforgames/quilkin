@@ -125,7 +125,6 @@ impl super::DownstreamReceiveWorkerConfig {
                                     &config,
                                     &sessions,
                                     &mut destinations,
-                                    true,
                                 );
                             }
                             Err(error) => {

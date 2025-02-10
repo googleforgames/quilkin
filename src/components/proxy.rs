@@ -73,6 +73,7 @@ pub struct Proxy {
     pub phoenix: crate::net::TcpListener,
     pub notifier: Option<tokio::sync::mpsc::UnboundedSender<String>>,
     pub xdp: crate::cli::proxy::XdpOptions,
+    pub termination_timeout: Option<crate::cli::Timeout>,
 }
 
 impl Default for Proxy {
@@ -91,6 +92,7 @@ impl Default for Proxy {
             phoenix,
             notifier: None,
             xdp: Default::default(),
+            termination_timeout: None,
         }
     }
 }
@@ -290,6 +292,7 @@ impl Proxy {
             .qcmp_port(qcmp_port)
             .phoenix()
             .phoenix_port(phoenix_port)
+            .termination_timeout(self.termination_timeout)
             .spawn_services(&config, &shutdown_rx)?;
 
         tracing::info!("Quilkin is ready");

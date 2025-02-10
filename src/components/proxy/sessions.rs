@@ -56,12 +56,7 @@ cfg_if::cfg_if! {
 /// tracking metrics and other information about the session.
 pub trait SessionManager {
     type Packet: crate::filters::Packet;
-    fn send(
-        &self,
-        key: SessionKey,
-        contents: &Self::Packet,
-        deny_new_sessions: bool,
-    ) -> Result<(), super::PipelineError>;
+    fn send(&self, key: SessionKey, contents: &Self::Packet) -> Result<(), super::PipelineError>;
 }
 
 #[derive(PartialEq, Eq, Hash)]
@@ -69,7 +64,6 @@ pub enum SessionError {
     SocketAddressUnavailable,
     MissingAllocatedSocket,
     MissingDestinationSocket,
-    NewSessionsDisallowed,
 }
 
 impl std::error::Error for SessionError {}
@@ -86,7 +80,6 @@ impl fmt::Display for SessionError {
             Self::MissingDestinationSocket => {
                 f.write_str("couldn't obtain any socket for destination, should be unreachable")
             }
-            Self::NewSessionsDisallowed => f.write_str("new sessions will no longer be created"),
         }
     }
 }
@@ -238,7 +231,6 @@ impl SessionPool {
     pub(crate) fn get<'pool>(
         self: &'pool Arc<Self>,
         key @ SessionKey { dest, .. }: SessionKey,
-        deny_new_sessions: bool,
     ) -> Result<(Option<MetricsIpNetEntry>, PacketQueueSender), super::PipelineError> {
         tracing::trace!(source=%key.source, dest=%key.dest, "SessionPool::get");
         // If we already have a session for the key pairing, return that session.
@@ -247,12 +239,6 @@ impl SessionPool {
             return Ok((
                 entry.asn_info.as_ref().map(MetricsIpNetEntry::from),
                 entry.pending_sends.clone(),
-            ));
-        }
-
-        if deny_new_sessions {
-            return Err(super::PipelineError::Session(
-                SessionError::NewSessionsDisallowed,
             ));
         }
 
@@ -386,9 +372,8 @@ impl SessionPool {
         self: &Arc<Self>,
         key: SessionKey,
         packet: FrozenPoolBuffer,
-        deny_new_sessions: bool,
     ) -> Result<(), super::PipelineError> {
-        self.send_inner(key, packet, deny_new_sessions)?;
+        self.send_inner(key, packet)?;
         Ok(())
     }
 
@@ -397,9 +382,8 @@ impl SessionPool {
         self: &Arc<Self>,
         key: SessionKey,
         packet: FrozenPoolBuffer,
-        deny_new_sessions: bool,
     ) -> Result<PacketQueueSender, super::PipelineError> {
-        let (asn_info, sender) = self.get(key, deny_new_sessions)?;
+        let (asn_info, sender) = self.get(key)?;
 
         sender.push(SendPacket {
             destination: key.dest.into(),
@@ -464,39 +448,13 @@ impl SessionPool {
         storage.destination_to_sources.remove(&(*dest, port));
         tracing::trace!("socket released");
     }
-
-    /// Closes all active sessions, and all downstream listeners
-    pub(crate) fn shutdown(self: Arc<Self>, wait: bool) {
-        // Disable downstream listeners first so new sessions aren't spawned while
-        // we are trying to reap the active sessions
-        for downstream_listener in &self.downstream_sends {
-            downstream_listener.disable_new_sessions();
-        }
-
-        if wait && !self.session_map.is_empty() {
-            tracing::info!(sessions=%self.session_map.len(), "waiting for active sessions to expire");
-
-            let start = std::time::Instant::now();
-            const SLEEP: std::time::Duration = std::time::Duration::from_millis(100);
-            while !self.session_map.is_empty() {
-                std::thread::sleep(SLEEP);
-            }
-
-            tracing::info!(shutdown_duration = ?start.elapsed(), "all sessions expired");
-        }
-    }
 }
 
 impl SessionManager for Arc<SessionPool> {
     type Packet = FrozenPoolBuffer;
 
-    fn send(
-        &self,
-        key: SessionKey,
-        contents: &Self::Packet,
-        deny_new_sessions: bool,
-    ) -> Result<(), super::PipelineError> {
-        SessionPool::send(self, key, contents.clone(), deny_new_sessions)
+    fn send(&self, key: SessionKey, contents: &Self::Packet) -> Result<(), super::PipelineError> {
+        SessionPool::send(self, key, contents.clone())
     }
 }
 
@@ -631,7 +589,7 @@ mod tests {
         )
             .into();
 
-        let _session = pool.get(key, false).unwrap();
+        let _session = pool.get(key).unwrap();
 
         assert!(pool.drop_session(key).await);
 
@@ -652,8 +610,8 @@ mod tests {
         )
             .into();
 
-        let _session1 = pool.get(key1, false).unwrap();
-        let _session2 = pool.get(key2, false).unwrap();
+        let _session1 = pool.get(key1).unwrap();
+        let _session2 = pool.get(key2).unwrap();
 
         assert!(pool.drop_session(key1).await);
         assert!(!pool.has_no_allocated_sockets());
@@ -677,8 +635,8 @@ mod tests {
         )
             .into();
 
-        let _socket1 = pool.get(key1, false).unwrap();
-        let _socket2 = pool.get(key2, false).unwrap();
+        let _socket1 = pool.get(key1).unwrap();
+        let _socket2 = pool.get(key2).unwrap();
         assert_ne!(
             pool.session_map.get(&key1).unwrap().socket_port,
             pool.session_map.get(&key2).unwrap().socket_port
@@ -702,8 +660,8 @@ mod tests {
         )
             .into();
 
-        let _socket1 = pool.get(key1, false).unwrap();
-        let _socket2 = pool.get(key2, false).unwrap();
+        let _socket1 = pool.get(key1).unwrap();
+        let _socket2 = pool.get(key2).unwrap();
 
         assert_eq!(
             pool.session_map.get(&key1).unwrap().socket_port,
@@ -725,13 +683,13 @@ mod tests {
         )
             .into();
 
-        let socket1 = pool.get(key1, false).unwrap();
+        let socket1 = pool.get(key1).unwrap();
 
         let task = tokio::spawn(async move {
             let _ = socket1;
         });
 
-        let _socket2 = pool.get(key2, false).unwrap();
+        let _socket2 = pool.get(key2).unwrap();
 
         task.await.unwrap();
     }
@@ -750,13 +708,13 @@ mod tests {
         )
             .into();
 
-        let socket1 = pool.get(key1, false).unwrap();
+        let socket1 = pool.get(key1).unwrap();
 
         let task = tokio::spawn(async move {
             let _ = socket1;
         });
 
-        let _socket2 = pool.get(key2, false).unwrap();
+        let _socket2 = pool.get(key2).unwrap();
 
         task.await.unwrap();
     }
@@ -777,9 +735,7 @@ mod tests {
         let key: SessionKey = (source, dest).into();
         let msg = b"helloworld";
 
-        let pending = pool
-            .send_inner(key, alloc_buffer(msg).freeze(), false)
-            .unwrap();
+        let pending = pool.send_inner(key, alloc_buffer(msg).freeze()).unwrap();
         let pending = pending.swap(Vec::new());
 
         assert_eq!(msg, &*pending[0].data);

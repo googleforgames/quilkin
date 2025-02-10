@@ -73,7 +73,6 @@ impl<P: PacketMut> DownstreamPacket<P> {
         config: &Arc<Config>,
         sessions: &S,
         destinations: &mut Vec<crate::net::EndpointAddress>,
-        deny_new_sessions: bool,
     ) {
         tracing::trace!(
             id = worker_id,
@@ -83,7 +82,7 @@ impl<P: PacketMut> DownstreamPacket<P> {
         );
 
         let timer = metrics::processing_time(metrics::READ).start_timer();
-        if let Err(error) = self.process_inner(config, sessions, destinations, deny_new_sessions) {
+        if let Err(error) = self.process_inner(config, sessions, destinations) {
             let discriminant = error.discriminant();
 
             error.inc_system_errors_total(metrics::READ, &metrics::EMPTY);
@@ -100,7 +99,6 @@ impl<P: PacketMut> DownstreamPacket<P> {
         config: &Arc<Config>,
         sessions: &S,
         destinations: &mut Vec<crate::net::EndpointAddress>,
-        deny_new_sessions: bool,
     ) -> Result<(), PipelineError> {
         if !config.clusters.read().has_endpoints() {
             tracing::trace!("no upstream endpoints");
@@ -125,7 +123,7 @@ impl<P: PacketMut> DownstreamPacket<P> {
                 dest: epa.to_socket_addr()?,
             };
 
-            sessions.send(session_key, &contents, deny_new_sessions)?;
+            sessions.send(session_key, &contents)?;
         }
 
         Ok(())

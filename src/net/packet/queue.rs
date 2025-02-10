@@ -38,13 +38,6 @@ impl PacketQueueSender {
         push(&self.notify);
     }
 
-    /// Called to inform the I/O loop this sender is tied to to still process
-    /// packets, but not to create new sessions
-    #[inline]
-    pub(crate) fn disable_new_sessions(&self) {
-        shutdown_receiver(&self.notify)
-    }
-
     /// Swaps the current queue with an empty one so we only lock for a pointer swap
     #[inline]
     pub(crate) fn swap(&self, mut swap: Vec<SendPacket>) -> Vec<SendPacket> {
@@ -75,13 +68,6 @@ cfg_if::cfg_if! {
         #[inline]
         fn push(notify: &PacketQueueNotifier) {
             notify.write(1);
-        }
-
-        pub(crate) const SHUTDOWN_TOKEN: u64 = 0xdeadbeef;
-
-        #[inline]
-        fn shutdown_receiver(notify: &PacketQueueNotifier) {
-            notify.write(SHUTDOWN_TOKEN);
         }
     } else {
         pub type PacketQueueReceiver = tokio::sync::watch::Receiver<bool>;

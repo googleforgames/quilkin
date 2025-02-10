@@ -341,3 +341,38 @@ impl Cli {
         }
     }
 }
+
+#[derive(Debug, Copy, Clone)]
+pub struct Timeout(std::time::Duration);
+
+impl std::str::FromStr for Timeout {
+    type Err = clap::Error;
+
+    fn from_str(src: &str) -> Result<Self, Self::Err> {
+        let suffix_pos = src.find(char::is_alphabetic).unwrap_or(src.len());
+
+        let num: u64 = src[..suffix_pos]
+            .parse()
+            .map_err(|err| clap::Error::raw(clap::error::ErrorKind::ValueValidation, err))?;
+        let suffix = if suffix_pos == src.len() {
+            "s"
+        } else {
+            &src[suffix_pos..]
+        };
+
+        let seconds = match suffix {
+            "s" | "S" => num,
+            "m" | "M" => num * 60,
+            "h" | "H" => num * 60 * 60,
+            "d" | "D" => num * 60 * 60 * 24,
+            s => {
+                return Err(clap::Error::raw(
+                    clap::error::ErrorKind::ValueValidation,
+                    format!("unknown duration suffix '{s}'"),
+                ))
+            }
+        };
+
+        Ok(Self(std::time::Duration::from_secs(seconds)))
+    }
+}
