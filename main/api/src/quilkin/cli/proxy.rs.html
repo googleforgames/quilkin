@@ -145,7 +145,11 @@
 <a href="#144" id="144">144</a>
 <a href="#145" id="145">145</a>
 <a href="#146" id="146">146</a>
-<a href="#147" id="147">147</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -210,6 +214,8 @@
     </span><span class="kw">pub </span>workers: <span class="prelude-ty">Option</span>&lt;std::num::NonZeroUsize&gt;,
     <span class="attr">#[clap(flatten)]
     </span><span class="kw">pub </span>xdp_opts: XdpOptions,
+    <span class="attr">#[clap(long = <span class="string">"termination-timeout"</span>)]
+    </span><span class="kw">pub </span>termination_timeout: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::cli::Timeout&gt;,
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>Proxy {
@@ -224,6 +230,7 @@
             idle_request_interval_secs: <span class="prelude-val">None</span>,
             workers: <span class="prelude-val">None</span>,
             xdp_opts: Default::default(),
+            termination_timeout: <span class="prelude-val">None</span>,
         }
     }
 }
@@ -280,6 +287,7 @@
             phoenix,
             notifier: <span class="prelude-val">None</span>,
             xdp: <span class="self">self</span>.xdp_opts,
+            termination_timeout: <span class="self">self</span>.termination_timeout,
         }
         .run(
             <span class="kw">crate</span>::components::RunArgs {

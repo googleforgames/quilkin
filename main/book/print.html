@@ -198,8 +198,8 @@ proxy. To see a basic usage of the command-line interface run through the
 for deploying quilkin for your game network.</li>
 </ul>
 <pre><code class="language-shell">$ quilkin --help
-{"timestamp":"2025-02-11T08:23:01.475647Z","level":"INFO","fields":{"message":"Starting Quilkin","version":"0.10.0-dev","commit":"b2c0c1bdf50cbc296c86a5834b210cf694801497"},"target":"quilkin::cli","filename":"src/cli.rs","threadId":"ThreadId(1)"}
-{"timestamp":"2025-02-11T08:23:01.475786Z","level":"ERROR","fields":{"message":"fatal error","error":"no service specified, shutting down","error_debug":"no service specified, shutting down"},"target":"quilkin","filename":"src/main.rs","threadId":"ThreadId(1)"}
+{"timestamp":"2025-02-11T08:40:19.303336Z","level":"INFO","fields":{"message":"Starting Quilkin","version":"0.10.0-dev","commit":"6d75481d9de4ff265ea1aae2babe013acadc169a"},"target":"quilkin::cli","filename":"src/cli.rs","threadId":"ThreadId(1)"}
+{"timestamp":"2025-02-11T08:40:19.303477Z","level":"ERROR","fields":{"message":"fatal error","error":"no service specified, shutting down","error_debug":"no service specified, shutting down"},"target":"quilkin","filename":"src/main.rs","threadId":"ThreadId(1)"}
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="installation"><a class="header" href="#installation">Installation</a></h1>
 <p>There are variety of automated and manual methods for installing Quilkin onto
@@ -211,7 +211,7 @@ your local machine through <a href="installation.html#cargo">Cargo</a>.</p>
 <dl>
   <dt><strong>Source / Method</strong></dt>
   <dd>
-<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.10.0-dev-b2c0c1b
+<pre><code>us-docker.pkg.dev/quilkin/release/quilkin:0.10.0-dev-6d75481
 </code></pre>
   </dd>
   <dt><strong>Notes</strong></dt>
@@ -1003,6 +1003,9 @@ Options:
           If not specified, this defaults to 4MiB (2k allocated packets of 2k each at a time) per NIC queue, ie 128MiB on a 32 queue NIC
           
           [env: QUILKIN_SERVICE_UDP_XDP_MEMORY_LIMIT=]
+
+      --termination-timeout &lt;TERMINATION_TIMEOUT&gt;
+          
 
   -h, --help
           Print help (see a summary with '-h')

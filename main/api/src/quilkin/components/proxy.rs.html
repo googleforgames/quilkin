@@ -305,7 +305,14 @@
 <a href="#304" id="304">304</a>
 <a href="#305" id="305">305</a>
 <a href="#306" id="306">306</a>
-<a href="#307" id="307">307</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -380,6 +387,7 @@
     <span class="kw">pub </span>phoenix: <span class="kw">crate</span>::net::TcpListener,
     <span class="kw">pub </span>notifier: <span class="prelude-ty">Option</span>&lt;tokio::sync::mpsc::UnboundedSender&lt;String&gt;&gt;,
     <span class="kw">pub </span>xdp: <span class="kw">crate</span>::cli::proxy::XdpOptions,
+    <span class="kw">pub </span>termination_timeout: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::cli::Timeout&gt;,
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>Proxy {
@@ -398,6 +406,7 @@
             phoenix,
             notifier: <span class="prelude-val">None</span>,
             xdp: Default::default(),
+            termination_timeout: <span class="prelude-val">None</span>,
         }
     }
 }
@@ -589,7 +598,7 @@
         )
         .port();
 
-        <span class="kw">crate</span>::cli::Service::default()
+        <span class="kw">let </span>svc_task = <span class="kw">crate</span>::cli::Service::default()
             .udp()
             .udp_port(udp_port)
             .xdp(<span class="self">self</span>.xdp)
@@ -597,6 +606,7 @@
             .qcmp_port(qcmp_port)
             .phoenix()
             .phoenix_port(phoenix_port)
+            .termination_timeout(<span class="self">self</span>.termination_timeout)
             .spawn_services(<span class="kw-2">&amp;</span>config, <span class="kw-2">&amp;</span>shutdown_rx)<span class="question-mark">?</span>;
 
         <span class="macro">tracing::info!</span>(<span class="string">"Quilkin is ready"</span>);
@@ -608,6 +618,10 @@
             .changed()
             .<span class="kw">await
             </span>.map_err(|error| <span class="macro">eyre::eyre!</span>(error))<span class="question-mark">?</span>;
+
+        <span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Err</span>(error)) = svc_task.<span class="kw">await </span>{
+            <span class="macro">tracing::error!</span>(%error, <span class="string">"Quilkin proxy services exited with error"</span>);
+        }
 
         <span class="prelude-val">Ok</span>(())
     }

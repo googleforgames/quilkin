@@ -741,21 +741,7 @@
 <a href="#740" id="740">740</a>
 <a href="#741" id="741">741</a>
 <a href="#742" id="742">742</a>
-<a href="#743" id="743">743</a>
-<a href="#744" id="744">744</a>
-<a href="#745" id="745">745</a>
-<a href="#746" id="746">746</a>
-<a href="#747" id="747">747</a>
-<a href="#748" id="748">748</a>
-<a href="#749" id="749">749</a>
-<a href="#750" id="750">750</a>
-<a href="#751" id="751">751</a>
-<a href="#752" id="752">752</a>
-<a href="#753" id="753">753</a>
-<a href="#754" id="754">754</a>
-<a href="#755" id="755">755</a>
-<a href="#756" id="756">756</a>
-<a href="#757" id="757">757</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#743" id="743">743</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -1204,20 +1190,6 @@
         </span>storage.sources_to_asn_info.remove(source);
         storage.destination_to_sources.remove(<span class="kw-2">&amp;</span>(<span class="kw-2">*</span>dest, port));
         <span class="macro">tracing::trace!</span>(<span class="string">"socket released"</span>);
-    }
-
-    <span class="doccomment">/// Closes all active sessions, and all downstream listeners
-    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>shutdown(<span class="self">self</span>: Arc&lt;<span class="self">Self</span>&gt;, wait: bool) {
-        <span class="comment">// Disable downstream listeners first so sessions aren't spawned while
-        // we are trying to reap the active sessions
-        </span><span class="kw">for </span>downstream_listener <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.downstream_sends {
-            downstream_listener.shutdown_receiver();
-        }
-
-        <span class="kw">if </span>wait &amp;&amp; !<span class="self">self</span>.session_map.is_empty() {
-            <span class="macro">tracing::info!</span>(sessions=%<span class="self">self</span>.session_map.len(), <span class="string">"waiting for active sessions to expire"</span>);
-            <span class="self">self</span>.session_map.clear();
-        }
     }
 }
 

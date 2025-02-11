@@ -533,7 +533,60 @@
 <a href="#532" id="532">532</a>
 <a href="#533" id="533">533</a>
 <a href="#534" id="534">534</a>
-<a href="#535" id="535">535</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::{future::Future, sync::Arc};
+<a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a>
+<a href="#543" id="543">543</a>
+<a href="#544" id="544">544</a>
+<a href="#545" id="545">545</a>
+<a href="#546" id="546">546</a>
+<a href="#547" id="547">547</a>
+<a href="#548" id="548">548</a>
+<a href="#549" id="549">549</a>
+<a href="#550" id="550">550</a>
+<a href="#551" id="551">551</a>
+<a href="#552" id="552">552</a>
+<a href="#553" id="553">553</a>
+<a href="#554" id="554">554</a>
+<a href="#555" id="555">555</a>
+<a href="#556" id="556">556</a>
+<a href="#557" id="557">557</a>
+<a href="#558" id="558">558</a>
+<a href="#559" id="559">559</a>
+<a href="#560" id="560">560</a>
+<a href="#561" id="561">561</a>
+<a href="#562" id="562">562</a>
+<a href="#563" id="563">563</a>
+<a href="#564" id="564">564</a>
+<a href="#565" id="565">565</a>
+<a href="#566" id="566">566</a>
+<a href="#567" id="567">567</a>
+<a href="#568" id="568">568</a>
+<a href="#569" id="569">569</a>
+<a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a>
+<a href="#574" id="574">574</a>
+<a href="#575" id="575">575</a>
+<a href="#576" id="576">576</a>
+<a href="#577" id="577">577</a>
+<a href="#578" id="578">578</a>
+<a href="#579" id="579">579</a>
+<a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
+<a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::{future::Future, sync::Arc};
 
 <span class="kw">use crate</span>::{components::proxy::SessionPool, config::Config};
 
@@ -648,7 +701,11 @@
         conflicts_with(<span class="string">"tls_key"</span>)
     )]
     </span>tls_key_path: <span class="prelude-ty">Option</span>&lt;std::path::PathBuf&gt;,
+    <span class="attr">#[clap(long = <span class="string">"termination-timeout"</span>)]
+    </span>termination_timeout: <span class="prelude-ty">Option</span>&lt;<span class="kw">super</span>::Timeout&gt;,
 }
+
+<span class="kw">pub type </span>Finalizer = Box&lt;<span class="kw">dyn </span>FnOnce(<span class="kw-2">&amp;</span><span class="kw">crate</span>::signal::ShutdownRx) + Send&gt;;
 
 <span class="kw">impl </span>Default <span class="kw">for </span>Service {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
@@ -670,6 +727,7 @@
             tls_key: <span class="prelude-val">None</span>,
             tls_cert_path: <span class="prelude-val">None</span>,
             tls_key_path: <span class="prelude-val">None</span>,
+            termination_timeout: <span class="prelude-val">None</span>,
         }
     }
 }
@@ -749,6 +807,11 @@
             || <span class="self">self</span>.mds_enabled
     }
 
+    <span class="kw">pub fn </span>termination_timeout(<span class="kw-2">mut </span><span class="self">self</span>, timeout: <span class="prelude-ty">Option</span>&lt;<span class="kw">super</span>::Timeout&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">self</span>.termination_timeout = timeout;
+        <span class="self">self
+    </span>}
+
     <span class="kw">fn </span>tls_identity(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">crate</span>::Result&lt;<span class="prelude-ty">Option</span>&lt;quilkin_xds::server::TlsIdentity&gt;&gt; {
         <span class="kw">if let </span><span class="prelude-val">Some</span>((cert, key)) = <span class="self">self</span>.tls_cert.as_ref().zip(<span class="self">self</span>.tls_key.as_ref()) {
             <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(quilkin_xds::server::TlsIdentity::from_raw(cert, key)))
@@ -775,29 +838,68 @@
             config.id.store(id.into());
         }
 
-        <span class="kw">let </span>shutdown_rx = shutdown_rx.clone();
+        <span class="kw">let </span><span class="kw-2">mut </span>shutdown_rx = shutdown_rx.clone();
         <span class="kw">let </span>mds_task = <span class="self">self</span>.publish_mds(config)<span class="question-mark">?</span>;
-        <span class="kw">let </span>phoenix_task = <span class="self">self</span>.publish_phoenix(config, <span class="kw-2">&amp;</span>shutdown_rx)<span class="question-mark">?</span>;
+        <span class="kw">let </span>(phoenix_task, phoenix_finalizer) = <span class="self">self</span>.publish_phoenix(config)<span class="question-mark">?</span>;
         <span class="comment">// We need to call this before qcmp since if we use XDP we handle QCMP
         // internally without a separate task
-        </span><span class="kw">let </span>(udp_task, finalizer) = <span class="self">self</span>.publish_udp(config)<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>(udp_task, finalizer, session_pool) = <span class="self">self</span>.publish_udp(config)<span class="question-mark">?</span>;
         <span class="kw">let </span>qcmp_task = <span class="self">self</span>.publish_qcmp(<span class="kw-2">&amp;</span>shutdown_rx)<span class="question-mark">?</span>;
         <span class="kw">let </span>xds_task = <span class="self">self</span>.publish_xds(config)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(tokio::spawn(<span class="kw">async move </span>{
-            <span class="kw">let </span>result = <span class="macro">tokio::select!</span> {
-                result = mds_task =&gt; result,
-                result = phoenix_task =&gt; result,
-                result = qcmp_task =&gt; result,
-                result = udp_task =&gt; result,
-                result = xds_task =&gt; result,
-            };
+            tokio::task::spawn(<span class="kw">async move </span>{
+                <span class="kw">let </span>(task, result) = <span class="macro">tokio::select!</span> {
+                    result = mds_task =&gt; (<span class="string">"mds"</span>, result),
+                    result = phoenix_task =&gt; (<span class="string">"phoenix"</span>, result),
+                    result = qcmp_task =&gt; (<span class="string">"qcmp"</span>, result),
+                    result = udp_task =&gt; (<span class="string">"udp"</span>, result),
+                    result = xds_task =&gt; (<span class="string">"xds"</span>, result),
+                };
+
+                <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = result {
+                    <span class="macro">tracing::error!</span>(task, %error, <span class="string">"service task failed"</span>);
+                }
+            });
+
+            shutdown_rx.changed().<span class="kw">await</span><span class="question-mark">?</span>;
 
             <span class="kw">if let </span><span class="prelude-val">Some</span>(finalizer) = finalizer {
-                (finalizer)(shutdown_rx.clone());
+                (finalizer)(<span class="kw-2">&amp;</span>shutdown_rx);
+
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(session_pool) = session_pool {
+                    <span class="macro">tracing::info!</span>(sessions = %session_pool.sessions().len(), <span class="string">"waiting for active sessions to expire"</span>);
+                    <span class="kw">let </span>start = std::time::Instant::now();
+
+                    <span class="kw">let </span><span class="kw-2">mut </span>sessions_check =
+                        tokio::time::interval(std::time::Duration::from_millis(<span class="number">100</span>));
+
+                    <span class="kw">loop </span>{
+                        sessions_check.tick().<span class="kw">await</span>;
+                        <span class="kw">let </span>elapsed = start.elapsed();
+                        <span class="kw">if let </span><span class="prelude-val">Some</span>(tt) = <span class="kw-2">&amp;</span><span class="self">self</span>.termination_timeout {
+                            <span class="kw">if </span>elapsed &gt; tt.<span class="number">0 </span>{
+                                <span class="macro">tracing::info!</span>(
+                                    <span class="question-mark">?</span>elapsed,
+                                    <span class="string">"termination timeout was reached before all sessions expired"
+                                </span>);
+                                <span class="kw">break</span>;
+                            }
+                        }
+
+                        <span class="kw">if </span>session_pool.sessions().is_empty() {
+                            <span class="macro">tracing::info!</span>(shutdown_duration = <span class="question-mark">?</span>elapsed, <span class="string">"all sessions expired"</span>);
+                            <span class="kw">break</span>;
+                        }
+                    }
+                }
+
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(pfin) = phoenix_finalizer {
+                    (pfin)(<span class="kw-2">&amp;</span>shutdown_rx);
+                }
             }
 
-            result
+            <span class="prelude-val">Ok</span>(())
         }))
     }
 
@@ -805,20 +907,23 @@
     </span><span class="kw">fn </span>publish_phoenix(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         config: <span class="kw-2">&amp;</span>Arc&lt;Config&gt;,
-        shutdown_rx: <span class="kw-2">&amp;</span><span class="kw">crate</span>::signal::ShutdownRx,
-    ) -&gt; <span class="kw">crate</span>::Result&lt;<span class="kw">impl </span>std::future::Future&lt;Output = <span class="kw">crate</span>::Result&lt;()&gt;&gt;&gt; {
+    ) -&gt; <span class="kw">crate</span>::Result&lt;(
+        <span class="kw">impl </span>std::future::Future&lt;Output = <span class="kw">crate</span>::Result&lt;()&gt;&gt;,
+        <span class="prelude-ty">Option</span>&lt;Finalizer&gt;,
+    )&gt; {
         <span class="kw">if </span><span class="self">self</span>.phoenix_enabled {
             <span class="macro">tracing::info!</span>(port=%<span class="self">self</span>.qcmp_port, <span class="string">"starting phoenix service"</span>);
             <span class="kw">let </span>phoenix = <span class="kw">crate</span>::net::TcpListener::bind(<span class="prelude-val">Some</span>(<span class="self">self</span>.phoenix_port))<span class="question-mark">?</span>;
-            <span class="kw">crate</span>::net::phoenix::spawn(
+            <span class="kw">let </span>finalizer = <span class="kw">crate</span>::net::phoenix::spawn(
                 phoenix,
                 config.clone(),
-                shutdown_rx.clone(),
                 <span class="kw">crate</span>::net::phoenix::Phoenix::new(<span class="kw">crate</span>::codec::qcmp::QcmpMeasurement::new()<span class="question-mark">?</span>),
-            )<span class="question-mark">?
-        </span>}
+            )<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(std::future::pending())
+            <span class="kw">return </span><span class="prelude-val">Ok</span>((std::future::pending(), <span class="prelude-val">Some</span>(finalizer)));
+        }
+
+        <span class="prelude-val">Ok</span>((std::future::pending(), <span class="prelude-val">None</span>))
     }
 
     <span class="doccomment">/// Spawns an QCMP server if enabled, otherwise returns a future which never completes.
@@ -894,10 +999,11 @@
         config: <span class="kw-2">&amp;</span>Arc&lt;<span class="kw">crate</span>::config::Config&gt;,
     ) -&gt; eyre::Result&lt;(
         <span class="kw">impl </span>Future&lt;Output = <span class="kw">crate</span>::Result&lt;()&gt;&gt;,
-        <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>FnOnce(<span class="kw">crate</span>::signal::ShutdownRx) + Send&gt;&gt;,
+        <span class="prelude-ty">Option</span>&lt;Finalizer&gt;,
+        <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">crate</span>::components::proxy::SessionPool&gt;&gt;,
     )&gt; {
         <span class="kw">if </span>!<span class="self">self</span>.udp_enabled &amp;&amp; !<span class="self">self</span>.qcmp_enabled {
-            <span class="kw">return </span><span class="prelude-val">Ok</span>((either::Left(std::future::pending()), <span class="prelude-val">None</span>));
+            <span class="kw">return </span><span class="prelude-val">Ok</span>((either::Left(std::future::pending()), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>));
         }
 
         <span class="macro">tracing::info!</span>(port=%<span class="self">self</span>.udp_port, <span class="string">"starting udp service"</span>);
@@ -907,7 +1013,7 @@
             <span class="kw">match </span><span class="self">self</span>.spawn_xdp(config.clone(), <span class="self">self</span>.xdp.force_xdp) {
                 <span class="prelude-val">Ok</span>(xdp) =&gt; {
                     <span class="self">self</span>.qcmp_enabled = <span class="bool-val">false</span>;
-                    <span class="kw">return </span><span class="prelude-val">Ok</span>((either::Left(std::future::pending()), <span class="prelude-val">Some</span>(xdp)));
+                    <span class="kw">return </span><span class="prelude-val">Ok</span>((either::Left(std::future::pending()), <span class="prelude-val">Some</span>(xdp), <span class="prelude-val">None</span>));
                 }
                 <span class="prelude-val">Err</span>(err) =&gt; {
                     <span class="kw">if </span><span class="self">self</span>.xdp.force_xdp {
@@ -923,11 +1029,11 @@
         }
 
         <span class="kw">if </span>!<span class="self">self</span>.udp_enabled {
-            <span class="kw">return </span><span class="prelude-val">Ok</span>((either::Left(std::future::pending()), <span class="prelude-val">None</span>));
+            <span class="kw">return </span><span class="prelude-val">Ok</span>((either::Left(std::future::pending()), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>));
         }
 
         <span class="self">self</span>.spawn_user_space_router(config.clone())
-            .map(|(fut, func)| (either::Right(fut), <span class="prelude-val">Some</span>(func)))
+            .map(|(fut, func, sp)| (either::Right(fut), <span class="prelude-val">Some</span>(func), <span class="prelude-val">Some</span>(sp)))
     }
 
     <span class="doccomment">/// Launches the user space implementation of the packet router using
@@ -940,7 +1046,8 @@
         config: Arc&lt;<span class="kw">crate</span>::config::Config&gt;,
     ) -&gt; <span class="kw">crate</span>::Result&lt;(
         <span class="kw">impl </span>Future&lt;Output = <span class="kw">crate</span>::Result&lt;()&gt;&gt;,
-        Box&lt;<span class="kw">dyn </span>FnOnce(<span class="kw">crate</span>::signal::ShutdownRx) + Send&gt;,
+        Finalizer,
+        Arc&lt;<span class="kw">crate</span>::components::proxy::SessionPool&gt;,
     )&gt; {
         <span class="kw">let </span>socket = <span class="kw">crate</span>::net::raw_socket_with_reuse(<span class="self">self</span>.udp_port)<span class="question-mark">?</span>;
         <span class="kw">let </span>workers = <span class="self">self</span>.udp_workers.get();
@@ -966,9 +1073,8 @@
 
         <span class="prelude-val">Ok</span>((
             std::future::pending(),
-            Box::from(<span class="kw">move </span>|shutdown_rx: <span class="kw">crate</span>::signal::ShutdownRx| {
-                sessions.shutdown(<span class="kw-2">*</span>shutdown_rx.borrow() == <span class="kw">crate</span>::signal::ShutdownKind::Normal);
-            }),
+            Box::from(<span class="kw">move </span>|_shutdown_rx: <span class="kw-2">&amp;</span><span class="kw">crate</span>::signal::ShutdownRx| {}),
+            sessions,
         ))
     }
 
@@ -977,7 +1083,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         config: Arc&lt;<span class="kw">crate</span>::config::Config&gt;,
         force_xdp: bool,
-    ) -&gt; eyre::Result&lt;Box&lt;<span class="kw">dyn </span>FnOnce(<span class="kw">crate</span>::signal::ShutdownRx) + Send&gt;&gt; {
+    ) -&gt; eyre::Result&lt;Finalizer&gt; {
         <span class="kw">use </span><span class="kw">crate</span>::net::xdp;
         <span class="kw">use </span>eyre::Context <span class="kw">as _</span>;
 
@@ -1005,7 +1111,7 @@
         .context(<span class="string">"failed to setup XDP"</span>)<span class="question-mark">?</span>;
 
         <span class="kw">let </span>io_loop = xdp::spawn(workers, config).context(<span class="string">"failed to spawn XDP I/O loop"</span>)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(Box::new(<span class="kw">move </span>|srx: <span class="kw">crate</span>::signal::ShutdownRx| {
+        <span class="prelude-val">Ok</span>(Box::new(<span class="kw">move </span>|srx: <span class="kw-2">&amp;</span><span class="kw">crate</span>::signal::ShutdownRx| {
             io_loop.shutdown(<span class="kw-2">*</span>srx.borrow() == <span class="kw">crate</span>::signal::ShutdownKind::Normal);
         }))
     }
