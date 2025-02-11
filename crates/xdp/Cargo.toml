@@ -12,7 +12,7 @@ aya-log = "0.2.1"
 libc.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
-xdp = "0.1.0"
+xdp = "0.2.0"
 #xdp = { git = "https://github.com/Jake-Shadle/xdp", branch = "main" }
 
 [lints]

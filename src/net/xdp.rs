@@ -130,12 +130,27 @@ pub enum XdpSpawnError {
 /// work in the `xdp` crate
 pub fn setup_xdp_io(config: XdpConfig<'_>) -> Result<XdpWorkers, XdpSetupError> {
     let nic_index = match config.nic {
-        NicConfig::Default => quilkin_xdp::get_default_nic()
-            .map_err(NicUnavailable::Query)?
-            .ok_or(NicUnavailable::NoAvailableDefault)?,
-        NicConfig::Name(name) => xdp::nic::NicIndex::lookup_by_name(name)
-            .map_err(NicUnavailable::Query)?
-            .ok_or_else(|| NicUnavailable::UnknownName(name.to_owned()))?,
+        NicConfig::Default => {
+            let mut chosen = None;
+
+            for iface in xdp::nic::InterfaceIter::new().map_err(NicUnavailable::Query)? {
+                if let Some(chosen) = chosen {
+                    if iface != chosen {
+                        return Err(NicUnavailable::NoAvailableDefault.into());
+                    }
+                } else {
+                    chosen = Some(iface);
+                }
+            }
+
+            chosen.ok_or(NicUnavailable::NoAvailableDefault)?
+        }
+        NicConfig::Name(name) => {
+            let cname = std::ffi::CString::new(name).unwrap();
+            xdp::nic::NicIndex::lookup_by_name(&cname)
+                .map_err(NicUnavailable::Query)?
+                .ok_or_else(|| NicUnavailable::UnknownName(name.to_owned()))?
+        }
         NicConfig::Index(index) => xdp::nic::NicIndex::new(index),
     };
 
@@ -233,6 +248,8 @@ pub fn setup_xdp_io(config: XdpConfig<'_>) -> Result<XdpWorkers, XdpSetupError> 
         // that doesn't change during the course of operation, but for now just
         // do it at runtime
         tx_metadata: device_caps.tx_metadata.checksum(),
+        #[cfg(debug_assertions)]
+        software_checksum: false,
     }
     .build()?;
 
@@ -315,7 +332,12 @@ pub fn spawn(workers: XdpWorkers, config: Arc<crate::Config>) -> Result<XdpLoop,
             .spawn(move || {
                 // Enqueue buffers to the fill ring to ensure that we don't miss any packets
                 // SAFETY: we keep the umem alive for as long as the socket is alive
-                unsafe { worker.fill.enqueue(&mut worker.umem, BATCH_SIZE * 2) };
+                unsafe {
+                    if let Err(error) = worker.fill.enqueue(&mut worker.umem, BATCH_SIZE * 2, true)
+                    {
+                        tracing::error!(%error, "failed to kick fill ring during initial spinup");
+                    }
+                };
 
                 io_loop(
                     worker,
@@ -407,24 +429,32 @@ fn io_loop(
     // the owner of the actual memory map
     unsafe {
         while !shutdown.load(std::sync::atomic::Ordering::Relaxed) {
-            // Wait for packets to be received/sent, note that
+            // Wait for packets to be received, note that
             // [poll](https://www.man7.org/linux/man-pages/man2/poll.2.html) also acts
             // as a [cancellation point](https://www.man7.org/linux/man-pages/man7/pthreads.7.html),
             // so shutdown will cause the thread to exit here
-            let Ok(true) = socket.poll(POLL_TIMEOUT) else {
+            let Ok(true) = socket.poll_read(POLL_TIMEOUT) else {
                 continue;
             };
 
             let recvd = rx.recv(&umem, &mut rx_slab);
 
             // Ensure the fill ring doesn't get starved, which could drop packets
-            fill.enqueue(&mut umem, BATCH_SIZE * 2 - recvd);
+            if let Err(error) = fill.enqueue(&mut umem, BATCH_SIZE * 2 - recvd, true) {
+                tracing::error!(%error, "RX kick failed");
+            }
 
             // Process each of the packets that we received, potentially queuing
             // packets to be sent
             process::process_packets(&mut rx_slab, &mut umem, &mut tx_slab, &mut state);
-
-            let enqueued_sends = tx.send(&mut tx_slab);
+            let before = tx_slab.len();
+            let enqueued_sends = match tx.send(&mut tx_slab, true) {
+                Ok(es) => es,
+                Err(error) => {
+                    tracing::error!(%error, "TX kick failed");
+                    before - tx_slab.len()
+                }
+            };
 
             // Return frames that have completed sending
             pending_sends -= completion.dequeue(&mut umem, pending_sends);
