@@ -44,6 +44,13 @@ impl LocalVersions {
             .unwrap()
             .lock()
     }
+
+    #[inline]
+    pub fn reset(&self) {
+        for (_, map) in &self.versions {
+            map.lock().clear();
+        }
+    }
 }
 
 pub type VersionMap = HashMap<String, String>;
