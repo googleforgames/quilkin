@@ -518,27 +518,16 @@ impl IoUringLoop {
                                 loop_ctx.enqueue_recv(buffer_pool.clone().alloc());
                             }
                             Token::PendingsSends => {
-                                if pending_sends_event.val < 0xdeadbeef {
-                                    double_pending_sends = pending_sends.swap(double_pending_sends);
-                                    loop_ctx.push_with_token(
-                                        pending_sends_event.io_uring_entry(),
-                                        Token::PendingsSends,
-                                    );
+                                double_pending_sends = pending_sends.swap(double_pending_sends);
+                                loop_ctx.push_with_token(
+                                    pending_sends_event.io_uring_entry(),
+                                    Token::PendingsSends,
+                                );
 
-                                    for pending in
-                                        double_pending_sends.drain(0..double_pending_sends.len())
-                                    {
-                                        loop_ctx.enqueue_send(pending);
-                                    }
-                                } else {
-                                    if matches!(ctx, PacketProcessorCtx::Router { .. }) {
-                                        tracing::info!(
-                                            "downstream io-uring loop shutdown requested"
-                                        );
-                                    } else {
-                                        tracing::info!("session io-uring loop shutdown requested");
-                                    }
-                                    break 'io;
+                                for pending in
+                                    double_pending_sends.drain(0..double_pending_sends.len())
+                                {
+                                    loop_ctx.enqueue_send(pending);
                                 }
                             }
                             Token::Send { key } => {

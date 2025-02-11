@@ -38,13 +38,6 @@ impl PacketQueueSender {
         push(&self.notify);
     }
 
-    /// Called to shutdown the consumer side of the sends (ie the io loop that is
-    /// actually dequing and sending packets)
-    #[inline]
-    pub(crate) fn shutdown_receiver(&self) {
-        shutdown_receiver(&self.notify)
-    }
-
     /// Swaps the current queue with an empty one so we only lock for a pointer swap
     #[inline]
     pub(crate) fn swap(&self, mut swap: Vec<SendPacket>) -> Vec<SendPacket> {
@@ -75,11 +68,6 @@ cfg_if::cfg_if! {
         #[inline]
         fn push(notify: &PacketQueueNotifier) {
             notify.write(1);
-        }
-
-        #[inline]
-        fn shutdown_receiver(notify: &PacketQueueNotifier) {
-            notify.write(0xdeadbeef);
         }
     } else {
         pub type PacketQueueReceiver = tokio::sync::watch::Receiver<bool>;

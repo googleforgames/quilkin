@@ -31,7 +31,6 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: "-C target-feature=+aes,+avx2"
 
 jobs:
   lint:
