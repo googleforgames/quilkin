@@ -432,7 +432,37 @@
 <a href="#431" id="431">431</a>
 <a href="#432" id="432">432</a>
 <a href="#433" id="433">433</a>
-<a href="#434" id="434">434</a></pre></div><pre class="rust"><code><span class="attr">#![allow(dead_code)]
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a></pre></div><pre class="rust"><code><span class="attr">#![allow(dead_code)]
 
 </span><span class="kw">use </span>quilkin_xdp::xdp::{
     <span class="self">self</span>,
@@ -564,12 +594,27 @@
 /// work in the `xdp` crate
 </span><span class="kw">pub fn </span>setup_xdp_io(config: XdpConfig&lt;<span class="lifetime">'_</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;XdpWorkers, XdpSetupError&gt; {
     <span class="kw">let </span>nic_index = <span class="kw">match </span>config.nic {
-        NicConfig::Default =&gt; quilkin_xdp::get_default_nic()
-            .map_err(NicUnavailable::Query)<span class="question-mark">?
-            </span>.ok_or(NicUnavailable::NoAvailableDefault)<span class="question-mark">?</span>,
-        NicConfig::Name(name) =&gt; xdp::nic::NicIndex::lookup_by_name(name)
-            .map_err(NicUnavailable::Query)<span class="question-mark">?
-            </span>.ok_or_else(|| NicUnavailable::UnknownName(name.to_owned()))<span class="question-mark">?</span>,
+        NicConfig::Default =&gt; {
+            <span class="kw">let </span><span class="kw-2">mut </span>chosen = <span class="prelude-val">None</span>;
+
+            <span class="kw">for </span>iface <span class="kw">in </span>xdp::nic::InterfaceIter::new().map_err(NicUnavailable::Query)<span class="question-mark">? </span>{
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(chosen) = chosen {
+                    <span class="kw">if </span>iface != chosen {
+                        <span class="kw">return </span><span class="prelude-val">Err</span>(NicUnavailable::NoAvailableDefault.into());
+                    }
+                } <span class="kw">else </span>{
+                    chosen = <span class="prelude-val">Some</span>(iface);
+                }
+            }
+
+            chosen.ok_or(NicUnavailable::NoAvailableDefault)<span class="question-mark">?
+        </span>}
+        NicConfig::Name(name) =&gt; {
+            <span class="kw">let </span>cname = std::ffi::CString::new(name).unwrap();
+            xdp::nic::NicIndex::lookup_by_name(<span class="kw-2">&amp;</span>cname)
+                .map_err(NicUnavailable::Query)<span class="question-mark">?
+                </span>.ok_or_else(|| NicUnavailable::UnknownName(name.to_owned()))<span class="question-mark">?
+        </span>}
         NicConfig::Index(index) =&gt; xdp::nic::NicIndex::new(index),
     };
 
@@ -667,6 +712,8 @@
         // that doesn't change during the course of operation, but for now just
         // do it at runtime
         </span>tx_metadata: device_caps.tx_metadata.checksum(),
+        <span class="attr">#[cfg(debug_assertions)]
+        </span>software_checksum: <span class="bool-val">false</span>,
     }
     .build()<span class="question-mark">?</span>;
 
@@ -749,7 +796,12 @@
             .spawn(<span class="kw">move </span>|| {
                 <span class="comment">// Enqueue buffers to the fill ring to ensure that we don't miss any packets
                 // SAFETY: we keep the umem alive for as long as the socket is alive
-                </span><span class="kw">unsafe </span>{ worker.fill.enqueue(<span class="kw-2">&amp;mut </span>worker.umem, BATCH_SIZE * <span class="number">2</span>) };
+                </span><span class="kw">unsafe </span>{
+                    <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = worker.fill.enqueue(<span class="kw-2">&amp;mut </span>worker.umem, BATCH_SIZE * <span class="number">2</span>, <span class="bool-val">true</span>)
+                    {
+                        <span class="macro">tracing::error!</span>(%error, <span class="string">"failed to kick fill ring during initial spinup"</span>);
+                    }
+                };
 
                 io_loop(
                     worker,
@@ -841,24 +893,32 @@
     // the owner of the actual memory map
     </span><span class="kw">unsafe </span>{
         <span class="kw">while </span>!shutdown.load(std::sync::atomic::Ordering::Relaxed) {
-            <span class="comment">// Wait for packets to be received/sent, note that
+            <span class="comment">// Wait for packets to be received, note that
             // [poll](https://www.man7.org/linux/man-pages/man2/poll.2.html) also acts
             // as a [cancellation point](https://www.man7.org/linux/man-pages/man7/pthreads.7.html),
             // so shutdown will cause the thread to exit here
-            </span><span class="kw">let </span><span class="prelude-val">Ok</span>(<span class="bool-val">true</span>) = socket.poll(POLL_TIMEOUT) <span class="kw">else </span>{
+            </span><span class="kw">let </span><span class="prelude-val">Ok</span>(<span class="bool-val">true</span>) = socket.poll_read(POLL_TIMEOUT) <span class="kw">else </span>{
                 <span class="kw">continue</span>;
             };
 
             <span class="kw">let </span>recvd = rx.recv(<span class="kw-2">&amp;</span>umem, <span class="kw-2">&amp;mut </span>rx_slab);
 
             <span class="comment">// Ensure the fill ring doesn't get starved, which could drop packets
-            </span>fill.enqueue(<span class="kw-2">&amp;mut </span>umem, BATCH_SIZE * <span class="number">2 </span>- recvd);
+            </span><span class="kw">if let </span><span class="prelude-val">Err</span>(error) = fill.enqueue(<span class="kw-2">&amp;mut </span>umem, BATCH_SIZE * <span class="number">2 </span>- recvd, <span class="bool-val">true</span>) {
+                <span class="macro">tracing::error!</span>(%error, <span class="string">"RX kick failed"</span>);
+            }
 
             <span class="comment">// Process each of the packets that we received, potentially queuing
             // packets to be sent
             </span>process::process_packets(<span class="kw-2">&amp;mut </span>rx_slab, <span class="kw-2">&amp;mut </span>umem, <span class="kw-2">&amp;mut </span>tx_slab, <span class="kw-2">&amp;mut </span>state);
-
-            <span class="kw">let </span>enqueued_sends = tx.send(<span class="kw-2">&amp;mut </span>tx_slab);
+            <span class="kw">let </span>before = tx_slab.len();
+            <span class="kw">let </span>enqueued_sends = <span class="kw">match </span>tx.send(<span class="kw-2">&amp;mut </span>tx_slab, <span class="bool-val">true</span>) {
+                <span class="prelude-val">Ok</span>(es) =&gt; es,
+                <span class="prelude-val">Err</span>(error) =&gt; {
+                    <span class="macro">tracing::error!</span>(%error, <span class="string">"TX kick failed"</span>);
+                    before - tx_slab.len()
+                }
+            };
 
             <span class="comment">// Return frames that have completed sending
             </span>pending_sends -= completion.dequeue(<span class="kw-2">&amp;mut </span>umem, pending_sends);

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["BindError","LoadError"],"fn":["get_default_nic"],"struct":["EbpfProgram","NicIndex","XdpWorker"]};
+window.SIDEBAR_ITEMS = {"enum":["BindError","LoadError"],"struct":["EbpfProgram","NicIndex","XdpWorker"]};
