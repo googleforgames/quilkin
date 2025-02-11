@@ -429,7 +429,10 @@
 <a href="#428" id="428">428</a>
 <a href="#429" id="429">429</a>
 <a href="#430" id="430">430</a>
-<a href="#431" id="431">431</a></pre></div><pre class="rust"><code><span class="attr">#![allow(dead_code)]
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a></pre></div><pre class="rust"><code><span class="attr">#![allow(dead_code)]
 
 </span><span class="kw">use </span>quilkin_xdp::xdp::{
     <span class="self">self</span>,
@@ -787,6 +790,8 @@
 <span class="kw">const </span>BATCH_SIZE: usize = <span class="number">64</span>;
 <span class="kw">use </span>xdp::packet::net_types::NetworkU16;
 
+<span class="kw">use </span><span class="kw">crate</span>::time::UtcTimestamp;
+
 <span class="doccomment">/// The core I/O loop
 ///
 /// All of the ring operations are done in this loop so that the actual
@@ -824,6 +829,7 @@
         sessions,
         local_ipv4,
         local_ipv6,
+        last_receive: UtcTimestamp::now(),
     };
 
     <span class="kw">let </span><span class="kw-2">mut </span>rx_slab = xdp::HeapSlab::with_capacity(BATCH_SIZE);
