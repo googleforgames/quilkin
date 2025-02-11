@@ -550,6 +550,10 @@ impl AdsClient {
 
                     resource_subscriptions = handle_first_response(&mut stream, resources).await?;
 
+                    // Assume the new server we've connected to has completely different
+                    // state from the previous one, so get rid of our current state
+                    // and get a full refresh from the new relay
+                    local.reset();
                     ds.refresh(&identifier, resource_subscriptions.to_vec(), &local)
                         .await?;
                 }
