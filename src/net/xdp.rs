@@ -130,9 +130,21 @@ pub enum XdpSpawnError {
 /// work in the `xdp` crate
 pub fn setup_xdp_io(config: XdpConfig<'_>) -> Result<XdpWorkers, XdpSetupError> {
     let nic_index = match config.nic {
-        NicConfig::Default => quilkin_xdp::get_default_nic()
-            .map_err(NicUnavailable::Query)?
-            .ok_or(NicUnavailable::NoAvailableDefault)?,
+        NicConfig::Default => {
+            let mut chosen = None;
+
+            for iface in xdp::nic::InterfaceIter::new().map_err(NicUnavailable::Query)? {
+                if let Some(chosen) = chosen {
+                    if iface != chosen {
+                        return Err(NicUnavailable::NoAvailableDefault.into());
+                    }
+                } else {
+                    chosen = Some(iface);
+                }
+            }
+
+            chosen.ok_or(NicUnavailable::NoAvailableDefault)?
+        }
         NicConfig::Name(name) => {
             let cname = std::ffi::CString::new(name).unwrap();
             xdp::nic::NicIndex::lookup_by_name(&cname)
