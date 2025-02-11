@@ -356,6 +356,8 @@ pub fn spawn(workers: XdpWorkers, config: Arc<crate::Config>) -> Result<XdpLoop,
 const BATCH_SIZE: usize = 64;
 use xdp::packet::net_types::NetworkU16;
 
+use crate::time::UtcTimestamp;
+
 /// The core I/O loop
 ///
 /// All of the ring operations are done in this loop so that the actual
@@ -393,6 +395,7 @@ fn io_loop(
         sessions,
         local_ipv4,
         local_ipv6,
+        last_receive: UtcTimestamp::now(),
     };
 
     let mut rx_slab = xdp::HeapSlab::with_capacity(BATCH_SIZE);
