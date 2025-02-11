@@ -71,11 +71,11 @@ pub struct XdpWorker {
     /// and send packets are stored
     pub umem: xdp::Umem,
     /// The ring used to indicate to the kernel we wish to receive packets
-    pub fill: xdp::FillRing,
+    pub fill: xdp::WakableFillRing,
     /// The ring the kernel pushes received packets to
     pub rx: xdp::RxRing,
     /// The ring we push packets we wish to send
-    pub tx: xdp::TxRing,
+    pub tx: xdp::WakableTxRing,
     /// The ring the kernel pushes packets that have finished sending
     pub completion: xdp::CompletionRing,
 }
@@ -160,7 +160,7 @@ impl EbpfProgram {
         for i in 0..device_caps.queue_count {
             let umem = xdp::Umem::map(umem_cfg)?;
             let mut sb = xdp::socket::XdpSocketBuilder::new()?;
-            let (rings, mut bind_flags) = sb.build_rings(&umem, ring_cfg)?;
+            let (rings, mut bind_flags) = sb.build_wakable_rings(&umem, ring_cfg)?;
 
             if device_caps.zero_copy.is_available() {
                 bind_flags.force_zerocopy();
@@ -219,54 +219,4 @@ impl EbpfProgram {
             .expect("'all_queues' is not an xdp program");
         program.detach(link_id)
     }
-}
-
-/// Gets the information for the default NIC
-pub fn get_default_nic() -> std::io::Result<Option<NicIndex>> {
-    let table = std::fs::read_to_string("/proc/net/route")?;
-
-    // In most cases there will probably only be one NIC that talks to
-    // the rest of the network, but just in case, fail if there is
-    // more than one, so the user is forced to specify. We _could_ go
-    // further and use netlink to get the route for a global IP eg. 8.8.8.8,
-    // but the rtnetlink crate is...pretty bad to work with, maybe neli?
-    // (though want to get rid of that as well)
-    let mut def_iface = None;
-
-    // skip column headers
-    for line in table.lines().skip(1) {
-        let mut iter = line.split(char::is_whitespace).filter_map(|s| {
-            let s = s.trim();
-            (!s.is_empty()).then_some(s)
-        });
-
-        let Some(name) = iter.next() else {
-            continue;
-        };
-        let Some(flags) = iter.nth(2).and_then(|f| u16::from_str_radix(f, 16).ok()) else {
-            continue;
-        };
-
-        if flags & (libc::RTF_UP | libc::RTF_GATEWAY) != libc::RTF_UP | libc::RTF_GATEWAY {
-            continue;
-        }
-
-        let Some(iface) = NicIndex::lookup_by_name(name)? else {
-            continue;
-        };
-
-        if let Some(def) = def_iface {
-            // A NIC can have multiple routes, so don't error when it comes up again
-            if def != iface {
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::Unsupported,
-                    format!("unable to determine default interface, found {def:?} and {iface:?}"),
-                ));
-            }
-        }
-
-        def_iface = Some(iface);
-    }
-
-    Ok(def_iface)
 }

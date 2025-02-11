@@ -77,7 +77,7 @@ async fn simple_forwarding() {
             frame_size: xdp::umem::FrameSize::TwoK,
             head_room: 0,
             frame_count: 1,
-            tx_metadata: false,
+            ..Default::default()
         }
         .build()
         .unwrap(),
@@ -162,7 +162,7 @@ async fn changes_ip_version() {
             frame_size: xdp::umem::FrameSize::TwoK,
             head_room: 20,
             frame_count: 1,
-            tx_metadata: false,
+            ..Default::default()
         }
         .build()
         .unwrap(),
@@ -246,7 +246,7 @@ async fn packet_manipulation() {
             frame_size: xdp::umem::FrameSize::TwoK,
             head_room: 20,
             frame_count: 1,
-            tx_metadata: false,
+            ..Default::default()
         }
         .build()
         .unwrap(),
@@ -525,7 +525,7 @@ async fn multiple_servers() {
             frame_size: xdp::umem::FrameSize::TwoK,
             head_room: 20,
             frame_count: 20,
-            tx_metadata: false,
+            ..Default::default()
         }
         .build()
         .unwrap(),
@@ -605,7 +605,7 @@ async fn many_sessions() {
             frame_size: xdp::umem::FrameSize::TwoK,
             head_room: 0,
             frame_count: 1,
-            tx_metadata: false,
+            ..Default::default()
         }
         .build()
         .unwrap(),
@@ -735,7 +735,7 @@ async fn frees_dropped_packets() {
             frame_size: xdp::umem::FrameSize::TwoK,
             head_room: 0,
             frame_count: 1,
-            tx_metadata: false,
+            ..Default::default()
         }
         .build()
         .unwrap(),
@@ -829,7 +829,7 @@ async fn qcmp() {
             frame_size: xdp::umem::FrameSize::TwoK,
             head_room: 0,
             frame_count: 1,
-            tx_metadata: false,
+            ..Default::default()
         }
         .build()
         .unwrap(),

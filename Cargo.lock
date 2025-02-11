@@ -4468,9 +4468,9 @@ checksum = "1e9df38ee2d2c3c5948ea468a8406ff0db0b29ae1ffde1bcf20ef305bcc95c51"
 
 [[package]]
 name = "xdp"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8d4713853608ff26445bf7f99e075ae82097347b7eca4fcabf7f8379b1ca07c"
+checksum = "1107093b573477d6a8a618e22d0e2bc9fc2bd0141190864bd58c68bc72604ff4"
 dependencies = [
  "libc",
  "memmap2",
