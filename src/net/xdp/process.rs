@@ -6,6 +6,7 @@ use crate::{
         maxmind_db::{self, IpNetEntry},
         EndpointAddress,
     },
+    time::UtcTimestamp,
 };
 pub use quilkin_xdp::xdp;
 use quilkin_xdp::xdp::{
@@ -114,6 +115,7 @@ pub struct State {
     pub sessions: Arc<SessionState>,
     pub local_ipv4: std::net::Ipv4Addr,
     pub local_ipv6: std::net::Ipv6Addr,
+    pub last_receive: UtcTimestamp,
 }
 
 impl State {
@@ -440,6 +442,11 @@ pub fn process_packets(
     let filters = state.config.filters.load();
     let cm = state.config.clusters.clone_value();
 
+    let now = UtcTimestamp::now();
+    let jitter = (now - state.last_receive).nanos();
+    state.last_receive = now;
+    let mut had_read = false;
+
     while let Some(inner) = rx_slab.pop_front() {
         let Ok(Some(udp)) = UdpPacket::parse_packet(&inner) else {
             unreachable!("we somehow got a non-UDP packet, this should be impossible with the eBPF program we use to route packets");
@@ -452,6 +459,7 @@ pub fn process_packets(
 
         let is_client = udp.dst_port == state.external_port;
         let direction = if is_client {
+            had_read = true;
             metrics::READ
         } else {
             metrics::WRITE
@@ -465,7 +473,7 @@ pub fn process_packets(
             if is_client {
                 process_client_packet(packet, umem, &filters, &cm, state, tx_slab)
             } else {
-                process_server_packet(packet, umem, &filters, state, tx_slab)
+                process_server_packet(packet, umem, &filters, state, tx_slab, jitter)
             }
         };
 
@@ -482,6 +490,10 @@ pub fn process_packets(
                 umem.free_packet(packet);
             }
         }
+    }
+
+    if had_read {
+        metrics::packet_jitter(metrics::READ, &metrics::EMPTY).set(jitter);
     }
 }
 
@@ -630,6 +642,7 @@ fn process_server_packet(
     filters: &crate::filters::FilterChain,
     state: &mut State,
     tx_slab: &mut HeapSlab,
+    jitter: i64,
 ) -> Result<Option<Packet>, (PipelineError, Packet)> {
     let server_addr = SocketAddr::new(packet.udp.ips.source(), packet.udp.src_port.host());
 
@@ -637,6 +650,8 @@ fn process_server_packet(
         tracing::debug!(address = %server_addr, "received traffic from a server that has no downstream");
         return Ok(Some(packet.inner));
     };
+
+    metrics::packet_jitter(metrics::Direction::Write, &asn).set(jitter);
 
     let mut ctx = filters::WriteContext::new(server_addr.into(), client_addr.into(), packet);
 

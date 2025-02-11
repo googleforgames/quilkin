@@ -10,6 +10,7 @@ use quilkin::{
             xdp::{self, packet::net_types as nt},
         },
     },
+    time::UtcTimestamp,
 };
 use std::{
     collections::BTreeSet,
@@ -66,6 +67,7 @@ async fn simple_forwarding() {
         sessions: Arc::new(Default::default()),
         local_ipv4: *PROXY.ip(),
         local_ipv6: Ipv6Addr::from_bits(0),
+        last_receive: UtcTimestamp::now(),
     };
 
     let data = [0xf0u8; 11];
@@ -150,6 +152,7 @@ async fn changes_ip_version() {
         sessions: Arc::new(Default::default()),
         local_ipv4: *PROXY4.ip(),
         local_ipv6: *PROXY6.ip(),
+        last_receive: UtcTimestamp::now(),
     };
 
     let data = [0xf1u8; 11];
@@ -283,6 +286,7 @@ async fn packet_manipulation() {
             sessions: Arc::new(Default::default()),
             local_ipv4: *PROXY.ip(),
             local_ipv6: Ipv6Addr::from_bits(0),
+            last_receive: UtcTimestamp::now(),
         };
 
         let data = [0xf1u8; 11];
@@ -346,6 +350,7 @@ async fn packet_manipulation() {
             sessions: Arc::new(Default::default()),
             local_ipv4: *PROXY.ip(),
             local_ipv6: Ipv6Addr::from_bits(0),
+            last_receive: UtcTimestamp::now(),
         };
 
         let data = [0xf1u8; 11];
@@ -417,6 +422,7 @@ async fn packet_manipulation() {
             sessions: Arc::new(Default::default()),
             local_ipv4: *PROXY.ip(),
             local_ipv6: Ipv6Addr::from_bits(0),
+            last_receive: UtcTimestamp::now(),
         };
 
         let mut client_packet = unsafe { umem.alloc().unwrap() };
@@ -511,6 +517,7 @@ async fn multiple_servers() {
         sessions: Arc::new(Default::default()),
         local_ipv4: Ipv4Addr::from_bits(0),
         local_ipv6: *PROXY.ip(),
+        last_receive: UtcTimestamp::now(),
     };
 
     let mut umem = xdp::Umem::map(
@@ -588,6 +595,7 @@ async fn many_sessions() {
         sessions: Arc::new(Default::default()),
         local_ipv4: *PROXY.ip(),
         local_ipv6: Ipv6Addr::from_bits(0),
+        last_receive: UtcTimestamp::now(),
     };
 
     let data = [0xf0u8; 11];
@@ -717,6 +725,7 @@ async fn frees_dropped_packets() {
         sessions: Arc::new(Default::default()),
         local_ipv4: *PROXY4.ip(),
         local_ipv6: *PROXY6.ip(),
+        last_receive: UtcTimestamp::now(),
     };
 
     let data = [0xf0u8; 11];
@@ -812,6 +821,7 @@ async fn qcmp() {
         sessions: Arc::new(Default::default()),
         local_ipv4: *PROXY.ip(),
         local_ipv6: Ipv6Addr::from_bits(0),
+        last_receive: UtcTimestamp::now(),
     };
 
     let mut umem = xdp::Umem::map(
