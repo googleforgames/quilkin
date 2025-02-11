@@ -71,11 +71,11 @@ pub struct XdpWorker {
     /// and send packets are stored
     pub umem: xdp::Umem,
     /// The ring used to indicate to the kernel we wish to receive packets
-    pub fill: xdp::FillRing,
+    pub fill: xdp::WakableFillRing,
     /// The ring the kernel pushes received packets to
     pub rx: xdp::RxRing,
     /// The ring we push packets we wish to send
-    pub tx: xdp::TxRing,
+    pub tx: xdp::WakableTxRing,
     /// The ring the kernel pushes packets that have finished sending
     pub completion: xdp::CompletionRing,
 }
@@ -160,7 +160,7 @@ impl EbpfProgram {
         for i in 0..device_caps.queue_count {
             let umem = xdp::Umem::map(umem_cfg)?;
             let mut sb = xdp::socket::XdpSocketBuilder::new()?;
-            let (rings, mut bind_flags) = sb.build_rings(&umem, ring_cfg)?;
+            let (rings, mut bind_flags) = sb.build_wakable_rings(&umem, ring_cfg)?;
 
             if device_caps.zero_copy.is_available() {
                 bind_flags.force_zerocopy();
