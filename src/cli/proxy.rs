@@ -63,6 +63,8 @@ pub struct Proxy {
     pub workers: Option<std::num::NonZeroUsize>,
     #[clap(flatten)]
     pub xdp_opts: XdpOptions,
+    #[clap(long = "termination-timeout")]
+    pub termination_timeout: Option<crate::cli::Timeout>,
 }
 
 impl Default for Proxy {
@@ -77,6 +79,7 @@ impl Default for Proxy {
             idle_request_interval_secs: None,
             workers: None,
             xdp_opts: Default::default(),
+            termination_timeout: None,
         }
     }
 }
@@ -133,6 +136,7 @@ impl Proxy {
             phoenix,
             notifier: None,
             xdp: self.xdp_opts,
+            termination_timeout: self.termination_timeout,
         }
         .run(
             crate::components::RunArgs {

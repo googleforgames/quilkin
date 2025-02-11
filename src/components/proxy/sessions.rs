@@ -448,20 +448,6 @@ impl SessionPool {
         storage.destination_to_sources.remove(&(*dest, port));
         tracing::trace!("socket released");
     }
-
-    /// Closes all active sessions, and all downstream listeners
-    pub(crate) fn shutdown(self: Arc<Self>, wait: bool) {
-        // Disable downstream listeners first so sessions aren't spawned while
-        // we are trying to reap the active sessions
-        for downstream_listener in &self.downstream_sends {
-            downstream_listener.shutdown_receiver();
-        }
-
-        if wait && !self.session_map.is_empty() {
-            tracing::info!(sessions=%self.session_map.len(), "waiting for active sessions to expire");
-            self.session_map.clear();
-        }
-    }
 }
 
 impl SessionManager for Arc<SessionPool> {
