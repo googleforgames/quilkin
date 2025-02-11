@@ -298,7 +298,14 @@
 <a href="#297" id="297">297</a>
 <a href="#298" id="298">298</a>
 <a href="#299" id="299">299</a>
-<a href="#300" id="300">300</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::discovery::{DeltaDiscoveryRequest, DeltaDiscoveryResponse, Resource};
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a></pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::discovery::{DeltaDiscoveryRequest, DeltaDiscoveryResponse, Resource};
 <span class="kw">use </span>std::{
     collections::{BTreeSet, HashMap},
     sync::Arc,
@@ -343,6 +350,13 @@
             .find_map(|(t, hm)| (<span class="kw-2">*</span>t == ty).then_some(hm))
             .unwrap()
             .lock()
+    }
+
+    <span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>reset(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+        <span class="kw">for </span>(<span class="kw">_</span>, map) <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.versions {
+            map.lock().clear();
+        }
     }
 }
 

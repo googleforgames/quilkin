@@ -572,7 +572,11 @@
 <a href="#571" id="571">571</a>
 <a href="#572" id="572">572</a>
 <a href="#573" id="573">573</a>
-<a href="#574" id="574">574</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#574" id="574">574</a>
+<a href="#575" id="575">575</a>
+<a href="#576" id="576">576</a>
+<a href="#577" id="577">577</a>
+<a href="#578" id="578">578</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -1124,6 +1128,10 @@
 
                     resource_subscriptions = handle_first_response(<span class="kw-2">&amp;mut </span>stream, resources).<span class="kw">await</span><span class="question-mark">?</span>;
 
+                    <span class="comment">// Assume the new server we've connected to has completely different
+                    // state from the previous one, so get rid of our current state
+                    // and get a full refresh from the new relay
+                    </span>local.reset();
                     ds.refresh(<span class="kw-2">&amp;</span>identifier, resource_subscriptions.to_vec(), <span class="kw-2">&amp;</span>local)
                         .<span class="kw">await</span><span class="question-mark">?</span>;
                 }
