@@ -928,7 +928,10 @@
 <a href="#927" id="927">927</a>
 <a href="#928" id="928">928</a>
 <a href="#929" id="929">929</a>
-<a href="#930" id="930">930</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#930" id="930">930</a>
+<a href="#931" id="931">931</a>
+<a href="#932" id="932">932</a>
+<a href="#933" id="933">933</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -1554,6 +1557,9 @@
 
         coordinates.x = (coordinates.x + (incoming * weight)) / <span class="number">2.0</span>;
         coordinates.y = (coordinates.y + (outgoing * weight)) / <span class="number">2.0</span>;
+
+        <span class="kw">crate</span>::metrics::phoenix_distance(<span class="self">self</span>.icao_code, <span class="self">self</span>.error_estimate)
+            .set(Coordinates::ORIGIN.distance_to(coordinates))
     }
 }
 
