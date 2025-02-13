@@ -17,8 +17,8 @@
 use crate::net::maxmind_db::MetricsIpNetEntry;
 use once_cell::sync::Lazy;
 use prometheus::{
-    core::Collector, Histogram, HistogramOpts, HistogramVec, IntCounter, IntCounterVec, IntGauge,
-    IntGaugeVec, Opts, Registry, DEFAULT_BUCKETS,
+    core::Collector, Gauge, GaugeVec, Histogram, HistogramOpts, HistogramVec, IntCounter,
+    IntCounterVec, IntGauge, IntGaugeVec, Opts, Registry, DEFAULT_BUCKETS,
 };
 
 pub use prometheus::Result;
@@ -158,6 +158,22 @@ pub(crate) fn phoenix_requests() -> &'static IntCounter {
     });
 
     &PHOENIX_REQUESTS
+}
+
+pub(crate) fn phoenix_distance(icao: crate::config::IcaoCode, error_estimate: f64) -> Gauge {
+    static PHOENIX_DISTANCE: Lazy<GaugeVec> = Lazy::new(|| {
+        prometheus::register_gauge_vec_with_registry! {
+            prometheus::opts! {
+                "service_phoenix_distance",
+                "The distance from this instance to another node in the network",
+            },
+            &["icao", "error_estimate"],
+            registry(),
+        }
+        .unwrap()
+    });
+
+    PHOENIX_DISTANCE.with_label_values(&[icao.as_ref(), &error_estimate.to_string()])
 }
 
 pub(crate) fn phoenix_task_closed() -> &'static IntGauge {

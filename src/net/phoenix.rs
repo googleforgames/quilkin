@@ -624,6 +624,9 @@ impl Node {
 
         coordinates.x = (coordinates.x + (incoming * weight)) / 2.0;
         coordinates.y = (coordinates.y + (outgoing * weight)) / 2.0;
+
+        crate::metrics::phoenix_distance(self.icao_code, self.error_estimate)
+            .set(Coordinates::ORIGIN.distance_to(coordinates))
     }
 }
 
