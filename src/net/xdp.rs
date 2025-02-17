@@ -169,10 +169,12 @@ pub fn setup_xdp_io(config: XdpConfig<'_>) -> Result<XdpWorkers, XdpSetupError> 
     if config.require_zero_copy
         && matches!(device_caps.zero_copy, xdp::nic::XdpZeroCopy::Unavailable)
     {
+        tracing::error!(?device_caps, nic = ?nic_index, "XDP features for device");
         return Err(XdpSetupError::ZeroCopyUnavailable(name));
     }
 
     if config.require_tx_checksum && !device_caps.tx_metadata.checksum() {
+        tracing::error!(?device_caps, nic = ?nic_index, "XDP features for device");
         return Err(XdpSetupError::TxChecksumUnavailable(name));
     }
 
