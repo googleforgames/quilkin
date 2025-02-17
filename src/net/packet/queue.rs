@@ -81,10 +81,5 @@ cfg_if::cfg_if! {
         fn push(notify: &PacketQueueNotifier) {
             let _ = notify.send(true);
         }
-
-        #[inline]
-        fn shutdown_receiver(notify: &PacketQueueNotifier) {
-            let _ = notify.send(false);
-        }
     }
 }
