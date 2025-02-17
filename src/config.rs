@@ -79,8 +79,6 @@ pub struct Config {
     pub filters: Slot<crate::filters::FilterChain>,
     #[serde(default = "default_proxy_id")]
     pub id: Slot<String>,
-    #[serde(default)]
-    pub version: Slot<Version>,
     #[serde(flatten)]
     pub datacenter: DatacenterConfig,
 }
@@ -562,7 +560,6 @@ impl Config {
             clusters: Default::default(),
             filters: Default::default(),
             id: default_proxy_id(),
-            version: Slot::with_default(),
             datacenter: DatacenterConfig::Agent {
                 icao_code: Default::default(),
                 qcmp_port: Default::default(),
@@ -575,7 +572,6 @@ impl Config {
             clusters: Default::default(),
             filters: Default::default(),
             id: default_proxy_id(),
-            version: Slot::with_default(),
             datacenter: DatacenterConfig::NonAgent {
                 datacenters: Default::default(),
             },
@@ -985,10 +981,6 @@ mod tests {
 
     use super::*;
 
-    fn parse_config(yaml: &str) -> Config {
-        Config::from_reader(yaml.as_bytes()).unwrap()
-    }
-
     #[test]
     fn deserialise_client() {
         let config = Config::default_non_agent();
@@ -1024,18 +1016,6 @@ mod tests {
         .unwrap();
 
         assert!(config.id.load().len() > 1);
-    }
-
-    #[test]
-    fn parse_proxy() {
-        let yaml = "
-version: v1alpha1
-id: server-proxy
-  ";
-        let config = parse_config(yaml);
-
-        assert_eq!(config.id.load().as_str(), "server-proxy");
-        assert_eq!(*config.version.load(), Version::V1Alpha1);
     }
 
     #[test]
