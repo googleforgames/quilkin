@@ -183,7 +183,7 @@ members = [
     ".",
     "crates/agones",
     "crates/macros",
-    "crates/nmap-service-probes",
+    #"crates/nmap-service-probes",
     "crates/proto-gen",
     "crates/quilkin-proto",
     "crates/test",
