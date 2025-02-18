@@ -27,8 +27,7 @@ ENV RUSTUP_HOME=/usr/local/rustup \
 RUN set -eux && \
     apt-get update && \
     apt-get install -y lsb-release jq curl wget zip git build-essential software-properties-common protobuf-compiler \
-        libssl-dev pkg-config nodejs npm bash-completion g++-x86-64-linux-gnu g++-mingw-w64-x86-64 && \
-    npm install -g browser-sync && \
+        libssl-dev pkg-config bash-completion g++-x86-64-linux-gnu g++-mingw-w64-x86-64 && \
     echo "source /etc/bash_completion" >> /root/.bashrc
 
 # install protoc-gen-doc
@@ -54,11 +53,6 @@ RUN wget --quiet -O terraform.zip "https://releases.hashicorp.com/terraform/1.5.
 RUN curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash && \
     echo "source <(helm completion bash)" >> /root/.bashrc
 
-# Install htmltest
-WORKDIR /tmp
-RUN wget --quiet -O htmltest.tar.gz "https://github.com/wjdp/htmltest/releases/download/v0.16.0/htmltest_0.16.0_linux_$(dpkg --print-architecture).tar.gz" && \
-     tar -xf htmltest.tar.gz && mv ./htmltest /usr/local/bin/ && rm htmltest.tar.gz
-
 # Add /workspace as a git safe directory
 RUN git config --global --add safe.directory /workspace
 
@@ -79,11 +73,7 @@ RUN set -eux; \
     chmod -R a+w $RUSTUP_HOME $CARGO_HOME && \
     rustup component add rustfmt clippy && \
     rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu x86_64-pc-windows-gnu && \
-    cargo install mdbook && \
-    cargo install --locked cargo-about && \
-    cargo install --locked mdbook-variables && \
-    cargo install --locked cargo-deny && \
-    cargo install --locked proto-gen && \
+    cargo install --locked cargo-about proto-gen && \
     rustup --version && \
     cargo --version && \
     rustc --version
