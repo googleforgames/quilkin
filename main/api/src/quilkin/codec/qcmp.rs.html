@@ -707,7 +707,8 @@
 <a href="#706" id="706">706</a>
 <a href="#707" id="707">707</a>
 <a href="#708" id="708">708</a>
-<a href="#709" id="709">709</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#709" id="709">709</a>
+<a href="#710" id="710">710</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -930,7 +931,7 @@
                                 <span class="kw">continue</span>;
                             }
                             <span class="prelude-val">Err</span>(error) =&gt; {
-                                <span class="macro">tracing::debug!</span>(%error, <span class="string">"rejected malformed packet"</span>);
+                                <span class="macro">tracing::debug!</span>(%error, %source, <span class="string">"rejected malformed packet"</span>);
                                 <span class="kw">continue</span>;
                             }
                         };
@@ -940,7 +941,7 @@
                             nonce,
                         } = command
                         <span class="kw">else </span>{
-                            <span class="macro">tracing::warn!</span>(<span class="string">"rejected unsupported QCMP packet"</span>);
+                            <span class="macro">tracing::warn!</span>(%source, <span class="string">"rejected unsupported QCMP packet"</span>);
                             <span class="kw">continue</span>;
                         };
 
@@ -948,17 +949,18 @@
                             .encode(<span class="kw-2">&amp;mut </span>output_buf);
 
                         <span class="macro">tracing::debug!</span>(
+                            %source,
                             <span class="string">"sending QCMP pong"</span>,
                         );
 
                         <span class="kw">match </span>socket.send_to(<span class="kw-2">&amp;</span>output_buf, source).<span class="kw">await </span>{
                             <span class="prelude-val">Ok</span>(len) =&gt; {
                                 <span class="kw">if </span>len != output_buf.len() {
-                                    <span class="macro">tracing::error!</span>(<span class="string">"failed to send entire QCMP pong response, expected {} but only sent {len}"</span>, output_buf.len());
+                                    <span class="macro">tracing::error!</span>(%source, <span class="string">"failed to send entire QCMP pong response, expected {} but only sent {len}"</span>, output_buf.len());
                                 }
                             }
                             <span class="prelude-val">Err</span>(error) =&gt; {
-                                <span class="macro">tracing::warn!</span>(%error, <span class="string">"error responding to ping"</span>);
+                                <span class="macro">tracing::warn!</span>(%error, %source, <span class="string">"error responding to ping"</span>);
                             }
                         }
                     }
