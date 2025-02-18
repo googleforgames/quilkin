@@ -221,7 +221,7 @@ pub fn spawn(
                                 continue;
                             }
                             Err(error) => {
-                                tracing::debug!(%error, "rejected malformed packet");
+                                tracing::debug!(%error, %source, "rejected malformed packet");
                                 continue;
                             }
                         };
@@ -231,7 +231,7 @@ pub fn spawn(
                             nonce,
                         } = command
                         else {
-                            tracing::warn!("rejected unsupported QCMP packet");
+                            tracing::warn!(%source, "rejected unsupported QCMP packet");
                             continue;
                         };
 
@@ -239,17 +239,18 @@ pub fn spawn(
                             .encode(&mut output_buf);
 
                         tracing::debug!(
+                            %source,
                             "sending QCMP pong",
                         );
 
                         match socket.send_to(&output_buf, source).await {
                             Ok(len) => {
                                 if len != output_buf.len() {
-                                    tracing::error!("failed to send entire QCMP pong response, expected {} but only sent {len}", output_buf.len());
+                                    tracing::error!(%source, "failed to send entire QCMP pong response, expected {} but only sent {len}", output_buf.len());
                                 }
                             }
                             Err(error) => {
-                                tracing::warn!(%error, "error responding to ping");
+                                tracing::warn!(%error, %source, "error responding to ping");
                             }
                         }
                     }
