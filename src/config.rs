@@ -168,16 +168,14 @@ impl<'de> Deserialize<'de> for Config {
 
                 let datacenter = if let Some(datacenters) = datacenters {
                     DatacenterConfig::NonAgent { datacenters }
+                } else if icao_code.is_none() && qcmp_port.is_none() {
+                    DatacenterConfig::NonAgent {
+                        datacenters: Default::default(),
+                    }
                 } else {
-                    if icao_code.is_none() && qcmp_port.is_none() {
-                        DatacenterConfig::NonAgent {
-                            datacenters: Default::default(),
-                        }
-                    } else {
-                        DatacenterConfig::Agent {
-                            icao_code: Slot::new(icao_code),
-                            qcmp_port: Slot::new(qcmp_port),
-                        }
+                    DatacenterConfig::Agent {
+                        icao_code: Slot::new(icao_code),
+                        qcmp_port: Slot::new(qcmp_port),
                     }
                 };
 
