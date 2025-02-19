@@ -246,10 +246,6 @@ impl Service {
         config: &Arc<Config>,
         shutdown_rx: &crate::signal::ShutdownRx,
     ) -> crate::Result<tokio::task::JoinHandle<crate::Result<()>>> {
-        if let Some(id) = self.id.clone() {
-            config.id.store(id.into());
-        }
-
         let mut shutdown_rx = shutdown_rx.clone();
         let mds_task = self.publish_mds(config)?;
         let (phoenix_task, phoenix_finalizer) = self.publish_phoenix(config)?;
@@ -328,7 +324,7 @@ impl Service {
             let phoenix = crate::net::TcpListener::bind(Some(self.phoenix_port))?;
             let finalizer = crate::net::phoenix::spawn(
                 phoenix,
-                config.clone(),
+                config.datacenters().clone(),
                 crate::net::phoenix::Phoenix::new(crate::codec::qcmp::QcmpMeasurement::new()?),
             )?;
 
@@ -408,7 +404,7 @@ impl Service {
     #[allow(clippy::type_complexity)]
     pub fn publish_udp(
         &mut self,
-        config: &Arc<crate::config::Config>,
+        config: &Arc<Config>,
     ) -> eyre::Result<(
         impl Future<Output = crate::Result<()>>,
         Option<Finalizer>,
@@ -455,7 +451,7 @@ impl Service {
     #[allow(clippy::type_complexity)]
     pub fn spawn_user_space_router(
         &self,
-        config: Arc<crate::config::Config>,
+        config: Arc<Config>,
     ) -> crate::Result<(
         impl Future<Output = crate::Result<()>>,
         Finalizer,
@@ -491,11 +487,7 @@ impl Service {
     }
 
     #[cfg(target_os = "linux")]
-    fn spawn_xdp(
-        &self,
-        config: Arc<crate::config::Config>,
-        force_xdp: bool,
-    ) -> eyre::Result<Finalizer> {
+    fn spawn_xdp(&self, config: Arc<Config>, force_xdp: bool) -> eyre::Result<Finalizer> {
         use crate::net::xdp;
         use eyre::Context as _;
 

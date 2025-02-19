@@ -14,10 +14,7 @@
  * limitations under the License.
  */
 
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::{path::PathBuf, sync::Arc};
 
 use clap::builder::TypedValueParser;
 use clap::crate_version;
@@ -229,35 +226,7 @@ impl Cli {
 
         tracing::debug!(cli = ?self, "config parameters");
 
-        let config = Arc::new(match Self::read_config(self.config)? {
-            Some(mut config) => {
-                // Workaround deficiency in serde flatten + untagged
-                if matches!(self.command, Some(Commands::Agent(..))) {
-                    config.datacenter = match config.datacenter {
-                        crate::config::DatacenterConfig::Agent {
-                            icao_code,
-                            qcmp_port,
-                        } => crate::config::DatacenterConfig::Agent {
-                            icao_code,
-                            qcmp_port,
-                        },
-                        crate::config::DatacenterConfig::NonAgent { datacenters } => {
-                            eyre::ensure!(datacenters.read().is_empty(), "starting an agent, but the configuration file has `datacenters` set");
-                            crate::config::DatacenterConfig::Agent {
-                                icao_code: crate::config::Slot::new(
-                                    crate::config::IcaoCode::default(),
-                                ),
-                                qcmp_port: crate::config::Slot::new(0),
-                            }
-                        }
-                    };
-                }
-
-                config
-            }
-            None if matches!(self.command, Some(Commands::Agent(..))) => Config::default_agent(),
-            None => Config::default_non_agent(),
-        });
+        let config = self.read_config()?;
 
         let ready = Arc::<std::sync::atomic::AtomicBool>::default();
         if self.admin.enabled {
@@ -310,35 +279,46 @@ impl Cli {
 
                 relay.run(locality, config, old_ready, shutdown_rx).await
             }
-            Some(_) => unreachable!(),
             None => {
                 self.service.spawn_services(&config, &shutdown_rx)?;
                 shutdown_rx.changed().await.map_err(From::from)
             }
+            Some(_) => unreachable!(),
         }
     }
 
     /// Searches for the configuration file, and panics if not found.
-    fn read_config<A: AsRef<Path>>(path: A) -> Result<Option<Config>, eyre::Error> {
-        let path = path.as_ref();
-        let from_reader = |file| Config::from_reader(file).map_err(From::from).map(Some);
+    fn read_config(&self) -> Result<Arc<crate::Config>, eyre::Error> {
+        let paths = [&self.config, std::path::Path::new(ETC_CONFIG_PATH)];
+        let mut paths = paths.iter();
 
-        match std::fs::File::open(path) {
-            Ok(file) => (from_reader)(file),
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-                tracing::debug!(path=%path.display(), "provided path not found");
-                match cfg!(unix).then(|| std::fs::File::open(ETC_CONFIG_PATH)) {
-                    Some(Ok(file)) => (from_reader)(file),
-                    Some(Err(error)) if error.kind() == std::io::ErrorKind::NotFound => {
-                        tracing::debug!(path=%path.display(), "/etc path not found");
-                        Ok(None)
-                    }
-                    Some(Err(error)) => Err(error.into()),
-                    None => Ok(None),
+        let file = loop {
+            let Some(path) = paths.next() else {
+                let cfg = if matches!(self.command, Some(Commands::Agent(..))) {
+                    Config::default_agent()
+                } else {
+                    Config::default_non_agent()
+                };
+                return Ok(Arc::new(cfg));
+            };
+
+            match std::fs::File::open(path) {
+                Ok(file) => break file,
+                Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+                    tracing::debug!(path = %path.display(), "config path not found");
+                    continue;
+                }
+                Err(err) => {
+                    tracing::error!(path = %path.display(), error = ?err, "failed to read path");
+                    eyre::bail!(err);
                 }
             }
-            Err(error) => Err(error.into()),
-        }
+        };
+
+        Ok(Arc::new(crate::Config::from_reader(
+            file,
+            matches!(self.command, Some(Commands::Agent(..))),
+        )?))
     }
 }
 

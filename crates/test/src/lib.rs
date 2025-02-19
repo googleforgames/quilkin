@@ -322,7 +322,7 @@ impl Pail {
                     quilkin::signal::channel(quilkin::signal::ShutdownKind::Testing);
 
                 let config = Arc::new(Config::default_non_agent());
-                config.id.store(Arc::new(spc.name.into()));
+                config.dyn_cfg.id.store(Arc::new(spc.name.into()));
 
                 let task = tokio::spawn(
                     relay::Relay {
@@ -397,7 +397,7 @@ impl Pail {
 
                 let config_path = path.clone();
                 let config = Arc::new(Config::default_agent());
-                config.id.store(Arc::new(spc.name.into()));
+                config.dyn_cfg.id.store(Arc::new(spc.name.into()));
                 let acfg = config.clone();
 
                 let task = tokio::spawn(async move {
@@ -490,7 +490,7 @@ impl Pail {
                         .modify(|clusters| clusters.insert_default(endpoints));
                 }
 
-                config.id.store(Arc::new(spc.name.into()));
+                config.dyn_cfg.id.store(Arc::new(spc.name.into()));
                 let pconfig = config.clone();
 
                 let (rttx, rtrx) = tokio::sync::mpsc::unbounded_channel();

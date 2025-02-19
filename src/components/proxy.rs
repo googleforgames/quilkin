@@ -226,7 +226,7 @@ impl Proxy {
                 *lock = Some(check.clone());
             }
 
-            let id = config.id.load();
+            let id = config.id();
 
             std::thread::Builder::new()
                 .name("proxy-subscription".into())

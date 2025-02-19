@@ -42,12 +42,12 @@ pub async fn watch(
         let configmap_reflector = crate::config::providers::k8s::update_filters_from_configmap(
             client.clone(),
             cns,
-            config.clone(),
+            config.filters.clone(),
         );
         let gameserver_reflector = crate::config::providers::k8s::update_endpoints_from_gameservers(
             client,
             gameservers_namespace,
-            config.clone(),
+            config.clusters.clone(),
             locality,
             address_selector,
         );
@@ -70,7 +70,7 @@ pub async fn watch(
         let gameserver_reflector = crate::config::providers::k8s::update_endpoints_from_gameservers(
             client,
             gameservers_namespace,
-            config.clone(),
+            config.clusters.clone(),
             locality,
             address_selector,
         );

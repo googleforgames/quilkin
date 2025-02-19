@@ -27,18 +27,20 @@ use http_body_util::Full;
 use hyper::{Method, Request, Response, StatusCode};
 type Body = Full<Bytes>;
 
-use crate::config::Config;
 use health::Health;
 
 pub const PORT: u16 = 8000;
 
 pub(crate) const IDLE_REQUEST_INTERVAL: Duration = Duration::from_secs(30);
 
-pub fn server(
-    config: Arc<Config>,
+pub fn server<C>(
+    config: Arc<C>,
     ready: Arc<AtomicBool>,
     address: Option<std::net::SocketAddr>,
-) -> std::thread::JoinHandle<eyre::Result<()>> {
+) -> std::thread::JoinHandle<eyre::Result<()>>
+where
+    C: serde::Serialize + Send + Sync + 'static,
+{
     let address = address.unwrap_or_else(|| (std::net::Ipv6Addr::UNSPECIFIED, PORT).into());
     let health = Health::new();
     tracing::info!(address = %address, "Starting admin endpoint");
@@ -93,9 +95,9 @@ pub fn server(
         .expect("failed to spawn admin-http thread")
 }
 
-async fn handle_request(
+async fn handle_request<C: serde::Serialize>(
     request: Request<hyper::body::Incoming>,
-    config: Arc<Config>,
+    config: Arc<C>,
     ready: &AtomicBool,
     health: Health,
 ) -> Response<Body> {

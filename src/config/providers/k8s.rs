@@ -24,12 +24,15 @@ use kube::{core::DeserializeGuard, runtime::watcher::Event};
 
 use agones::GameServer;
 
-use crate::net::endpoint::Locality;
+use crate::{
+    config,
+    net::{endpoint::Locality, ClusterMap},
+};
 
 pub fn update_filters_from_configmap(
     client: kube::Client,
     namespace: impl AsRef<str>,
-    config: Arc<crate::Config>,
+    filters: config::Slot<crate::filters::FilterChain>,
 ) -> impl Stream<Item = crate::Result<(), eyre::Error>> {
     async_stream::stream! {
         let mut cmap = None;
@@ -63,7 +66,7 @@ pub fn update_filters_from_configmap(
                     }
                 }
                 Event::Delete(_) => {
-                    config.filters.remove();
+                    filters.remove();
                     yield Ok(());
                     continue;
                 }
@@ -73,13 +76,13 @@ pub fn update_filters_from_configmap(
             let data = data.get("quilkin.yaml").ok_or_else(|| eyre::eyre!("quilkin.yaml property not found"))?;
             let data: serde_json::Map<String, serde_json::Value> = serde_yaml::from_str(data)?;
 
-            if let Some(filters) = data
+            if let Some(de_filters) = data
                 .get("filters")
                     .cloned()
                     .map(serde_json::from_value)
                     .transpose()?
             {
-                config.filters.store(Arc::new(filters));
+                filters.store(Arc::new(de_filters));
             }
 
             yield Ok(());
@@ -127,7 +130,7 @@ fn gameserver_events(
 pub fn update_endpoints_from_gameservers(
     client: kube::Client,
     namespace: impl AsRef<str>,
-    config: Arc<crate::Config>,
+    clusters: config::Watch<ClusterMap>,
     locality: Option<Locality>,
     address_selector: Option<crate::config::AddressSelector>,
 ) -> impl Stream<Item = crate::Result<(), eyre::Error>> {
@@ -158,7 +161,7 @@ pub fn update_endpoints_from_gameservers(
                         continue;
                     };
                     tracing::debug!(endpoint=%serde_json::to_value(&endpoint).unwrap(), "Adding endpoint");
-                    config.clusters.write()
+                    clusters.write()
                         .replace(locality.clone(), endpoint);
                 }
                 Event::Init => {},
@@ -185,7 +188,7 @@ pub fn update_endpoints_from_gameservers(
                         "Restarting with endpoints"
                     );
 
-                    config.clusters.write().insert(locality.clone(), std::mem::take(&mut servers));
+                    clusters.write().insert(locality.clone(), std::mem::take(&mut servers));
                 }
                 Event::Delete(result) => {
                     let server = match result.0 {
@@ -198,9 +201,9 @@ pub fn update_endpoints_from_gameservers(
 
                     tracing::debug!("received delete event from k8s");
                     let found = if let Some(endpoint) = server.endpoint(ads) {
-                        config.clusters.write().remove_endpoint(&endpoint)
+                        clusters.write().remove_endpoint(&endpoint)
                     } else {
-                        config.clusters.write().remove_endpoint_if(|endpoint| {
+                        clusters.write().remove_endpoint_if(|endpoint| {
                             endpoint.metadata.unknown.get("name") == server.metadata.name.clone().map(From::from).as_ref()
                         })
                     };
@@ -215,7 +218,7 @@ pub fn update_endpoints_from_gameservers(
                 }
             };
 
-            config.apply_metrics();
+            crate::metrics::apply_clusters(&clusters);
             yield Ok(());
         }
     }
