@@ -9,6 +9,7 @@ impl Config {
         #[serde(deny_unknown_fields)]
         struct AllConfig {
             id: Option<String>,
+            version: Option<Version>,
             filters: Option<crate::filters::FilterChain>,
             clusters: Option<ClusterMap>,
             #[serde(flatten)]
@@ -46,6 +47,7 @@ impl Config {
             datacenter: cfg.datacenter,
             dyn_cfg: DynamicConfig {
                 id: cfg.id.map_or_else(default_id, Slot::from),
+                version: cfg.version.unwrap_or_default(),
                 typemap: default_typemap(),
             },
         })
@@ -96,6 +98,7 @@ impl serde::Serialize for Config {
         let len = self.dyn_cfg.typemap.len() + 1 /* id */ + 1 /* filters */ + 1 /* clusters */ + if matches!(self.datacenter, DatacenterConfig::Agent { .. }) { 2 } else { 1};
         let mut map = serializer.serialize_map(Some(len))?;
 
+        map.serialize_entry("version", &self.dyn_cfg.version)?;
         map.serialize_entry("id", &self.dyn_cfg.id)?;
         map.serialize_entry("filters", &self.filters)?;
         map.serialize_entry("clusters", &self.clusters)?;

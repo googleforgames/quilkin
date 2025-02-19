@@ -107,6 +107,7 @@ impl<'de> Deserialize<'de> for Config {
                 let mut icao_code = None;
                 let mut qcmp_port = None;
                 let mut datacenters = None;
+                let mut version = None;
 
                 while let Some(key) = map.next_key::<std::borrow::Cow<'de, str>>()? {
                     match key.as_ref() {
@@ -147,7 +148,7 @@ impl<'de> Deserialize<'de> for Config {
                             qcmp_port = Some(map.next_value()?);
                         }
                         "version" => {
-                            map.next_value::<String>()?;
+                            version = Some(map.next_value()?);
                         }
                         unknown => {
                             return Err(Error::unknown_field(
@@ -185,6 +186,7 @@ impl<'de> Deserialize<'de> for Config {
                     clusters: clusters.unwrap_or_default(),
                     datacenter,
                     dyn_cfg: DynamicConfig {
+                        version: version.unwrap_or_default(),
                         id: id.map_or_else(default_id, Slot::new),
                         typemap: default_typemap(),
                     },
@@ -222,6 +224,7 @@ pub struct Agent {
 #[cfg_attr(test, derive(Debug))]
 pub struct DynamicConfig {
     pub id: Slot<String>,
+    pub version: Version,
     typemap: ConfigMap,
 }
 
@@ -231,10 +234,7 @@ impl<'de> Deserialize<'de> for DynamicConfig {
     where
         D: serde::Deserializer<'de>,
     {
-        struct DynVisitor {
-            id: Option<String>,
-            map: ConfigMap,
-        }
+        struct DynVisitor;
 
         impl<'de> serde::de::Visitor<'de> for DynVisitor {
             type Value = DynamicConfig;
@@ -243,13 +243,17 @@ impl<'de> Deserialize<'de> for DynamicConfig {
                 formatter.write_str("Quilkin dynamic config")
             }
 
-            fn visit_map<A>(mut self, mut map: A) -> Result<Self::Value, A::Error>
+            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
             where
                 A: serde::de::MapAccess<'de>,
             {
+                let mut version = None;
+                let mut id = None;
+
                 while let Some(key) = map.next_key::<std::borrow::Cow<'de, str>>()? {
                     match key.as_ref() {
-                        "id" => self.id = Some(map.next_value()?),
+                        "id" => id = Some(map.next_value()?),
+                        "version" => version = Some(map.next_value()?),
                         other => {
                             return Err(serde::de::Error::unknown_field(other, &["id"]));
                         }
@@ -257,16 +261,14 @@ impl<'de> Deserialize<'de> for DynamicConfig {
                 }
 
                 Ok(DynamicConfig {
-                    id: self.id.map_or_else(default_id, |id| Slot::new(id)),
-                    typemap: self.map,
+                    version: version.unwrap_or_default(),
+                    id: id.map_or_else(default_id, |id| Slot::new(Some(id))),
+                    typemap: default_typemap(),
                 })
             }
         }
 
-        deserializer.deserialize_map(DynVisitor {
-            id: None,
-            map: default_typemap(),
-        })
+        deserializer.deserialize_map(DynVisitor)
     }
 }
 
@@ -740,6 +742,7 @@ impl Config {
             filters: Default::default(),
             dyn_cfg: DynamicConfig {
                 id: default_id(),
+                version: Version::default(),
                 typemap: default_typemap(),
             },
             datacenter: DatacenterConfig::Agent {
@@ -755,6 +758,7 @@ impl Config {
             filters: Default::default(),
             dyn_cfg: DynamicConfig {
                 id: default_id(),
+                version: Version::default(),
                 typemap: default_typemap(),
             },
             datacenter: DatacenterConfig::NonAgent {
