@@ -316,7 +316,11 @@
 <a href="#315" id="315">315</a>
 <a href="#316" id="316">316</a>
 <a href="#317" id="317">317</a>
-<a href="#318" id="318">318</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -439,6 +443,10 @@
             })
         });
 
+        <span class="kw">let </span><span class="prelude-val">Some</span>(clusters) = config.dyn_cfg.clusters() <span class="kw">else </span>{
+            <span class="macro">eyre::bail!</span>(<span class="string">"empty clusters were not created"</span>)
+        };
+
         <span class="kw">if </span>!<span class="self">self</span>.to.is_empty() {
             <span class="kw">let </span>endpoints = <span class="kw">if let </span><span class="prelude-val">Some</span>(tt) = <span class="kw-2">&amp;</span><span class="self">self</span>.to_tokens {
                 <span class="kw">let </span>(unique, overflow) = <span class="number">256u64</span>.overflowing_pow(tt.length <span class="kw">as _</span>);
@@ -510,12 +518,12 @@
                     .collect()
             };
 
-            config.clusters.modify(|clusters| {
+            clusters.modify(|clusters| {
                 clusters.insert(<span class="prelude-val">None</span>, endpoints);
             });
         }
 
-        <span class="kw">if </span>!config.clusters.read().has_endpoints() &amp;&amp; <span class="self">self</span>.management_servers.is_empty() {
+        <span class="kw">if </span>!clusters.read().has_endpoints() &amp;&amp; <span class="self">self</span>.management_servers.is_empty() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">eyre::eyre!</span>(
                  <span class="string">"`quilkin proxy` requires at least one `to` address or `management_server` endpoint."
              </span>));

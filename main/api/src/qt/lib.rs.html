@@ -732,7 +732,9 @@
 <a href="#731" id="731">731</a>
 <a href="#732" id="732">732</a>
 <a href="#733" id="733">733</a>
-<a href="#734" id="734">734</a></pre></div><pre class="rust"><code><span class="kw">use </span>quilkin::{
+<a href="#734" id="734">734</a>
+<a href="#735" id="735">735</a>
+<a href="#736" id="736">736</a></pre></div><pre class="rust"><code><span class="kw">use </span>quilkin::{
     collections::{BufferPool, PoolBuffer},
     components::{<span class="self">self</span>, RunArgs},
     config::Providers,
@@ -1224,7 +1226,9 @@
 
                 <span class="kw">if </span>!endpoints.is_empty() {
                     config
-                        .clusters
+                        .dyn_cfg
+                        .clusters()
+                        .unwrap()
                         .modify(|clusters| clusters.insert_default(endpoints));
                 }
 

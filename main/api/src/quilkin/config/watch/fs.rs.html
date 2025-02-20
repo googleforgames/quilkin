@@ -233,7 +233,7 @@
         <span class="kw">let </span>_handle = tokio::spawn(watch(dest.clone(), &lt;<span class="kw">_</span>&gt;::default(), file_path.clone(), <span class="prelude-val">None</span>));
         tokio::time::sleep(std::time::Duration::from_millis(<span class="number">100</span>)).<span class="kw">await</span>;
 
-        source.clusters.modify(|clusters| {
+        source.dyn_cfg.clusters().unwrap().modify(|clusters| {
             clusters.insert_default(
                 [<span class="kw">crate</span>::net::endpoint::Endpoint::with_metadata(
                     (std::net::Ipv4Addr::LOCALHOST, <span class="number">4321</span>).into(),

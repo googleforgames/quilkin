@@ -340,7 +340,15 @@
 <a href="#339" id="339">339</a>
 <a href="#340" id="340">340</a>
 <a href="#341" id="341">341</a>
-<a href="#342" id="342">342</a></pre></div><pre class="rust"><code><span class="kw">use </span>serde::ser::SerializeMap;
+<a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
+<a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a>
+<a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
+<a href="#350" id="350">350</a></pre></div><pre class="rust"><code><span class="kw">use </span>serde::ser::SerializeMap;
 
 <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
@@ -387,9 +395,11 @@
         <span class="kw">if let </span><span class="prelude-val">Some</span>(filters) = cfg.filters {
             typemap.insert::&lt;FilterChain&gt;(Slot::new(filters));
         }
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(clusters) = cfg.clusters {
+            typemap.insert::&lt;ClusterMap&gt;(Watch::new(clusters));
+        }
 
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
-            clusters: Watch::new(cfg.clusters.unwrap_or_default()),
             datacenter: cfg.datacenter,
             dyn_cfg: DynamicConfig {
                 id: cfg.id.map_or_else(default_id, Slot::from),
@@ -415,9 +425,13 @@
                     <span class="self">self</span>.dyn_cfg.id.try_replace(serde_json::from_value(v)<span class="question-mark">?</span>);
                 }
                 <span class="string">"clusters" </span>=&gt; {
+                    <span class="kw">let </span><span class="prelude-val">Some</span>(clusters) = <span class="self">self</span>.dyn_cfg.clusters() <span class="kw">else </span>{
+                        <span class="kw">continue</span>;
+                    };
+
                     <span class="kw">let </span>cmd: cluster::ClusterMapDeser = serde_json::from_value(v)<span class="question-mark">?</span>;
                     <span class="macro">tracing::trace!</span>(len = cmd.endpoints.len(), <span class="string">"replacing clusters"</span>);
-                    <span class="self">self</span>.clusters.modify(|clusters| {
+                    clusters.modify(|clusters| {
                         <span class="kw">for </span>cluster <span class="kw">in </span>cmd.endpoints {
                             clusters.insert(cluster.locality, cluster.endpoints);
                         }
@@ -449,9 +463,11 @@
         map.serialize_entry(<span class="string">"version"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.dyn_cfg.version)<span class="question-mark">?</span>;
         map.serialize_entry(<span class="string">"id"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.dyn_cfg.id)<span class="question-mark">?</span>;
         <span class="kw">if let </span><span class="prelude-val">Some</span>(filters) = <span class="self">self</span>.dyn_cfg.filters() {
-            map.serialize_entry(<span class="string">"filters"</span>, <span class="kw-2">&amp;</span>filters)<span class="question-mark">?</span>;
+            map.serialize_entry(<span class="string">"filters"</span>, filters)<span class="question-mark">?</span>;
         }
-        map.serialize_entry(<span class="string">"clusters"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.clusters)<span class="question-mark">?</span>;
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(clusters) = <span class="self">self</span>.dyn_cfg.clusters() {
+            map.serialize_entry(<span class="string">"clusters"</span>, clusters)<span class="question-mark">?</span>;
+        }
 
         <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.datacenter {
             DatacenterConfig::Agent {
@@ -481,7 +497,7 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>deserialise_client() {
         <span class="kw">let </span>config = Config::default_non_agent();
-        config.clusters.modify(|clusters| {
+        config.dyn_cfg.clusters().unwrap().modify(|clusters| {
             clusters.insert_default([Endpoint::new(<span class="string">"127.0.0.1:25999"</span>.parse().unwrap())].into())
         });
 
@@ -491,7 +507,7 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>deserialise_server() {
         <span class="kw">let </span>config = Config::default_non_agent();
-        config.clusters.modify(|clusters| {
+        config.dyn_cfg.clusters().unwrap().modify(|clusters| {
             clusters.insert_default(
                 [
                     Endpoint::new(<span class="string">"127.0.0.1:26000"</span>.parse().unwrap()),
@@ -527,7 +543,7 @@
         }))
         .unwrap();
 
-        <span class="kw">let </span>value = config.clusters.read();
+        <span class="kw">let </span>value = config.dyn_cfg.clusters().unwrap().read();
         <span class="macro">assert_eq!</span>(
             <span class="kw-2">&amp;*</span>value,
             <span class="kw-2">&amp;</span>ClusterMap::new_default(
@@ -548,7 +564,7 @@
         }))
         .unwrap();
 
-        <span class="kw">let </span>value = config.clusters.read();
+        <span class="kw">let </span>value = config.dyn_cfg.clusters().unwrap().read();
         <span class="macro">assert_eq!</span>(
             <span class="kw-2">&amp;*</span>value,
             <span class="kw-2">&amp;</span>ClusterMap::new_default(
@@ -593,7 +609,7 @@
         }))
         .unwrap_or_else(|<span class="kw">_</span>| Config::default_agent());
 
-        <span class="kw">let </span>value = config.clusters.read();
+        <span class="kw">let </span>value = config.dyn_cfg.clusters().unwrap().read();
         <span class="macro">assert_eq!</span>(
             <span class="kw-2">&amp;*</span>value,
             <span class="kw-2">&amp;</span>ClusterMap::new_default(

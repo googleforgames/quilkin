@@ -587,7 +587,11 @@
 <a href="#586" id="586">586</a>
 <a href="#587" id="587">587</a>
 <a href="#588" id="588">588</a>
-<a href="#589" id="589">589</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::{future::Future, sync::Arc};
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::{future::Future, sync::Arc};
 
 <span class="kw">use crate</span>::{components::proxy::SessionPool, config::Config};
 
@@ -1088,9 +1092,13 @@
         <span class="kw">let </span>filters = config
             .dyn_cfg
             .filters()
-            .clone()
-            .context(<span class="string">"XDP requires a filter chain"</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>clusters = config.clusters.clone();
+            .context(<span class="string">"XDP requires a filter chain"</span>)<span class="question-mark">?
+            </span>.clone();
+        <span class="kw">let </span>clusters = config
+            .dyn_cfg
+            .clusters()
+            .context(<span class="string">"XDP requires a cluster map"</span>)<span class="question-mark">?
+            </span>.clone();
 
         <span class="kw">let </span>config = <span class="kw">crate</span>::net::xdp::process::ConfigState { filters, clusters };
 

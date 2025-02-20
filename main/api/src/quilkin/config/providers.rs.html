@@ -138,7 +138,10 @@
 <a href="#137" id="137">137</a>
 <a href="#138" id="138">138</a>
 <a href="#139" id="139">139</a>
-<a href="#140" id="140">140</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -222,7 +225,10 @@
                     .dyn_cfg
                     .filters()
                     .context(<span class="string">"agones requires filters"</span>)<span class="question-mark">?</span>;
-                <span class="kw">let </span>clusters = config.clusters.clone();
+                <span class="kw">let </span>clusters = config
+                    .dyn_cfg
+                    .clusters()
+                    .context(<span class="string">"agones requires clusters"</span>)<span class="question-mark">?</span>;
 
                 <span class="self">Self</span>::task(health_check.clone(), {
                     <span class="kw">let </span>health_check = health_check.clone();

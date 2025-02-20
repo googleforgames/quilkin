@@ -1223,7 +1223,68 @@
 <a href="#1222" id="1222">1222</a>
 <a href="#1223" id="1223">1223</a>
 <a href="#1224" id="1224">1224</a>
-<a href="#1225" id="1225">1225</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#1225" id="1225">1225</a>
+<a href="#1226" id="1226">1226</a>
+<a href="#1227" id="1227">1227</a>
+<a href="#1228" id="1228">1228</a>
+<a href="#1229" id="1229">1229</a>
+<a href="#1230" id="1230">1230</a>
+<a href="#1231" id="1231">1231</a>
+<a href="#1232" id="1232">1232</a>
+<a href="#1233" id="1233">1233</a>
+<a href="#1234" id="1234">1234</a>
+<a href="#1235" id="1235">1235</a>
+<a href="#1236" id="1236">1236</a>
+<a href="#1237" id="1237">1237</a>
+<a href="#1238" id="1238">1238</a>
+<a href="#1239" id="1239">1239</a>
+<a href="#1240" id="1240">1240</a>
+<a href="#1241" id="1241">1241</a>
+<a href="#1242" id="1242">1242</a>
+<a href="#1243" id="1243">1243</a>
+<a href="#1244" id="1244">1244</a>
+<a href="#1245" id="1245">1245</a>
+<a href="#1246" id="1246">1246</a>
+<a href="#1247" id="1247">1247</a>
+<a href="#1248" id="1248">1248</a>
+<a href="#1249" id="1249">1249</a>
+<a href="#1250" id="1250">1250</a>
+<a href="#1251" id="1251">1251</a>
+<a href="#1252" id="1252">1252</a>
+<a href="#1253" id="1253">1253</a>
+<a href="#1254" id="1254">1254</a>
+<a href="#1255" id="1255">1255</a>
+<a href="#1256" id="1256">1256</a>
+<a href="#1257" id="1257">1257</a>
+<a href="#1258" id="1258">1258</a>
+<a href="#1259" id="1259">1259</a>
+<a href="#1260" id="1260">1260</a>
+<a href="#1261" id="1261">1261</a>
+<a href="#1262" id="1262">1262</a>
+<a href="#1263" id="1263">1263</a>
+<a href="#1264" id="1264">1264</a>
+<a href="#1265" id="1265">1265</a>
+<a href="#1266" id="1266">1266</a>
+<a href="#1267" id="1267">1267</a>
+<a href="#1268" id="1268">1268</a>
+<a href="#1269" id="1269">1269</a>
+<a href="#1270" id="1270">1270</a>
+<a href="#1271" id="1271">1271</a>
+<a href="#1272" id="1272">1272</a>
+<a href="#1273" id="1273">1273</a>
+<a href="#1274" id="1274">1274</a>
+<a href="#1275" id="1275">1275</a>
+<a href="#1276" id="1276">1276</a>
+<a href="#1277" id="1277">1277</a>
+<a href="#1278" id="1278">1278</a>
+<a href="#1279" id="1279">1279</a>
+<a href="#1280" id="1280">1280</a>
+<a href="#1281" id="1281">1281</a>
+<a href="#1282" id="1282">1282</a>
+<a href="#1283" id="1283">1283</a>
+<a href="#1284" id="1284">1284</a>
+<a href="#1285" id="1285">1285</a>
+<a href="#1286" id="1286">1286</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -1299,7 +1360,6 @@
 <span class="attr">#[derive(Clone)]
 #[cfg_attr(test, derive(Debug))]
 </span><span class="kw">pub struct </span>Config {
-    <span class="kw">pub </span>clusters: Watch&lt;ClusterMap&gt;,
     <span class="kw">pub </span>datacenter: DatacenterConfig,
     <span class="kw">pub </span>dyn_cfg: DynamicConfig,
 }
@@ -1326,7 +1386,6 @@
                 <span class="kw">use </span>serde::de::Error;
 
                 <span class="kw">let </span><span class="kw-2">mut </span>id = <span class="prelude-ty">Option</span>::&lt;String&gt;::None;
-                <span class="kw">let </span><span class="kw-2">mut </span>clusters = <span class="prelude-val">None</span>;
                 <span class="kw">let </span><span class="kw-2">mut </span>icao_code = <span class="prelude-val">None</span>;
                 <span class="kw">let </span><span class="kw-2">mut </span>qcmp_port = <span class="prelude-val">None</span>;
                 <span class="kw">let </span><span class="kw-2">mut </span>datacenters = <span class="prelude-val">None</span>;
@@ -1351,7 +1410,6 @@
                 <span class="kw">while let </span><span class="prelude-val">Some</span>(key) = map.next_key::&lt;std::borrow::Cow&lt;<span class="lifetime">'de</span>, str&gt;&gt;()<span class="question-mark">? </span>{
                     <span class="kw">match </span>key.as_ref() {
                         <span class="string">"id" </span>=&gt; id = <span class="prelude-val">Some</span>(map.next_value()<span class="question-mark">?</span>),
-                        <span class="string">"clusters" </span>=&gt; clusters = <span class="prelude-val">Some</span>(map.next_value()<span class="question-mark">?</span>),
                         <span class="string">"datacenters" </span>=&gt; {
                             <span class="kw">if </span>icao_code.is_some() || qcmp_port.is_some() {
                                 <span class="kw">return </span><span class="prelude-val">Err</span>(Error::custom(
@@ -1390,6 +1448,7 @@
                         }
                         unknown =&gt; {
                             <span class="macro">tm_insert!</span>(key, <span class="string">"filters"</span>, FilterChain);
+                            <span class="macro">tm_insert!</span>(key, <span class="string">"clusters"</span>, ClusterMap);
 
                             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::unknown_field(
                                 unknown,
@@ -1420,7 +1479,6 @@
                 };
 
                 <span class="prelude-val">Ok</span>(Config {
-                    clusters: clusters.unwrap_or_default(),
                     datacenter,
                     dyn_cfg: DynamicConfig {
                         version: version.unwrap_or_default(),
@@ -1438,13 +1496,12 @@
 <span class="attr">#[cfg(test)]
 </span><span class="kw">impl </span>PartialEq <span class="kw">for </span>Config {
     <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
-        <span class="kw">if </span><span class="self">self</span>.clusters != other.clusters || <span class="self">self</span>.datacenter != other.datacenter {
+        <span class="kw">if </span><span class="self">self</span>.datacenter != other.datacenter {
             <span class="kw">return </span><span class="bool-val">false</span>;
         }
 
-        <span class="comment">// TODO: compare typemaps
-        </span><span class="bool-val">true
-    </span>}
+        <span class="self">self</span>.dyn_cfg == other.dyn_cfg
+    }
 }
 
 <span class="attr">#[derive(Clone, Debug)]
@@ -1507,6 +1564,8 @@
                         <span class="string">"version" </span>=&gt; version = <span class="prelude-val">Some</span>(map.next_value()<span class="question-mark">?</span>),
                         other =&gt; {
                             <span class="macro">tm_insert!</span>(key, <span class="string">"filters"</span>, FilterChain);
+                            <span class="macro">tm_insert!</span>(key, <span class="string">"clusters"</span>, ClusterMap);
+
                             <span class="kw">return </span><span class="prelude-val">Err</span>(serde::de::Error::unknown_field(other, <span class="kw-2">&amp;</span>[<span class="string">"id"</span>]));
                         }
                     }
@@ -1541,20 +1600,43 @@
 }
 
 <span class="kw">impl </span>DynamicConfig {
-    <span class="kw">pub fn </span>filters(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Slot&lt;FilterChain&gt;&gt; {
-        <span class="self">self</span>.typemap.get::&lt;FilterChain&gt;().cloned()
+    <span class="kw">pub fn </span>filters(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Slot&lt;FilterChain&gt;&gt; {
+        <span class="self">self</span>.typemap.get::&lt;FilterChain&gt;()
     }
 
-    <span class="kw">pub fn </span>clusters(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Watch&lt;ClusterMap&gt;&gt; {
-        <span class="self">self</span>.typemap.get::&lt;ClusterMap&gt;().cloned()
+    <span class="kw">pub fn </span>clusters(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Watch&lt;ClusterMap&gt;&gt; {
+        <span class="self">self</span>.typemap.get::&lt;ClusterMap&gt;()
     }
 
-    <span class="kw">pub fn </span>datacenters(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Watch&lt;DatacenterMap&gt;&gt; {
-        <span class="self">self</span>.typemap.get::&lt;DatacenterMap&gt;().cloned()
+    <span class="kw">pub fn </span>datacenters(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Watch&lt;DatacenterMap&gt;&gt; {
+        <span class="self">self</span>.typemap.get::&lt;DatacenterMap&gt;()
     }
 
-    <span class="kw">pub fn </span>agent(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Agent&gt; {
-        <span class="self">self</span>.typemap.get::&lt;Agent&gt;().cloned()
+    <span class="kw">pub fn </span>agent(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Agent&gt; {
+        <span class="self">self</span>.typemap.get::&lt;Agent&gt;()
+    }
+}
+
+<span class="attr">#[cfg(test)]
+</span><span class="kw">impl </span>PartialEq <span class="kw">for </span>DynamicConfig {
+    <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
+        <span class="kw">if </span><span class="self">self</span>.id != other.id || <span class="self">self</span>.version != other.version {
+            <span class="kw">return </span><span class="bool-val">false</span>;
+        }
+
+        <span class="kw">fn </span>compare&lt;T&gt;(a: <span class="kw-2">&amp;</span>ConfigMap, b: <span class="kw-2">&amp;</span>ConfigMap) -&gt; bool
+        <span class="kw">where
+            </span>T: typemap_rev::TypeMapKey,
+            T::Value: PartialEq + Clone + std::fmt::Debug,
+        {
+            <span class="kw">let </span><span class="prelude-val">Some</span>((a, b)) = a.get::&lt;T&gt;().zip(b.get::&lt;T&gt;()) <span class="kw">else </span>{
+                <span class="kw">return </span><span class="bool-val">false</span>;
+            };
+            a == b
+        }
+
+        compare::&lt;FilterChain&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>.typemap, <span class="kw-2">&amp;</span>other.typemap)
+            &amp;&amp; compare::&lt;ClusterMap&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>.typemap, <span class="kw-2">&amp;</span>other.typemap)
     }
 }
 
@@ -1617,33 +1699,59 @@
         <span class="macro">tracing::trace!</span>(<span class="string">"waiting for changes"</span>);
 
         <span class="kw">async move </span>{
-            <span class="kw">let </span><span class="kw-2">mut </span>cluster_watcher = control_plane.config.clusters.watch();
-            <span class="kw">match </span><span class="kw-2">&amp;</span>control_plane.config.datacenter {
-                <span class="kw">crate</span>::config::DatacenterConfig::Agent { .. } =&gt; <span class="kw">loop </span>{
-                    <span class="kw">match </span>cluster_watcher.changed().<span class="kw">await </span>{
-                        <span class="prelude-val">Ok</span>(()) =&gt; control_plane.push_update(<span class="kw">crate</span>::xds::CLUSTER_TYPE),
-                        <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">tracing::error!</span>(%error, <span class="string">"error watching changes"</span>),
-                    }
-                },
+            <span class="kw">let </span>clusters = control_plane.config.dyn_cfg.clusters();
+
+            <span class="kw">let </span>dc = <span class="kw">match </span><span class="kw-2">&amp;</span>control_plane.config.datacenter {
+                <span class="kw">crate</span>::config::DatacenterConfig::Agent { .. } =&gt; <span class="prelude-val">None</span>,
                 <span class="kw">crate</span>::config::DatacenterConfig::NonAgent { datacenters } =&gt; {
-                    <span class="kw">let </span><span class="kw-2">mut </span>dc_watcher = datacenters.watch();
+                    <span class="prelude-val">Some</span>(datacenters.clone())
+                }
+            };
+
+            <span class="kw">match </span>(clusters, dc) {
+                (<span class="prelude-val">Some</span>(clusters), <span class="prelude-val">Some</span>(dc)) =&gt; {
+                    <span class="kw">let </span><span class="kw-2">mut </span>cw = clusters.watch();
+                    <span class="kw">let </span><span class="kw-2">mut </span>dcw = dc.watch();
                     <span class="kw">loop </span>{
                         <span class="macro">tokio::select!</span> {
-                            result = cluster_watcher.changed() =&gt; {
+                            result = cw.changed() =&gt; {
                                 <span class="kw">match </span>result {
-                                    <span class="prelude-val">Ok</span>(()) =&gt; control_plane.push_update(<span class="kw">crate</span>::xds::CLUSTER_TYPE),
+                                    <span class="prelude-val">Ok</span>(()) =&gt; control_plane.push_update(xds::CLUSTER_TYPE),
                                     <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">tracing::error!</span>(%error, <span class="string">"error watching changes"</span>),
                                 }
                             }
-                            result = dc_watcher.changed() =&gt; {
+                            result = dcw.changed() =&gt; {
                                 <span class="kw">match </span>result {
-                                    <span class="prelude-val">Ok</span>(()) =&gt; control_plane.push_update(<span class="kw">crate</span>::xds::DATACENTER_TYPE),
+                                    <span class="prelude-val">Ok</span>(()) =&gt; control_plane.push_update(xds::DATACENTER_TYPE),
                                     <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">tracing::error!</span>(%error, <span class="string">"error watching changes"</span>),
                                 }
                             }
                         }
                     }
                 }
+                (<span class="prelude-val">Some</span>(clusters), <span class="prelude-val">None</span>) =&gt; {
+                    <span class="kw">let </span><span class="kw-2">mut </span>cw = clusters.watch();
+
+                    <span class="kw">loop </span>{
+                        <span class="kw">match </span>cw.changed().<span class="kw">await </span>{
+                            <span class="prelude-val">Ok</span>(()) =&gt; control_plane.push_update(xds::CLUSTER_TYPE),
+                            <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">tracing::error!</span>(%error, <span class="string">"error watching changes"</span>),
+                        }
+                    }
+                }
+                (<span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(dc)) =&gt; {
+                    <span class="kw">let </span><span class="kw-2">mut </span>dcw = dc.watch();
+
+                    <span class="kw">loop </span>{
+                        <span class="kw">match </span>dcw.changed().<span class="kw">await </span>{
+                            <span class="prelude-val">Ok</span>(()) =&gt; control_plane.push_update(xds::DATACENTER_TYPE),
+                            <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">tracing::error!</span>(%error, <span class="string">"error watching changes"</span>),
+                        }
+                    }
+                }
+                (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>) =&gt; <span class="kw">loop </span>{
+                    tokio::time::sleep(std::time::Duration::from_secs(u64::MAX)).<span class="kw">await</span>;
+                },
             }
         }
     }
@@ -1782,7 +1890,7 @@
                         }
                     }
                 },
-                <span class="kw">crate</span>::xds::ResourceType::Cluster =&gt; {
+                ResourceType::Cluster =&gt; {
                     <span class="kw">let </span><span class="kw-2">mut </span>push = |key: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::net::endpoint::Locality&gt;,
                                     value: <span class="kw-2">&amp;</span><span class="kw">crate</span>::net::cluster::EndpointSet|
                      -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
@@ -1810,8 +1918,12 @@
                         <span class="prelude-val">Ok</span>(())
                     };
 
+                    <span class="kw">let </span><span class="prelude-val">Some</span>(clusters) = <span class="self">self</span>.dyn_cfg.clusters() <span class="kw">else </span>{
+                        <span class="kw">break </span><span class="lifetime">'append</span>;
+                    };
+
                     <span class="kw">if </span>client_state.subscribed.is_empty() {
-                        <span class="kw">for </span>cluster <span class="kw">in </span><span class="self">self</span>.clusters.read().iter() {
+                        <span class="kw">for </span>cluster <span class="kw">in </span>clusters.read().iter() {
                             push(cluster.key(), cluster.value())<span class="question-mark">?</span>;
                         }
                     } <span class="kw">else </span>{
@@ -1822,7 +1934,7 @@
                                 name.parse().ok().map(<span class="prelude-val">Some</span>)
                             }
                         }) {
-                            <span class="kw">if let </span><span class="prelude-val">Some</span>(cluster) = <span class="self">self</span>.clusters.read().get(<span class="kw-2">&amp;</span>locality) {
+                            <span class="kw">if let </span><span class="prelude-val">Some</span>(cluster) = clusters.read().get(<span class="kw-2">&amp;</span>locality) {
                                 push(cluster.key(), cluster.value())<span class="question-mark">?</span>;
                             }
                         }
@@ -1832,7 +1944,7 @@
                     // is when ClusterMap::update_unlocated_endpoints is called to move the None
                     // locality endpoints to another one, so we just detect that case manually
                     </span><span class="kw">if </span>client_state.versions.contains_key(<span class="string">""</span>)
-                        &amp;&amp; <span class="self">self</span>.clusters.read().get(<span class="kw-2">&amp;</span><span class="prelude-val">None</span>).is_none()
+                        &amp;&amp; clusters.read().get(<span class="kw-2">&amp;</span><span class="prelude-val">None</span>).is_none()
                     {
                         removed.insert(<span class="string">""</span>.into());
                     }
@@ -1855,7 +1967,9 @@
 
         <span class="kw">match </span>resource_type {
             ResourceType::FilterChain | ResourceType::Listener =&gt; {
-                <span class="kw">let </span><span class="prelude-val">Some</span>(filters) = <span class="self">self</span>.dyn_cfg.filters() <span class="kw">else </span>{ <span class="kw">return </span><span class="prelude-val">Ok</span>(()); };
+                <span class="kw">let </span><span class="prelude-val">Some</span>(filters) = <span class="self">self</span>.dyn_cfg.filters() <span class="kw">else </span>{
+                    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+                };
 
                 <span class="comment">// Server should only ever send exactly one filter chain, more or less indicates a bug
                 </span><span class="kw">let </span><span class="prelude-val">Some</span>(res) = resources.pop() <span class="kw">else </span>{
@@ -1875,7 +1989,8 @@
                     <span class="kw">crate</span>::xds::Resource::FilterChain(r) | <span class="kw">crate</span>::xds::Resource::Listener(r) =&gt; r,
                     res =&gt; {
                         <span class="macro">eyre::bail!</span>(
-                            <span class="string">"filter chain response contained a {} resource payload"</span>, res.type_url()
+                            <span class="string">"filter chain response contained a {} resource payload"</span>,
+                            res.type_url()
                         );
                     }
                 };
@@ -1940,76 +2055,83 @@
                     <span class="prelude-val">Ok</span>(())
                 })<span class="question-mark">?</span>;
             }
-            <span class="kw">crate</span>::xds::ResourceType::Cluster =&gt; <span class="self">self</span>.clusters.modify(|guard| -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
-                <span class="kw">for </span>removed <span class="kw">in </span>removed_resources {
-                    <span class="kw">let </span>locality = <span class="kw">if </span>removed.is_empty() {
-                        <span class="prelude-val">None
-                    </span>} <span class="kw">else </span>{
-                        <span class="prelude-val">Some</span>(removed.parse()<span class="question-mark">?</span>)
-                    };
-                    guard.remove_locality(<span class="kw-2">&amp;</span>locality);
-                }
+            ResourceType::Cluster =&gt; {
+                <span class="kw">let </span><span class="prelude-val">Some</span>(clusters) = <span class="self">self</span>.dyn_cfg.clusters() <span class="kw">else </span>{
+                    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+                };
 
-                <span class="kw">for </span>res <span class="kw">in </span>resources {
-                    <span class="kw">let </span><span class="prelude-val">Some</span>(resource) = res.resource <span class="kw">else </span>{
-                        <span class="macro">eyre::bail!</span>(<span class="string">"a cluster resource could not be applied because it didn't contain an actual payload"</span>);
-                    };
+                clusters.modify(|guard| -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
+                    <span class="kw">for </span>removed <span class="kw">in </span>removed_resources {
+                        <span class="kw">let </span>locality = <span class="kw">if </span>removed.is_empty() {
+                            <span class="prelude-val">None
+                        </span>} <span class="kw">else </span>{
+                            <span class="prelude-val">Some</span>(removed.parse()<span class="question-mark">?</span>)
+                        };
+                        guard.remove_locality(<span class="kw-2">&amp;</span>locality);
+                    }
 
-                    <span class="kw">let </span>cluster = <span class="kw">match </span><span class="kw">crate</span>::xds::Resource::try_decode(resource) {
-                        <span class="prelude-val">Ok</span>(<span class="kw">crate</span>::xds::Resource::Cluster(c)) =&gt; c,
-                        <span class="prelude-val">Ok</span>(other) =&gt; {
-                            <span class="macro">eyre::bail!</span>(<span class="string">"a cluster resource could not be applied because the resource payload was '{}'"</span>, other.type_url());
-                        }
-                        <span class="prelude-val">Err</span>(error) =&gt; {
-                            <span class="kw">return </span><span class="prelude-val">Err</span>(error.wrap_err(<span class="string">"a cluster resource could not be applied because the resource payload could not be decoded"</span>));
-                        }
-                    };
+                    <span class="kw">for </span>res <span class="kw">in </span>resources {
+                        <span class="kw">let </span><span class="prelude-val">Some</span>(resource) = res.resource <span class="kw">else </span>{
+                            <span class="macro">eyre::bail!</span>(<span class="string">"a cluster resource could not be applied because it didn't contain an actual payload"</span>);
+                        };
 
-                    <span class="kw">let </span>parsed_version = res.version.parse()<span class="question-mark">?</span>;
+                        <span class="kw">let </span>cluster = <span class="kw">match </span><span class="kw">crate</span>::xds::Resource::try_decode(resource) {
+                            <span class="prelude-val">Ok</span>(<span class="kw">crate</span>::xds::Resource::Cluster(c)) =&gt; c,
+                            <span class="prelude-val">Ok</span>(other) =&gt; {
+                                <span class="macro">eyre::bail!</span>(<span class="string">"a cluster resource could not be applied because the resource payload was '{}'"</span>, other.type_url());
+                            }
+                            <span class="prelude-val">Err</span>(error) =&gt; {
+                                <span class="kw">return </span><span class="prelude-val">Err</span>(error.wrap_err(<span class="string">"a cluster resource could not be applied because the resource payload could not be decoded"</span>));
+                            }
+                        };
 
-                    <span class="kw">let </span>endpoints = <span class="kw">match </span>cluster
-                            .endpoints
-                            .into_iter()
-                            .map(<span class="kw">crate</span>::net::endpoint::Endpoint::try_from)
-                            .collect::&lt;<span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt;&gt;() {
-                        <span class="prelude-val">Ok</span>(eps) =&gt; eps,
-                        <span class="prelude-val">Err</span>(error) =&gt; {
-                            <span class="kw">return </span><span class="prelude-val">Err</span>(error.wrap_err(<span class="string">"a cluster resource could not be applied because one or more endpoints could not be parsed"</span>));
-                        }
-                    };
+                        <span class="kw">let </span>parsed_version = res.version.parse()<span class="question-mark">?</span>;
 
-                    <span class="kw">let </span>endpoints = <span class="kw">crate</span>::config::cluster::EndpointSet::with_version(
-                        endpoints,
-                        parsed_version,
-                    );
+                        <span class="kw">let </span>endpoints = <span class="kw">match </span>cluster
+                                .endpoints
+                                .into_iter()
+                                .map(<span class="kw">crate</span>::net::endpoint::Endpoint::try_from)
+                                .collect::&lt;<span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt;&gt;() {
+                            <span class="prelude-val">Ok</span>(eps) =&gt; eps,
+                            <span class="prelude-val">Err</span>(error) =&gt; {
+                                <span class="kw">return </span><span class="prelude-val">Err</span>(error.wrap_err(<span class="string">"a cluster resource could not be applied because one or more endpoints could not be parsed"</span>));
+                            }
+                        };
 
-                    <span class="kw">let </span>locality = cluster.locality.map(<span class="kw">crate</span>::net::endpoint::Locality::from);
+                        <span class="kw">let </span>endpoints = <span class="kw">crate</span>::config::cluster::EndpointSet::with_version(
+                            endpoints,
+                            parsed_version,
+                        );
 
-                    guard.apply(locality, endpoints);
-                }
+                        <span class="kw">let </span>locality = cluster.locality.map(<span class="kw">crate</span>::net::endpoint::Locality::from);
 
-                <span class="prelude-val">Ok</span>(())
-            })<span class="question-mark">?</span>,
+                        guard.apply(locality, endpoints);
+                    }
+
+                    <span class="prelude-val">Ok</span>(())
+                })<span class="question-mark">?</span>;
+
+                <span class="self">self</span>.apply_metrics();
+            }
         }
 
-        <span class="self">self</span>.apply_metrics();
         <span class="prelude-val">Ok</span>(())
     }
 
     <span class="attr">#[inline]
     </span><span class="kw">pub fn </span>apply_metrics(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-        <span class="comment">// let Some(clusters) = self.clusters() else {
-        //     return;
-        // };
-        </span><span class="kw">crate</span>::metrics::apply_clusters(<span class="kw-2">&amp;</span><span class="self">self</span>.clusters);
+        <span class="kw">let </span><span class="prelude-val">Some</span>(clusters) = <span class="self">self</span>.dyn_cfg.clusters() <span class="kw">else </span>{
+            <span class="kw">return</span>;
+        };
+        <span class="kw">crate</span>::metrics::apply_clusters(clusters);
     }
 
     <span class="kw">pub fn </span>default_agent() -&gt; <span class="self">Self </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>typemap = default_typemap();
         insert_default::&lt;FilterChain&gt;(<span class="kw-2">&amp;mut </span>typemap);
+        insert_default::&lt;ClusterMap&gt;(<span class="kw-2">&amp;mut </span>typemap);
 
         <span class="self">Self </span>{
-            clusters: Default::default(),
             dyn_cfg: DynamicConfig {
                 id: default_id(),
                 version: Version::default(),
@@ -2025,9 +2147,9 @@
     <span class="kw">pub fn </span>default_non_agent() -&gt; <span class="self">Self </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>typemap = default_typemap();
         insert_default::&lt;FilterChain&gt;(<span class="kw-2">&amp;mut </span>typemap);
+        insert_default::&lt;ClusterMap&gt;(<span class="kw-2">&amp;mut </span>typemap);
 
         <span class="self">Self </span>{
-            clusters: Default::default(),
             dyn_cfg: DynamicConfig {
                 id: default_id(),
                 version: Version::default(),

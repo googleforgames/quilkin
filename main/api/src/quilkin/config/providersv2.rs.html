@@ -638,8 +638,8 @@
 <span class="kw">impl </span>FiltersAndClusters {
     <span class="kw">pub fn </span>new(config: <span class="kw-2">&amp;</span><span class="kw">crate</span>::Config) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>&gt; {
         <span class="prelude-val">Some</span>(<span class="self">Self </span>{
-            filters: config.dyn_cfg.filters()<span class="question-mark">?</span>,
-            clusters: config.clusters.clone(),
+            filters: config.dyn_cfg.filters()<span class="question-mark">?</span>.clone(),
+            clusters: config.dyn_cfg.clusters()<span class="question-mark">?</span>.clone(),
         })
     }
 }
