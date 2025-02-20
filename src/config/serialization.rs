@@ -41,14 +41,18 @@ impl Config {
             };
         }
 
+        let mut typemap = default_typemap();
+        if let Some(filters) = cfg.filters {
+            typemap.insert::<FilterChain>(Slot::new(filters));
+        }
+
         Ok(Self {
             clusters: Watch::new(cfg.clusters.unwrap_or_default()),
-            filters: Slot::new(cfg.filters.unwrap_or_default()),
             datacenter: cfg.datacenter,
             dyn_cfg: DynamicConfig {
                 id: cfg.id.map_or_else(default_id, Slot::from),
                 version: cfg.version.unwrap_or_default(),
-                typemap: default_typemap(),
+                typemap,
             },
         })
     }
@@ -61,7 +65,9 @@ impl Config {
         for (k, v) in map {
             match k.as_str() {
                 "filters" => {
-                    self.filters.try_replace(serde_json::from_value(v)?);
+                    if let Some(filters) = self.dyn_cfg.filters() {
+                        filters.try_replace(serde_json::from_value(v)?);
+                    }
                 }
                 "id" => {
                     self.dyn_cfg.id.try_replace(serde_json::from_value(v)?);
@@ -100,7 +106,9 @@ impl serde::Serialize for Config {
 
         map.serialize_entry("version", &self.dyn_cfg.version)?;
         map.serialize_entry("id", &self.dyn_cfg.id)?;
-        map.serialize_entry("filters", &self.filters)?;
+        if let Some(filters) = self.dyn_cfg.filters() {
+            map.serialize_entry("filters", &filters)?;
+        }
         map.serialize_entry("clusters", &self.clusters)?;
 
         match &self.datacenter {

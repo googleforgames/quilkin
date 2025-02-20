@@ -349,8 +349,14 @@ impl SessionPool {
         tracing::trace!(%source, %dest, length = packet.len(), "received packet from upstream");
 
         let mut context = crate::filters::WriteContext::new(source.into(), dest.into(), packet);
+        let Some(filters) = config.dyn_cfg.filters() else {
+            return Err((
+                asn_info,
+                Error::Filter(crate::filters::FilterError::Custom("no filters loaded")),
+            ));
+        };
 
-        if let Err(err) = config.filters.load().write(&mut context) {
+        if let Err(err) = filters.load().write(&mut context) {
             return Err((asn_info, err.into()));
         }
 

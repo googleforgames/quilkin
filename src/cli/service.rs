@@ -489,12 +489,21 @@ impl Service {
     #[cfg(target_os = "linux")]
     fn spawn_xdp(&self, config: Arc<Config>, force_xdp: bool) -> eyre::Result<Finalizer> {
         use crate::net::xdp;
-        use eyre::Context as _;
+        use eyre::{Context as _, ContextCompat as _};
 
         // TODO: remove this once it's been more stabilized
         if !force_xdp {
             eyre::bail!("XDP currently disabled by default");
         }
+
+        let filters = config
+            .dyn_cfg
+            .filters()
+            .clone()
+            .context("XDP requires a filter chain")?;
+        let clusters = config.clusters.clone();
+
+        let config = crate::net::xdp::process::ConfigState { filters, clusters };
 
         let udp_port = if self.udp_enabled { self.udp_port } else { 0 };
         let qcmp_port = if self.qcmp_enabled { self.qcmp_port } else { 0 };

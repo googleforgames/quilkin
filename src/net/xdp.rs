@@ -317,7 +317,7 @@ impl XdpLoop {
 ///
 /// This can fail if threads can not be spawned for some reason (unlikely), the
 /// more likely reason for failure is the inability to attach the eBPF program
-pub fn spawn(workers: XdpWorkers, config: Arc<crate::Config>) -> Result<XdpLoop, XdpSpawnError> {
+pub fn spawn(workers: XdpWorkers, config: process::ConfigState) -> Result<XdpLoop, XdpSpawnError> {
     let external_port = workers.external_port;
     let qcmp_port = workers.qcmp_port;
     let ipv4 = workers.ipv4;
@@ -394,7 +394,7 @@ fn io_loop(
     worker: quilkin_xdp::XdpWorker,
     external_port: NetworkU16,
     qcmp_port: NetworkU16,
-    config: Arc<crate::Config>,
+    config: process::ConfigState,
     sessions: Arc<process::SessionState>,
     local_ipv4: std::net::Ipv4Addr,
     local_ipv6: std::net::Ipv6Addr,

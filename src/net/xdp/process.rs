@@ -104,12 +104,20 @@ impl filters::PacketMut for PacketWrapper {
     }
 }
 
+use crate::config;
+
+#[derive(Clone)]
+pub struct ConfigState {
+    pub filters: config::Slot<crate::filters::FilterChain>,
+    pub clusters: config::Watch<crate::net::ClusterMap>,
+}
+
 pub struct State {
     /// The external port is how we determine if packets come from clients (downstream)
     /// or servers (upstream)
     pub external_port: NetworkU16,
     pub qcmp_port: NetworkU16,
-    pub config: Arc<crate::Config>,
+    pub config: ConfigState,
     pub destinations: Vec<EndpointAddress>,
     pub addr_to_asn: std::collections::HashMap<IpAddr, Option<(IpNetEntry, maxmind_db::Asn)>>,
     pub sessions: Arc<SessionState>,

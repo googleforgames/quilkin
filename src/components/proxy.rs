@@ -142,7 +142,11 @@ impl Proxy {
 
                 {
                     use crate::filters::StaticFilter as _;
-                    config.filters.store(Arc::new(
+                    let Some(filters) = config.dyn_cfg.filters() else {
+                        eyre::bail!("empty filters were not created")
+                    };
+
+                    filters.store(Arc::new(
                         crate::filters::FilterChain::try_create([
                             crate::filters::Capture::as_filter_config(
                                 crate::filters::capture::Config {
