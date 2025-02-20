@@ -38,7 +38,7 @@ async fn test_filter() {
 
     // create server configuration
     let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
-    server_config.filters.store(
+    server_config.dyn_cfg.filters().unwrap().store(
         quilkin::filters::FilterChain::try_create([Filter {
             name: "TestFilter".to_string(),
             label: None,
@@ -64,7 +64,7 @@ async fn test_filter() {
             .into(),
         )
     });
-    client_config.filters.store(
+    client_config.dyn_cfg.filters().unwrap().store(
         quilkin::filters::FilterChain::try_create([Filter {
             name: "TestFilter".to_string(),
             label: None,
@@ -123,7 +123,7 @@ async fn debug_filter() {
     server_config
         .clusters
         .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
-    server_config.filters.store(
+    server_config.dyn_cfg.filters().unwrap().store(
         quilkin::filters::FilterChain::try_create([Filter {
             name: factory.name().into(),
             label: None,
@@ -145,7 +145,7 @@ async fn debug_filter() {
             .into(),
         )
     });
-    client_config.filters.store(
+    client_config.dyn_cfg.filters().unwrap().store(
         quilkin::filters::FilterChain::try_create([Filter {
             name: factory.name().into(),
             label: None,

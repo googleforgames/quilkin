@@ -51,7 +51,7 @@ policy: ROUND_ROBIN
     server_config.clusters.modify(|clusters| {
         clusters.insert_default(echo_addresses.iter().cloned().map(Endpoint::new).collect())
     });
-    server_config.filters.store(
+    server_config.dyn_cfg.filters().unwrap().store(
         quilkin::filters::FilterChain::try_create([Filter {
             name: LoadBalancer::factory().name().into(),
             label: None,

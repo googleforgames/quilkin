@@ -142,7 +142,7 @@ pub struct FiltersAndClusters {
 impl FiltersAndClusters {
     pub fn new(config: &crate::Config) -> Option<Self> {
         Some(Self {
-            filters: config.filters.clone(),
+            filters: config.dyn_cfg.filters()?,
             clusters: config.clusters.clone(),
         })
     }

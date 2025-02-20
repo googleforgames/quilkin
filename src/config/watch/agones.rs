@@ -20,7 +20,7 @@ use std::sync::{
     Arc,
 };
 
-use crate::{net::endpoint::Locality, Config};
+use crate::net::endpoint::Locality;
 
 pub use crate::config::providers::k8s::update_endpoints_from_gameservers as watch_gameservers;
 
@@ -29,7 +29,8 @@ pub async fn watch(
     config_namespace: Option<String>,
     health_check: Arc<AtomicBool>,
     locality: Option<Locality>,
-    config: Arc<Config>,
+    filters: crate::config::Slot<crate::filters::FilterChain>,
+    clusters: crate::config::Watch<crate::net::ClusterMap>,
     address_selector: Option<crate::config::AddressSelector>,
 ) -> crate::Result<()> {
     let client = tokio::time::timeout(
@@ -42,12 +43,12 @@ pub async fn watch(
         let configmap_reflector = crate::config::providers::k8s::update_filters_from_configmap(
             client.clone(),
             cns,
-            config.filters.clone(),
+            filters,
         );
         let gameserver_reflector = crate::config::providers::k8s::update_endpoints_from_gameservers(
             client,
             gameservers_namespace,
-            config.clusters.clone(),
+            clusters,
             locality,
             address_selector,
         );
@@ -70,7 +71,7 @@ pub async fn watch(
         let gameserver_reflector = crate::config::providers::k8s::update_endpoints_from_gameservers(
             client,
             gameservers_namespace,
-            config.clusters.clone(),
+            clusters,
             locality,
             address_selector,
         );

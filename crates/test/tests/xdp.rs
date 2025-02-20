@@ -32,6 +32,20 @@ fn endpoints(eps: &[(SocketAddr, &[u8])]) -> BTreeSet<net::Endpoint> {
         .collect()
 }
 
+#[inline]
+fn make_config(
+    filters: filters::FilterChain,
+    endpoints: BTreeSet<net::Endpoint>,
+) -> process::ConfigState {
+    let cm = quilkin::net::ClusterMap::new();
+    cm.insert(None, endpoints);
+
+    process::ConfigState {
+        filters: quilkin::config::Slot::new(filters),
+        clusters: quilkin::config::Watch::new(cm),
+    }
+}
+
 /// Validates we can do basic processing and forwarding of packets
 #[tokio::test]
 async fn simple_forwarding() {
@@ -39,8 +53,7 @@ async fn simple_forwarding() {
     const PROXY: SocketAddrV4 = SocketAddrV4::new(Ipv4Addr::new(2, 2, 2, 2), 7777);
     const CLIENT: SocketAddrV4 = SocketAddrV4::new(Ipv4Addr::new(5, 5, 5, 5), 8888);
 
-    let config = quilkin::Config::default_non_agent();
-    config.filters.store(Arc::new(
+    let config = make_config(
         filters::FilterChain::try_create([
             filters::Capture::as_filter_config(filters::capture::Config {
                 metadata_key: filters::capture::CAPTURED_BYTES.into(),
@@ -53,15 +66,13 @@ async fn simple_forwarding() {
             filters::TokenRouter::as_filter_config(None).unwrap(),
         ])
         .unwrap(),
-    ));
-    config.clusters.modify(|clusters| {
-        clusters.insert(None, endpoints(&[(SERVER.into(), &[0xf0])]));
-    });
+        endpoints(&[(SERVER.into(), &[0xf0])]),
+    );
 
     let mut state = process::State {
         external_port: PROXY.port().into(),
         qcmp_port: 0.into(),
-        config: Arc::new(config),
+        config,
         destinations: Vec::with_capacity(1),
         addr_to_asn: Default::default(),
         sessions: Arc::new(Default::default()),
@@ -124,8 +135,7 @@ async fn changes_ip_version() {
         SocketAddrV6::new(Ipv6Addr::new(2, 2, 2, 2, 2, 2, 2, 2), 7777, 0, 0);
     const CLIENT: SocketAddrV4 = SocketAddrV4::new(Ipv4Addr::new(5, 5, 5, 5), 8888);
 
-    let config = quilkin::Config::default_non_agent();
-    config.filters.store(Arc::new(
+    let config = make_config(
         filters::FilterChain::try_create([
             filters::Capture::as_filter_config(filters::capture::Config {
                 metadata_key: filters::capture::CAPTURED_BYTES.into(),
@@ -138,15 +148,13 @@ async fn changes_ip_version() {
             filters::TokenRouter::as_filter_config(None).unwrap(),
         ])
         .unwrap(),
-    ));
-    config.clusters.modify(|clusters| {
-        clusters.insert(None, endpoints(&[(SERVER.into(), &[0xf1])]));
-    });
+        endpoints(&[(SERVER.into(), &[0xf1])]),
+    );
 
     let mut state = process::State {
         external_port: PROXY4.port().into(),
         qcmp_port: 0.into(),
-        config: Arc::new(config),
+        config,
         destinations: Vec::with_capacity(1),
         addr_to_asn: Default::default(),
         sessions: Arc::new(Default::default()),
@@ -258,8 +266,7 @@ async fn packet_manipulation() {
 
     // Test suffix removal
     {
-        let config = quilkin::Config::default_non_agent();
-        config.filters.store(Arc::new(
+        let config = make_config(
             filters::FilterChain::try_create([
                 filters::Capture::as_filter_config(filters::capture::Config {
                     metadata_key: filters::capture::CAPTURED_BYTES.into(),
@@ -272,15 +279,13 @@ async fn packet_manipulation() {
                 filters::TokenRouter::as_filter_config(None).unwrap(),
             ])
             .unwrap(),
-        ));
-        config.clusters.modify(|clusters| {
-            clusters.insert(None, endpoints(&[(SERVER.into(), &[0xf1])]));
-        });
+            endpoints(&[(SERVER.into(), &[0xf1])]),
+        );
 
         let mut state = process::State {
             external_port: PROXY.port().into(),
             qcmp_port: 0.into(),
-            config: Arc::new(config),
+            config,
             destinations: Vec::with_capacity(1),
             addr_to_asn: Default::default(),
             sessions: Arc::new(Default::default()),
@@ -322,8 +327,7 @@ async fn packet_manipulation() {
 
     // Test prefix removal
     {
-        let config = quilkin::Config::default_non_agent();
-        config.filters.store(Arc::new(
+        let config = make_config(
             filters::FilterChain::try_create([
                 filters::Capture::as_filter_config(filters::capture::Config {
                     metadata_key: filters::capture::CAPTURED_BYTES.into(),
@@ -336,15 +340,13 @@ async fn packet_manipulation() {
                 filters::TokenRouter::as_filter_config(None).unwrap(),
             ])
             .unwrap(),
-        ));
-        config.clusters.modify(|clusters| {
-            clusters.insert(None, endpoints(&[(SERVER.into(), &[0xf1])]));
-        });
+            endpoints(&[(SERVER.into(), &[0xf1])]),
+        );
 
         let mut state = process::State {
             external_port: PROXY.port().into(),
             qcmp_port: 0.into(),
-            config: Arc::new(config),
+            config,
             destinations: Vec::with_capacity(1),
             addr_to_asn: Default::default(),
             sessions: Arc::new(Default::default()),
@@ -387,8 +389,8 @@ async fn packet_manipulation() {
     // Test suffix removal, combined with read append and write prepend
     {
         let concat_data = [0xff; 11];
-        let config = quilkin::Config::default_non_agent();
-        config.filters.store(Arc::new(
+        let data = [0xf1u8; 20];
+        let config = make_config(
             filters::FilterChain::try_create([
                 filters::Capture::as_filter_config(filters::capture::Config {
                     metadata_key: filters::capture::CAPTURED_BYTES.into(),
@@ -407,16 +409,13 @@ async fn packet_manipulation() {
                 .unwrap(),
             ])
             .unwrap(),
-        ));
-        let data = [0xf1u8; 20];
-        config.clusters.modify(|clusters| {
-            clusters.insert(None, endpoints(&[(SERVER.into(), &data[..data.len() - 2])]));
-        });
+            endpoints(&[(SERVER.into(), &data[..data.len() - 2])]),
+        );
 
         let mut state = process::State {
             external_port: PROXY.port().into(),
             qcmp_port: 0.into(),
-            config: Arc::new(config),
+            config,
             destinations: Vec::with_capacity(1),
             addr_to_asn: Default::default(),
             sessions: Arc::new(Default::default()),
@@ -478,9 +477,9 @@ async fn multiple_servers() {
     let mut servers: Vec<_> = (1..20)
         .map(|i| SocketAddrV6::new(Ipv6Addr::new(i, i, i, i, i, i, i, i), 1000 + i, 0, 0))
         .collect();
+    let tok = [0xf1u8];
 
-    let config = quilkin::Config::default_non_agent();
-    config.filters.store(Arc::new(
+    let config = make_config(
         filters::FilterChain::try_create([
             filters::Capture::as_filter_config(filters::capture::Config {
                 metadata_key: filters::capture::CAPTURED_BYTES.into(),
@@ -493,25 +492,19 @@ async fn multiple_servers() {
             filters::TokenRouter::as_filter_config(None).unwrap(),
         ])
         .unwrap(),
-    ));
-    let tok = [0xf1u8];
-    config.clusters.modify(|clusters| {
-        clusters.insert(
-            None,
-            endpoints(
-                servers
-                    .iter()
-                    .map(|a| (SocketAddr::from(*a), &tok[..]))
-                    .collect::<Vec<_>>()
-                    .as_slice(),
-            ),
-        )
-    });
+        endpoints(
+            servers
+                .iter()
+                .map(|a| (SocketAddr::from(*a), &tok[..]))
+                .collect::<Vec<_>>()
+                .as_slice(),
+        ),
+    );
 
     let mut state = process::State {
         external_port: PROXY.port().into(),
         qcmp_port: 0.into(),
-        config: Arc::new(config),
+        config,
         destinations: Vec::with_capacity(1),
         addr_to_asn: Default::default(),
         sessions: Arc::new(Default::default()),
@@ -567,8 +560,7 @@ async fn many_sessions() {
     const SERVER: SocketAddrV4 = SocketAddrV4::new(Ipv4Addr::new(1, 1, 1, 1), 1111);
     const PROXY: SocketAddrV4 = SocketAddrV4::new(Ipv4Addr::new(2, 2, 2, 2), 7777);
 
-    let config = quilkin::Config::default_non_agent();
-    config.filters.store(Arc::new(
+    let config = make_config(
         filters::FilterChain::try_create([
             filters::Capture::as_filter_config(filters::capture::Config {
                 metadata_key: filters::capture::CAPTURED_BYTES.into(),
@@ -581,15 +573,13 @@ async fn many_sessions() {
             filters::TokenRouter::as_filter_config(None).unwrap(),
         ])
         .unwrap(),
-    ));
-    config.clusters.modify(|clusters| {
-        clusters.insert(None, endpoints(&[(SERVER.into(), &[0xf0])]));
-    });
+        endpoints(&[(SERVER.into(), &[0xf0])]),
+    );
 
     let mut state = process::State {
         external_port: PROXY.port().into(),
         qcmp_port: 0.into(),
-        config: Arc::new(config),
+        config,
         destinations: Vec::with_capacity(1),
         addr_to_asn: Default::default(),
         sessions: Arc::new(Default::default()),
@@ -697,8 +687,7 @@ async fn frees_dropped_packets() {
     const CLIENT: SocketAddrV6 =
         SocketAddrV6::new(Ipv6Addr::new(1, 2, 3, 4, 5, 6, 7, 8), 9999, 0, 0);
 
-    let config = quilkin::Config::default_non_agent();
-    config.filters.store(Arc::new(
+    let config = make_config(
         filters::FilterChain::try_create([
             filters::Capture::as_filter_config(filters::capture::Config {
                 metadata_key: filters::capture::CAPTURED_BYTES.into(),
@@ -711,15 +700,13 @@ async fn frees_dropped_packets() {
             filters::TokenRouter::as_filter_config(None).unwrap(),
         ])
         .unwrap(),
-    ));
-    config.clusters.modify(|clusters| {
-        clusters.insert(None, endpoints(&[(SERVER.into(), &[0xf0])]));
-    });
+        endpoints(&[(SERVER.into(), &[0xf0])]),
+    );
 
     let mut state = process::State {
         external_port: PROXY4.port().into(),
         qcmp_port: 0.into(),
-        config: Arc::new(config),
+        config,
         destinations: Vec::with_capacity(1),
         addr_to_asn: Default::default(),
         sessions: Arc::new(Default::default()),
@@ -815,7 +802,7 @@ async fn qcmp() {
     let mut state = process::State {
         external_port: 7777.into(),
         qcmp_port: PROXY.port().into(),
-        config: Arc::new(quilkin::Config::default_non_agent()),
+        config: make_config(filters::FilterChain::default(), endpoints(&[])),
         destinations: Vec::with_capacity(1),
         addr_to_asn: Default::default(),
         sessions: Arc::new(Default::default()),

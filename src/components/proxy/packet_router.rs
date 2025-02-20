@@ -106,7 +106,11 @@ impl<P: PacketMut> DownstreamPacket<P> {
         }
 
         let cm = config.clusters.clone_value();
-        let filters = config.filters.load();
+        let Some(filters) = config.dyn_cfg.filters() else {
+            return Err(PipelineError::Filter(crate::filters::FilterError::Custom(
+                "no filters loaded",
+            )));
+        };
         let mut context = ReadContext::new(&cm, self.source.into(), self.contents, destinations);
         filters.read(&mut context).map_err(PipelineError::Filter)?;
 

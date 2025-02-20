@@ -39,7 +39,7 @@ bytes: YWJj #abc
     server_config
         .clusters
         .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
-    server_config.filters.store(
+    server_config.dyn_cfg.filters().unwrap().store(
         quilkin::filters::FilterChain::try_create([Filter {
             name: Concatenate::factory().name().into(),
             label: None,

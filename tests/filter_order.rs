@@ -56,7 +56,7 @@ async fn multiple_mutations() {
     server_config
         .clusters
         .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
-    server_config.filters.store(
+    server_config.dyn_cfg.filters().unwrap().store(
         quilkin::filters::FilterChain::try_create(filters)
             .map(std::sync::Arc::new)
             .unwrap(),

@@ -466,7 +466,11 @@ impl Pail {
                     }
 
                     if !cfg.filters.is_empty() {
-                        config.filters.store(Arc::new(cfg.filters));
+                        config
+                            .dyn_cfg
+                            .filters()
+                            .unwrap()
+                            .store(Arc::new(cfg.filters));
                     }
                 }
 

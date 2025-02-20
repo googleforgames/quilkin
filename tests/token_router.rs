@@ -149,7 +149,7 @@ quilkin.dev:
         )
     });
 
-    server_config.filters.store(
+    server_config.dyn_cfg.filters().unwrap().store(
         quilkin::filters::FilterChain::try_create([
             Filter {
                 name: Capture::factory().name().into(),

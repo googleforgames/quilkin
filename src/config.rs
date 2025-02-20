@@ -75,7 +75,6 @@ pub enum DatacenterConfig {
 #[cfg_attr(test, derive(Debug))]
 pub struct Config {
     pub clusters: Watch<ClusterMap>,
-    pub filters: Slot<crate::filters::FilterChain>,
     pub datacenter: DatacenterConfig,
     pub dyn_cfg: DynamicConfig,
 }
@@ -102,17 +101,31 @@ impl<'de> Deserialize<'de> for Config {
                 use serde::de::Error;
 
                 let mut id = Option::<String>::None;
-                let mut filters = None;
                 let mut clusters = None;
                 let mut icao_code = None;
                 let mut qcmp_port = None;
                 let mut datacenters = None;
                 let mut version = None;
+                let mut typemap = default_typemap();
+
+                macro_rules! tm_insert {
+                    ($key:expr, $field:expr, $kind:ty) => {{
+                        if $key == $field {
+                            if typemap.contains_key::<$kind>() {
+                                return Err(serde::de::Error::duplicate_field($field));
+                            }
+
+                            let value =
+                                map.next_value::<<$kind as typemap_rev::TypeMapKey>::Value>()?;
+                            typemap.insert::<$kind>(value);
+                            continue;
+                        }
+                    }};
+                }
 
                 while let Some(key) = map.next_key::<std::borrow::Cow<'de, str>>()? {
                     match key.as_ref() {
                         "id" => id = Some(map.next_value()?),
-                        "filters" => filters = Some(map.next_value()?),
                         "clusters" => clusters = Some(map.next_value()?),
                         "datacenters" => {
                             if icao_code.is_some() || qcmp_port.is_some() {
@@ -151,6 +164,8 @@ impl<'de> Deserialize<'de> for Config {
                             version = Some(map.next_value()?);
                         }
                         unknown => {
+                            tm_insert!(key, "filters", FilterChain);
+
                             return Err(Error::unknown_field(
                                 unknown,
                                 &[
@@ -180,13 +195,12 @@ impl<'de> Deserialize<'de> for Config {
                 };
 
                 Ok(Config {
-                    filters: filters.unwrap_or_default(),
                     clusters: clusters.unwrap_or_default(),
                     datacenter,
                     dyn_cfg: DynamicConfig {
                         version: version.unwrap_or_default(),
                         id: id.map_or_else(default_id, Slot::new),
-                        typemap: default_typemap(),
+                        typemap,
                     },
                 })
             }
@@ -199,10 +213,7 @@ impl<'de> Deserialize<'de> for Config {
 #[cfg(test)]
 impl PartialEq for Config {
     fn eq(&self, other: &Self) -> bool {
-        if self.clusters != other.clusters
-            || self.filters != other.filters
-            || self.datacenter != other.datacenter
-        {
+        if self.clusters != other.clusters || self.datacenter != other.datacenter {
             return false;
         }
 
@@ -247,12 +258,30 @@ impl<'de> Deserialize<'de> for DynamicConfig {
             {
                 let mut version = None;
                 let mut id = None;
+                let mut typemap = default_typemap();
+
+                macro_rules! tm_insert {
+                    ($key:expr, $field:expr, $kind:ty) => {{
+                        if $key == $field {
+                            if typemap.contains_key::<$kind>() {
+                                return Err(serde::de::Error::duplicate_field($field));
+                            }
+
+                            let value =
+                                map.next_value::<<$kind as typemap_rev::TypeMapKey>::Value>()?;
+                            typemap.insert::<$kind>(value);
+                            continue;
+                        }
+                    }};
+                }
 
                 while let Some(key) = map.next_key::<std::borrow::Cow<'de, str>>()? {
-                    match key.as_ref() {
+                    let key = key.as_ref();
+                    match key {
                         "id" => id = Some(map.next_value()?),
                         "version" => version = Some(map.next_value()?),
                         other => {
+                            tm_insert!(key, "filters", FilterChain);
                             return Err(serde::de::Error::unknown_field(other, &["id"]));
                         }
                     }
@@ -261,7 +290,7 @@ impl<'de> Deserialize<'de> for DynamicConfig {
                 Ok(DynamicConfig {
                     version: version.unwrap_or_default(),
                     id: id.map_or_else(default_id, |id| Slot::new(Some(id))),
-                    typemap: default_typemap(),
+                    typemap,
                 })
             }
         }
@@ -345,8 +374,14 @@ impl quilkin_xds::config::Configuration for Config {
         &self,
         control_plane: quilkin_xds::server::ControlPlane<Self>,
     ) -> impl std::future::Future<Output = ()> + Send + 'static {
-        if !control_plane.is_relay {
-            self.filters.watch({
+        if let Some(fc) = control_plane
+            .config
+            .dyn_cfg
+            .typemap
+            .get::<FilterChain>()
+            .filter(|_| !control_plane.is_relay)
+        {
+            fc.watch({
                 let this = control_plane.clone();
                 move |_| {
                     this.push_update(xds::FILTER_CHAIN_TYPE);
@@ -402,13 +437,17 @@ impl Config {
         let mut resources = Vec::new();
         let mut removed = std::collections::HashSet::new();
 
-        let resource_type: crate::xds::ResourceType = client_state.resource_type.parse()?;
+        let resource_type = client_state.resource_type.parse::<ResourceType>()?;
 
         'append: {
             match resource_type {
-                crate::xds::ResourceType::FilterChain => {
-                    let resource = crate::xds::Resource::FilterChain(
-                        crate::net::cluster::proto::FilterChain::try_from(&*self.filters.load())?,
+                ResourceType::FilterChain => {
+                    let Some(filters) = self.dyn_cfg.filters() else {
+                        break 'append;
+                    };
+
+                    let resource = xds::Resource::FilterChain(
+                        crate::net::cluster::proto::FilterChain::try_from(&*filters.load())?,
                     );
                     let any = resource.try_encode()?;
                     let version = gxhash::gxhash64(&any.value, 0xdeadbeef);
@@ -429,8 +468,12 @@ impl Config {
                     });
                 }
                 crate::xds::ResourceType::Listener => {
+                    let Some(filters) = self.dyn_cfg.filters() else {
+                        break 'append;
+                    };
+
                     let resource = crate::xds::Resource::Listener(
-                        crate::net::cluster::proto::FilterChain::try_from(&*self.filters.load())?,
+                        crate::net::cluster::proto::FilterChain::try_from(&*filters.load())?,
                     );
                     let any = resource.try_encode()?;
 
@@ -583,10 +626,12 @@ impl Config {
         removed_resources: &[String],
         remote_addr: Option<std::net::SocketAddr>,
     ) -> crate::Result<()> {
-        let resource_type: crate::xds::ResourceType = type_url.parse()?;
+        let resource_type = type_url.parse::<ResourceType>()?;
 
         match resource_type {
-            crate::xds::ResourceType::FilterChain | crate::xds::ResourceType::Listener => {
+            ResourceType::FilterChain | ResourceType::Listener => {
+                let Some(filters) = self.dyn_cfg.filters() else { return Ok(()); };
+
                 // Server should only ever send exactly one filter chain, more or less indicates a bug
                 let Some(res) = resources.pop() else {
                     eyre::bail!("no resources in delta response");
@@ -613,7 +658,7 @@ impl Config {
                 let fc =
                     crate::filters::FilterChain::try_create_fallible(resource.filters.into_iter())?;
 
-                self.filters.store(Arc::new(fc));
+                filters.store(Arc::new(fc));
             }
             crate::xds::ResourceType::Datacenter => {
                 let DatacenterConfig::NonAgent { datacenters } = &self.datacenter else {
@@ -735,13 +780,15 @@ impl Config {
     }
 
     pub fn default_agent() -> Self {
+        let mut typemap = default_typemap();
+        insert_default::<FilterChain>(&mut typemap);
+
         Self {
             clusters: Default::default(),
-            filters: Default::default(),
             dyn_cfg: DynamicConfig {
                 id: default_id(),
                 version: Version::default(),
-                typemap: default_typemap(),
+                typemap,
             },
             datacenter: DatacenterConfig::Agent {
                 icao_code: Default::default(),
@@ -751,13 +798,15 @@ impl Config {
     }
 
     pub fn default_non_agent() -> Self {
+        let mut typemap = default_typemap();
+        insert_default::<FilterChain>(&mut typemap);
+
         Self {
             clusters: Default::default(),
-            filters: Default::default(),
             dyn_cfg: DynamicConfig {
                 id: default_id(),
                 version: Version::default(),
-                typemap: default_typemap(),
+                typemap,
             },
             datacenter: DatacenterConfig::NonAgent {
                 datacenters: Default::default(),
@@ -1053,6 +1102,14 @@ pub(crate) fn default_id() -> Slot<String> {
 
 pub(crate) fn default_typemap() -> ConfigMap {
     typemap_rev::TypeMap::custom()
+}
+
+pub(crate) fn insert_default<T>(tm: &mut ConfigMap)
+where
+    T: typemap_rev::TypeMapKey,
+    T::Value: Default + Clone + std::fmt::Debug,
+{
+    tm.insert::<T>(T::Value::default())
 }
 
 /// Filter is the configuration for a single filter

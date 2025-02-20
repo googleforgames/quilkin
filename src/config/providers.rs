@@ -55,7 +55,7 @@ impl Providers {
     #[tracing::instrument(level = "trace", skip_all)]
     pub fn spawn(
         self,
-        config: std::sync::Arc<crate::Config>,
+        config: Arc<crate::Config>,
         health_check: Arc<AtomicBool>,
         locality: Option<crate::net::endpoint::Locality>,
         address_selector: Option<crate::config::AddressSelector>,
@@ -76,15 +76,25 @@ impl Providers {
                     }
                 };
 
+                use eyre::ContextCompat as _;
+
+                let filters = config
+                    .dyn_cfg
+                    .filters()
+                    .context("agones requires filters")?;
+                let clusters = config.clusters.clone();
+
                 Self::task(health_check.clone(), {
                     let health_check = health_check.clone();
+
                     move || {
                         crate::config::watch::agones(
                             gameservers_namespace.clone(),
                             config_namespace.clone(),
                             health_check.clone(),
                             locality.clone(),
-                            config.clone(),
+                            filters.clone(),
+                            clusters.clone(),
                             address_selector.clone(),
                         )
                     }
