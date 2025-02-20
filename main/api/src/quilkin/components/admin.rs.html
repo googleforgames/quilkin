@@ -234,7 +234,9 @@
 <a href="#233" id="233">233</a>
 <a href="#234" id="234">234</a>
 <a href="#235" id="235">235</a>
-<a href="#236" id="236">236</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -263,18 +265,20 @@
 <span class="kw">use </span>hyper::{Method, Request, Response, StatusCode};
 <span class="kw">type </span>Body = Full&lt;Bytes&gt;;
 
-<span class="kw">use </span><span class="kw">crate</span>::config::Config;
 <span class="kw">use </span>health::Health;
 
 <span class="kw">pub const </span>PORT: u16 = <span class="number">8000</span>;
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>IDLE_REQUEST_INTERVAL: Duration = Duration::from_secs(<span class="number">30</span>);
 
-<span class="kw">pub fn </span>server(
-    config: Arc&lt;Config&gt;,
+<span class="kw">pub fn </span>server&lt;C&gt;(
+    config: Arc&lt;C&gt;,
     ready: Arc&lt;AtomicBool&gt;,
     address: <span class="prelude-ty">Option</span>&lt;std::net::SocketAddr&gt;,
-) -&gt; std::thread::JoinHandle&lt;eyre::Result&lt;()&gt;&gt; {
+) -&gt; std::thread::JoinHandle&lt;eyre::Result&lt;()&gt;&gt;
+<span class="kw">where
+    </span>C: serde::Serialize + Send + Sync + <span class="lifetime">'static</span>,
+{
     <span class="kw">let </span>address = address.unwrap_or_else(|| (std::net::Ipv6Addr::UNSPECIFIED, PORT).into());
     <span class="kw">let </span>health = Health::new();
     <span class="macro">tracing::info!</span>(address = %address, <span class="string">"Starting admin endpoint"</span>);
@@ -329,9 +333,9 @@
         .expect(<span class="string">"failed to spawn admin-http thread"</span>)
 }
 
-<span class="kw">async fn </span>handle_request(
+<span class="kw">async fn </span>handle_request&lt;C: serde::Serialize&gt;(
     request: Request&lt;hyper::body::Incoming&gt;,
-    config: Arc&lt;Config&gt;,
+    config: Arc&lt;C&gt;,
     ready: <span class="kw-2">&amp;</span>AtomicBool,
     health: Health,
 ) -&gt; Response&lt;Body&gt; {

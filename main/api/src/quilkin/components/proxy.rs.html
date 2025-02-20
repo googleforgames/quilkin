@@ -540,7 +540,7 @@
                 <span class="kw-2">*</span>lock = <span class="prelude-val">Some</span>(check.clone());
             }
 
-            <span class="kw">let </span>id = config.id.load();
+            <span class="kw">let </span>id = config.id();
 
             std::thread::Builder::new()
                 .name(<span class="string">"proxy-subscription"</span>.into())

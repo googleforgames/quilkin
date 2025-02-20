@@ -578,15 +578,7 @@
 <a href="#577" id="577">577</a>
 <a href="#578" id="578">578</a>
 <a href="#579" id="579">579</a>
-<a href="#580" id="580">580</a>
-<a href="#581" id="581">581</a>
-<a href="#582" id="582">582</a>
-<a href="#583" id="583">583</a>
-<a href="#584" id="584">584</a>
-<a href="#585" id="585">585</a>
-<a href="#586" id="586">586</a>
-<a href="#587" id="587">587</a>
-<a href="#588" id="588">588</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::{future::Future, sync::Arc};
+<a href="#580" id="580">580</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::{future::Future, sync::Arc};
 
 <span class="kw">use crate</span>::{components::proxy::SessionPool, config::Config};
 
@@ -834,10 +826,6 @@
         config: <span class="kw-2">&amp;</span>Arc&lt;Config&gt;,
         shutdown_rx: <span class="kw-2">&amp;</span><span class="kw">crate</span>::signal::ShutdownRx,
     ) -&gt; <span class="kw">crate</span>::Result&lt;tokio::task::JoinHandle&lt;<span class="kw">crate</span>::Result&lt;()&gt;&gt;&gt; {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = <span class="self">self</span>.id.clone() {
-            config.id.store(id.into());
-        }
-
         <span class="kw">let </span><span class="kw-2">mut </span>shutdown_rx = shutdown_rx.clone();
         <span class="kw">let </span>mds_task = <span class="self">self</span>.publish_mds(config)<span class="question-mark">?</span>;
         <span class="kw">let </span>(phoenix_task, phoenix_finalizer) = <span class="self">self</span>.publish_phoenix(config)<span class="question-mark">?</span>;
@@ -916,7 +904,7 @@
             <span class="kw">let </span>phoenix = <span class="kw">crate</span>::net::TcpListener::bind(<span class="prelude-val">Some</span>(<span class="self">self</span>.phoenix_port))<span class="question-mark">?</span>;
             <span class="kw">let </span>finalizer = <span class="kw">crate</span>::net::phoenix::spawn(
                 phoenix,
-                config.clone(),
+                config.datacenters().clone(),
                 <span class="kw">crate</span>::net::phoenix::Phoenix::new(<span class="kw">crate</span>::codec::qcmp::QcmpMeasurement::new()<span class="question-mark">?</span>),
             )<span class="question-mark">?</span>;
 
@@ -996,7 +984,7 @@
     <span class="attr">#[allow(clippy::type_complexity)]
     </span><span class="kw">pub fn </span>publish_udp(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        config: <span class="kw-2">&amp;</span>Arc&lt;<span class="kw">crate</span>::config::Config&gt;,
+        config: <span class="kw-2">&amp;</span>Arc&lt;Config&gt;,
     ) -&gt; eyre::Result&lt;(
         <span class="kw">impl </span>Future&lt;Output = <span class="kw">crate</span>::Result&lt;()&gt;&gt;,
         <span class="prelude-ty">Option</span>&lt;Finalizer&gt;,
@@ -1043,7 +1031,7 @@
     </span><span class="attr">#[allow(clippy::type_complexity)]
     </span><span class="kw">pub fn </span>spawn_user_space_router(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        config: Arc&lt;<span class="kw">crate</span>::config::Config&gt;,
+        config: Arc&lt;Config&gt;,
     ) -&gt; <span class="kw">crate</span>::Result&lt;(
         <span class="kw">impl </span>Future&lt;Output = <span class="kw">crate</span>::Result&lt;()&gt;&gt;,
         Finalizer,
@@ -1079,11 +1067,7 @@
     }
 
     <span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)]
-    </span><span class="kw">fn </span>spawn_xdp(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        config: Arc&lt;<span class="kw">crate</span>::config::Config&gt;,
-        force_xdp: bool,
-    ) -&gt; eyre::Result&lt;Finalizer&gt; {
+    </span><span class="kw">fn </span>spawn_xdp(<span class="kw-2">&amp;</span><span class="self">self</span>, config: Arc&lt;Config&gt;, force_xdp: bool) -&gt; eyre::Result&lt;Finalizer&gt; {
         <span class="kw">use </span><span class="kw">crate</span>::net::xdp;
         <span class="kw">use </span>eyre::Context <span class="kw">as _</span>;
 

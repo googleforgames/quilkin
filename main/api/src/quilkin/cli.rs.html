@@ -356,27 +356,7 @@
 <a href="#355" id="355">355</a>
 <a href="#356" id="356">356</a>
 <a href="#357" id="357">357</a>
-<a href="#358" id="358">358</a>
-<a href="#359" id="359">359</a>
-<a href="#360" id="360">360</a>
-<a href="#361" id="361">361</a>
-<a href="#362" id="362">362</a>
-<a href="#363" id="363">363</a>
-<a href="#364" id="364">364</a>
-<a href="#365" id="365">365</a>
-<a href="#366" id="366">366</a>
-<a href="#367" id="367">367</a>
-<a href="#368" id="368">368</a>
-<a href="#369" id="369">369</a>
-<a href="#370" id="370">370</a>
-<a href="#371" id="371">371</a>
-<a href="#372" id="372">372</a>
-<a href="#373" id="373">373</a>
-<a href="#374" id="374">374</a>
-<a href="#375" id="375">375</a>
-<a href="#376" id="376">376</a>
-<a href="#377" id="377">377</a>
-<a href="#378" id="378">378</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#358" id="358">358</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -392,10 +372,7 @@
  * limitations under the License.
  */
 
-</span><span class="kw">use </span>std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+</span><span class="kw">use </span>std::{path::PathBuf, sync::Arc};
 
 <span class="kw">use </span>clap::builder::TypedValueParser;
 <span class="kw">use </span>clap::crate_version;
@@ -607,35 +584,7 @@
 
         <span class="macro">tracing::debug!</span>(cli = <span class="question-mark">?</span><span class="self">self</span>, <span class="string">"config parameters"</span>);
 
-        <span class="kw">let </span>config = Arc::new(<span class="kw">match </span><span class="self">Self</span>::read_config(<span class="self">self</span>.config)<span class="question-mark">? </span>{
-            <span class="prelude-val">Some</span>(<span class="kw-2">mut </span>config) =&gt; {
-                <span class="comment">// Workaround deficiency in serde flatten + untagged
-                </span><span class="kw">if </span><span class="macro">matches!</span>(<span class="self">self</span>.command, <span class="prelude-val">Some</span>(Commands::Agent(..))) {
-                    config.datacenter = <span class="kw">match </span>config.datacenter {
-                        <span class="kw">crate</span>::config::DatacenterConfig::Agent {
-                            icao_code,
-                            qcmp_port,
-                        } =&gt; <span class="kw">crate</span>::config::DatacenterConfig::Agent {
-                            icao_code,
-                            qcmp_port,
-                        },
-                        <span class="kw">crate</span>::config::DatacenterConfig::NonAgent { datacenters } =&gt; {
-                            <span class="macro">eyre::ensure!</span>(datacenters.read().is_empty(), <span class="string">"starting an agent, but the configuration file has `datacenters` set"</span>);
-                            <span class="kw">crate</span>::config::DatacenterConfig::Agent {
-                                icao_code: <span class="kw">crate</span>::config::Slot::new(
-                                    <span class="kw">crate</span>::config::IcaoCode::default(),
-                                ),
-                                qcmp_port: <span class="kw">crate</span>::config::Slot::new(<span class="number">0</span>),
-                            }
-                        }
-                    };
-                }
-
-                config
-            }
-            <span class="prelude-val">None </span><span class="kw">if </span><span class="macro">matches!</span>(<span class="self">self</span>.command, <span class="prelude-val">Some</span>(Commands::Agent(..))) =&gt; Config::default_agent(),
-            <span class="prelude-val">None </span>=&gt; Config::default_non_agent(),
-        });
+        <span class="kw">let </span>config = <span class="self">self</span>.read_config()<span class="question-mark">?</span>;
 
         <span class="kw">let </span>ready = Arc::&lt;std::sync::atomic::AtomicBool&gt;::default();
         <span class="kw">if </span><span class="self">self</span>.admin.enabled {
@@ -688,35 +637,46 @@
 
                 relay.run(locality, config, old_ready, shutdown_rx).<span class="kw">await
             </span>}
-            <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; <span class="macro">unreachable!</span>(),
             <span class="prelude-val">None </span>=&gt; {
                 <span class="self">self</span>.service.spawn_services(<span class="kw-2">&amp;</span>config, <span class="kw-2">&amp;</span>shutdown_rx)<span class="question-mark">?</span>;
                 shutdown_rx.changed().<span class="kw">await</span>.map_err(From::from)
             }
+            <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; <span class="macro">unreachable!</span>(),
         }
     }
 
     <span class="doccomment">/// Searches for the configuration file, and panics if not found.
-    </span><span class="kw">fn </span>read_config&lt;A: AsRef&lt;Path&gt;&gt;(path: A) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Config&gt;, eyre::Error&gt; {
-        <span class="kw">let </span>path = path.as_ref();
-        <span class="kw">let </span>from_reader = |file| Config::from_reader(file).map_err(From::from).map(<span class="prelude-val">Some</span>);
+    </span><span class="kw">fn </span>read_config(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Arc&lt;<span class="kw">crate</span>::Config&gt;, eyre::Error&gt; {
+        <span class="kw">let </span>paths = [<span class="kw-2">&amp;</span><span class="self">self</span>.config, std::path::Path::new(ETC_CONFIG_PATH)];
+        <span class="kw">let </span><span class="kw-2">mut </span>paths = paths.iter();
 
-        <span class="kw">match </span>std::fs::File::open(path) {
-            <span class="prelude-val">Ok</span>(file) =&gt; (from_reader)(file),
-            <span class="prelude-val">Err</span>(error) <span class="kw">if </span>error.kind() == std::io::ErrorKind::NotFound =&gt; {
-                <span class="macro">tracing::debug!</span>(path=%path.display(), <span class="string">"provided path not found"</span>);
-                <span class="kw">match </span><span class="macro">cfg!</span>(unix).then(|| std::fs::File::open(ETC_CONFIG_PATH)) {
-                    <span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(file)) =&gt; (from_reader)(file),
-                    <span class="prelude-val">Some</span>(<span class="prelude-val">Err</span>(error)) <span class="kw">if </span>error.kind() == std::io::ErrorKind::NotFound =&gt; {
-                        <span class="macro">tracing::debug!</span>(path=%path.display(), <span class="string">"/etc path not found"</span>);
-                        <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
-                    }
-                    <span class="prelude-val">Some</span>(<span class="prelude-val">Err</span>(error)) =&gt; <span class="prelude-val">Err</span>(error.into()),
-                    <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
+        <span class="kw">let </span>file = <span class="kw">loop </span>{
+            <span class="kw">let </span><span class="prelude-val">Some</span>(path) = paths.next() <span class="kw">else </span>{
+                <span class="kw">let </span>cfg = <span class="kw">if </span><span class="macro">matches!</span>(<span class="self">self</span>.command, <span class="prelude-val">Some</span>(Commands::Agent(..))) {
+                    Config::default_agent()
+                } <span class="kw">else </span>{
+                    Config::default_non_agent()
+                };
+                <span class="kw">return </span><span class="prelude-val">Ok</span>(Arc::new(cfg));
+            };
+
+            <span class="kw">match </span>std::fs::File::open(path) {
+                <span class="prelude-val">Ok</span>(file) =&gt; <span class="kw">break </span>file,
+                <span class="prelude-val">Err</span>(err) <span class="kw">if </span>err.kind() == std::io::ErrorKind::NotFound =&gt; {
+                    <span class="macro">tracing::debug!</span>(path = %path.display(), <span class="string">"config path not found"</span>);
+                    <span class="kw">continue</span>;
+                }
+                <span class="prelude-val">Err</span>(err) =&gt; {
+                    <span class="macro">tracing::error!</span>(path = %path.display(), error = <span class="question-mark">?</span>err, <span class="string">"failed to read path"</span>);
+                    <span class="macro">eyre::bail!</span>(err);
                 }
             }
-            <span class="prelude-val">Err</span>(error) =&gt; <span class="prelude-val">Err</span>(error.into()),
-        }
+        };
+
+        <span class="prelude-val">Ok</span>(Arc::new(<span class="kw">crate</span>::Config::from_reader(
+            file,
+            <span class="macro">matches!</span>(<span class="self">self</span>.command, <span class="prelude-val">Some</span>(Commands::Agent(..))),
+        )<span class="question-mark">?</span>))
     }
 }
 

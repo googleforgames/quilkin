@@ -145,11 +145,7 @@
 <a href="#144" id="144">144</a>
 <a href="#145" id="145">145</a>
 <a href="#146" id="146">146</a>
-<a href="#147" id="147">147</a>
-<a href="#148" id="148">148</a>
-<a href="#149" id="149">149</a>
-<a href="#150" id="150">150</a>
-<a href="#151" id="151">151</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#147" id="147">147</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -245,11 +241,7 @@
         initialized: <span class="prelude-ty">Option</span>&lt;tokio::sync::oneshot::Sender&lt;()&gt;&gt;,
         shutdown_rx: ShutdownRx,
     ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
-        <span class="macro">tracing::info!</span>(
-            port = <span class="self">self</span>.port,
-            proxy_id = <span class="kw-2">&amp;*</span>config.id.load(),
-            <span class="string">"Starting proxy"
-        </span>);
+        <span class="macro">tracing::info!</span>(port = <span class="self">self</span>.port, proxy_id = config.id(), <span class="string">"Starting proxy"</span>);
 
         <span class="comment">// The number of worker tasks to spawn. Each task gets a dedicated queue to
         // consume packets off.

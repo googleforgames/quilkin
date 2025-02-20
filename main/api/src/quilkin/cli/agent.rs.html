@@ -124,7 +124,7 @@
 
 </span><span class="kw">use </span>std::sync::Arc;
 
-<span class="kw">use crate</span>::{components::agent, config::Config};
+<span class="kw">use </span><span class="kw">crate</span>::components::agent;
 <span class="kw">pub use </span>agent::Ready;
 
 <span class="macro">define_port!</span>(<span class="number">7600</span>);
@@ -189,7 +189,7 @@
     </span><span class="kw">pub async fn </span>run(
         <span class="self">self</span>,
         locality: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::net::endpoint::Locality&gt;,
-        config: Arc&lt;Config&gt;,
+        config: Arc&lt;<span class="kw">crate</span>::Config&gt;,
         ready: Ready,
         shutdown_rx: <span class="kw">crate</span>::signal::ShutdownRx,
     ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {

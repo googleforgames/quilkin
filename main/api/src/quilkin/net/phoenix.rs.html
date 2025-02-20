@@ -926,12 +926,7 @@
 <a href="#925" id="925">925</a>
 <a href="#926" id="926">926</a>
 <a href="#927" id="927">927</a>
-<a href="#928" id="928">928</a>
-<a href="#929" id="929">929</a>
-<a href="#930" id="930">930</a>
-<a href="#931" id="931">931</a>
-<a href="#932" id="932">932</a>
-<a href="#933" id="933">933</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#928" id="928">928</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -972,22 +967,19 @@
 <span class="kw">use </span>async_trait::async_trait;
 <span class="kw">use </span>dashmap::DashMap;
 
-<span class="kw">use </span><span class="kw">crate</span>::config::IcaoCode;
+<span class="kw">use </span><span class="kw">crate</span>::config::{<span class="self">self</span>, IcaoCode};
 
 <span class="kw">pub fn </span>spawn&lt;M: Clone + Measurement + Sync + Send + <span class="lifetime">'static</span>&gt;(
     listener: <span class="kw">crate</span>::net::TcpListener,
-    config: Arc&lt;<span class="kw">crate</span>::Config&gt;,
+    datacenters: config::Watch&lt;config::DatacenterMap&gt;,
     phoenix: Phoenix&lt;M&gt;,
 ) -&gt; <span class="kw">crate</span>::Result&lt;<span class="kw">crate</span>::cli::Finalizer&gt; {
     <span class="kw">use </span>eyre::WrapErr <span class="kw">as _</span>;
     <span class="kw">use </span>hyper::{Response, StatusCode};
 
-    phoenix.add_nodes_from_config(<span class="kw-2">&amp;</span>config);
+    phoenix.add_nodes_from_config(<span class="kw-2">&amp;</span>datacenters);
 
-    <span class="kw">let </span><span class="kw">crate</span>::config::DatacenterConfig::NonAgent { datacenters } = <span class="kw-2">&amp;</span>config.datacenter <span class="kw">else </span>{
-        <span class="macro">unreachable!</span>(<span class="string">"this shouldn't be spawned on an agent"</span>)
-    };
-    <span class="kw">let </span><span class="kw-2">mut </span>config_watcher = datacenters.watch();
+    <span class="kw">let </span><span class="kw-2">mut </span>dc_watcher = datacenters.watch();
     <span class="kw">let </span>(shutdown_tx, <span class="kw-2">mut </span>shutdown_rx) = <span class="kw">crate</span>::signal::channel(Default::default());
 
     <span class="kw">let </span>ph_thread = std::thread::Builder::new()
@@ -1006,7 +998,7 @@
                 .unwrap();
             <span class="kw">let </span>res = runtime.block_on({
                 <span class="kw">let </span><span class="kw-2">mut </span>phoenix_watcher = phoenix.update_watcher();
-                <span class="kw">let </span>config = config.clone();
+                <span class="kw">let </span>datacenters = datacenters.clone();
 
                 <span class="kw">async move </span>{
                     <span class="kw">let </span>json = <span class="kw">crate</span>::config::Slot::new(serde_json::Map::default());
@@ -1085,7 +1077,7 @@
 
                         <span class="macro">tokio::select!</span> {
                             <span class="kw">_ </span>= shutdown_rx.changed() =&gt; <span class="kw">break </span><span class="prelude-val">Ok</span>::&lt;<span class="kw">_</span>, eyre::Error&gt;(()),
-                            result = config_watcher.changed() =&gt; <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = result {
+                            result = dc_watcher.changed() =&gt; <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = result {
                                 <span class="kw">break </span><span class="prelude-val">Err</span>(err).context(<span class="string">"config watcher sender dropped"</span>);
                             },
                             result = phoenix_watcher.changed() =&gt; <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = result {
@@ -1094,7 +1086,7 @@
                         }
 
                         <span class="macro">tracing::trace!</span>(<span class="string">"change detected, updating phoenix"</span>);
-                        phoenix.add_nodes_from_config(<span class="kw-2">&amp;</span>config);
+                        phoenix.add_nodes_from_config(<span class="kw-2">&amp;</span>datacenters);
                         <span class="kw">let </span>nodes = phoenix.ordered_nodes_by_latency();
                         <span class="kw">let </span><span class="kw-2">mut </span>new_json = serde_json::Map::default();
 
@@ -1397,11 +1389,7 @@
             .or_insert_with(|| Node::new(icao_code));
     }
 
-    <span class="kw">pub fn </span>add_nodes_from_config(<span class="kw-2">&amp;</span><span class="self">self</span>, config: <span class="kw-2">&amp;</span><span class="kw">crate</span>::Config) {
-        <span class="kw">let </span><span class="kw">crate</span>::config::DatacenterConfig::NonAgent { datacenters } = <span class="kw-2">&amp;</span>config.datacenter <span class="kw">else </span>{
-            <span class="macro">unreachable!</span>(<span class="string">"this shouldn't be called by an agent"</span>)
-        };
-
+    <span class="kw">pub fn </span>add_nodes_from_config(<span class="kw-2">&amp;</span><span class="self">self</span>, datacenters: <span class="kw-2">&amp;</span>config::Watch&lt;config::DatacenterMap&gt;) {
         <span class="kw">let </span>dcs = datacenters.write();
 
         <span class="kw">for </span>removed <span class="kw">in </span>dcs.removed() {
@@ -1795,13 +1783,15 @@
     <span class="attr">#[tokio::test]
     #[cfg_attr(target_os = <span class="string">"macos"</span>, ignore)]
     </span><span class="kw">async fn </span>http_server() {
-        <span class="kw">let </span>config = Arc::new(<span class="kw">crate</span>::Config::default_non_agent());
         <span class="kw">let </span>qcmp_listener = <span class="kw">crate</span>::net::TcpListener::bind(<span class="prelude-val">None</span>).expect(<span class="string">"failed to bind listener"</span>);
         <span class="kw">let </span>qcmp_port = qcmp_listener.port();
 
         <span class="kw">let </span>icao_code = <span class="string">"ABCD"</span>.parse().unwrap();
 
-        config.datacenters().write().insert(
+        <span class="kw">let </span>datacenters =
+            <span class="kw">crate</span>::config::Watch::&lt;<span class="kw">crate</span>::config::DatacenterMap&gt;::new(Default::default());
+
+        datacenters.write().insert(
             std::net::Ipv4Addr::LOCALHOST.into(),
             <span class="kw">crate</span>::config::Datacenter {
                 qcmp_port,
@@ -1822,7 +1812,7 @@
             .interval_range(Duration::from_millis(<span class="number">10</span>)..Duration::from_millis(<span class="number">15</span>))
             .build();
 
-        <span class="kw">let </span>end = <span class="kw">super</span>::spawn(qcmp_listener, config.clone(), phoenix).unwrap();
+        <span class="kw">let </span>end = <span class="kw">super</span>::spawn(qcmp_listener, datacenters, phoenix).unwrap();
         tokio::time::sleep(Duration::from_millis(<span class="number">150</span>)).<span class="kw">await</span>;
 
         <span class="kw">let </span>client =

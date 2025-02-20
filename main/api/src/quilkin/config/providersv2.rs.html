@@ -470,7 +470,31 @@
 <a href="#469" id="469">469</a>
 <a href="#470" id="470">470</a>
 <a href="#471" id="471">471</a>
-<a href="#472" id="472">472</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
+<a href="#475" id="475">475</a>
+<a href="#476" id="476">476</a>
+<a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
+<a href="#479" id="479">479</a>
+<a href="#480" id="480">480</a>
+<a href="#481" id="481">481</a>
+<a href="#482" id="482">482</a>
+<a href="#483" id="483">483</a>
+<a href="#484" id="484">484</a>
+<a href="#485" id="485">485</a>
+<a href="#486" id="486">486</a>
+<a href="#487" id="487">487</a>
+<a href="#488" id="488">488</a>
+<a href="#489" id="489">489</a>
+<a href="#490" id="490">490</a>
+<a href="#491" id="491">491</a>
+<a href="#492" id="492">492</a>
+<a href="#493" id="493">493</a>
+<a href="#494" id="494">494</a>
+<a href="#495" id="495">495</a>
+<a href="#496" id="496">496</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -494,6 +518,7 @@
     },
 };
 
+<span class="kw">use </span><span class="kw">crate</span>::config;
 <span class="kw">use </span>futures::TryStreamExt;
 <span class="kw">use </span>tokio::task::JoinHandle;
 
@@ -604,6 +629,21 @@
     </span>xds_endpoints: Vec&lt;tonic::transport::Endpoint&gt;,
 }
 
+<span class="attr">#[derive(Clone)]
+</span><span class="kw">pub struct </span>FiltersAndClusters {
+    <span class="kw">pub </span>filters: config::Slot&lt;<span class="kw">crate</span>::filters::FilterChain&gt;,
+    <span class="kw">pub </span>clusters: config::Watch&lt;config::ClusterMap&gt;,
+}
+
+<span class="kw">impl </span>FiltersAndClusters {
+    <span class="kw">pub fn </span>new(config: <span class="kw-2">&amp;</span><span class="kw">crate</span>::Config) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>&gt; {
+        <span class="prelude-val">Some</span>(<span class="self">Self </span>{
+            filters: config.filters.clone(),
+            clusters: config.clusters.clone(),
+        })
+    }
+}
+
 <span class="kw">impl </span>Providers {
     <span class="attr">#[allow(clippy::type_complexity)]
     </span><span class="kw">const </span>SUBS: <span class="kw-2">&amp;</span>[(<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>[(<span class="kw-2">&amp;</span>str, Vec&lt;String&gt;)])] = <span class="kw-2">&amp;</span>[
@@ -661,7 +701,7 @@
 
     <span class="kw">pub fn </span>spawn_static_provider(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        config: Arc&lt;<span class="kw">crate</span>::config::Config&gt;,
+        config: FiltersAndClusters,
         health_check: <span class="kw-2">&amp;</span>AtomicBool,
     ) -&gt; <span class="kw">crate</span>::Result&lt;JoinHandle&lt;<span class="kw">crate</span>::Result&lt;()&gt;&gt;&gt; {
         <span class="kw">let </span>endpoint_tokens = <span class="self">self
@@ -763,7 +803,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         health_check: Arc&lt;AtomicBool&gt;,
         locality: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::net::endpoint::Locality&gt;,
-        config: Arc&lt;<span class="kw">crate</span>::config::Config&gt;,
+        config: FiltersAndClusters,
     ) -&gt; JoinHandle&lt;<span class="kw">crate</span>::Result&lt;()&gt;&gt; {
         <span class="kw">let </span>agones_namespace = <span class="self">self</span>.agones_namespace.clone();
         <span class="kw">let </span>agones_enabled = <span class="self">self</span>.agones_enabled;
@@ -772,9 +812,9 @@
         <span class="kw">let </span>selector = <span class="self">self
             </span>.address_type
             .as_ref()
-            .map(|at| <span class="kw">crate</span>::config::AddressSelector {
+            .map(|at| config::AddressSelector {
                 name: at.clone(),
-                kind: <span class="self">self</span>.ip_kind.unwrap_or(<span class="kw">crate</span>::config::AddrKind::Any),
+                kind: <span class="self">self</span>.ip_kind.unwrap_or(config::AddrKind::Any),
             });
 
         <span class="kw">let </span>task = {
@@ -807,7 +847,7 @@
                             <span class="kw">crate</span>::config::providers::k8s::update_filters_from_configmap(
                                 client.clone(),
                                 k8s_namespace.clone(),
-                                config.clone(),
+                                config.filters,
                             ),
                         ))
                     } <span class="kw">else </span>{
@@ -820,7 +860,7 @@
                             <span class="kw">crate</span>::config::watch::agones::watch_gameservers(
                                 client,
                                 agones_namespace.clone(),
-                                config.clone(),
+                                config.clusters,
                                 locality.clone(),
                                 selector.clone(),
                             ),
@@ -856,7 +896,7 @@
 
     <span class="kw">pub fn </span>spawn_xds_provider(
         <span class="self">self</span>,
-        config: <span class="kw-2">&amp;</span>std::sync::Arc&lt;<span class="kw">crate</span>::Config&gt;,
+        config: Arc&lt;config::Config&gt;,
         health_check: Arc&lt;AtomicBool&gt;,
     ) -&gt; tokio::task::JoinHandle&lt;<span class="kw">crate</span>::Result&lt;()&gt;&gt; {
         <span class="kw">let </span>config = config.clone();
@@ -868,14 +908,10 @@
             <span class="kw">let </span>health_check = health_check.clone();
             <span class="kw">let </span>tx = tx.clone();
             <span class="kw">async move </span>{
-                <span class="kw">let </span>client = <span class="kw">crate</span>::net::xds::AdsClient::connect(
-                    String::clone(<span class="kw-2">&amp;</span>config.id.load()),
-                    endpoints,
-                )
-                .<span class="kw">await</span><span class="question-mark">?</span>;
+                <span class="kw">let </span>client = <span class="kw">crate</span>::net::xds::AdsClient::connect(config.id(), endpoints).<span class="kw">await</span><span class="question-mark">?</span>;
 
                 <span class="kw">let </span>_stream = client
-                    .delta_subscribe(config.clone(), health_check.clone(), tx, <span class="self">Self</span>::SUBS)
+                    .delta_subscribe(config, health_check.clone(), tx, <span class="self">Self</span>::SUBS)
                     .<span class="kw">await
                     </span>.map_err(|<span class="kw">_</span>| <span class="macro">eyre::eyre!</span>(<span class="string">"failed to acquire delta stream"</span>))<span class="question-mark">?</span>;
 
@@ -889,19 +925,29 @@
     <span class="attr">#[tracing::instrument(level = <span class="string">"trace"</span>, skip_all)]
     </span><span class="kw">pub fn </span>spawn_providers(
         <span class="self">self</span>,
-        config: <span class="kw-2">&amp;</span>std::sync::Arc&lt;<span class="kw">crate</span>::Config&gt;,
+        config: <span class="kw-2">&amp;</span>Arc&lt;config::Config&gt;,
         health_check: Arc&lt;AtomicBool&gt;,
         locality: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::net::endpoint::Locality&gt;,
     ) -&gt; tokio::task::JoinHandle&lt;<span class="kw">crate</span>::Result&lt;()&gt;&gt; {
+        <span class="kw">let </span>none = || {
+            health_check.store(<span class="bool-val">true</span>, Ordering::SeqCst);
+            tokio::spawn(<span class="kw">async move </span>{ <span class="prelude-val">Ok</span>(()) })
+        };
+
         <span class="kw">if </span><span class="self">self</span>.k8s_enabled || <span class="self">self</span>.agones_enabled {
-            <span class="self">self</span>.spawn_k8s_provider(health_check, locality, config.clone())
+            <span class="kw">let </span><span class="prelude-val">Some</span>(fc) = FiltersAndClusters::new(config) <span class="kw">else </span>{
+                <span class="kw">return </span>none();
+            };
+            <span class="self">self</span>.spawn_k8s_provider(health_check, locality, fc)
         } <span class="kw">else if </span>!<span class="self">self</span>.xds_endpoints.is_empty() {
-            <span class="self">self</span>.spawn_xds_provider(config, health_check)
+            <span class="self">self</span>.spawn_xds_provider(config.clone(), health_check)
         } <span class="kw">else if </span><span class="self">self</span>.fs_enabled {
             <span class="kw">let </span>config = config.clone();
+
             tokio::spawn(<span class="self">Self</span>::task(health_check.clone(), {
                 <span class="kw">let </span>path = <span class="self">self</span>.fs_path.clone();
                 <span class="kw">let </span>health_check = health_check.clone();
+
                 <span class="kw">move </span>|| {
                     <span class="kw">crate</span>::config::watch::fs(
                         config.clone(),
@@ -912,11 +958,13 @@
                 }
             }))
         } <span class="kw">else if </span><span class="self">self</span>.static_enabled() {
-            <span class="self">self</span>.spawn_static_provider(config.clone(), <span class="kw-2">&amp;</span>health_check)
-                .unwrap()
+            <span class="kw">let </span><span class="prelude-val">Some</span>(fc) = FiltersAndClusters::new(config) <span class="kw">else </span>{
+                <span class="kw">return </span>none();
+            };
+
+            <span class="self">self</span>.spawn_static_provider(fc, <span class="kw-2">&amp;</span>health_check).unwrap()
         } <span class="kw">else </span>{
-            health_check.store(<span class="bool-val">true</span>, Ordering::SeqCst);
-            tokio::spawn(<span class="kw">async move </span>{ <span class="prelude-val">Ok</span>(()) })
+            none()
         }
     }
 

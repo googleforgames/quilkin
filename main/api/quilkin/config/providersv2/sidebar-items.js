@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["Providers"]};
+window.SIDEBAR_ITEMS = {"struct":["FiltersAndClusters","Providers"]};

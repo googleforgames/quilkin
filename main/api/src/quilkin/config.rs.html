@@ -1166,46 +1166,7 @@
 <a href="#1165" id="1165">1165</a>
 <a href="#1166" id="1166">1166</a>
 <a href="#1167" id="1167">1167</a>
-<a href="#1168" id="1168">1168</a>
-<a href="#1169" id="1169">1169</a>
-<a href="#1170" id="1170">1170</a>
-<a href="#1171" id="1171">1171</a>
-<a href="#1172" id="1172">1172</a>
-<a href="#1173" id="1173">1173</a>
-<a href="#1174" id="1174">1174</a>
-<a href="#1175" id="1175">1175</a>
-<a href="#1176" id="1176">1176</a>
-<a href="#1177" id="1177">1177</a>
-<a href="#1178" id="1178">1178</a>
-<a href="#1179" id="1179">1179</a>
-<a href="#1180" id="1180">1180</a>
-<a href="#1181" id="1181">1181</a>
-<a href="#1182" id="1182">1182</a>
-<a href="#1183" id="1183">1183</a>
-<a href="#1184" id="1184">1184</a>
-<a href="#1185" id="1185">1185</a>
-<a href="#1186" id="1186">1186</a>
-<a href="#1187" id="1187">1187</a>
-<a href="#1188" id="1188">1188</a>
-<a href="#1189" id="1189">1189</a>
-<a href="#1190" id="1190">1190</a>
-<a href="#1191" id="1191">1191</a>
-<a href="#1192" id="1192">1192</a>
-<a href="#1193" id="1193">1193</a>
-<a href="#1194" id="1194">1194</a>
-<a href="#1195" id="1195">1195</a>
-<a href="#1196" id="1196">1196</a>
-<a href="#1197" id="1197">1197</a>
-<a href="#1198" id="1198">1198</a>
-<a href="#1199" id="1199">1199</a>
-<a href="#1200" id="1200">1200</a>
-<a href="#1201" id="1201">1201</a>
-<a href="#1202" id="1202">1202</a>
-<a href="#1203" id="1203">1203</a>
-<a href="#1204" id="1204">1204</a>
-<a href="#1205" id="1205">1205</a>
-<a href="#1206" id="1206">1206</a>
-<a href="#1207" id="1207">1207</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#1168" id="1168">1168</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -1238,9 +1199,10 @@
 <span class="kw">use </span>uuid::Uuid;
 
 <span class="kw">use crate</span>::{
-    filters::prelude::<span class="kw-2">*</span>,
+    filters::{prelude::<span class="kw-2">*</span>, FilterChain},
     generated::envoy::service::discovery::v3::Resource <span class="kw">as </span>XdsResource,
     net::cluster::{<span class="self">self</span>, ClusterMap},
+    xds::{<span class="self">self</span>, ResourceType},
 };
 
 <span class="kw">pub use </span><span class="self">self</span>::{
@@ -1251,10 +1213,13 @@
 <span class="kw">mod </span>error;
 <span class="kw">pub mod </span>providers;
 <span class="kw">pub mod </span>providersv2;
+<span class="kw">mod </span>serialization;
 <span class="kw">mod </span>slot;
 <span class="kw">pub mod </span>watch;
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>BACKOFF_INITIAL_DELAY: Duration = Duration::from_millis(<span class="number">500</span>);
+
+<span class="kw">pub type </span>ConfigMap = typemap_rev::TypeMap&lt;<span class="kw">dyn </span>typemap_rev::CloneDebuggableStorage&gt;;
 
 <span class="macro">base64_serde_type!</span>(<span class="kw">pub </span>Base64Standard, base64::engine::general_purpose::STANDARD);
 
@@ -1274,31 +1239,246 @@
     },
 }
 
-<span class="doccomment">/// Configuration for a component
-</span><span class="attr">#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
-#[cfg_attr(test, derive(PartialEq))]
-#[serde(deny_unknown_fields)]
-#[non_exhaustive]
+<span class="attr">#[derive(Clone)]
+#[cfg_attr(test, derive(Debug))]
 </span><span class="kw">pub struct </span>Config {
-    <span class="attr">#[serde(default)]
-    </span><span class="kw">pub </span>clusters: Watch&lt;ClusterMap&gt;,
-    <span class="attr">#[serde(default)]
-    </span><span class="kw">pub </span>filters: Slot&lt;<span class="kw">crate</span>::filters::FilterChain&gt;,
-    <span class="attr">#[serde(default = <span class="string">"default_proxy_id"</span>)]
-    </span><span class="kw">pub </span>id: Slot&lt;String&gt;,
-    <span class="attr">#[serde(default)]
-    </span><span class="kw">pub </span>version: Slot&lt;Version&gt;,
-    <span class="attr">#[serde(flatten)]
-    </span><span class="kw">pub </span>datacenter: DatacenterConfig,
+    <span class="kw">pub </span>clusters: Watch&lt;ClusterMap&gt;,
+    <span class="kw">pub </span>filters: Slot&lt;<span class="kw">crate</span>::filters::FilterChain&gt;,
+    <span class="kw">pub </span>datacenter: DatacenterConfig,
+    <span class="kw">pub </span>dyn_cfg: DynamicConfig,
+}
+
+<span class="attr">#[cfg(test)]
+</span><span class="kw">impl</span>&lt;<span class="lifetime">'de</span>&gt; Deserialize&lt;<span class="lifetime">'de</span>&gt; <span class="kw">for </span>Config {
+    <span class="kw">fn </span>deserialize&lt;D&gt;(deserializer: D) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, D::Error&gt;
+    <span class="kw">where
+        </span>D: serde::Deserializer&lt;<span class="lifetime">'de</span>&gt;,
+    {
+        <span class="kw">struct </span>Visitor;
+
+        <span class="kw">impl</span>&lt;<span class="lifetime">'de</span>&gt; serde::de::Visitor&lt;<span class="lifetime">'de</span>&gt; <span class="kw">for </span>Visitor {
+            <span class="kw">type </span>Value = Config;
+
+            <span class="kw">fn </span>expecting(<span class="kw-2">&amp;</span><span class="self">self</span>, formatter: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
+                formatter.write_str(<span class="string">"Quilkin config"</span>)
+            }
+
+            <span class="kw">fn </span>visit_map&lt;A&gt;(<span class="self">self</span>, <span class="kw-2">mut </span>map: A) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Value, A::Error&gt;
+            <span class="kw">where
+                </span>A: serde::de::MapAccess&lt;<span class="lifetime">'de</span>&gt;,
+            {
+                <span class="kw">use </span>serde::de::Error;
+
+                <span class="kw">let </span><span class="kw-2">mut </span>id = <span class="prelude-ty">Option</span>::&lt;String&gt;::None;
+                <span class="kw">let </span><span class="kw-2">mut </span>filters = <span class="prelude-val">None</span>;
+                <span class="kw">let </span><span class="kw-2">mut </span>clusters = <span class="prelude-val">None</span>;
+                <span class="kw">let </span><span class="kw-2">mut </span>icao_code = <span class="prelude-val">None</span>;
+                <span class="kw">let </span><span class="kw-2">mut </span>qcmp_port = <span class="prelude-val">None</span>;
+                <span class="kw">let </span><span class="kw-2">mut </span>datacenters = <span class="prelude-val">None</span>;
+                <span class="kw">let </span><span class="kw-2">mut </span>version = <span class="prelude-val">None</span>;
+
+                <span class="kw">while let </span><span class="prelude-val">Some</span>(key) = map.next_key::&lt;std::borrow::Cow&lt;<span class="lifetime">'de</span>, str&gt;&gt;()<span class="question-mark">? </span>{
+                    <span class="kw">match </span>key.as_ref() {
+                        <span class="string">"id" </span>=&gt; id = <span class="prelude-val">Some</span>(map.next_value()<span class="question-mark">?</span>),
+                        <span class="string">"filters" </span>=&gt; filters = <span class="prelude-val">Some</span>(map.next_value()<span class="question-mark">?</span>),
+                        <span class="string">"clusters" </span>=&gt; clusters = <span class="prelude-val">Some</span>(map.next_value()<span class="question-mark">?</span>),
+                        <span class="string">"datacenters" </span>=&gt; {
+                            <span class="kw">if </span>icao_code.is_some() || qcmp_port.is_some() {
+                                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::custom(
+                                    <span class="string">"agent specific fields have already been deserialized"</span>,
+                                ));
+                            } <span class="kw">else if </span>datacenters.is_some() {
+                                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::duplicate_field(<span class="string">"datacenters"</span>));
+                            }
+
+                            datacenters = <span class="prelude-val">Some</span>(map.next_value()<span class="question-mark">?</span>);
+                        }
+                        <span class="string">"icao_code" </span>=&gt; {
+                            <span class="kw">if </span>datacenters.is_some() {
+                                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::custom(
+                                    <span class="string">"non-agent `datacenters` field has already been deserialized"</span>,
+                                ));
+                            } <span class="kw">else if </span>icao_code.is_some() {
+                                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::duplicate_field(<span class="string">"icao_code"</span>));
+                            }
+
+                            icao_code = <span class="prelude-val">Some</span>(map.next_value()<span class="question-mark">?</span>);
+                        }
+                        <span class="string">"qcmp_port" </span>=&gt; {
+                            <span class="kw">if </span>datacenters.is_some() {
+                                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::custom(
+                                    <span class="string">"non-agent `datacenters` field has already been deserialized"</span>,
+                                ));
+                            } <span class="kw">else if </span>qcmp_port.is_some() {
+                                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::duplicate_field(<span class="string">"qcmp_port"</span>));
+                            }
+
+                            qcmp_port = <span class="prelude-val">Some</span>(map.next_value()<span class="question-mark">?</span>);
+                        }
+                        <span class="string">"version" </span>=&gt; {
+                            version = <span class="prelude-val">Some</span>(map.next_value()<span class="question-mark">?</span>);
+                        }
+                        unknown =&gt; {
+                            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::unknown_field(
+                                unknown,
+                                <span class="kw-2">&amp;</span>[
+                                    <span class="string">"id"</span>,
+                                    <span class="string">"filters"</span>,
+                                    <span class="string">"clusters"</span>,
+                                    <span class="string">"datacenters"</span>,
+                                    <span class="string">"icao_code"</span>,
+                                    <span class="string">"qcmp_port"</span>,
+                                ],
+                            ));
+                        }
+                    }
+                }
+
+                <span class="kw">let </span>datacenter = <span class="kw">if let </span><span class="prelude-val">Some</span>(datacenters) = datacenters {
+                    DatacenterConfig::NonAgent { datacenters }
+                } <span class="kw">else if </span>icao_code.is_none() &amp;&amp; qcmp_port.is_none() {
+                    DatacenterConfig::NonAgent {
+                        datacenters: Default::default(),
+                    }
+                } <span class="kw">else </span>{
+                    DatacenterConfig::Agent {
+                        icao_code: Slot::new(icao_code),
+                        qcmp_port: Slot::new(qcmp_port),
+                    }
+                };
+
+                <span class="prelude-val">Ok</span>(Config {
+                    filters: filters.unwrap_or_default(),
+                    clusters: clusters.unwrap_or_default(),
+                    datacenter,
+                    dyn_cfg: DynamicConfig {
+                        version: version.unwrap_or_default(),
+                        id: id.map_or_else(default_id, Slot::new),
+                        typemap: default_typemap(),
+                    },
+                })
+            }
+        }
+
+        deserializer.deserialize_map(Visitor)
+    }
+}
+
+<span class="attr">#[cfg(test)]
+</span><span class="kw">impl </span>PartialEq <span class="kw">for </span>Config {
+    <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
+        <span class="kw">if </span><span class="self">self</span>.clusters != other.clusters
+            || <span class="self">self</span>.filters != other.filters
+            || <span class="self">self</span>.datacenter != other.datacenter
+        {
+            <span class="kw">return </span><span class="bool-val">false</span>;
+        }
+
+        <span class="comment">// TODO: compare typemaps
+        </span><span class="bool-val">true
+    </span>}
+}
+
+<span class="attr">#[derive(Clone, Debug)]
+</span><span class="kw">pub struct </span>Agent {
+    <span class="kw">pub </span>icao_code: Slot&lt;IcaoCode&gt;,
+    <span class="kw">pub </span>qcmp_port: Slot&lt;u16&gt;,
+}
+
+<span class="doccomment">/// Configuration for a component
+</span><span class="attr">#[derive(Clone)]
+#[cfg_attr(test, derive(Debug))]
+</span><span class="kw">pub struct </span>DynamicConfig {
+    <span class="kw">pub </span>id: Slot&lt;String&gt;,
+    <span class="kw">pub </span>version: Version,
+    typemap: ConfigMap,
+}
+
+<span class="attr">#[cfg(test)]
+</span><span class="kw">impl</span>&lt;<span class="lifetime">'de</span>&gt; Deserialize&lt;<span class="lifetime">'de</span>&gt; <span class="kw">for </span>DynamicConfig {
+    <span class="kw">fn </span>deserialize&lt;D&gt;(deserializer: D) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, D::Error&gt;
+    <span class="kw">where
+        </span>D: serde::Deserializer&lt;<span class="lifetime">'de</span>&gt;,
+    {
+        <span class="kw">struct </span>DynVisitor;
+
+        <span class="kw">impl</span>&lt;<span class="lifetime">'de</span>&gt; serde::de::Visitor&lt;<span class="lifetime">'de</span>&gt; <span class="kw">for </span>DynVisitor {
+            <span class="kw">type </span>Value = DynamicConfig;
+
+            <span class="kw">fn </span>expecting(<span class="kw-2">&amp;</span><span class="self">self</span>, formatter: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
+                formatter.write_str(<span class="string">"Quilkin dynamic config"</span>)
+            }
+
+            <span class="kw">fn </span>visit_map&lt;A&gt;(<span class="self">self</span>, <span class="kw-2">mut </span>map: A) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Value, A::Error&gt;
+            <span class="kw">where
+                </span>A: serde::de::MapAccess&lt;<span class="lifetime">'de</span>&gt;,
+            {
+                <span class="kw">let </span><span class="kw-2">mut </span>version = <span class="prelude-val">None</span>;
+                <span class="kw">let </span><span class="kw-2">mut </span>id = <span class="prelude-val">None</span>;
+
+                <span class="kw">while let </span><span class="prelude-val">Some</span>(key) = map.next_key::&lt;std::borrow::Cow&lt;<span class="lifetime">'de</span>, str&gt;&gt;()<span class="question-mark">? </span>{
+                    <span class="kw">match </span>key.as_ref() {
+                        <span class="string">"id" </span>=&gt; id = <span class="prelude-val">Some</span>(map.next_value()<span class="question-mark">?</span>),
+                        <span class="string">"version" </span>=&gt; version = <span class="prelude-val">Some</span>(map.next_value()<span class="question-mark">?</span>),
+                        other =&gt; {
+                            <span class="kw">return </span><span class="prelude-val">Err</span>(serde::de::Error::unknown_field(other, <span class="kw-2">&amp;</span>[<span class="string">"id"</span>]));
+                        }
+                    }
+                }
+
+                <span class="prelude-val">Ok</span>(DynamicConfig {
+                    version: version.unwrap_or_default(),
+                    id: id.map_or_else(default_id, |id| Slot::new(<span class="prelude-val">Some</span>(id))),
+                    typemap: default_typemap(),
+                })
+            }
+        }
+
+        deserializer.deserialize_map(DynVisitor)
+    }
+}
+
+<span class="kw">impl </span>typemap_rev::TypeMapKey <span class="kw">for </span>FilterChain {
+    <span class="kw">type </span>Value = Slot&lt;FilterChain&gt;;
+}
+
+<span class="kw">impl </span>typemap_rev::TypeMapKey <span class="kw">for </span>ClusterMap {
+    <span class="kw">type </span>Value = Watch&lt;ClusterMap&gt;;
+}
+
+<span class="kw">impl </span>typemap_rev::TypeMapKey <span class="kw">for </span>DatacenterMap {
+    <span class="kw">type </span>Value = Watch&lt;DatacenterMap&gt;;
+}
+
+<span class="kw">impl </span>typemap_rev::TypeMapKey <span class="kw">for </span>Agent {
+    <span class="kw">type </span>Value = Agent;
+}
+
+<span class="kw">impl </span>DynamicConfig {
+    <span class="kw">pub fn </span>filters(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Slot&lt;FilterChain&gt;&gt; {
+        <span class="self">self</span>.typemap.get::&lt;FilterChain&gt;().cloned()
+    }
+
+    <span class="kw">pub fn </span>clusters(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Watch&lt;ClusterMap&gt;&gt; {
+        <span class="self">self</span>.typemap.get::&lt;ClusterMap&gt;().cloned()
+    }
+
+    <span class="kw">pub fn </span>datacenters(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Watch&lt;DatacenterMap&gt;&gt; {
+        <span class="self">self</span>.typemap.get::&lt;DatacenterMap&gt;().cloned()
+    }
+
+    <span class="kw">pub fn </span>agent(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Agent&gt; {
+        <span class="self">self</span>.typemap.get::&lt;Agent&gt;().cloned()
+    }
 }
 
 <span class="kw">impl </span>quilkin_xds::config::Configuration <span class="kw">for </span>Config {
     <span class="kw">fn </span>identifier(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-        (<span class="kw-2">*</span><span class="self">self</span>.id.load()).clone()
+        String::clone(<span class="kw-2">&amp;</span><span class="self">self</span>.id())
     }
 
     <span class="kw">fn </span>allow_request_processing(<span class="kw-2">&amp;</span><span class="self">self</span>, resource_type: <span class="kw-2">&amp;</span>str) -&gt; bool {
-        resource_type.parse::&lt;<span class="kw">crate</span>::xds::ResourceType&gt;().is_ok()
+        resource_type.parse::&lt;ResourceType&gt;().is_ok()
     }
 
     <span class="kw">fn </span>apply_delta(
@@ -1323,8 +1503,8 @@
         _server_version: <span class="kw-2">&amp;</span>str,
     ) -&gt; <span class="kw">impl </span>Iterator&lt;Item = (<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, Vec&lt;String&gt;)&gt; {
         [
-            (<span class="kw">crate</span>::xds::CLUSTER_TYPE, Vec::new()),
-            (<span class="kw">crate</span>::xds::DATACENTER_TYPE, Vec::new()),
+            (xds::CLUSTER_TYPE, Vec::new()),
+            (xds::DATACENTER_TYPE, Vec::new()),
         ]
         .into_iter()
     }
@@ -1333,13 +1513,11 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         control_plane: quilkin_xds::server::ControlPlane&lt;<span class="self">Self</span>&gt;,
     ) -&gt; <span class="kw">impl </span>std::future::Future&lt;Output = ()&gt; + Send + <span class="lifetime">'static </span>{
-        <span class="kw">let </span><span class="kw-2">mut </span>cluster_watcher = <span class="self">self</span>.clusters.watch();
-
         <span class="kw">if </span>!control_plane.is_relay {
             <span class="self">self</span>.filters.watch({
                 <span class="kw">let </span>this = control_plane.clone();
                 <span class="kw">move </span>|<span class="kw">_</span>| {
-                    this.push_update(<span class="kw">crate</span>::xds::FILTER_CHAIN_TYPE);
+                    this.push_update(xds::FILTER_CHAIN_TYPE);
                 }
             });
         }
@@ -1347,6 +1525,7 @@
         <span class="macro">tracing::trace!</span>(<span class="string">"waiting for changes"</span>);
 
         <span class="kw">async move </span>{
+            <span class="kw">let </span><span class="kw-2">mut </span>cluster_watcher = control_plane.config.clusters.watch();
             <span class="kw">match </span><span class="kw-2">&amp;</span>control_plane.config.datacenter {
                 <span class="kw">crate</span>::config::DatacenterConfig::Agent { .. } =&gt; <span class="kw">loop </span>{
                     <span class="kw">match </span>cluster_watcher.changed().<span class="kw">await </span>{
@@ -1381,48 +1560,6 @@
 <span class="kw">use </span><span class="kw">crate</span>::net::xds::config::DeltaDiscoveryRes;
 
 <span class="kw">impl </span>Config {
-    <span class="doccomment">/// Attempts to deserialize `input` as a YAML object representing `Self`.
-    </span><span class="kw">pub fn </span>from_reader&lt;R: std::io::Read&gt;(input: R) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, serde_yaml::Error&gt; {
-        serde_yaml::from_reader(input)
-    }
-
-    <span class="kw">fn </span>update_from_json(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut </span>map: serde_json::Map&lt;String, serde_json::Value&gt;,
-        locality: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::net::endpoint::Locality&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), eyre::Error&gt; {
-        <span class="macro">macro_rules!</span> replace_if_present {
-            ($(<span class="macro-nonterminal">$field</span>:ident),+) =&gt; {
-                $(
-                    <span class="kw">if let </span><span class="prelude-val">Some</span>(value) = map.remove(<span class="macro">stringify!</span>(<span class="macro-nonterminal">$field</span>)) {
-                        <span class="macro">tracing::trace!</span>(%value, <span class="string">"replacing {}"</span>, <span class="macro">stringify!</span>(<span class="macro-nonterminal">$field</span>));
-                        <span class="self">self</span>.<span class="macro-nonterminal">$field</span>.try_replace(serde_json::from_value(value)<span class="question-mark">?</span>);
-                    }
-                )+
-            }
-        }
-
-        <span class="macro">replace_if_present!</span>(filters, id);
-
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(value) = map.remove(<span class="string">"clusters"</span>) {
-            <span class="kw">let </span>cmd: cluster::ClusterMapDeser = serde_json::from_value(value)<span class="question-mark">?</span>;
-            <span class="macro">tracing::trace!</span>(len = cmd.endpoints.len(), <span class="string">"replacing clusters"</span>);
-            <span class="self">self</span>.clusters.modify(|clusters| {
-                <span class="kw">for </span>cluster <span class="kw">in </span>cmd.endpoints {
-                    clusters.insert(cluster.locality, cluster.endpoints);
-                }
-
-                <span class="kw">if let </span><span class="prelude-val">Some</span>(locality) = locality {
-                    clusters.update_unlocated_endpoints(locality);
-                }
-            });
-        }
-
-        <span class="self">self</span>.apply_metrics();
-
-        <span class="prelude-val">Ok</span>(())
-    }
-
     <span class="doccomment">/// Given a list of subscriptions and the current state of the calling client,
     /// construct a response with the current state of our resources that differ
     /// from those of the client
@@ -1759,17 +1896,21 @@
 
     <span class="attr">#[inline]
     </span><span class="kw">pub fn </span>apply_metrics(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-        <span class="kw">let </span>clusters = <span class="self">self</span>.clusters.read();
-        <span class="kw">crate</span>::net::cluster::active_clusters().set(clusters.len() <span class="kw">as </span>i64);
-        <span class="kw">crate</span>::net::cluster::active_endpoints().set(clusters.num_of_endpoints() <span class="kw">as </span>i64);
+        <span class="comment">// let Some(clusters) = self.clusters() else {
+        //     return;
+        // };
+        </span><span class="kw">crate</span>::metrics::apply_clusters(<span class="kw-2">&amp;</span><span class="self">self</span>.clusters);
     }
 
     <span class="kw">pub fn </span>default_agent() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             clusters: Default::default(),
             filters: Default::default(),
-            id: default_proxy_id(),
-            version: Slot::with_default(),
+            dyn_cfg: DynamicConfig {
+                id: default_id(),
+                version: Version::default(),
+                typemap: default_typemap(),
+            },
             datacenter: DatacenterConfig::Agent {
                 icao_code: Default::default(),
                 qcmp_port: Default::default(),
@@ -1781,8 +1922,11 @@
         <span class="self">Self </span>{
             clusters: Default::default(),
             filters: Default::default(),
-            id: default_proxy_id(),
-            version: Slot::with_default(),
+            dyn_cfg: DynamicConfig {
+                id: default_id(),
+                version: Version::default(),
+                typemap: default_typemap(),
+            },
             datacenter: DatacenterConfig::NonAgent {
                 datacenters: Default::default(),
             },
@@ -1798,6 +1942,11 @@
                 <span class="macro">unreachable!</span>(<span class="string">"this should not be called on an agent"</span>);
             }
         }
+    }
+
+    <span class="attr">#[inline]
+    </span><span class="kw">pub fn </span>id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+        String::clone(<span class="kw-2">&amp;</span><span class="self">self</span>.dyn_cfg.id.load())
     }
 }
 
@@ -2054,7 +2203,7 @@
     }
 }
 
-<span class="kw">fn </span>default_proxy_id() -&gt; Slot&lt;String&gt; {
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>default_id() -&gt; Slot&lt;String&gt; {
     Slot::from(
         std::env::var(<span class="string">"QUILKIN_SERVICE_ID"</span>)
             .or_else(|<span class="kw">_</span>| {
@@ -2068,6 +2217,10 @@
             })
             .unwrap_or_else(|<span class="kw">_</span>| Uuid::new_v4().as_hyphenated().to_string()),
     )
+}
+
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>default_typemap() -&gt; ConfigMap {
+    typemap_rev::TypeMap::custom()
 }
 
 <span class="doccomment">/// Filter is the configuration for a single filter
@@ -2180,236 +2333,5 @@
     Ipv4,
     Ipv6,
     Any,
-}
-
-<span class="attr">#[cfg(test)]
-</span><span class="kw">mod </span>tests {
-    <span class="kw">use </span>std::net::Ipv6Addr;
-
-    <span class="kw">use </span>serde_json::json;
-
-    <span class="kw">use </span><span class="kw">crate</span>::net::endpoint::{Endpoint, Metadata};
-
-    <span class="kw">use super</span>::<span class="kw-2">*</span>;
-
-    <span class="kw">fn </span>parse_config(yaml: <span class="kw-2">&amp;</span>str) -&gt; Config {
-        Config::from_reader(yaml.as_bytes()).unwrap()
-    }
-
-    <span class="attr">#[test]
-    </span><span class="kw">fn </span>deserialise_client() {
-        <span class="kw">let </span>config = Config::default_non_agent();
-        config.clusters.modify(|clusters| {
-            clusters.insert_default([Endpoint::new(<span class="string">"127.0.0.1:25999"</span>.parse().unwrap())].into())
-        });
-
-        <span class="kw">let _ </span>= serde_yaml::to_string(<span class="kw-2">&amp;</span>config).unwrap();
-    }
-
-    <span class="attr">#[test]
-    </span><span class="kw">fn </span>deserialise_server() {
-        <span class="kw">let </span>config = Config::default_non_agent();
-        config.clusters.modify(|clusters| {
-            clusters.insert_default(
-                [
-                    Endpoint::new(<span class="string">"127.0.0.1:26000"</span>.parse().unwrap()),
-                    Endpoint::new(<span class="string">"127.0.0.1:26001"</span>.parse().unwrap()),
-                ]
-                .into(),
-            )
-        });
-
-        <span class="kw">let _ </span>= serde_yaml::to_string(<span class="kw-2">&amp;</span>config).unwrap();
-    }
-
-    <span class="attr">#[test]
-    </span><span class="kw">fn </span>parse_default_values() {
-        <span class="kw">let </span>config: Config = serde_json::from_value(<span class="macro">json!</span>({
-            <span class="string">"version"</span>: <span class="string">"v1alpha1"</span>,
-             <span class="string">"clusters"</span>:[]
-        }))
-        .unwrap();
-
-        <span class="macro">assert!</span>(config.id.load().len() &gt; <span class="number">1</span>);
-    }
-
-    <span class="attr">#[test]
-    </span><span class="kw">fn </span>parse_proxy() {
-        <span class="kw">let </span>yaml = <span class="string">"
-version: v1alpha1
-id: server-proxy
-  "</span>;
-        <span class="kw">let </span>config = parse_config(yaml);
-
-        <span class="macro">assert_eq!</span>(config.id.load().as_str(), <span class="string">"server-proxy"</span>);
-        <span class="macro">assert_eq!</span>(<span class="kw-2">*</span>config.version.load(), Version::V1Alpha1);
-    }
-
-    <span class="attr">#[test]
-    </span><span class="kw">fn </span>parse_client() {
-        <span class="kw">let </span>config: Config = serde_json::from_value(<span class="macro">json!</span>({
-            <span class="string">"version"</span>: <span class="string">"v1alpha1"</span>,
-            <span class="string">"clusters"</span>: [{
-                <span class="string">"endpoints"</span>: [{
-                    <span class="string">"address"</span>: <span class="string">"127.0.0.1:25999"
-                </span>}],
-            }]
-        }))
-        .unwrap();
-
-        <span class="kw">let </span>value = config.clusters.read();
-        <span class="macro">assert_eq!</span>(
-            <span class="kw-2">&amp;*</span>value,
-            <span class="kw-2">&amp;</span>ClusterMap::new_default(
-                [Endpoint::new((std::net::Ipv4Addr::LOCALHOST, <span class="number">25999</span>).into(),)].into()
-            )
-        )
-    }
-
-    <span class="attr">#[test]
-    </span><span class="kw">fn </span>parse_ipv6_endpoint() {
-        <span class="kw">let </span>config: Config = serde_json::from_value(<span class="macro">json!</span>({
-            <span class="string">"version"</span>: <span class="string">"v1alpha1"</span>,
-            <span class="string">"clusters"</span>:[{
-                <span class="string">"endpoints"</span>: [{
-                    <span class="string">"address"</span>: <span class="string">"[2345:0425:2CA1:0000:0000:0567:5673:24b5]:25999"
-                </span>}],
-            }]
-        }))
-        .unwrap();
-
-        <span class="kw">let </span>value = config.clusters.read();
-        <span class="macro">assert_eq!</span>(
-            <span class="kw-2">&amp;*</span>value,
-            <span class="kw-2">&amp;</span>ClusterMap::new_default(
-                [Endpoint::new(
-                    (
-                        <span class="string">"2345:0425:2CA1:0000:0000:0567:5673:24b5"
-                            </span>.parse::&lt;Ipv6Addr&gt;()
-                            .unwrap(),
-                        <span class="number">25999
-                    </span>)
-                        .into()
-                )]
-                .into()
-            )
-        )
-    }
-
-    <span class="attr">#[test]
-    </span><span class="kw">fn </span>parse_server() {
-        <span class="kw">let </span>config: Config = serde_json::from_value(<span class="macro">json!</span>({
-            <span class="string">"version"</span>: <span class="string">"v1alpha1"</span>,
-            <span class="string">"clusters"</span>: [{
-                <span class="string">"endpoints"</span>: [
-                    {
-                        <span class="string">"address" </span>: <span class="string">"127.0.0.1:26000"</span>,
-                        <span class="string">"metadata"</span>: {
-                            <span class="string">"quilkin.dev"</span>: {
-                                <span class="string">"tokens"</span>: [<span class="string">"MXg3aWp5Ng=="</span>, <span class="string">"OGdqM3YyaQ=="</span>],
-                            }
-                        }
-                    },
-                    {
-                        <span class="string">"address" </span>: <span class="string">"[2345:0425:2CA1:0000:0000:0567:5673:24b5]:25999"</span>,
-                        <span class="string">"metadata"</span>: {
-                            <span class="string">"quilkin.dev"</span>: {
-                                <span class="string">"tokens"</span>: [<span class="string">"bmt1eTcweA=="</span>],
-                            }
-                        }
-                    }
-                ],
-            }]
-        }))
-        .unwrap_or_else(|<span class="kw">_</span>| Config::default_agent());
-
-        <span class="kw">let </span>value = config.clusters.read();
-        <span class="macro">assert_eq!</span>(
-            <span class="kw-2">&amp;*</span>value,
-            <span class="kw-2">&amp;</span>ClusterMap::new_default(
-                [
-                    Endpoint::with_metadata(
-                        <span class="string">"127.0.0.1:26000"</span>.parse().unwrap(),
-                        Metadata {
-                            tokens: <span class="macro">vec!</span>[<span class="string">"1x7ijy6"</span>, <span class="string">"8gj3v2i"</span>]
-                                .into_iter()
-                                .map(From::from)
-                                .collect(),
-                        },
-                    ),
-                    Endpoint::with_metadata(
-                        <span class="string">"[2345:0425:2CA1:0000:0000:0567:5673:24b5]:25999"
-                            </span>.parse()
-                            .unwrap(),
-                        Metadata {
-                            tokens: <span class="macro">vec!</span>[<span class="string">"nkuy70x"</span>].into_iter().map(From::from).collect(),
-                        },
-                    ),
-                ]
-                .into()
-            )
-        );
-    }
-
-    <span class="attr">#[test]
-    </span><span class="kw">fn </span>deny_unused_fields() {
-        <span class="kw">let </span>configs = <span class="macro">vec!</span>[
-            <span class="string">"
-version: v1alpha1
-foo: bar
-clusters:
-    - endpoints:
-        - address: 127.0.0.1:7001
-"</span>,
-            <span class="string">"
-# proxy
-version: v1alpha1
-foo: bar
-id: client-proxy
-port: 7000
-clusters:
-    - endpoints:
-        - address: 127.0.0.1:7001
-"</span>,
-            <span class="string">"
-# admin
-version: v1alpha1
-admin:
-    foo: bar
-    address: 127.0.0.1:7001
-"</span>,
-            <span class="string">"
-# static.endpoints
-version: v1alpha1
-clusters:
-    - endpoints:
-        - address: 127.0.0.1:7001
-          connection_ids:
-            - Mxg3aWp5Ng==
-"</span>,
-            <span class="string">"
-# static.filters
-version: v1alpha1
-filters:
-  - name: quilkin.core.v1.rate-limiter
-    foo: bar
-"</span>,
-            <span class="string">"
-# dynamic.management_servers
-version: v1alpha1
-dynamic:
-  management_servers:
-    - address: 127.0.0.1:25999
-      foo: bar
-"</span>,
-        ];
-
-        <span class="kw">for </span>config <span class="kw">in </span>configs {
-            <span class="kw">let </span>result = Config::from_reader(config.as_bytes());
-            <span class="kw">let </span>error = result.unwrap_err();
-            <span class="macro">println!</span>(<span class="string">"here: {}"</span>, error);
-            <span class="macro">assert!</span>(<span class="macro">format!</span>(<span class="string">"{error:?}"</span>).contains(<span class="string">"unknown field"</span>));
-        }
-    }
 }
 </code></pre></div></section></main></body></html>

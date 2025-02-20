@@ -129,12 +129,12 @@
         <span class="kw">let </span>configmap_reflector = <span class="kw">crate</span>::config::providers::k8s::update_filters_from_configmap(
             client.clone(),
             cns,
-            config.clone(),
+            config.filters.clone(),
         );
         <span class="kw">let </span>gameserver_reflector = <span class="kw">crate</span>::config::providers::k8s::update_endpoints_from_gameservers(
             client,
             gameservers_namespace,
-            config.clone(),
+            config.clusters.clone(),
             locality,
             address_selector,
         );
@@ -157,7 +157,7 @@
         <span class="kw">let </span>gameserver_reflector = <span class="kw">crate</span>::config::providers::k8s::update_endpoints_from_gameservers(
             client,
             gameservers_namespace,
-            config.clone(),
+            config.clusters.clone(),
             locality,
             address_selector,
         );

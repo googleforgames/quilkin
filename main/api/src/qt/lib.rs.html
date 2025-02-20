@@ -1052,7 +1052,7 @@
                     quilkin::signal::channel(quilkin::signal::ShutdownKind::Testing);
 
                 <span class="kw">let </span>config = Arc::new(Config::default_non_agent());
-                config.id.store(Arc::new(spc.name.into()));
+                config.dyn_cfg.id.store(Arc::new(spc.name.into()));
 
                 <span class="kw">let </span>task = tokio::spawn(
                     relay::Relay {
@@ -1127,7 +1127,7 @@
 
                 <span class="kw">let </span>config_path = path.clone();
                 <span class="kw">let </span>config = Arc::new(Config::default_agent());
-                config.id.store(Arc::new(spc.name.into()));
+                config.dyn_cfg.id.store(Arc::new(spc.name.into()));
                 <span class="kw">let </span>acfg = config.clone();
 
                 <span class="kw">let </span>task = tokio::spawn(<span class="kw">async move </span>{
@@ -1220,7 +1220,7 @@
                         .modify(|clusters| clusters.insert_default(endpoints));
                 }
 
-                config.id.store(Arc::new(spc.name.into()));
+                config.dyn_cfg.id.store(Arc::new(spc.name.into()));
                 <span class="kw">let </span>pconfig = config.clone();
 
                 <span class="kw">let </span>(rttx, rtrx) = tokio::sync::mpsc::unbounded_channel();
