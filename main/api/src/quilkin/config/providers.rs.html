@@ -128,7 +128,17 @@
 <a href="#127" id="127">127</a>
 <a href="#128" id="128">128</a>
 <a href="#129" id="129">129</a>
-<a href="#130" id="130">130</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -185,7 +195,7 @@
     <span class="attr">#[tracing::instrument(level = <span class="string">"trace"</span>, skip_all)]
     </span><span class="kw">pub fn </span>spawn(
         <span class="self">self</span>,
-        config: std::sync::Arc&lt;<span class="kw">crate</span>::Config&gt;,
+        config: Arc&lt;<span class="kw">crate</span>::Config&gt;,
         health_check: Arc&lt;AtomicBool&gt;,
         locality: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::net::endpoint::Locality&gt;,
         address_selector: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::config::AddressSelector&gt;,
@@ -206,15 +216,25 @@
                     </span>}
                 };
 
+                <span class="kw">use </span>eyre::ContextCompat <span class="kw">as _</span>;
+
+                <span class="kw">let </span>filters = config
+                    .dyn_cfg
+                    .filters()
+                    .context(<span class="string">"agones requires filters"</span>)<span class="question-mark">?</span>;
+                <span class="kw">let </span>clusters = config.clusters.clone();
+
                 <span class="self">Self</span>::task(health_check.clone(), {
                     <span class="kw">let </span>health_check = health_check.clone();
+
                     <span class="kw">move </span>|| {
                         <span class="kw">crate</span>::config::watch::agones(
                             gameservers_namespace.clone(),
                             config_namespace.clone(),
                             health_check.clone(),
                             locality.clone(),
-                            config.clone(),
+                            filters.clone(),
+                            clusters.clone(),
                             address_selector.clone(),
                         )
                     }

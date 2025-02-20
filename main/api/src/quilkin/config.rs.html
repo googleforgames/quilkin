@@ -1166,7 +1166,64 @@
 <a href="#1165" id="1165">1165</a>
 <a href="#1166" id="1166">1166</a>
 <a href="#1167" id="1167">1167</a>
-<a href="#1168" id="1168">1168</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#1168" id="1168">1168</a>
+<a href="#1169" id="1169">1169</a>
+<a href="#1170" id="1170">1170</a>
+<a href="#1171" id="1171">1171</a>
+<a href="#1172" id="1172">1172</a>
+<a href="#1173" id="1173">1173</a>
+<a href="#1174" id="1174">1174</a>
+<a href="#1175" id="1175">1175</a>
+<a href="#1176" id="1176">1176</a>
+<a href="#1177" id="1177">1177</a>
+<a href="#1178" id="1178">1178</a>
+<a href="#1179" id="1179">1179</a>
+<a href="#1180" id="1180">1180</a>
+<a href="#1181" id="1181">1181</a>
+<a href="#1182" id="1182">1182</a>
+<a href="#1183" id="1183">1183</a>
+<a href="#1184" id="1184">1184</a>
+<a href="#1185" id="1185">1185</a>
+<a href="#1186" id="1186">1186</a>
+<a href="#1187" id="1187">1187</a>
+<a href="#1188" id="1188">1188</a>
+<a href="#1189" id="1189">1189</a>
+<a href="#1190" id="1190">1190</a>
+<a href="#1191" id="1191">1191</a>
+<a href="#1192" id="1192">1192</a>
+<a href="#1193" id="1193">1193</a>
+<a href="#1194" id="1194">1194</a>
+<a href="#1195" id="1195">1195</a>
+<a href="#1196" id="1196">1196</a>
+<a href="#1197" id="1197">1197</a>
+<a href="#1198" id="1198">1198</a>
+<a href="#1199" id="1199">1199</a>
+<a href="#1200" id="1200">1200</a>
+<a href="#1201" id="1201">1201</a>
+<a href="#1202" id="1202">1202</a>
+<a href="#1203" id="1203">1203</a>
+<a href="#1204" id="1204">1204</a>
+<a href="#1205" id="1205">1205</a>
+<a href="#1206" id="1206">1206</a>
+<a href="#1207" id="1207">1207</a>
+<a href="#1208" id="1208">1208</a>
+<a href="#1209" id="1209">1209</a>
+<a href="#1210" id="1210">1210</a>
+<a href="#1211" id="1211">1211</a>
+<a href="#1212" id="1212">1212</a>
+<a href="#1213" id="1213">1213</a>
+<a href="#1214" id="1214">1214</a>
+<a href="#1215" id="1215">1215</a>
+<a href="#1216" id="1216">1216</a>
+<a href="#1217" id="1217">1217</a>
+<a href="#1218" id="1218">1218</a>
+<a href="#1219" id="1219">1219</a>
+<a href="#1220" id="1220">1220</a>
+<a href="#1221" id="1221">1221</a>
+<a href="#1222" id="1222">1222</a>
+<a href="#1223" id="1223">1223</a>
+<a href="#1224" id="1224">1224</a>
+<a href="#1225" id="1225">1225</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -1243,7 +1300,6 @@
 #[cfg_attr(test, derive(Debug))]
 </span><span class="kw">pub struct </span>Config {
     <span class="kw">pub </span>clusters: Watch&lt;ClusterMap&gt;,
-    <span class="kw">pub </span>filters: Slot&lt;<span class="kw">crate</span>::filters::FilterChain&gt;,
     <span class="kw">pub </span>datacenter: DatacenterConfig,
     <span class="kw">pub </span>dyn_cfg: DynamicConfig,
 }
@@ -1270,17 +1326,31 @@
                 <span class="kw">use </span>serde::de::Error;
 
                 <span class="kw">let </span><span class="kw-2">mut </span>id = <span class="prelude-ty">Option</span>::&lt;String&gt;::None;
-                <span class="kw">let </span><span class="kw-2">mut </span>filters = <span class="prelude-val">None</span>;
                 <span class="kw">let </span><span class="kw-2">mut </span>clusters = <span class="prelude-val">None</span>;
                 <span class="kw">let </span><span class="kw-2">mut </span>icao_code = <span class="prelude-val">None</span>;
                 <span class="kw">let </span><span class="kw-2">mut </span>qcmp_port = <span class="prelude-val">None</span>;
                 <span class="kw">let </span><span class="kw-2">mut </span>datacenters = <span class="prelude-val">None</span>;
                 <span class="kw">let </span><span class="kw-2">mut </span>version = <span class="prelude-val">None</span>;
+                <span class="kw">let </span><span class="kw-2">mut </span>typemap = default_typemap();
+
+                <span class="macro">macro_rules!</span> tm_insert {
+                    (<span class="macro-nonterminal">$key</span>:expr, <span class="macro-nonterminal">$field</span>:expr, <span class="macro-nonterminal">$kind</span>:ty) =&gt; {{
+                        <span class="kw">if </span><span class="macro-nonterminal">$key </span>== <span class="macro-nonterminal">$field </span>{
+                            <span class="kw">if </span>typemap.contains_key::&lt;<span class="macro-nonterminal">$kind</span>&gt;() {
+                                <span class="kw">return </span><span class="prelude-val">Err</span>(serde::de::Error::duplicate_field(<span class="macro-nonterminal">$field</span>));
+                            }
+
+                            <span class="kw">let </span>value =
+                                map.next_value::&lt;&lt;<span class="macro-nonterminal">$kind </span><span class="kw">as </span>typemap_rev::TypeMapKey&gt;::Value&gt;()<span class="question-mark">?</span>;
+                            typemap.insert::&lt;<span class="macro-nonterminal">$kind</span>&gt;(value);
+                            <span class="kw">continue</span>;
+                        }
+                    }};
+                }
 
                 <span class="kw">while let </span><span class="prelude-val">Some</span>(key) = map.next_key::&lt;std::borrow::Cow&lt;<span class="lifetime">'de</span>, str&gt;&gt;()<span class="question-mark">? </span>{
                     <span class="kw">match </span>key.as_ref() {
                         <span class="string">"id" </span>=&gt; id = <span class="prelude-val">Some</span>(map.next_value()<span class="question-mark">?</span>),
-                        <span class="string">"filters" </span>=&gt; filters = <span class="prelude-val">Some</span>(map.next_value()<span class="question-mark">?</span>),
                         <span class="string">"clusters" </span>=&gt; clusters = <span class="prelude-val">Some</span>(map.next_value()<span class="question-mark">?</span>),
                         <span class="string">"datacenters" </span>=&gt; {
                             <span class="kw">if </span>icao_code.is_some() || qcmp_port.is_some() {
@@ -1319,6 +1389,8 @@
                             version = <span class="prelude-val">Some</span>(map.next_value()<span class="question-mark">?</span>);
                         }
                         unknown =&gt; {
+                            <span class="macro">tm_insert!</span>(key, <span class="string">"filters"</span>, FilterChain);
+
                             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::unknown_field(
                                 unknown,
                                 <span class="kw-2">&amp;</span>[
@@ -1348,13 +1420,12 @@
                 };
 
                 <span class="prelude-val">Ok</span>(Config {
-                    filters: filters.unwrap_or_default(),
                     clusters: clusters.unwrap_or_default(),
                     datacenter,
                     dyn_cfg: DynamicConfig {
                         version: version.unwrap_or_default(),
                         id: id.map_or_else(default_id, Slot::new),
-                        typemap: default_typemap(),
+                        typemap,
                     },
                 })
             }
@@ -1367,10 +1438,7 @@
 <span class="attr">#[cfg(test)]
 </span><span class="kw">impl </span>PartialEq <span class="kw">for </span>Config {
     <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
-        <span class="kw">if </span><span class="self">self</span>.clusters != other.clusters
-            || <span class="self">self</span>.filters != other.filters
-            || <span class="self">self</span>.datacenter != other.datacenter
-        {
+        <span class="kw">if </span><span class="self">self</span>.clusters != other.clusters || <span class="self">self</span>.datacenter != other.datacenter {
             <span class="kw">return </span><span class="bool-val">false</span>;
         }
 
@@ -1415,12 +1483,30 @@
             {
                 <span class="kw">let </span><span class="kw-2">mut </span>version = <span class="prelude-val">None</span>;
                 <span class="kw">let </span><span class="kw-2">mut </span>id = <span class="prelude-val">None</span>;
+                <span class="kw">let </span><span class="kw-2">mut </span>typemap = default_typemap();
+
+                <span class="macro">macro_rules!</span> tm_insert {
+                    (<span class="macro-nonterminal">$key</span>:expr, <span class="macro-nonterminal">$field</span>:expr, <span class="macro-nonterminal">$kind</span>:ty) =&gt; {{
+                        <span class="kw">if </span><span class="macro-nonterminal">$key </span>== <span class="macro-nonterminal">$field </span>{
+                            <span class="kw">if </span>typemap.contains_key::&lt;<span class="macro-nonterminal">$kind</span>&gt;() {
+                                <span class="kw">return </span><span class="prelude-val">Err</span>(serde::de::Error::duplicate_field(<span class="macro-nonterminal">$field</span>));
+                            }
+
+                            <span class="kw">let </span>value =
+                                map.next_value::&lt;&lt;<span class="macro-nonterminal">$kind </span><span class="kw">as </span>typemap_rev::TypeMapKey&gt;::Value&gt;()<span class="question-mark">?</span>;
+                            typemap.insert::&lt;<span class="macro-nonterminal">$kind</span>&gt;(value);
+                            <span class="kw">continue</span>;
+                        }
+                    }};
+                }
 
                 <span class="kw">while let </span><span class="prelude-val">Some</span>(key) = map.next_key::&lt;std::borrow::Cow&lt;<span class="lifetime">'de</span>, str&gt;&gt;()<span class="question-mark">? </span>{
-                    <span class="kw">match </span>key.as_ref() {
+                    <span class="kw">let </span>key = key.as_ref();
+                    <span class="kw">match </span>key {
                         <span class="string">"id" </span>=&gt; id = <span class="prelude-val">Some</span>(map.next_value()<span class="question-mark">?</span>),
                         <span class="string">"version" </span>=&gt; version = <span class="prelude-val">Some</span>(map.next_value()<span class="question-mark">?</span>),
                         other =&gt; {
+                            <span class="macro">tm_insert!</span>(key, <span class="string">"filters"</span>, FilterChain);
                             <span class="kw">return </span><span class="prelude-val">Err</span>(serde::de::Error::unknown_field(other, <span class="kw-2">&amp;</span>[<span class="string">"id"</span>]));
                         }
                     }
@@ -1429,7 +1515,7 @@
                 <span class="prelude-val">Ok</span>(DynamicConfig {
                     version: version.unwrap_or_default(),
                     id: id.map_or_else(default_id, |id| Slot::new(<span class="prelude-val">Some</span>(id))),
-                    typemap: default_typemap(),
+                    typemap,
                 })
             }
         }
@@ -1513,8 +1599,14 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         control_plane: quilkin_xds::server::ControlPlane&lt;<span class="self">Self</span>&gt;,
     ) -&gt; <span class="kw">impl </span>std::future::Future&lt;Output = ()&gt; + Send + <span class="lifetime">'static </span>{
-        <span class="kw">if </span>!control_plane.is_relay {
-            <span class="self">self</span>.filters.watch({
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(fc) = control_plane
+            .config
+            .dyn_cfg
+            .typemap
+            .get::&lt;FilterChain&gt;()
+            .filter(|<span class="kw">_</span>| !control_plane.is_relay)
+        {
+            fc.watch({
                 <span class="kw">let </span>this = control_plane.clone();
                 <span class="kw">move </span>|<span class="kw">_</span>| {
                     this.push_update(xds::FILTER_CHAIN_TYPE);
@@ -1570,13 +1662,17 @@
         <span class="kw">let </span><span class="kw-2">mut </span>resources = Vec::new();
         <span class="kw">let </span><span class="kw-2">mut </span>removed = std::collections::HashSet::new();
 
-        <span class="kw">let </span>resource_type: <span class="kw">crate</span>::xds::ResourceType = client_state.resource_type.parse()<span class="question-mark">?</span>;
+        <span class="kw">let </span>resource_type = client_state.resource_type.parse::&lt;ResourceType&gt;()<span class="question-mark">?</span>;
 
         <span class="lifetime">'append</span>: {
             <span class="kw">match </span>resource_type {
-                <span class="kw">crate</span>::xds::ResourceType::FilterChain =&gt; {
-                    <span class="kw">let </span>resource = <span class="kw">crate</span>::xds::Resource::FilterChain(
-                        <span class="kw">crate</span>::net::cluster::proto::FilterChain::try_from(<span class="kw-2">&amp;*</span><span class="self">self</span>.filters.load())<span class="question-mark">?</span>,
+                ResourceType::FilterChain =&gt; {
+                    <span class="kw">let </span><span class="prelude-val">Some</span>(filters) = <span class="self">self</span>.dyn_cfg.filters() <span class="kw">else </span>{
+                        <span class="kw">break </span><span class="lifetime">'append</span>;
+                    };
+
+                    <span class="kw">let </span>resource = xds::Resource::FilterChain(
+                        <span class="kw">crate</span>::net::cluster::proto::FilterChain::try_from(<span class="kw-2">&amp;*</span>filters.load())<span class="question-mark">?</span>,
                     );
                     <span class="kw">let </span>any = resource.try_encode()<span class="question-mark">?</span>;
                     <span class="kw">let </span>version = gxhash::gxhash64(<span class="kw-2">&amp;</span>any.value, <span class="number">0xdeadbeef</span>);
@@ -1597,8 +1693,12 @@
                     });
                 }
                 <span class="kw">crate</span>::xds::ResourceType::Listener =&gt; {
+                    <span class="kw">let </span><span class="prelude-val">Some</span>(filters) = <span class="self">self</span>.dyn_cfg.filters() <span class="kw">else </span>{
+                        <span class="kw">break </span><span class="lifetime">'append</span>;
+                    };
+
                     <span class="kw">let </span>resource = <span class="kw">crate</span>::xds::Resource::Listener(
-                        <span class="kw">crate</span>::net::cluster::proto::FilterChain::try_from(<span class="kw-2">&amp;*</span><span class="self">self</span>.filters.load())<span class="question-mark">?</span>,
+                        <span class="kw">crate</span>::net::cluster::proto::FilterChain::try_from(<span class="kw-2">&amp;*</span>filters.load())<span class="question-mark">?</span>,
                     );
                     <span class="kw">let </span>any = resource.try_encode()<span class="question-mark">?</span>;
 
@@ -1751,10 +1851,12 @@
         removed_resources: <span class="kw-2">&amp;</span>[String],
         remote_addr: <span class="prelude-ty">Option</span>&lt;std::net::SocketAddr&gt;,
     ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
-        <span class="kw">let </span>resource_type: <span class="kw">crate</span>::xds::ResourceType = type_url.parse()<span class="question-mark">?</span>;
+        <span class="kw">let </span>resource_type = type_url.parse::&lt;ResourceType&gt;()<span class="question-mark">?</span>;
 
         <span class="kw">match </span>resource_type {
-            <span class="kw">crate</span>::xds::ResourceType::FilterChain | <span class="kw">crate</span>::xds::ResourceType::Listener =&gt; {
+            ResourceType::FilterChain | ResourceType::Listener =&gt; {
+                <span class="kw">let </span><span class="prelude-val">Some</span>(filters) = <span class="self">self</span>.dyn_cfg.filters() <span class="kw">else </span>{ <span class="kw">return </span><span class="prelude-val">Ok</span>(()); };
+
                 <span class="comment">// Server should only ever send exactly one filter chain, more or less indicates a bug
                 </span><span class="kw">let </span><span class="prelude-val">Some</span>(res) = resources.pop() <span class="kw">else </span>{
                     <span class="macro">eyre::bail!</span>(<span class="string">"no resources in delta response"</span>);
@@ -1781,7 +1883,7 @@
                 <span class="kw">let </span>fc =
                     <span class="kw">crate</span>::filters::FilterChain::try_create_fallible(resource.filters.into_iter())<span class="question-mark">?</span>;
 
-                <span class="self">self</span>.filters.store(Arc::new(fc));
+                filters.store(Arc::new(fc));
             }
             <span class="kw">crate</span>::xds::ResourceType::Datacenter =&gt; {
                 <span class="kw">let </span>DatacenterConfig::NonAgent { datacenters } = <span class="kw-2">&amp;</span><span class="self">self</span>.datacenter <span class="kw">else </span>{
@@ -1903,13 +2005,15 @@
     }
 
     <span class="kw">pub fn </span>default_agent() -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span><span class="kw-2">mut </span>typemap = default_typemap();
+        insert_default::&lt;FilterChain&gt;(<span class="kw-2">&amp;mut </span>typemap);
+
         <span class="self">Self </span>{
             clusters: Default::default(),
-            filters: Default::default(),
             dyn_cfg: DynamicConfig {
                 id: default_id(),
                 version: Version::default(),
-                typemap: default_typemap(),
+                typemap,
             },
             datacenter: DatacenterConfig::Agent {
                 icao_code: Default::default(),
@@ -1919,13 +2023,15 @@
     }
 
     <span class="kw">pub fn </span>default_non_agent() -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span><span class="kw-2">mut </span>typemap = default_typemap();
+        insert_default::&lt;FilterChain&gt;(<span class="kw-2">&amp;mut </span>typemap);
+
         <span class="self">Self </span>{
             clusters: Default::default(),
-            filters: Default::default(),
             dyn_cfg: DynamicConfig {
                 id: default_id(),
                 version: Version::default(),
-                typemap: default_typemap(),
+                typemap,
             },
             datacenter: DatacenterConfig::NonAgent {
                 datacenters: Default::default(),
@@ -2221,6 +2327,14 @@
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>default_typemap() -&gt; ConfigMap {
     typemap_rev::TypeMap::custom()
+}
+
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>insert_default&lt;T&gt;(tm: <span class="kw-2">&amp;mut </span>ConfigMap)
+<span class="kw">where
+    </span>T: typemap_rev::TypeMapKey,
+    T::Value: Default + Clone + std::fmt::Debug,
+{
+    tm.insert::&lt;T&gt;(T::Value::default())
 }
 
 <span class="doccomment">/// Filter is the configuration for a single filter

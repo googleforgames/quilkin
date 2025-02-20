@@ -578,7 +578,16 @@
 <a href="#577" id="577">577</a>
 <a href="#578" id="578">578</a>
 <a href="#579" id="579">579</a>
-<a href="#580" id="580">580</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::{future::Future, sync::Arc};
+<a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
+<a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::{future::Future, sync::Arc};
 
 <span class="kw">use crate</span>::{components::proxy::SessionPool, config::Config};
 
@@ -1069,12 +1078,21 @@
     <span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)]
     </span><span class="kw">fn </span>spawn_xdp(<span class="kw-2">&amp;</span><span class="self">self</span>, config: Arc&lt;Config&gt;, force_xdp: bool) -&gt; eyre::Result&lt;Finalizer&gt; {
         <span class="kw">use </span><span class="kw">crate</span>::net::xdp;
-        <span class="kw">use </span>eyre::Context <span class="kw">as _</span>;
+        <span class="kw">use </span>eyre::{Context <span class="kw">as _</span>, ContextCompat <span class="kw">as _</span>};
 
         <span class="comment">// TODO: remove this once it's been more stabilized
         </span><span class="kw">if </span>!force_xdp {
             <span class="macro">eyre::bail!</span>(<span class="string">"XDP currently disabled by default"</span>);
         }
+
+        <span class="kw">let </span>filters = config
+            .dyn_cfg
+            .filters()
+            .clone()
+            .context(<span class="string">"XDP requires a filter chain"</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>clusters = config.clusters.clone();
+
+        <span class="kw">let </span>config = <span class="kw">crate</span>::net::xdp::process::ConfigState { filters, clusters };
 
         <span class="kw">let </span>udp_port = <span class="kw">if </span><span class="self">self</span>.udp_enabled { <span class="self">self</span>.udp_port } <span class="kw">else </span>{ <span class="number">0 </span>};
         <span class="kw">let </span>qcmp_port = <span class="kw">if </span><span class="self">self</span>.qcmp_enabled { <span class="self">self</span>.qcmp_port } <span class="kw">else </span>{ <span class="number">0 </span>};

@@ -85,7 +85,8 @@
 <a href="#84" id="84">84</a>
 <a href="#85" id="85">85</a>
 <a href="#86" id="86">86</a>
-<a href="#87" id="87">87</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -107,7 +108,7 @@
     Arc,
 };
 
-<span class="kw">use crate</span>::{net::endpoint::Locality, Config};
+<span class="kw">use </span><span class="kw">crate</span>::net::endpoint::Locality;
 
 <span class="kw">pub use </span><span class="kw">crate</span>::config::providers::k8s::update_endpoints_from_gameservers <span class="kw">as </span>watch_gameservers;
 
@@ -116,7 +117,8 @@
     config_namespace: <span class="prelude-ty">Option</span>&lt;String&gt;,
     health_check: Arc&lt;AtomicBool&gt;,
     locality: <span class="prelude-ty">Option</span>&lt;Locality&gt;,
-    config: Arc&lt;Config&gt;,
+    filters: <span class="kw">crate</span>::config::Slot&lt;<span class="kw">crate</span>::filters::FilterChain&gt;,
+    clusters: <span class="kw">crate</span>::config::Watch&lt;<span class="kw">crate</span>::net::ClusterMap&gt;,
     address_selector: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::config::AddressSelector&gt;,
 ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
     <span class="kw">let </span>client = tokio::time::timeout(
@@ -129,12 +131,12 @@
         <span class="kw">let </span>configmap_reflector = <span class="kw">crate</span>::config::providers::k8s::update_filters_from_configmap(
             client.clone(),
             cns,
-            config.filters.clone(),
+            filters,
         );
         <span class="kw">let </span>gameserver_reflector = <span class="kw">crate</span>::config::providers::k8s::update_endpoints_from_gameservers(
             client,
             gameservers_namespace,
-            config.clusters.clone(),
+            clusters,
             locality,
             address_selector,
         );
@@ -157,7 +159,7 @@
         <span class="kw">let </span>gameserver_reflector = <span class="kw">crate</span>::config::providers::k8s::update_endpoints_from_gameservers(
             client,
             gameservers_namespace,
-            config.clusters.clone(),
+            clusters,
             locality,
             address_selector,
         );

@@ -332,7 +332,15 @@
 <a href="#331" id="331">331</a>
 <a href="#332" id="332">332</a>
 <a href="#333" id="333">333</a>
-<a href="#334" id="334">334</a></pre></div><pre class="rust"><code><span class="kw">use </span>serde::ser::SerializeMap;
+<a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
+<a href="#336" id="336">336</a>
+<a href="#337" id="337">337</a>
+<a href="#338" id="338">338</a>
+<a href="#339" id="339">339</a>
+<a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a></pre></div><pre class="rust"><code><span class="kw">use </span>serde::ser::SerializeMap;
 
 <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
@@ -375,14 +383,18 @@
             };
         }
 
+        <span class="kw">let </span><span class="kw-2">mut </span>typemap = default_typemap();
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(filters) = cfg.filters {
+            typemap.insert::&lt;FilterChain&gt;(Slot::new(filters));
+        }
+
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             clusters: Watch::new(cfg.clusters.unwrap_or_default()),
-            filters: Slot::new(cfg.filters.unwrap_or_default()),
             datacenter: cfg.datacenter,
             dyn_cfg: DynamicConfig {
                 id: cfg.id.map_or_else(default_id, Slot::from),
                 version: cfg.version.unwrap_or_default(),
-                typemap: default_typemap(),
+                typemap,
             },
         })
     }
@@ -395,7 +407,9 @@
         <span class="kw">for </span>(k, v) <span class="kw">in </span>map {
             <span class="kw">match </span>k.as_str() {
                 <span class="string">"filters" </span>=&gt; {
-                    <span class="self">self</span>.filters.try_replace(serde_json::from_value(v)<span class="question-mark">?</span>);
+                    <span class="kw">if let </span><span class="prelude-val">Some</span>(filters) = <span class="self">self</span>.dyn_cfg.filters() {
+                        filters.try_replace(serde_json::from_value(v)<span class="question-mark">?</span>);
+                    }
                 }
                 <span class="string">"id" </span>=&gt; {
                     <span class="self">self</span>.dyn_cfg.id.try_replace(serde_json::from_value(v)<span class="question-mark">?</span>);
@@ -434,7 +448,9 @@
 
         map.serialize_entry(<span class="string">"version"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.dyn_cfg.version)<span class="question-mark">?</span>;
         map.serialize_entry(<span class="string">"id"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.dyn_cfg.id)<span class="question-mark">?</span>;
-        map.serialize_entry(<span class="string">"filters"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.filters)<span class="question-mark">?</span>;
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(filters) = <span class="self">self</span>.dyn_cfg.filters() {
+            map.serialize_entry(<span class="string">"filters"</span>, <span class="kw-2">&amp;</span>filters)<span class="question-mark">?</span>;
+        }
         map.serialize_entry(<span class="string">"clusters"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.clusters)<span class="question-mark">?</span>;
 
         <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.datacenter {

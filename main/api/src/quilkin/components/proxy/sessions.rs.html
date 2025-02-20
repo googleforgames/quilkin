@@ -741,7 +741,13 @@
 <a href="#740" id="740">740</a>
 <a href="#741" id="741">741</a>
 <a href="#742" id="742">742</a>
-<a href="#743" id="743">743</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#743" id="743">743</a>
+<a href="#744" id="744">744</a>
+<a href="#745" id="745">745</a>
+<a href="#746" id="746">746</a>
+<a href="#747" id="747">747</a>
+<a href="#748" id="748">748</a>
+<a href="#749" id="749">749</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -1092,8 +1098,14 @@
         <span class="macro">tracing::trace!</span>(%source, %dest, length = packet.len(), <span class="string">"received packet from upstream"</span>);
 
         <span class="kw">let </span><span class="kw-2">mut </span>context = <span class="kw">crate</span>::filters::WriteContext::new(source.into(), dest.into(), packet);
+        <span class="kw">let </span><span class="prelude-val">Some</span>(filters) = config.dyn_cfg.filters() <span class="kw">else </span>{
+            <span class="kw">return </span><span class="prelude-val">Err</span>((
+                asn_info,
+                Error::Filter(<span class="kw">crate</span>::filters::FilterError::Custom(<span class="string">"no filters loaded"</span>)),
+            ));
+        };
 
-        <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = config.filters.load().write(<span class="kw-2">&amp;mut </span>context) {
+        <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = filters.load().write(<span class="kw-2">&amp;mut </span>context) {
             <span class="kw">return </span><span class="prelude-val">Err</span>((asn_info, err.into()));
         }
 

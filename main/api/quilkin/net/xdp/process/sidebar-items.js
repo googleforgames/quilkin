@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["process_packets"],"struct":["SessionState","State"]};
+window.SIDEBAR_ITEMS = {"fn":["process_packets"],"struct":["ConfigState","SessionState","State"]};

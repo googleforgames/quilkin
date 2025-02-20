@@ -830,7 +830,15 @@
 <a href="#829" id="829">829</a>
 <a href="#830" id="830">830</a>
 <a href="#831" id="831">831</a>
-<a href="#832" id="832">832</a></pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
+<a href="#832" id="832">832</a>
+<a href="#833" id="833">833</a>
+<a href="#834" id="834">834</a>
+<a href="#835" id="835">835</a>
+<a href="#836" id="836">836</a>
+<a href="#837" id="837">837</a>
+<a href="#838" id="838">838</a>
+<a href="#839" id="839">839</a>
+<a href="#840" id="840">840</a></pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
     components::proxy::{sessions::inner_metrics <span class="kw">as </span>session_metrics, PipelineError},
     filters::{<span class="self">self</span>, Filter <span class="kw">as _</span>},
     metrics::{<span class="self">self</span>, AsnInfo},
@@ -936,12 +944,20 @@
     }
 }
 
+<span class="kw">use </span><span class="kw">crate</span>::config;
+
+<span class="attr">#[derive(Clone)]
+</span><span class="kw">pub struct </span>ConfigState {
+    <span class="kw">pub </span>filters: config::Slot&lt;<span class="kw">crate</span>::filters::FilterChain&gt;,
+    <span class="kw">pub </span>clusters: config::Watch&lt;<span class="kw">crate</span>::net::ClusterMap&gt;,
+}
+
 <span class="kw">pub struct </span>State {
     <span class="doccomment">/// The external port is how we determine if packets come from clients (downstream)
     /// or servers (upstream)
     </span><span class="kw">pub </span>external_port: NetworkU16,
     <span class="kw">pub </span>qcmp_port: NetworkU16,
-    <span class="kw">pub </span>config: Arc&lt;<span class="kw">crate</span>::Config&gt;,
+    <span class="kw">pub </span>config: ConfigState,
     <span class="kw">pub </span>destinations: Vec&lt;EndpointAddress&gt;,
     <span class="kw">pub </span>addr_to_asn: std::collections::HashMap&lt;IpAddr, <span class="prelude-ty">Option</span>&lt;(IpNetEntry, maxmind_db::Asn)&gt;&gt;,
     <span class="kw">pub </span>sessions: Arc&lt;SessionState&gt;,

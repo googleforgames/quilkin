@@ -785,7 +785,7 @@
 ///
 /// This can fail if threads can not be spawned for some reason (unlikely), the
 /// more likely reason for failure is the inability to attach the eBPF program
-</span><span class="kw">pub fn </span>spawn(workers: XdpWorkers, config: Arc&lt;<span class="kw">crate</span>::Config&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;XdpLoop, XdpSpawnError&gt; {
+</span><span class="kw">pub fn </span>spawn(workers: XdpWorkers, config: process::ConfigState) -&gt; <span class="prelude-ty">Result</span>&lt;XdpLoop, XdpSpawnError&gt; {
     <span class="kw">let </span>external_port = workers.external_port;
     <span class="kw">let </span>qcmp_port = workers.qcmp_port;
     <span class="kw">let </span>ipv4 = workers.ipv4;
@@ -862,7 +862,7 @@
     worker: quilkin_xdp::XdpWorker,
     external_port: NetworkU16,
     qcmp_port: NetworkU16,
-    config: Arc&lt;<span class="kw">crate</span>::Config&gt;,
+    config: process::ConfigState,
     sessions: Arc&lt;process::SessionState&gt;,
     local_ipv4: std::net::Ipv4Addr,
     local_ipv6: std::net::Ipv6Addr,
