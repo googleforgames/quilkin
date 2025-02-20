@@ -45,9 +45,11 @@ impl Config {
         if let Some(filters) = cfg.filters {
             typemap.insert::<FilterChain>(Slot::new(filters));
         }
+        if let Some(clusters) = cfg.clusters {
+            typemap.insert::<ClusterMap>(Watch::new(clusters));
+        }
 
         Ok(Self {
-            clusters: Watch::new(cfg.clusters.unwrap_or_default()),
             datacenter: cfg.datacenter,
             dyn_cfg: DynamicConfig {
                 id: cfg.id.map_or_else(default_id, Slot::from),
@@ -73,9 +75,13 @@ impl Config {
                     self.dyn_cfg.id.try_replace(serde_json::from_value(v)?);
                 }
                 "clusters" => {
+                    let Some(clusters) = self.dyn_cfg.clusters() else {
+                        continue;
+                    };
+
                     let cmd: cluster::ClusterMapDeser = serde_json::from_value(v)?;
                     tracing::trace!(len = cmd.endpoints.len(), "replacing clusters");
-                    self.clusters.modify(|clusters| {
+                    clusters.modify(|clusters| {
                         for cluster in cmd.endpoints {
                             clusters.insert(cluster.locality, cluster.endpoints);
                         }
@@ -107,9 +113,11 @@ impl serde::Serialize for Config {
         map.serialize_entry("version", &self.dyn_cfg.version)?;
         map.serialize_entry("id", &self.dyn_cfg.id)?;
         if let Some(filters) = self.dyn_cfg.filters() {
-            map.serialize_entry("filters", &filters)?;
+            map.serialize_entry("filters", filters)?;
         }
-        map.serialize_entry("clusters", &self.clusters)?;
+        if let Some(clusters) = self.dyn_cfg.clusters() {
+            map.serialize_entry("clusters", clusters)?;
+        }
 
         match &self.datacenter {
             DatacenterConfig::Agent {
@@ -139,7 +147,7 @@ mod tests {
     #[test]
     fn deserialise_client() {
         let config = Config::default_non_agent();
-        config.clusters.modify(|clusters| {
+        config.dyn_cfg.clusters().unwrap().modify(|clusters| {
             clusters.insert_default([Endpoint::new("127.0.0.1:25999".parse().unwrap())].into())
         });
 
@@ -149,7 +157,7 @@ mod tests {
     #[test]
     fn deserialise_server() {
         let config = Config::default_non_agent();
-        config.clusters.modify(|clusters| {
+        config.dyn_cfg.clusters().unwrap().modify(|clusters| {
             clusters.insert_default(
                 [
                     Endpoint::new("127.0.0.1:26000".parse().unwrap()),
@@ -185,7 +193,7 @@ mod tests {
         }))
         .unwrap();
 
-        let value = config.clusters.read();
+        let value = config.dyn_cfg.clusters().unwrap().read();
         assert_eq!(
             &*value,
             &ClusterMap::new_default(
@@ -206,7 +214,7 @@ mod tests {
         }))
         .unwrap();
 
-        let value = config.clusters.read();
+        let value = config.dyn_cfg.clusters().unwrap().read();
         assert_eq!(
             &*value,
             &ClusterMap::new_default(
@@ -251,7 +259,7 @@ mod tests {
         }))
         .unwrap_or_else(|_| Config::default_agent());
 
-        let value = config.clusters.read();
+        let value = config.dyn_cfg.clusters().unwrap().read();
         assert_eq!(
             &*value,
             &ClusterMap::new_default(

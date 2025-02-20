@@ -82,7 +82,10 @@ impl Providers {
                     .dyn_cfg
                     .filters()
                     .context("agones requires filters")?;
-                let clusters = config.clusters.clone();
+                let clusters = config
+                    .dyn_cfg
+                    .clusters()
+                    .context("agones requires clusters")?;
 
                 Self::task(health_check.clone(), {
                     let health_check = health_check.clone();

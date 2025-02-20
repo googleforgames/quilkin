@@ -121,6 +121,10 @@ impl Proxy {
             })
         });
 
+        let Some(clusters) = config.dyn_cfg.clusters() else {
+            eyre::bail!("empty clusters were not created")
+        };
+
         if !self.to.is_empty() {
             let endpoints = if let Some(tt) = &self.to_tokens {
                 let (unique, overflow) = 256u64.overflowing_pow(tt.length as _);
@@ -192,12 +196,12 @@ impl Proxy {
                     .collect()
             };
 
-            config.clusters.modify(|clusters| {
+            clusters.modify(|clusters| {
                 clusters.insert(None, endpoints);
             });
         }
 
-        if !config.clusters.read().has_endpoints() && self.management_servers.is_empty() {
+        if !clusters.read().has_endpoints() && self.management_servers.is_empty() {
             return Err(eyre::eyre!(
                  "`quilkin proxy` requires at least one `to` address or `management_server` endpoint."
              ));

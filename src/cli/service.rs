@@ -499,9 +499,13 @@ impl Service {
         let filters = config
             .dyn_cfg
             .filters()
-            .clone()
-            .context("XDP requires a filter chain")?;
-        let clusters = config.clusters.clone();
+            .context("XDP requires a filter chain")?
+            .clone();
+        let clusters = config
+            .dyn_cfg
+            .clusters()
+            .context("XDP requires a cluster map")?
+            .clone();
 
         let config = crate::net::xdp::process::ConfigState { filters, clusters };
 

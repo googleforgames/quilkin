@@ -136,18 +136,22 @@ quilkin.dev:
         ";
 
     let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
-    server_config.clusters.modify(|clusters| {
-        clusters.insert_default(
-            [
-                Endpoint::with_metadata(
-                    echo.clone(),
-                    serde_yaml::from_str::<MetadataView<_>>(endpoint_metadata).unwrap(),
-                ),
-                "127.0.0.2:5000".parse().unwrap(), // goes nowhere, so shouldn't do anything.
-            ]
-            .into(),
-        )
-    });
+    server_config
+        .dyn_cfg
+        .clusters()
+        .unwrap()
+        .modify(|clusters| {
+            clusters.insert_default(
+                [
+                    Endpoint::with_metadata(
+                        echo.clone(),
+                        serde_yaml::from_str::<MetadataView<_>>(endpoint_metadata).unwrap(),
+                    ),
+                    "127.0.0.2:5000".parse().unwrap(), // goes nowhere, so shouldn't do anything.
+                ]
+                .into(),
+            )
+        });
 
     server_config.dyn_cfg.filters().unwrap().store(
         quilkin::filters::FilterChain::try_create([

@@ -209,7 +209,9 @@ async fn test(t: &mut TestHelper, yaml: &str, address_type: AddressType) -> mpsc
     );
 
     server_config
-        .clusters
+        .dyn_cfg
+        .clusters()
+        .unwrap()
         .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
 
     let proxy_socket =
