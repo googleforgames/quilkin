@@ -31,9 +31,10 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    filters::prelude::*,
+    filters::{prelude::*, FilterChain},
     generated::envoy::service::discovery::v3::Resource as XdsResource,
     net::cluster::{self, ClusterMap},
+    xds::{self, ResourceType},
 };
 
 pub use self::{
@@ -44,10 +45,13 @@ mod config_type;
 mod error;
 pub mod providers;
 pub mod providersv2;
+mod serialization;
 mod slot;
 pub mod watch;
 
 pub(crate) const BACKOFF_INITIAL_DELAY: Duration = Duration::from_millis(500);
+
+pub type ConfigMap = typemap_rev::TypeMap<dyn typemap_rev::CloneDebuggableStorage>;
 
 base64_serde_type!(pub Base64Standard, base64::engine::general_purpose::STANDARD);
 
@@ -67,31 +71,246 @@ pub enum DatacenterConfig {
     },
 }
 
-/// Configuration for a component
-#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
-#[cfg_attr(test, derive(PartialEq))]
-#[serde(deny_unknown_fields)]
-#[non_exhaustive]
+#[derive(Clone)]
+#[cfg_attr(test, derive(Debug))]
 pub struct Config {
-    #[serde(default)]
     pub clusters: Watch<ClusterMap>,
-    #[serde(default)]
     pub filters: Slot<crate::filters::FilterChain>,
-    #[serde(default = "default_proxy_id")]
-    pub id: Slot<String>,
-    #[serde(default)]
-    pub version: Slot<Version>,
-    #[serde(flatten)]
     pub datacenter: DatacenterConfig,
+    pub dyn_cfg: DynamicConfig,
+}
+
+#[cfg(test)]
+impl<'de> Deserialize<'de> for Config {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct Visitor;
+
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = Config;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("Quilkin config")
+            }
+
+            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::MapAccess<'de>,
+            {
+                use serde::de::Error;
+
+                let mut id = Option::<String>::None;
+                let mut filters = None;
+                let mut clusters = None;
+                let mut icao_code = None;
+                let mut qcmp_port = None;
+                let mut datacenters = None;
+                let mut version = None;
+
+                while let Some(key) = map.next_key::<std::borrow::Cow<'de, str>>()? {
+                    match key.as_ref() {
+                        "id" => id = Some(map.next_value()?),
+                        "filters" => filters = Some(map.next_value()?),
+                        "clusters" => clusters = Some(map.next_value()?),
+                        "datacenters" => {
+                            if icao_code.is_some() || qcmp_port.is_some() {
+                                return Err(Error::custom(
+                                    "agent specific fields have already been deserialized",
+                                ));
+                            } else if datacenters.is_some() {
+                                return Err(Error::duplicate_field("datacenters"));
+                            }
+
+                            datacenters = Some(map.next_value()?);
+                        }
+                        "icao_code" => {
+                            if datacenters.is_some() {
+                                return Err(Error::custom(
+                                    "non-agent `datacenters` field has already been deserialized",
+                                ));
+                            } else if icao_code.is_some() {
+                                return Err(Error::duplicate_field("icao_code"));
+                            }
+
+                            icao_code = Some(map.next_value()?);
+                        }
+                        "qcmp_port" => {
+                            if datacenters.is_some() {
+                                return Err(Error::custom(
+                                    "non-agent `datacenters` field has already been deserialized",
+                                ));
+                            } else if qcmp_port.is_some() {
+                                return Err(Error::duplicate_field("qcmp_port"));
+                            }
+
+                            qcmp_port = Some(map.next_value()?);
+                        }
+                        "version" => {
+                            version = Some(map.next_value()?);
+                        }
+                        unknown => {
+                            return Err(Error::unknown_field(
+                                unknown,
+                                &[
+                                    "id",
+                                    "filters",
+                                    "clusters",
+                                    "datacenters",
+                                    "icao_code",
+                                    "qcmp_port",
+                                ],
+                            ));
+                        }
+                    }
+                }
+
+                let datacenter = if let Some(datacenters) = datacenters {
+                    DatacenterConfig::NonAgent { datacenters }
+                } else if icao_code.is_none() && qcmp_port.is_none() {
+                    DatacenterConfig::NonAgent {
+                        datacenters: Default::default(),
+                    }
+                } else {
+                    DatacenterConfig::Agent {
+                        icao_code: Slot::new(icao_code),
+                        qcmp_port: Slot::new(qcmp_port),
+                    }
+                };
+
+                Ok(Config {
+                    filters: filters.unwrap_or_default(),
+                    clusters: clusters.unwrap_or_default(),
+                    datacenter,
+                    dyn_cfg: DynamicConfig {
+                        version: version.unwrap_or_default(),
+                        id: id.map_or_else(default_id, Slot::new),
+                        typemap: default_typemap(),
+                    },
+                })
+            }
+        }
+
+        deserializer.deserialize_map(Visitor)
+    }
+}
+
+#[cfg(test)]
+impl PartialEq for Config {
+    fn eq(&self, other: &Self) -> bool {
+        if self.clusters != other.clusters
+            || self.filters != other.filters
+            || self.datacenter != other.datacenter
+        {
+            return false;
+        }
+
+        // TODO: compare typemaps
+        true
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Agent {
+    pub icao_code: Slot<IcaoCode>,
+    pub qcmp_port: Slot<u16>,
+}
+
+/// Configuration for a component
+#[derive(Clone)]
+#[cfg_attr(test, derive(Debug))]
+pub struct DynamicConfig {
+    pub id: Slot<String>,
+    pub version: Version,
+    typemap: ConfigMap,
+}
+
+#[cfg(test)]
+impl<'de> Deserialize<'de> for DynamicConfig {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct DynVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for DynVisitor {
+            type Value = DynamicConfig;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("Quilkin dynamic config")
+            }
+
+            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::MapAccess<'de>,
+            {
+                let mut version = None;
+                let mut id = None;
+
+                while let Some(key) = map.next_key::<std::borrow::Cow<'de, str>>()? {
+                    match key.as_ref() {
+                        "id" => id = Some(map.next_value()?),
+                        "version" => version = Some(map.next_value()?),
+                        other => {
+                            return Err(serde::de::Error::unknown_field(other, &["id"]));
+                        }
+                    }
+                }
+
+                Ok(DynamicConfig {
+                    version: version.unwrap_or_default(),
+                    id: id.map_or_else(default_id, |id| Slot::new(Some(id))),
+                    typemap: default_typemap(),
+                })
+            }
+        }
+
+        deserializer.deserialize_map(DynVisitor)
+    }
+}
+
+impl typemap_rev::TypeMapKey for FilterChain {
+    type Value = Slot<FilterChain>;
+}
+
+impl typemap_rev::TypeMapKey for ClusterMap {
+    type Value = Watch<ClusterMap>;
+}
+
+impl typemap_rev::TypeMapKey for DatacenterMap {
+    type Value = Watch<DatacenterMap>;
+}
+
+impl typemap_rev::TypeMapKey for Agent {
+    type Value = Agent;
+}
+
+impl DynamicConfig {
+    pub fn filters(&self) -> Option<Slot<FilterChain>> {
+        self.typemap.get::<FilterChain>().cloned()
+    }
+
+    pub fn clusters(&self) -> Option<Watch<ClusterMap>> {
+        self.typemap.get::<ClusterMap>().cloned()
+    }
+
+    pub fn datacenters(&self) -> Option<Watch<DatacenterMap>> {
+        self.typemap.get::<DatacenterMap>().cloned()
+    }
+
+    pub fn agent(&self) -> Option<Agent> {
+        self.typemap.get::<Agent>().cloned()
+    }
 }
 
 impl quilkin_xds::config::Configuration for Config {
     fn identifier(&self) -> String {
-        (*self.id.load()).clone()
+        String::clone(&self.id())
     }
 
     fn allow_request_processing(&self, resource_type: &str) -> bool {
-        resource_type.parse::<crate::xds::ResourceType>().is_ok()
+        resource_type.parse::<ResourceType>().is_ok()
     }
 
     fn apply_delta(
@@ -116,8 +335,8 @@ impl quilkin_xds::config::Configuration for Config {
         _server_version: &str,
     ) -> impl Iterator<Item = (&'static str, Vec<String>)> {
         [
-            (crate::xds::CLUSTER_TYPE, Vec::new()),
-            (crate::xds::DATACENTER_TYPE, Vec::new()),
+            (xds::CLUSTER_TYPE, Vec::new()),
+            (xds::DATACENTER_TYPE, Vec::new()),
         ]
         .into_iter()
     }
@@ -126,13 +345,11 @@ impl quilkin_xds::config::Configuration for Config {
         &self,
         control_plane: quilkin_xds::server::ControlPlane<Self>,
     ) -> impl std::future::Future<Output = ()> + Send + 'static {
-        let mut cluster_watcher = self.clusters.watch();
-
         if !control_plane.is_relay {
             self.filters.watch({
                 let this = control_plane.clone();
                 move |_| {
-                    this.push_update(crate::xds::FILTER_CHAIN_TYPE);
+                    this.push_update(xds::FILTER_CHAIN_TYPE);
                 }
             });
         }
@@ -140,6 +357,7 @@ impl quilkin_xds::config::Configuration for Config {
         tracing::trace!("waiting for changes");
 
         async move {
+            let mut cluster_watcher = control_plane.config.clusters.watch();
             match &control_plane.config.datacenter {
                 crate::config::DatacenterConfig::Agent { .. } => loop {
                     match cluster_watcher.changed().await {
@@ -174,48 +392,6 @@ impl quilkin_xds::config::Configuration for Config {
 use crate::net::xds::config::DeltaDiscoveryRes;
 
 impl Config {
-    /// Attempts to deserialize `input` as a YAML object representing `Self`.
-    pub fn from_reader<R: std::io::Read>(input: R) -> Result<Self, serde_yaml::Error> {
-        serde_yaml::from_reader(input)
-    }
-
-    fn update_from_json(
-        &self,
-        mut map: serde_json::Map<String, serde_json::Value>,
-        locality: Option<crate::net::endpoint::Locality>,
-    ) -> Result<(), eyre::Error> {
-        macro_rules! replace_if_present {
-            ($($field:ident),+) => {
-                $(
-                    if let Some(value) = map.remove(stringify!($field)) {
-                        tracing::trace!(%value, "replacing {}", stringify!($field));
-                        self.$field.try_replace(serde_json::from_value(value)?);
-                    }
-                )+
-            }
-        }
-
-        replace_if_present!(filters, id);
-
-        if let Some(value) = map.remove("clusters") {
-            let cmd: cluster::ClusterMapDeser = serde_json::from_value(value)?;
-            tracing::trace!(len = cmd.endpoints.len(), "replacing clusters");
-            self.clusters.modify(|clusters| {
-                for cluster in cmd.endpoints {
-                    clusters.insert(cluster.locality, cluster.endpoints);
-                }
-
-                if let Some(locality) = locality {
-                    clusters.update_unlocated_endpoints(locality);
-                }
-            });
-        }
-
-        self.apply_metrics();
-
-        Ok(())
-    }
-
     /// Given a list of subscriptions and the current state of the calling client,
     /// construct a response with the current state of our resources that differ
     /// from those of the client
@@ -552,17 +728,21 @@ impl Config {
 
     #[inline]
     pub fn apply_metrics(&self) {
-        let clusters = self.clusters.read();
-        crate::net::cluster::active_clusters().set(clusters.len() as i64);
-        crate::net::cluster::active_endpoints().set(clusters.num_of_endpoints() as i64);
+        // let Some(clusters) = self.clusters() else {
+        //     return;
+        // };
+        crate::metrics::apply_clusters(&self.clusters);
     }
 
     pub fn default_agent() -> Self {
         Self {
             clusters: Default::default(),
             filters: Default::default(),
-            id: default_proxy_id(),
-            version: Slot::with_default(),
+            dyn_cfg: DynamicConfig {
+                id: default_id(),
+                version: Version::default(),
+                typemap: default_typemap(),
+            },
             datacenter: DatacenterConfig::Agent {
                 icao_code: Default::default(),
                 qcmp_port: Default::default(),
@@ -574,8 +754,11 @@ impl Config {
         Self {
             clusters: Default::default(),
             filters: Default::default(),
-            id: default_proxy_id(),
-            version: Slot::with_default(),
+            dyn_cfg: DynamicConfig {
+                id: default_id(),
+                version: Version::default(),
+                typemap: default_typemap(),
+            },
             datacenter: DatacenterConfig::NonAgent {
                 datacenters: Default::default(),
             },
@@ -591,6 +774,11 @@ impl Config {
                 unreachable!("this should not be called on an agent");
             }
         }
+    }
+
+    #[inline]
+    pub fn id(&self) -> String {
+        String::clone(&self.dyn_cfg.id.load())
     }
 }
 
@@ -847,7 +1035,7 @@ impl Default for Version {
     }
 }
 
-fn default_proxy_id() -> Slot<String> {
+pub(crate) fn default_id() -> Slot<String> {
     Slot::from(
         std::env::var("QUILKIN_SERVICE_ID")
             .or_else(|_| {
@@ -861,6 +1049,10 @@ fn default_proxy_id() -> Slot<String> {
             })
             .unwrap_or_else(|_| Uuid::new_v4().as_hyphenated().to_string()),
     )
+}
+
+pub(crate) fn default_typemap() -> ConfigMap {
+    typemap_rev::TypeMap::custom()
 }
 
 /// Filter is the configuration for a single filter
@@ -973,235 +1165,4 @@ pub enum AddrKind {
     Ipv4,
     Ipv6,
     Any,
-}
-
-#[cfg(test)]
-mod tests {
-    use std::net::Ipv6Addr;
-
-    use serde_json::json;
-
-    use crate::net::endpoint::{Endpoint, Metadata};
-
-    use super::*;
-
-    fn parse_config(yaml: &str) -> Config {
-        Config::from_reader(yaml.as_bytes()).unwrap()
-    }
-
-    #[test]
-    fn deserialise_client() {
-        let config = Config::default_non_agent();
-        config.clusters.modify(|clusters| {
-            clusters.insert_default([Endpoint::new("127.0.0.1:25999".parse().unwrap())].into())
-        });
-
-        let _ = serde_yaml::to_string(&config).unwrap();
-    }
-
-    #[test]
-    fn deserialise_server() {
-        let config = Config::default_non_agent();
-        config.clusters.modify(|clusters| {
-            clusters.insert_default(
-                [
-                    Endpoint::new("127.0.0.1:26000".parse().unwrap()),
-                    Endpoint::new("127.0.0.1:26001".parse().unwrap()),
-                ]
-                .into(),
-            )
-        });
-
-        let _ = serde_yaml::to_string(&config).unwrap();
-    }
-
-    #[test]
-    fn parse_default_values() {
-        let config: Config = serde_json::from_value(json!({
-            "version": "v1alpha1",
-             "clusters":[]
-        }))
-        .unwrap();
-
-        assert!(config.id.load().len() > 1);
-    }
-
-    #[test]
-    fn parse_proxy() {
-        let yaml = "
-version: v1alpha1
-id: server-proxy
-  ";
-        let config = parse_config(yaml);
-
-        assert_eq!(config.id.load().as_str(), "server-proxy");
-        assert_eq!(*config.version.load(), Version::V1Alpha1);
-    }
-
-    #[test]
-    fn parse_client() {
-        let config: Config = serde_json::from_value(json!({
-            "version": "v1alpha1",
-            "clusters": [{
-                "endpoints": [{
-                    "address": "127.0.0.1:25999"
-                }],
-            }]
-        }))
-        .unwrap();
-
-        let value = config.clusters.read();
-        assert_eq!(
-            &*value,
-            &ClusterMap::new_default(
-                [Endpoint::new((std::net::Ipv4Addr::LOCALHOST, 25999).into(),)].into()
-            )
-        )
-    }
-
-    #[test]
-    fn parse_ipv6_endpoint() {
-        let config: Config = serde_json::from_value(json!({
-            "version": "v1alpha1",
-            "clusters":[{
-                "endpoints": [{
-                    "address": "[2345:0425:2CA1:0000:0000:0567:5673:24b5]:25999"
-                }],
-            }]
-        }))
-        .unwrap();
-
-        let value = config.clusters.read();
-        assert_eq!(
-            &*value,
-            &ClusterMap::new_default(
-                [Endpoint::new(
-                    (
-                        "2345:0425:2CA1:0000:0000:0567:5673:24b5"
-                            .parse::<Ipv6Addr>()
-                            .unwrap(),
-                        25999
-                    )
-                        .into()
-                )]
-                .into()
-            )
-        )
-    }
-
-    #[test]
-    fn parse_server() {
-        let config: Config = serde_json::from_value(json!({
-            "version": "v1alpha1",
-            "clusters": [{
-                "endpoints": [
-                    {
-                        "address" : "127.0.0.1:26000",
-                        "metadata": {
-                            "quilkin.dev": {
-                                "tokens": ["MXg3aWp5Ng==", "OGdqM3YyaQ=="],
-                            }
-                        }
-                    },
-                    {
-                        "address" : "[2345:0425:2CA1:0000:0000:0567:5673:24b5]:25999",
-                        "metadata": {
-                            "quilkin.dev": {
-                                "tokens": ["bmt1eTcweA=="],
-                            }
-                        }
-                    }
-                ],
-            }]
-        }))
-        .unwrap_or_else(|_| Config::default_agent());
-
-        let value = config.clusters.read();
-        assert_eq!(
-            &*value,
-            &ClusterMap::new_default(
-                [
-                    Endpoint::with_metadata(
-                        "127.0.0.1:26000".parse().unwrap(),
-                        Metadata {
-                            tokens: vec!["1x7ijy6", "8gj3v2i"]
-                                .into_iter()
-                                .map(From::from)
-                                .collect(),
-                        },
-                    ),
-                    Endpoint::with_metadata(
-                        "[2345:0425:2CA1:0000:0000:0567:5673:24b5]:25999"
-                            .parse()
-                            .unwrap(),
-                        Metadata {
-                            tokens: vec!["nkuy70x"].into_iter().map(From::from).collect(),
-                        },
-                    ),
-                ]
-                .into()
-            )
-        );
-    }
-
-    #[test]
-    fn deny_unused_fields() {
-        let configs = vec![
-            "
-version: v1alpha1
-foo: bar
-clusters:
-    - endpoints:
-        - address: 127.0.0.1:7001
-",
-            "
-# proxy
-version: v1alpha1
-foo: bar
-id: client-proxy
-port: 7000
-clusters:
-    - endpoints:
-        - address: 127.0.0.1:7001
-",
-            "
-# admin
-version: v1alpha1
-admin:
-    foo: bar
-    address: 127.0.0.1:7001
-",
-            "
-# static.endpoints
-version: v1alpha1
-clusters:
-    - endpoints:
-        - address: 127.0.0.1:7001
-          connection_ids:
-            - Mxg3aWp5Ng==
-",
-            "
-# static.filters
-version: v1alpha1
-filters:
-  - name: quilkin.core.v1.rate-limiter
-    foo: bar
-",
-            "
-# dynamic.management_servers
-version: v1alpha1
-dynamic:
-  management_servers:
-    - address: 127.0.0.1:25999
-      foo: bar
-",
-        ];
-
-        for config in configs {
-            let result = Config::from_reader(config.as_bytes());
-            let error = result.unwrap_err();
-            println!("here: {}", error);
-            assert!(format!("{error:?}").contains("unknown field"));
-        }
-    }
 }

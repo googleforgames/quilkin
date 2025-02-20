@@ -22,6 +22,7 @@ use std::{
     },
 };
 
+use crate::config;
 use futures::TryStreamExt;
 use tokio::task::JoinHandle;
 
@@ -132,6 +133,21 @@ pub struct Providers {
     xds_endpoints: Vec<tonic::transport::Endpoint>,
 }
 
+#[derive(Clone)]
+pub struct FiltersAndClusters {
+    pub filters: config::Slot<crate::filters::FilterChain>,
+    pub clusters: config::Watch<config::ClusterMap>,
+}
+
+impl FiltersAndClusters {
+    pub fn new(config: &crate::Config) -> Option<Self> {
+        Some(Self {
+            filters: config.filters.clone(),
+            clusters: config.clusters.clone(),
+        })
+    }
+}
+
 impl Providers {
     #[allow(clippy::type_complexity)]
     const SUBS: &[(&str, &[(&str, Vec<String>)])] = &[
@@ -189,7 +205,7 @@ impl Providers {
 
     pub fn spawn_static_provider(
         &self,
-        config: Arc<crate::config::Config>,
+        config: FiltersAndClusters,
         health_check: &AtomicBool,
     ) -> crate::Result<JoinHandle<crate::Result<()>>> {
         let endpoint_tokens = self
@@ -291,7 +307,7 @@ impl Providers {
         &self,
         health_check: Arc<AtomicBool>,
         locality: Option<crate::net::endpoint::Locality>,
-        config: Arc<crate::config::Config>,
+        config: FiltersAndClusters,
     ) -> JoinHandle<crate::Result<()>> {
         let agones_namespace = self.agones_namespace.clone();
         let agones_enabled = self.agones_enabled;
@@ -300,9 +316,9 @@ impl Providers {
         let selector = self
             .address_type
             .as_ref()
-            .map(|at| crate::config::AddressSelector {
+            .map(|at| config::AddressSelector {
                 name: at.clone(),
-                kind: self.ip_kind.unwrap_or(crate::config::AddrKind::Any),
+                kind: self.ip_kind.unwrap_or(config::AddrKind::Any),
             });
 
         let task = {
@@ -335,7 +351,7 @@ impl Providers {
                             crate::config::providers::k8s::update_filters_from_configmap(
                                 client.clone(),
                                 k8s_namespace.clone(),
-                                config.clone(),
+                                config.filters,
                             ),
                         ))
                     } else {
@@ -348,7 +364,7 @@ impl Providers {
                             crate::config::watch::agones::watch_gameservers(
                                 client,
                                 agones_namespace.clone(),
-                                config.clone(),
+                                config.clusters,
                                 locality.clone(),
                                 selector.clone(),
                             ),
@@ -384,7 +400,7 @@ impl Providers {
 
     pub fn spawn_xds_provider(
         self,
-        config: &std::sync::Arc<crate::Config>,
+        config: Arc<config::Config>,
         health_check: Arc<AtomicBool>,
     ) -> tokio::task::JoinHandle<crate::Result<()>> {
         let config = config.clone();
@@ -396,14 +412,10 @@ impl Providers {
             let health_check = health_check.clone();
             let tx = tx.clone();
             async move {
-                let client = crate::net::xds::AdsClient::connect(
-                    String::clone(&config.id.load()),
-                    endpoints,
-                )
-                .await?;
+                let client = crate::net::xds::AdsClient::connect(config.id(), endpoints).await?;
 
                 let _stream = client
-                    .delta_subscribe(config.clone(), health_check.clone(), tx, Self::SUBS)
+                    .delta_subscribe(config, health_check.clone(), tx, Self::SUBS)
                     .await
                     .map_err(|_| eyre::eyre!("failed to acquire delta stream"))?;
 
@@ -417,19 +429,29 @@ impl Providers {
     #[tracing::instrument(level = "trace", skip_all)]
     pub fn spawn_providers(
         self,
-        config: &std::sync::Arc<crate::Config>,
+        config: &Arc<config::Config>,
         health_check: Arc<AtomicBool>,
         locality: Option<crate::net::endpoint::Locality>,
     ) -> tokio::task::JoinHandle<crate::Result<()>> {
+        let none = || {
+            health_check.store(true, Ordering::SeqCst);
+            tokio::spawn(async move { Ok(()) })
+        };
+
         if self.k8s_enabled || self.agones_enabled {
-            self.spawn_k8s_provider(health_check, locality, config.clone())
+            let Some(fc) = FiltersAndClusters::new(config) else {
+                return none();
+            };
+            self.spawn_k8s_provider(health_check, locality, fc)
         } else if !self.xds_endpoints.is_empty() {
-            self.spawn_xds_provider(config, health_check)
+            self.spawn_xds_provider(config.clone(), health_check)
         } else if self.fs_enabled {
             let config = config.clone();
+
             tokio::spawn(Self::task(health_check.clone(), {
                 let path = self.fs_path.clone();
                 let health_check = health_check.clone();
+
                 move || {
                     crate::config::watch::fs(
                         config.clone(),
@@ -440,11 +462,13 @@ impl Providers {
                 }
             }))
         } else if self.static_enabled() {
-            self.spawn_static_provider(config.clone(), &health_check)
-                .unwrap()
+            let Some(fc) = FiltersAndClusters::new(config) else {
+                return none();
+            };
+
+            self.spawn_static_provider(fc, &health_check).unwrap()
         } else {
-            health_check.store(true, Ordering::SeqCst);
-            tokio::spawn(async move { Ok(()) })
+            none()
         }
     }
 

@@ -89,10 +89,7 @@ impl Agent {
             }
             .spawn_providers(&config, ready.provider_is_healthy.clone(), self.locality);
 
-            let task = crate::net::xds::client::MdsClient::connect(
-                String::clone(&config.id.load()),
-                self.relay_servers,
-            );
+            let task = crate::net::xds::client::MdsClient::connect(config.id(), self.relay_servers);
 
             tokio::select! {
                 result = task => {

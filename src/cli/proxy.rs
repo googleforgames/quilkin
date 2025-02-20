@@ -94,11 +94,7 @@ impl Proxy {
         initialized: Option<tokio::sync::oneshot::Sender<()>>,
         shutdown_rx: ShutdownRx,
     ) -> crate::Result<()> {
-        tracing::info!(
-            port = self.port,
-            proxy_id = &*config.id.load(),
-            "Starting proxy"
-        );
+        tracing::info!(port = self.port, proxy_id = config.id(), "Starting proxy");
 
         // The number of worker tasks to spawn. Each task gets a dedicated queue to
         // consume packets off.

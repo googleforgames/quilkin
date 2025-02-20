@@ -353,3 +353,10 @@ pub trait CollectorExt: Collector + Clone + Sized + 'static {
 }
 
 impl<C: Collector + Clone + 'static> CollectorExt for C {}
+
+#[inline]
+pub(crate) fn apply_clusters(clusters: &crate::config::Watch<crate::net::ClusterMap>) {
+    let clusters = clusters.read();
+    crate::net::cluster::active_clusters().set(clusters.len() as i64);
+    crate::net::cluster::active_endpoints().set(clusters.num_of_endpoints() as i64);
+}

@@ -16,7 +16,7 @@
 
 use std::sync::Arc;
 
-use crate::{components::agent, config::Config};
+use crate::components::agent;
 pub use agent::Ready;
 
 define_port!(7600);
@@ -81,7 +81,7 @@ impl Agent {
     pub async fn run(
         self,
         locality: Option<crate::net::endpoint::Locality>,
-        config: Arc<Config>,
+        config: Arc<crate::Config>,
         ready: Ready,
         shutdown_rx: crate::signal::ShutdownRx,
     ) -> crate::Result<()> {

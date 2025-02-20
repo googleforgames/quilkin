@@ -62,11 +62,9 @@ impl Manage {
 
         let _relay_stream = if !self.relay_servers.is_empty() {
             tracing::info!("connecting to relay server");
-            let client = crate::net::xds::client::MdsClient::connect(
-                String::clone(&config.id.load()),
-                self.relay_servers,
-            )
-            .await?;
+            let client =
+                crate::net::xds::client::MdsClient::connect(config.id(), self.relay_servers)
+                    .await?;
 
             // Attempt to connect to a delta stream if the relay has one
             // available, otherwise fallback to the regular aggregated stream

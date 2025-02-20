@@ -134,6 +134,7 @@ tracing.workspace = true
 tracing-futures.workspace = true
 tracing-subscriber = { workspace = true, features = ["json", "env-filter"] }
 tryhard.workspace = true
+typemap_rev = "0.3.0"
 url.workspace = true
 uuid.workspace = true
 lasso = { version = "0.7.3", features = ["multi-threaded"] }
@@ -183,7 +184,7 @@ members = [
     ".",
     "crates/agones",
     "crates/macros",
-    "crates/nmap-service-probes",
+    #"crates/nmap-service-probes",
     "crates/proto-gen",
     "crates/quilkin-proto",
     "crates/test",

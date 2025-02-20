@@ -39,22 +39,19 @@ use std::{collections::HashMap, net::SocketAddr, ops::Range, sync::Arc, time::Du
 use async_trait::async_trait;
 use dashmap::DashMap;
 
-use crate::config::IcaoCode;
+use crate::config::{self, IcaoCode};
 
 pub fn spawn<M: Clone + Measurement + Sync + Send + 'static>(
     listener: crate::net::TcpListener,
-    config: Arc<crate::Config>,
+    datacenters: config::Watch<config::DatacenterMap>,
     phoenix: Phoenix<M>,
 ) -> crate::Result<crate::cli::Finalizer> {
     use eyre::WrapErr as _;
     use hyper::{Response, StatusCode};
 
-    phoenix.add_nodes_from_config(&config);
+    phoenix.add_nodes_from_config(&datacenters);
 
-    let crate::config::DatacenterConfig::NonAgent { datacenters } = &config.datacenter else {
-        unreachable!("this shouldn't be spawned on an agent")
-    };
-    let mut config_watcher = datacenters.watch();
+    let mut dc_watcher = datacenters.watch();
     let (shutdown_tx, mut shutdown_rx) = crate::signal::channel(Default::default());
 
     let ph_thread = std::thread::Builder::new()
@@ -73,7 +70,7 @@ pub fn spawn<M: Clone + Measurement + Sync + Send + 'static>(
                 .unwrap();
             let res = runtime.block_on({
                 let mut phoenix_watcher = phoenix.update_watcher();
-                let config = config.clone();
+                let datacenters = datacenters.clone();
 
                 async move {
                     let json = crate::config::Slot::new(serde_json::Map::default());
@@ -152,7 +149,7 @@ pub fn spawn<M: Clone + Measurement + Sync + Send + 'static>(
 
                         tokio::select! {
                             _ = shutdown_rx.changed() => break Ok::<_, eyre::Error>(()),
-                            result = config_watcher.changed() => if let Err(err) = result {
+                            result = dc_watcher.changed() => if let Err(err) = result {
                                 break Err(err).context("config watcher sender dropped");
                             },
                             result = phoenix_watcher.changed() => if let Err(err) = result {
@@ -161,7 +158,7 @@ pub fn spawn<M: Clone + Measurement + Sync + Send + 'static>(
                         }
 
                         tracing::trace!("change detected, updating phoenix");
-                        phoenix.add_nodes_from_config(&config);
+                        phoenix.add_nodes_from_config(&datacenters);
                         let nodes = phoenix.ordered_nodes_by_latency();
                         let mut new_json = serde_json::Map::default();
 
@@ -464,11 +461,7 @@ impl<M: Measurement + 'static> Phoenix<M> {
             .or_insert_with(|| Node::new(icao_code));
     }
 
-    pub fn add_nodes_from_config(&self, config: &crate::Config) {
-        let crate::config::DatacenterConfig::NonAgent { datacenters } = &config.datacenter else {
-            unreachable!("this shouldn't be called by an agent")
-        };
-
+    pub fn add_nodes_from_config(&self, datacenters: &config::Watch<config::DatacenterMap>) {
         let dcs = datacenters.write();
 
         for removed in dcs.removed() {
@@ -862,13 +855,15 @@ mod tests {
     #[tokio::test]
     #[cfg_attr(target_os = "macos", ignore)]
     async fn http_server() {
-        let config = Arc::new(crate::Config::default_non_agent());
         let qcmp_listener = crate::net::TcpListener::bind(None).expect("failed to bind listener");
         let qcmp_port = qcmp_listener.port();
 
         let icao_code = "ABCD".parse().unwrap();
 
-        config.datacenters().write().insert(
+        let datacenters =
+            crate::config::Watch::<crate::config::DatacenterMap>::new(Default::default());
+
+        datacenters.write().insert(
             std::net::Ipv4Addr::LOCALHOST.into(),
             crate::config::Datacenter {
                 qcmp_port,
@@ -889,7 +884,7 @@ mod tests {
             .interval_range(Duration::from_millis(10)..Duration::from_millis(15))
             .build();
 
-        let end = super::spawn(qcmp_listener, config.clone(), phoenix).unwrap();
+        let end = super::spawn(qcmp_listener, datacenters, phoenix).unwrap();
         tokio::time::sleep(Duration::from_millis(150)).await;
 
         let client =

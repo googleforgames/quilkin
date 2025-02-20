@@ -2167,15 +2167,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "nmap-service-probes"
-version = "0.1.0"
-dependencies = [
- "pretty_assertions",
- "thiserror 2.0.11",
- "winnow",
-]
-
-[[package]]
 name = "notify"
 version = "8.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2734,6 +2725,7 @@ dependencies = [
  "tracing-subscriber",
  "tracing-test",
  "tryhard",
+ "typemap_rev",
  "url",
  "uuid",
  "xxhash-rust",
@@ -3926,6 +3918,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "typemap_rev"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "74b08b0c1257381af16a5c3605254d529d3e7e109f3c62befc5d168968192998"
+
+[[package]]
 name = "typenum"
 version = "1.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4389,15 +4387,6 @@ name = "windows_x86_64_msvc"
 version = "0.52.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
-
-[[package]]
-name = "winnow"
-version = "0.6.26"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e90edd2ac1aa278a5c4599b1d89cf03074b610800f866d4026dc199d7929a28"
-dependencies = [
- "memchr",
-]
 
 [[package]]
 name = "winreg"
