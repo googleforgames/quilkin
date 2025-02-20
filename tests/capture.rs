@@ -57,20 +57,24 @@ async fn token_router() {
         .unwrap(),
     );
 
-    server_config.clusters.modify(|clusters| {
-        clusters.insert_default(
-            [Endpoint::with_metadata(
-                echo.clone(),
-                serde_json::from_value::<MetadataView<_>>(serde_json::json!({
-                    "quilkin.dev": {
-                        "tokens": ["YWJj"]
-                    }
-                }))
-                .unwrap(),
-            )]
-            .into(),
-        )
-    });
+    server_config
+        .dyn_cfg
+        .clusters()
+        .unwrap()
+        .modify(|clusters| {
+            clusters.insert_default(
+                [Endpoint::with_metadata(
+                    echo.clone(),
+                    serde_json::from_value::<MetadataView<_>>(serde_json::json!({
+                        "quilkin.dev": {
+                            "tokens": ["YWJj"]
+                        }
+                    }))
+                    .unwrap(),
+                )]
+                .into(),
+            )
+        });
 
     let server_port = t.run_server(server_config, None, None).await;
 

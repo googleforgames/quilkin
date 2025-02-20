@@ -54,7 +54,9 @@ async fn multiple_mutations() {
     quilkin::test::map_to_localhost(&mut echo);
     let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
     server_config
-        .clusters
+        .dyn_cfg
+        .clusters()
+        .unwrap()
         .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
     server_config.dyn_cfg.filters().unwrap().store(
         quilkin::filters::FilterChain::try_create(filters)

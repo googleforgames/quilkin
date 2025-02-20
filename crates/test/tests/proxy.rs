@@ -88,7 +88,9 @@ trace_test!(uring_receiver, {
 
     let config = std::sync::Arc::new(quilkin::Config::default_non_agent());
     config
-        .clusters
+        .dyn_cfg
+        .clusters()
+        .unwrap()
         .modify(|clusters| clusters.insert_default([endpoint.into()].into()));
 
     let socket = sb.client();
@@ -133,7 +135,9 @@ trace_test!(
 
         let config = std::sync::Arc::new(quilkin::Config::default_non_agent());
         config
-            .clusters
+            .dyn_cfg
+            .clusters()
+            .unwrap()
             .modify(|clusters| clusters.insert_default([endpoint.into()].into()));
 
         let pending_sends: Vec<_> = [

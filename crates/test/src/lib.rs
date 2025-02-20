@@ -490,7 +490,9 @@ impl Pail {
 
                 if !endpoints.is_empty() {
                     config
-                        .clusters
+                        .dyn_cfg
+                        .clusters()
+                        .unwrap()
                         .modify(|clusters| clusters.insert_default(endpoints));
                 }
 

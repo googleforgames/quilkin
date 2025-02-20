@@ -39,10 +39,12 @@ impl Manage {
             mut shutdown_rx,
         }: RunArgs<Ready>,
     ) -> crate::Result<()> {
+        let Some(clusters) = config.dyn_cfg.clusters() else {
+            eyre::bail!("clusters were not configured, this is a configuration issue");
+        };
+
         if let Some(locality) = &self.locality {
-            config
-                .clusters
-                .modify(|map| map.update_unlocated_endpoints(locality.clone()));
+            clusters.modify(|map| map.update_unlocated_endpoints(locality.clone()));
         }
 
         let provider_task = match self.provider {

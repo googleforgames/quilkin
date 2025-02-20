@@ -49,21 +49,27 @@ async fn test_filter() {
     );
 
     server_config
-        .clusters
+        .dyn_cfg
+        .clusters()
+        .unwrap()
         .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
 
     let server_port = t.run_server(server_config, None, None).await;
 
     // create a local client
     let client_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
-    client_config.clusters.modify(|clusters| {
-        clusters.insert_default(
-            [Endpoint::new(
-                SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port).into(),
-            )]
-            .into(),
-        )
-    });
+    client_config
+        .dyn_cfg
+        .clusters()
+        .unwrap()
+        .modify(|clusters| {
+            clusters.insert_default(
+                [Endpoint::new(
+                    SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port).into(),
+                )]
+                .into(),
+            )
+        });
     client_config.dyn_cfg.filters().unwrap().store(
         quilkin::filters::FilterChain::try_create([Filter {
             name: "TestFilter".to_string(),
@@ -121,7 +127,9 @@ async fn debug_filter() {
     // create server configuration
     let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
     server_config
-        .clusters
+        .dyn_cfg
+        .clusters()
+        .unwrap()
         .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
     server_config.dyn_cfg.filters().unwrap().store(
         quilkin::filters::FilterChain::try_create([Filter {
@@ -137,14 +145,18 @@ async fn debug_filter() {
 
     // create a local client
     let client_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
-    client_config.clusters.modify(|clusters| {
-        clusters.insert_default(
-            [Endpoint::new(
-                SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port).into(),
-            )]
-            .into(),
-        )
-    });
+    client_config
+        .dyn_cfg
+        .clusters()
+        .unwrap()
+        .modify(|clusters| {
+            clusters.insert_default(
+                [Endpoint::new(
+                    SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port).into(),
+                )]
+                .into(),
+            )
+        });
     client_config.dyn_cfg.filters().unwrap().store(
         quilkin::filters::FilterChain::try_create([Filter {
             name: factory.name().into(),

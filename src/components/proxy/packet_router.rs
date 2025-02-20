@@ -100,12 +100,16 @@ impl<P: PacketMut> DownstreamPacket<P> {
         sessions: &S,
         destinations: &mut Vec<crate::net::EndpointAddress>,
     ) -> Result<(), PipelineError> {
-        if !config.clusters.read().has_endpoints() {
+        let Some(clusters) = config
+            .dyn_cfg
+            .clusters()
+            .filter(|c| c.read().has_endpoints())
+        else {
             tracing::trace!("no upstream endpoints");
             return Err(PipelineError::NoUpstreamEndpoints);
-        }
+        };
 
-        let cm = config.clusters.clone_value();
+        let cm = clusters.clone_value();
         let Some(filters) = config.dyn_cfg.filters() else {
             return Err(PipelineError::Filter(crate::filters::FilterError::Custom(
                 "no filters loaded",

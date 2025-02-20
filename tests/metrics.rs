@@ -35,7 +35,9 @@ async fn metrics_server() {
     // create server configuration
     let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
     server_config
-        .clusters
+        .dyn_cfg
+        .clusters()
+        .unwrap()
         .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
     let server_port = t
         .run_server(
@@ -47,14 +49,18 @@ async fn metrics_server() {
 
     // create a local client
     let client_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
-    client_config.clusters.modify(|clusters| {
-        clusters.insert_default(
-            [Endpoint::new(
-                (std::net::Ipv6Addr::LOCALHOST, server_port).into(),
-            )]
-            .into(),
-        )
-    });
+    client_config
+        .dyn_cfg
+        .clusters()
+        .unwrap()
+        .modify(|clusters| {
+            clusters.insert_default(
+                [Endpoint::new(
+                    (std::net::Ipv6Addr::LOCALHOST, server_port).into(),
+                )]
+                .into(),
+            )
+        });
     let client_port = t.run_server(client_config, None, None).await;
 
     // let's send the packet

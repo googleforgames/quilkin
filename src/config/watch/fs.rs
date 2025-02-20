@@ -105,7 +105,7 @@ mod tests {
         let _handle = tokio::spawn(watch(dest.clone(), <_>::default(), file_path.clone(), None));
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-        source.clusters.modify(|clusters| {
+        source.dyn_cfg.clusters().unwrap().modify(|clusters| {
             clusters.insert_default(
                 [crate::net::endpoint::Endpoint::with_metadata(
                     (std::net::Ipv4Addr::LOCALHOST, 4321).into(),

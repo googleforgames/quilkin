@@ -325,7 +325,7 @@ impl QuilkinLoop {
         let thread = spawn("quilkin", move || {
             let runtime = tokio::runtime::Runtime::new().unwrap();
             let config = Arc::new(quilkin::Config::default_non_agent());
-            config.clusters.modify(|clusters| {
+            config.dyn_cfg.clusters().unwrap().modify(|clusters| {
                 clusters
                     .insert_default([quilkin::net::endpoint::Endpoint::new(endpoint.into())].into())
             });

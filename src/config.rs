@@ -74,7 +74,6 @@ pub enum DatacenterConfig {
 #[derive(Clone)]
 #[cfg_attr(test, derive(Debug))]
 pub struct Config {
-    pub clusters: Watch<ClusterMap>,
     pub datacenter: DatacenterConfig,
     pub dyn_cfg: DynamicConfig,
 }
@@ -101,7 +100,6 @@ impl<'de> Deserialize<'de> for Config {
                 use serde::de::Error;
 
                 let mut id = Option::<String>::None;
-                let mut clusters = None;
                 let mut icao_code = None;
                 let mut qcmp_port = None;
                 let mut datacenters = None;
@@ -126,7 +124,6 @@ impl<'de> Deserialize<'de> for Config {
                 while let Some(key) = map.next_key::<std::borrow::Cow<'de, str>>()? {
                     match key.as_ref() {
                         "id" => id = Some(map.next_value()?),
-                        "clusters" => clusters = Some(map.next_value()?),
                         "datacenters" => {
                             if icao_code.is_some() || qcmp_port.is_some() {
                                 return Err(Error::custom(
@@ -165,6 +162,7 @@ impl<'de> Deserialize<'de> for Config {
                         }
                         unknown => {
                             tm_insert!(key, "filters", FilterChain);
+                            tm_insert!(key, "clusters", ClusterMap);
 
                             return Err(Error::unknown_field(
                                 unknown,
@@ -195,7 +193,6 @@ impl<'de> Deserialize<'de> for Config {
                 };
 
                 Ok(Config {
-                    clusters: clusters.unwrap_or_default(),
                     datacenter,
                     dyn_cfg: DynamicConfig {
                         version: version.unwrap_or_default(),
@@ -213,12 +210,11 @@ impl<'de> Deserialize<'de> for Config {
 #[cfg(test)]
 impl PartialEq for Config {
     fn eq(&self, other: &Self) -> bool {
-        if self.clusters != other.clusters || self.datacenter != other.datacenter {
+        if self.datacenter != other.datacenter {
             return false;
         }
 
-        // TODO: compare typemaps
-        true
+        self.dyn_cfg == other.dyn_cfg
     }
 }
 
@@ -282,6 +278,8 @@ impl<'de> Deserialize<'de> for DynamicConfig {
                         "version" => version = Some(map.next_value()?),
                         other => {
                             tm_insert!(key, "filters", FilterChain);
+                            tm_insert!(key, "clusters", ClusterMap);
+
                             return Err(serde::de::Error::unknown_field(other, &["id"]));
                         }
                     }
@@ -316,20 +314,43 @@ impl typemap_rev::TypeMapKey for Agent {
 }
 
 impl DynamicConfig {
-    pub fn filters(&self) -> Option<Slot<FilterChain>> {
-        self.typemap.get::<FilterChain>().cloned()
+    pub fn filters(&self) -> Option<&Slot<FilterChain>> {
+        self.typemap.get::<FilterChain>()
     }
 
-    pub fn clusters(&self) -> Option<Watch<ClusterMap>> {
-        self.typemap.get::<ClusterMap>().cloned()
+    pub fn clusters(&self) -> Option<&Watch<ClusterMap>> {
+        self.typemap.get::<ClusterMap>()
     }
 
-    pub fn datacenters(&self) -> Option<Watch<DatacenterMap>> {
-        self.typemap.get::<DatacenterMap>().cloned()
+    pub fn datacenters(&self) -> Option<&Watch<DatacenterMap>> {
+        self.typemap.get::<DatacenterMap>()
     }
 
-    pub fn agent(&self) -> Option<Agent> {
-        self.typemap.get::<Agent>().cloned()
+    pub fn agent(&self) -> Option<&Agent> {
+        self.typemap.get::<Agent>()
+    }
+}
+
+#[cfg(test)]
+impl PartialEq for DynamicConfig {
+    fn eq(&self, other: &Self) -> bool {
+        if self.id != other.id || self.version != other.version {
+            return false;
+        }
+
+        fn compare<T>(a: &ConfigMap, b: &ConfigMap) -> bool
+        where
+            T: typemap_rev::TypeMapKey,
+            T::Value: PartialEq + Clone + std::fmt::Debug,
+        {
+            let Some((a, b)) = a.get::<T>().zip(b.get::<T>()) else {
+                return false;
+            };
+            a == b
+        }
+
+        compare::<FilterChain>(&self.typemap, &other.typemap)
+            && compare::<ClusterMap>(&self.typemap, &other.typemap)
     }
 }
 
@@ -392,33 +413,59 @@ impl quilkin_xds::config::Configuration for Config {
         tracing::trace!("waiting for changes");
 
         async move {
-            let mut cluster_watcher = control_plane.config.clusters.watch();
-            match &control_plane.config.datacenter {
-                crate::config::DatacenterConfig::Agent { .. } => loop {
-                    match cluster_watcher.changed().await {
-                        Ok(()) => control_plane.push_update(crate::xds::CLUSTER_TYPE),
-                        Err(error) => tracing::error!(%error, "error watching changes"),
-                    }
-                },
+            let clusters = control_plane.config.dyn_cfg.clusters();
+
+            let dc = match &control_plane.config.datacenter {
+                crate::config::DatacenterConfig::Agent { .. } => None,
                 crate::config::DatacenterConfig::NonAgent { datacenters } => {
-                    let mut dc_watcher = datacenters.watch();
+                    Some(datacenters.clone())
+                }
+            };
+
+            match (clusters, dc) {
+                (Some(clusters), Some(dc)) => {
+                    let mut cw = clusters.watch();
+                    let mut dcw = dc.watch();
                     loop {
                         tokio::select! {
-                            result = cluster_watcher.changed() => {
+                            result = cw.changed() => {
                                 match result {
-                                    Ok(()) => control_plane.push_update(crate::xds::CLUSTER_TYPE),
+                                    Ok(()) => control_plane.push_update(xds::CLUSTER_TYPE),
                                     Err(error) => tracing::error!(%error, "error watching changes"),
                                 }
                             }
-                            result = dc_watcher.changed() => {
+                            result = dcw.changed() => {
                                 match result {
-                                    Ok(()) => control_plane.push_update(crate::xds::DATACENTER_TYPE),
+                                    Ok(()) => control_plane.push_update(xds::DATACENTER_TYPE),
                                     Err(error) => tracing::error!(%error, "error watching changes"),
                                 }
                             }
                         }
                     }
                 }
+                (Some(clusters), None) => {
+                    let mut cw = clusters.watch();
+
+                    loop {
+                        match cw.changed().await {
+                            Ok(()) => control_plane.push_update(xds::CLUSTER_TYPE),
+                            Err(error) => tracing::error!(%error, "error watching changes"),
+                        }
+                    }
+                }
+                (None, Some(dc)) => {
+                    let mut dcw = dc.watch();
+
+                    loop {
+                        match dcw.changed().await {
+                            Ok(()) => control_plane.push_update(xds::DATACENTER_TYPE),
+                            Err(error) => tracing::error!(%error, "error watching changes"),
+                        }
+                    }
+                }
+                (None, None) => loop {
+                    tokio::time::sleep(std::time::Duration::from_secs(u64::MAX)).await;
+                },
             }
         }
     }
@@ -557,7 +604,7 @@ impl Config {
                         }
                     }
                 },
-                crate::xds::ResourceType::Cluster => {
+                ResourceType::Cluster => {
                     let mut push = |key: &Option<crate::net::endpoint::Locality>,
                                     value: &crate::net::cluster::EndpointSet|
                      -> crate::Result<()> {
@@ -585,8 +632,12 @@ impl Config {
                         Ok(())
                     };
 
+                    let Some(clusters) = self.dyn_cfg.clusters() else {
+                        break 'append;
+                    };
+
                     if client_state.subscribed.is_empty() {
-                        for cluster in self.clusters.read().iter() {
+                        for cluster in clusters.read().iter() {
                             push(cluster.key(), cluster.value())?;
                         }
                     } else {
@@ -597,7 +648,7 @@ impl Config {
                                 name.parse().ok().map(Some)
                             }
                         }) {
-                            if let Some(cluster) = self.clusters.read().get(&locality) {
+                            if let Some(cluster) = clusters.read().get(&locality) {
                                 push(cluster.key(), cluster.value())?;
                             }
                         }
@@ -607,7 +658,7 @@ impl Config {
                     // is when ClusterMap::update_unlocated_endpoints is called to move the None
                     // locality endpoints to another one, so we just detect that case manually
                     if client_state.versions.contains_key("")
-                        && self.clusters.read().get(&None).is_none()
+                        && clusters.read().get(&None).is_none()
                     {
                         removed.insert("".into());
                     }
@@ -630,7 +681,9 @@ impl Config {
 
         match resource_type {
             ResourceType::FilterChain | ResourceType::Listener => {
-                let Some(filters) = self.dyn_cfg.filters() else { return Ok(()); };
+                let Some(filters) = self.dyn_cfg.filters() else {
+                    return Ok(());
+                };
 
                 // Server should only ever send exactly one filter chain, more or less indicates a bug
                 let Some(res) = resources.pop() else {
@@ -650,7 +703,8 @@ impl Config {
                     crate::xds::Resource::FilterChain(r) | crate::xds::Resource::Listener(r) => r,
                     res => {
                         eyre::bail!(
-                            "filter chain response contained a {} resource payload", res.type_url()
+                            "filter chain response contained a {} resource payload",
+                            res.type_url()
                         );
                     }
                 };
@@ -715,76 +769,83 @@ impl Config {
                     Ok(())
                 })?;
             }
-            crate::xds::ResourceType::Cluster => self.clusters.modify(|guard| -> crate::Result<()> {
-                for removed in removed_resources {
-                    let locality = if removed.is_empty() {
-                        None
-                    } else {
-                        Some(removed.parse()?)
-                    };
-                    guard.remove_locality(&locality);
-                }
+            ResourceType::Cluster => {
+                let Some(clusters) = self.dyn_cfg.clusters() else {
+                    return Ok(());
+                };
 
-                for res in resources {
-                    let Some(resource) = res.resource else {
-                        eyre::bail!("a cluster resource could not be applied because it didn't contain an actual payload");
-                    };
+                clusters.modify(|guard| -> crate::Result<()> {
+                    for removed in removed_resources {
+                        let locality = if removed.is_empty() {
+                            None
+                        } else {
+                            Some(removed.parse()?)
+                        };
+                        guard.remove_locality(&locality);
+                    }
 
-                    let cluster = match crate::xds::Resource::try_decode(resource) {
-                        Ok(crate::xds::Resource::Cluster(c)) => c,
-                        Ok(other) => {
-                            eyre::bail!("a cluster resource could not be applied because the resource payload was '{}'", other.type_url());
-                        }
-                        Err(error) => {
-                            return Err(error.wrap_err("a cluster resource could not be applied because the resource payload could not be decoded"));
-                        }
-                    };
+                    for res in resources {
+                        let Some(resource) = res.resource else {
+                            eyre::bail!("a cluster resource could not be applied because it didn't contain an actual payload");
+                        };
 
-                    let parsed_version = res.version.parse()?;
+                        let cluster = match crate::xds::Resource::try_decode(resource) {
+                            Ok(crate::xds::Resource::Cluster(c)) => c,
+                            Ok(other) => {
+                                eyre::bail!("a cluster resource could not be applied because the resource payload was '{}'", other.type_url());
+                            }
+                            Err(error) => {
+                                return Err(error.wrap_err("a cluster resource could not be applied because the resource payload could not be decoded"));
+                            }
+                        };
 
-                    let endpoints = match cluster
-                            .endpoints
-                            .into_iter()
-                            .map(crate::net::endpoint::Endpoint::try_from)
-                            .collect::<Result<_, _>>() {
-                        Ok(eps) => eps,
-                        Err(error) => {
-                            return Err(error.wrap_err("a cluster resource could not be applied because one or more endpoints could not be parsed"));
-                        }
-                    };
+                        let parsed_version = res.version.parse()?;
 
-                    let endpoints = crate::config::cluster::EndpointSet::with_version(
-                        endpoints,
-                        parsed_version,
-                    );
+                        let endpoints = match cluster
+                                .endpoints
+                                .into_iter()
+                                .map(crate::net::endpoint::Endpoint::try_from)
+                                .collect::<Result<_, _>>() {
+                            Ok(eps) => eps,
+                            Err(error) => {
+                                return Err(error.wrap_err("a cluster resource could not be applied because one or more endpoints could not be parsed"));
+                            }
+                        };
 
-                    let locality = cluster.locality.map(crate::net::endpoint::Locality::from);
+                        let endpoints = crate::config::cluster::EndpointSet::with_version(
+                            endpoints,
+                            parsed_version,
+                        );
 
-                    guard.apply(locality, endpoints);
-                }
+                        let locality = cluster.locality.map(crate::net::endpoint::Locality::from);
 
-                Ok(())
-            })?,
+                        guard.apply(locality, endpoints);
+                    }
+
+                    Ok(())
+                })?;
+
+                self.apply_metrics();
+            }
         }
 
-        self.apply_metrics();
         Ok(())
     }
 
     #[inline]
     pub fn apply_metrics(&self) {
-        // let Some(clusters) = self.clusters() else {
-        //     return;
-        // };
-        crate::metrics::apply_clusters(&self.clusters);
+        let Some(clusters) = self.dyn_cfg.clusters() else {
+            return;
+        };
+        crate::metrics::apply_clusters(clusters);
     }
 
     pub fn default_agent() -> Self {
         let mut typemap = default_typemap();
         insert_default::<FilterChain>(&mut typemap);
+        insert_default::<ClusterMap>(&mut typemap);
 
         Self {
-            clusters: Default::default(),
             dyn_cfg: DynamicConfig {
                 id: default_id(),
                 version: Version::default(),
@@ -800,9 +861,9 @@ impl Config {
     pub fn default_non_agent() -> Self {
         let mut typemap = default_typemap();
         insert_default::<FilterChain>(&mut typemap);
+        insert_default::<ClusterMap>(&mut typemap);
 
         Self {
-            clusters: Default::default(),
             dyn_cfg: DynamicConfig {
                 id: default_id(),
                 version: Version::default(),
