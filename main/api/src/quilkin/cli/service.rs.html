@@ -591,7 +591,12 @@
 <a href="#590" id="590">590</a>
 <a href="#591" id="591">591</a>
 <a href="#592" id="592">592</a>
-<a href="#593" id="593">593</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::{future::Future, sync::Arc};
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a></pre></div><pre class="rust"><code><span class="kw">use </span>std::{future::Future, sync::Arc};
 
 <span class="kw">use crate</span>::{components::proxy::SessionPool, config::Config};
 
@@ -913,11 +918,16 @@
         <span class="prelude-ty">Option</span>&lt;Finalizer&gt;,
     )&gt; {
         <span class="kw">if </span><span class="self">self</span>.phoenix_enabled {
+            <span class="kw">let </span><span class="prelude-val">Some</span>(datacenters) = config.dyn_cfg.datacenters() <span class="kw">else </span>{
+                <span class="macro">tracing::info!</span>(<span class="string">"not starting phoenix service even though it was requested, datacenters were not configured"</span>);
+                <span class="kw">return </span><span class="prelude-val">Ok</span>((std::future::pending(), <span class="prelude-val">None</span>));
+            };
+
             <span class="macro">tracing::info!</span>(port=%<span class="self">self</span>.qcmp_port, <span class="string">"starting phoenix service"</span>);
             <span class="kw">let </span>phoenix = <span class="kw">crate</span>::net::TcpListener::bind(<span class="prelude-val">Some</span>(<span class="self">self</span>.phoenix_port))<span class="question-mark">?</span>;
             <span class="kw">let </span>finalizer = <span class="kw">crate</span>::net::phoenix::spawn(
                 phoenix,
-                config.datacenters().clone(),
+                datacenters.clone(),
                 <span class="kw">crate</span>::net::phoenix::Phoenix::new(<span class="kw">crate</span>::codec::qcmp::QcmpMeasurement::new()<span class="question-mark">?</span>),
             )<span class="question-mark">?</span>;
 

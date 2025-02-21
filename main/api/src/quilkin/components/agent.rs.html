@@ -109,11 +109,7 @@
 <a href="#108" id="108">108</a>
 <a href="#109" id="109">109</a>
 <a href="#110" id="110">110</a>
-<a href="#111" id="111">111</a>
-<a href="#112" id="112">112</a>
-<a href="#113" id="113">113</a>
-<a href="#114" id="114">114</a>
-<a href="#115" id="115">115</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#111" id="111">111</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2024 Google LLC All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -172,17 +168,13 @@
             <span class="kw-2">mut </span>shutdown_rx,
         }: RunArgs&lt;Ready&gt;,
     ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
-        {
-            <span class="kw">let </span><span class="kw">crate</span>::config::DatacenterConfig::Agent {
-                icao_code,
-                qcmp_port,
-            } = <span class="kw-2">&amp;</span>config.datacenter
-            <span class="kw">else </span>{
-                <span class="macro">unreachable!</span>(<span class="string">"this should be an agent config"</span>);
-            };
-
-            qcmp_port.store(<span class="self">self</span>.port.into());
-            icao_code.store(<span class="self">self</span>.icao_code.unwrap_or_default().into());
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(agent) = config.dyn_cfg.agent() {
+            agent.qcmp_port.store(<span class="self">self</span>.port.into());
+            agent
+                .icao_code
+                .store(<span class="self">self</span>.icao_code.unwrap_or_default().into());
+        } <span class="kw">else </span>{
+            <span class="macro">eyre::bail!</span>(<span class="string">"agent configuration missing"</span>);
         }
 
         <span class="kw">let </span>_mds_task = <span class="kw">if </span>!<span class="self">self</span>.relay_servers.is_empty() {

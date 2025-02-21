@@ -332,23 +332,7 @@
 <a href="#331" id="331">331</a>
 <a href="#332" id="332">332</a>
 <a href="#333" id="333">333</a>
-<a href="#334" id="334">334</a>
-<a href="#335" id="335">335</a>
-<a href="#336" id="336">336</a>
-<a href="#337" id="337">337</a>
-<a href="#338" id="338">338</a>
-<a href="#339" id="339">339</a>
-<a href="#340" id="340">340</a>
-<a href="#341" id="341">341</a>
-<a href="#342" id="342">342</a>
-<a href="#343" id="343">343</a>
-<a href="#344" id="344">344</a>
-<a href="#345" id="345">345</a>
-<a href="#346" id="346">346</a>
-<a href="#347" id="347">347</a>
-<a href="#348" id="348">348</a>
-<a href="#349" id="349">349</a>
-<a href="#350" id="350">350</a></pre></div><pre class="rust"><code><span class="kw">use </span>serde::ser::SerializeMap;
+<a href="#334" id="334">334</a></pre></div><pre class="rust"><code><span class="kw">use </span>serde::ser::SerializeMap;
 
 <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
@@ -362,33 +346,17 @@
             version: <span class="prelude-ty">Option</span>&lt;Version&gt;,
             filters: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::filters::FilterChain&gt;,
             clusters: <span class="prelude-ty">Option</span>&lt;ClusterMap&gt;,
-            <span class="attr">#[serde(flatten)]
-            </span>datacenter: DatacenterConfig,
+            datacenters: <span class="prelude-ty">Option</span>&lt;DatacenterMap&gt;,
+            icao_code: <span class="prelude-ty">Option</span>&lt;IcaoCode&gt;,
+            qcmp_port: <span class="prelude-ty">Option</span>&lt;u16&gt;,
         }
 
-        <span class="kw">let </span><span class="kw-2">mut </span>cfg: AllConfig = serde_yaml::from_reader(input)<span class="question-mark">?</span>;
+        <span class="kw">let </span>cfg: AllConfig = serde_yaml::from_reader(input)<span class="question-mark">?</span>;
 
-        <span class="comment">// Workaround deficiency in serde flatten + untagged
-        </span><span class="kw">if </span>is_agent {
-            cfg.datacenter = <span class="kw">match </span>cfg.datacenter {
-                DatacenterConfig::Agent {
-                    icao_code,
-                    qcmp_port,
-                } =&gt; DatacenterConfig::Agent {
-                    icao_code,
-                    qcmp_port,
-                },
-                DatacenterConfig::NonAgent { datacenters } =&gt; {
-                    <span class="macro">eyre::ensure!</span>(
-                        datacenters.read().is_empty(),
-                        <span class="string">"starting an agent, but the configuration file has `datacenters` set"
-                    </span>);
-                    <span class="kw">crate</span>::config::DatacenterConfig::Agent {
-                        icao_code: <span class="kw">crate</span>::config::Slot::new(<span class="kw">crate</span>::config::IcaoCode::default()),
-                        qcmp_port: <span class="kw">crate</span>::config::Slot::new(<span class="number">0</span>),
-                    }
-                }
-            };
+        <span class="kw">if </span>cfg.datacenters.is_some() &amp;&amp; (cfg.icao_code.is_some() || cfg.qcmp_port.is_some()) {
+            <span class="macro">eyre::bail!</span>(<span class="string">"`datacenters` and `icao_code` or `qcmp_port` were present"</span>);
+        } <span class="kw">else if </span>is_agent &amp;&amp; cfg.datacenters.is_some() {
+            <span class="macro">eyre::bail!</span>(<span class="string">"`datacenters` was set even though this is an agent"</span>);
         }
 
         <span class="kw">let </span><span class="kw-2">mut </span>typemap = default_typemap();
@@ -398,9 +366,16 @@
         <span class="kw">if let </span><span class="prelude-val">Some</span>(clusters) = cfg.clusters {
             typemap.insert::&lt;ClusterMap&gt;(Watch::new(clusters));
         }
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(datacenters) = cfg.datacenters {
+            typemap.insert::&lt;DatacenterMap&gt;(Watch::new(datacenters));
+        } <span class="kw">else </span>{
+            typemap.insert::&lt;Agent&gt;(Agent {
+                icao_code: Slot::new(cfg.icao_code),
+                qcmp_port: Slot::new(cfg.qcmp_port),
+            });
+        }
 
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
-            datacenter: cfg.datacenter,
             dyn_cfg: DynamicConfig {
                 id: cfg.id.map_or_else(default_id, Slot::from),
                 version: cfg.version.unwrap_or_default(),
@@ -457,8 +432,7 @@
     <span class="kw">where
         </span>S: serde::Serializer,
     {
-        <span class="kw">let </span>len = <span class="self">self</span>.dyn_cfg.typemap.len() + <span class="number">1 </span><span class="comment">/* id */ </span>+ <span class="number">1 </span><span class="comment">/* filters */ </span>+ <span class="number">1 </span><span class="comment">/* clusters */ </span>+ <span class="kw">if </span><span class="macro">matches!</span>(<span class="self">self</span>.datacenter, DatacenterConfig::Agent { .. }) { <span class="number">2 </span>} <span class="kw">else </span>{ <span class="number">1</span>};
-        <span class="kw">let </span><span class="kw-2">mut </span>map = serializer.serialize_map(<span class="prelude-val">Some</span>(len))<span class="question-mark">?</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>map = serializer.serialize_map(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
 
         map.serialize_entry(<span class="string">"version"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.dyn_cfg.version)<span class="question-mark">?</span>;
         map.serialize_entry(<span class="string">"id"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.dyn_cfg.id)<span class="question-mark">?</span>;
@@ -468,18 +442,12 @@
         <span class="kw">if let </span><span class="prelude-val">Some</span>(clusters) = <span class="self">self</span>.dyn_cfg.clusters() {
             map.serialize_entry(<span class="string">"clusters"</span>, clusters)<span class="question-mark">?</span>;
         }
-
-        <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.datacenter {
-            DatacenterConfig::Agent {
-                icao_code,
-                qcmp_port,
-            } =&gt; {
-                map.serialize_entry(<span class="string">"icao_code"</span>, icao_code)<span class="question-mark">?</span>;
-                map.serialize_entry(<span class="string">"qcmp_port"</span>, qcmp_port)<span class="question-mark">?</span>;
-            }
-            DatacenterConfig::NonAgent { datacenters } =&gt; {
-                map.serialize_entry(<span class="string">"datacenters"</span>, datacenters)<span class="question-mark">?</span>;
-            }
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(datacenters) = <span class="self">self</span>.dyn_cfg.datacenters() {
+            map.serialize_entry(<span class="string">"datacenters"</span>, datacenters)<span class="question-mark">?</span>;
+        }
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(agent) = <span class="self">self</span>.dyn_cfg.agent() {
+            map.serialize_entry(<span class="string">"icao_code"</span>, <span class="kw-2">&amp;</span>agent.icao_code)<span class="question-mark">?</span>;
+            map.serialize_entry(<span class="string">"qcmp_port"</span>, <span class="kw-2">&amp;</span>agent.qcmp_port)<span class="question-mark">?</span>;
         }
 
         map.end()

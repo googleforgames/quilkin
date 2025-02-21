@@ -1281,10 +1281,7 @@
 <a href="#1280" id="1280">1280</a>
 <a href="#1281" id="1281">1281</a>
 <a href="#1282" id="1282">1282</a>
-<a href="#1283" id="1283">1283</a>
-<a href="#1284" id="1284">1284</a>
-<a href="#1285" id="1285">1285</a>
-<a href="#1286" id="1286">1286</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#1283" id="1283">1283</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -1340,27 +1337,9 @@
 <span class="kw">pub type </span>ConfigMap = typemap_rev::TypeMap&lt;<span class="kw">dyn </span>typemap_rev::CloneDebuggableStorage&gt;;
 
 <span class="macro">base64_serde_type!</span>(<span class="kw">pub </span>Base64Standard, base64::engine::general_purpose::STANDARD);
-
-<span class="attr">#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
-#[serde(untagged)]
-#[cfg_attr(test, derive(PartialEq))]
-</span><span class="kw">pub enum </span>DatacenterConfig {
-    NonAgent {
-        <span class="attr">#[serde(default)]
-        </span>datacenters: Watch&lt;DatacenterMap&gt;,
-    },
-    Agent {
-        <span class="attr">#[serde(default)]
-        </span>icao_code: Slot&lt;IcaoCode&gt;,
-        <span class="attr">#[serde(default)]
-        </span>qcmp_port: Slot&lt;u16&gt;,
-    },
-}
-
 <span class="attr">#[derive(Clone)]
 #[cfg_attr(test, derive(Debug))]
 </span><span class="kw">pub struct </span>Config {
-    <span class="kw">pub </span>datacenter: DatacenterConfig,
     <span class="kw">pub </span>dyn_cfg: DynamicConfig,
 }
 
@@ -1465,21 +1444,18 @@
                     }
                 }
 
-                <span class="kw">let </span>datacenter = <span class="kw">if let </span><span class="prelude-val">Some</span>(datacenters) = datacenters {
-                    DatacenterConfig::NonAgent { datacenters }
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(datacenters) = datacenters {
+                    typemap.insert::&lt;DatacenterMap&gt;(datacenters);
                 } <span class="kw">else if </span>icao_code.is_none() &amp;&amp; qcmp_port.is_none() {
-                    DatacenterConfig::NonAgent {
-                        datacenters: Default::default(),
-                    }
+                    typemap.insert::&lt;DatacenterMap&gt;(Default::default());
                 } <span class="kw">else </span>{
-                    DatacenterConfig::Agent {
+                    typemap.insert::&lt;Agent&gt;(Agent {
                         icao_code: Slot::new(icao_code),
                         qcmp_port: Slot::new(qcmp_port),
-                    }
+                    });
                 };
 
                 <span class="prelude-val">Ok</span>(Config {
-                    datacenter,
                     dyn_cfg: DynamicConfig {
                         version: version.unwrap_or_default(),
                         id: id.map_or_else(default_id, Slot::new),
@@ -1496,15 +1472,11 @@
 <span class="attr">#[cfg(test)]
 </span><span class="kw">impl </span>PartialEq <span class="kw">for </span>Config {
     <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
-        <span class="kw">if </span><span class="self">self</span>.datacenter != other.datacenter {
-            <span class="kw">return </span><span class="bool-val">false</span>;
-        }
-
         <span class="self">self</span>.dyn_cfg == other.dyn_cfg
     }
 }
 
-<span class="attr">#[derive(Clone, Debug)]
+<span class="attr">#[derive(Clone, Debug, Default)]
 </span><span class="kw">pub struct </span>Agent {
     <span class="kw">pub </span>icao_code: Slot&lt;IcaoCode&gt;,
     <span class="kw">pub </span>qcmp_port: Slot&lt;u16&gt;,
@@ -1538,8 +1510,13 @@
             <span class="kw">where
                 </span>A: serde::de::MapAccess&lt;<span class="lifetime">'de</span>&gt;,
             {
+                <span class="kw">use </span>serde::de::Error;
+
                 <span class="kw">let </span><span class="kw-2">mut </span>version = <span class="prelude-val">None</span>;
                 <span class="kw">let </span><span class="kw-2">mut </span>id = <span class="prelude-val">None</span>;
+                <span class="kw">let </span><span class="kw-2">mut </span>icao_code = <span class="prelude-val">None</span>;
+                <span class="kw">let </span><span class="kw-2">mut </span>qcmp_port = <span class="prelude-val">None</span>;
+                <span class="kw">let </span><span class="kw-2">mut </span>datacenters = <span class="prelude-val">None</span>;
                 <span class="kw">let </span><span class="kw-2">mut </span>typemap = default_typemap();
 
                 <span class="macro">macro_rules!</span> tm_insert {
@@ -1562,14 +1539,58 @@
                     <span class="kw">match </span>key {
                         <span class="string">"id" </span>=&gt; id = <span class="prelude-val">Some</span>(map.next_value()<span class="question-mark">?</span>),
                         <span class="string">"version" </span>=&gt; version = <span class="prelude-val">Some</span>(map.next_value()<span class="question-mark">?</span>),
+                        <span class="string">"datacenters" </span>=&gt; {
+                            <span class="kw">if </span>icao_code.is_some() || qcmp_port.is_some() {
+                                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::custom(
+                                    <span class="string">"agent specific fields have already been deserialized"</span>,
+                                ));
+                            } <span class="kw">else if </span>datacenters.is_some() {
+                                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::duplicate_field(<span class="string">"datacenters"</span>));
+                            }
+
+                            datacenters = <span class="prelude-val">Some</span>(map.next_value()<span class="question-mark">?</span>);
+                        }
+                        <span class="string">"icao_code" </span>=&gt; {
+                            <span class="kw">if </span>datacenters.is_some() {
+                                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::custom(
+                                    <span class="string">"non-agent `datacenters` field has already been deserialized"</span>,
+                                ));
+                            } <span class="kw">else if </span>icao_code.is_some() {
+                                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::duplicate_field(<span class="string">"icao_code"</span>));
+                            }
+
+                            icao_code = <span class="prelude-val">Some</span>(map.next_value()<span class="question-mark">?</span>);
+                        }
+                        <span class="string">"qcmp_port" </span>=&gt; {
+                            <span class="kw">if </span>datacenters.is_some() {
+                                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::custom(
+                                    <span class="string">"non-agent `datacenters` field has already been deserialized"</span>,
+                                ));
+                            } <span class="kw">else if </span>qcmp_port.is_some() {
+                                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::duplicate_field(<span class="string">"qcmp_port"</span>));
+                            }
+
+                            qcmp_port = <span class="prelude-val">Some</span>(map.next_value()<span class="question-mark">?</span>);
+                        }
                         other =&gt; {
                             <span class="macro">tm_insert!</span>(key, <span class="string">"filters"</span>, FilterChain);
                             <span class="macro">tm_insert!</span>(key, <span class="string">"clusters"</span>, ClusterMap);
 
-                            <span class="kw">return </span><span class="prelude-val">Err</span>(serde::de::Error::unknown_field(other, <span class="kw-2">&amp;</span>[<span class="string">"id"</span>]));
+                            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::unknown_field(other, <span class="kw-2">&amp;</span>[<span class="string">"id"</span>]));
                         }
                     }
                 }
+
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(datacenters) = datacenters {
+                    typemap.insert::&lt;DatacenterMap&gt;(datacenters);
+                } <span class="kw">else if </span>icao_code.is_none() &amp;&amp; qcmp_port.is_none() {
+                    typemap.insert::&lt;DatacenterMap&gt;(Default::default());
+                } <span class="kw">else </span>{
+                    typemap.insert::&lt;Agent&gt;(Agent {
+                        icao_code: Slot::new(icao_code),
+                        qcmp_port: Slot::new(qcmp_port),
+                    });
+                };
 
                 <span class="prelude-val">Ok</span>(DynamicConfig {
                     version: version.unwrap_or_default(),
@@ -1700,15 +1721,9 @@
 
         <span class="kw">async move </span>{
             <span class="kw">let </span>clusters = control_plane.config.dyn_cfg.clusters();
+            <span class="kw">let </span>datacenters = control_plane.config.dyn_cfg.datacenters();
 
-            <span class="kw">let </span>dc = <span class="kw">match </span><span class="kw-2">&amp;</span>control_plane.config.datacenter {
-                <span class="kw">crate</span>::config::DatacenterConfig::Agent { .. } =&gt; <span class="prelude-val">None</span>,
-                <span class="kw">crate</span>::config::DatacenterConfig::NonAgent { datacenters } =&gt; {
-                    <span class="prelude-val">Some</span>(datacenters.clone())
-                }
-            };
-
-            <span class="kw">match </span>(clusters, dc) {
+            <span class="kw">match </span>(clusters, datacenters) {
                 (<span class="prelude-val">Some</span>(clusters), <span class="prelude-val">Some</span>(dc)) =&gt; {
                     <span class="kw">let </span><span class="kw-2">mut </span>cw = clusters.watch();
                     <span class="kw">let </span><span class="kw-2">mut </span>dcw = dc.watch();
@@ -1819,26 +1834,22 @@
                         cache_control: <span class="prelude-val">None</span>,
                     });
                 }
-                <span class="kw">crate</span>::xds::ResourceType::Datacenter =&gt; <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.datacenter {
-                    DatacenterConfig::Agent {
-                        qcmp_port,
-                        icao_code,
-                    } =&gt; {
-                        <span class="kw">let </span>name = icao_code.load().to_string();
-                        <span class="kw">let </span>qcmp_port = <span class="kw-2">*</span>qcmp_port.load();
+                ResourceType::Datacenter =&gt; {
+                    <span class="kw">if let </span><span class="prelude-val">Some</span>(agent) = <span class="self">self</span>.dyn_cfg.agent() {
+                        <span class="kw">let </span>name = agent.icao_code.load().to_string();
+                        <span class="kw">let </span>qcmp_port = <span class="kw-2">*</span>agent.qcmp_port.load();
                         <span class="kw">let </span>port_s = qcmp_port.to_string();
 
                         <span class="kw">if </span>client_state.version_matches(<span class="kw-2">&amp;</span>name, <span class="kw-2">&amp;</span>port_s) {
                             <span class="kw">break </span><span class="lifetime">'append</span>;
                         }
 
-                        <span class="kw">let </span>resource = <span class="kw">crate</span>::xds::Resource::Datacenter(
-                            <span class="kw">crate</span>::net::cluster::proto::Datacenter {
+                        <span class="kw">let </span>resource =
+                            xds::Resource::Datacenter(<span class="kw">crate</span>::net::cluster::proto::Datacenter {
                                 qcmp_port: qcmp_port <span class="kw">as _</span>,
                                 icao_code: name.clone(),
                                 ..Default::default()
-                            },
-                        );
+                            });
 
                         resources.push(XdsResource {
                             name,
@@ -1848,8 +1859,7 @@
                             ttl: <span class="prelude-val">None</span>,
                             cache_control: <span class="prelude-val">None</span>,
                         });
-                    }
-                    DatacenterConfig::NonAgent { datacenters } =&gt; {
+                    } <span class="kw">else if let </span><span class="prelude-val">Some</span>(datacenters) = <span class="self">self</span>.dyn_cfg.datacenters() {
                         <span class="kw">for </span>entry <span class="kw">in </span>datacenters.read().iter() {
                             <span class="kw">let </span>host = entry.key().to_string();
                             <span class="kw">let </span>qcmp_port = entry.qcmp_port;
@@ -1889,7 +1899,7 @@
                             }
                         }
                     }
-                },
+                }
                 ResourceType::Cluster =&gt; {
                     <span class="kw">let </span><span class="kw-2">mut </span>push = |key: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::net::endpoint::Locality&gt;,
                                     value: <span class="kw-2">&amp;</span><span class="kw">crate</span>::net::cluster::EndpointSet|
@@ -2000,9 +2010,9 @@
 
                 filters.store(Arc::new(fc));
             }
-            <span class="kw">crate</span>::xds::ResourceType::Datacenter =&gt; {
-                <span class="kw">let </span>DatacenterConfig::NonAgent { datacenters } = <span class="kw-2">&amp;</span><span class="self">self</span>.datacenter <span class="kw">else </span>{
-                    <span class="macro">eyre::bail!</span>(<span class="string">"cannot apply delta datacenters resource to agent"</span>);
+            ResourceType::Datacenter =&gt; {
+                <span class="kw">let </span><span class="prelude-val">Some</span>(datacenters) = <span class="self">self</span>.dyn_cfg.datacenters() <span class="kw">else </span>{
+                    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
                 };
 
                 datacenters.modify(|wg| {
@@ -2130,16 +2140,13 @@
         <span class="kw">let </span><span class="kw-2">mut </span>typemap = default_typemap();
         insert_default::&lt;FilterChain&gt;(<span class="kw-2">&amp;mut </span>typemap);
         insert_default::&lt;ClusterMap&gt;(<span class="kw-2">&amp;mut </span>typemap);
+        insert_default::&lt;Agent&gt;(<span class="kw-2">&amp;mut </span>typemap);
 
         <span class="self">Self </span>{
             dyn_cfg: DynamicConfig {
                 id: default_id(),
                 version: Version::default(),
                 typemap,
-            },
-            datacenter: DatacenterConfig::Agent {
-                icao_code: Default::default(),
-                qcmp_port: Default::default(),
             },
         }
     }
@@ -2148,6 +2155,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>typemap = default_typemap();
         insert_default::&lt;FilterChain&gt;(<span class="kw-2">&amp;mut </span>typemap);
         insert_default::&lt;ClusterMap&gt;(<span class="kw-2">&amp;mut </span>typemap);
+        insert_default::&lt;DatacenterMap&gt;(<span class="kw-2">&amp;mut </span>typemap);
 
         <span class="self">Self </span>{
             dyn_cfg: DynamicConfig {
@@ -2155,20 +2163,6 @@
                 version: Version::default(),
                 typemap,
             },
-            datacenter: DatacenterConfig::NonAgent {
-                datacenters: Default::default(),
-            },
-        }
-    }
-
-    <span class="doccomment">/// Gets the datacenters, panicking if this is an agent config
-    </span><span class="attr">#[inline]
-    </span><span class="kw">pub fn </span>datacenters(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Watch&lt;DatacenterMap&gt; {
-        <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.datacenter {
-            DatacenterConfig::NonAgent { datacenters } =&gt; datacenters,
-            DatacenterConfig::Agent { .. } =&gt; {
-                <span class="macro">unreachable!</span>(<span class="string">"this should not be called on an agent"</span>);
-            }
         }
     }
 
