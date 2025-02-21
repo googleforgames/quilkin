@@ -43,9 +43,9 @@ use k8s_openapi::{
     chrono,
 };
 use kube::{
-    api::{DeleteParams, ListParams, LogParams, PostParams},
-    runtime::wait::{await_condition, Condition},
     Api, Resource, ResourceExt,
+    api::{DeleteParams, ListParams, LogParams, PostParams},
+    runtime::wait::{Condition, await_condition},
 };
 use tokio::{sync::OnceCell, time::timeout};
 use tracing::debug;

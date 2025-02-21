@@ -1,28 +1,27 @@
 use crate::{
-    components::proxy::{sessions::inner_metrics as session_metrics, PipelineError},
+    components::proxy::{PipelineError, sessions::inner_metrics as session_metrics},
     filters::{self, Filter as _},
     metrics::{self, AsnInfo},
     net::{
-        maxmind_db::{self, IpNetEntry},
         EndpointAddress,
+        maxmind_db::{self, IpNetEntry},
     },
     time::UtcTimestamp,
 };
 pub use quilkin_xdp::xdp;
 use quilkin_xdp::xdp::{
-    packet::{
-        csum,
-        net_types::{IpAddresses, NetworkU16, UdpPacket},
-        Packet, PacketError,
-    },
     HeapSlab, Umem,
+    packet::{
+        Packet, PacketError, csum,
+        net_types::{IpAddresses, NetworkU16, UdpPacket},
+    },
 };
 use std::{
     collections::hash_map::Entry,
     net::{IpAddr, SocketAddr},
     sync::{
-        atomic::{AtomicU16, Ordering},
         Arc,
+        atomic::{AtomicU16, Ordering},
     },
     time::Instant,
 };
@@ -457,7 +456,9 @@ pub fn process_packets(
 
     while let Some(inner) = rx_slab.pop_front() {
         let Ok(Some(udp)) = UdpPacket::parse_packet(&inner) else {
-            unreachable!("we somehow got a non-UDP packet, this should be impossible with the eBPF program we use to route packets");
+            unreachable!(
+                "we somehow got a non-UDP packet, this should be impossible with the eBPF program we use to route packets"
+            );
         };
 
         if udp.dst_port == state.qcmp_port {

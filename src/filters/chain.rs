@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-use prometheus::{exponential_buckets, Histogram};
+use prometheus::{Histogram, exponential_buckets};
 
 use crate::{
     config::Filter as FilterConfig,
-    filters::{prelude::*, FilterRegistry},
-    metrics::{histogram_opts, CollectorExt},
+    filters::{FilterRegistry, prelude::*},
+    metrics::{CollectorExt, histogram_opts},
 };
 
 const FILTER_LABEL: &str = "filter";
@@ -263,8 +263,8 @@ impl schemars::JsonSchema for FilterChain {
     fn schema_name() -> String {
         <Vec<FilterConfig>>::schema_name()
     }
-    fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
-        <Vec<FilterConfig>>::json_schema(gen)
+    fn json_schema(r#gen: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
+        <Vec<FilterConfig>>::json_schema(r#gen)
     }
 
     fn is_referenceable() -> bool {
@@ -333,7 +333,7 @@ mod tests {
         config,
         filters::Debug,
         net::endpoint::Endpoint,
-        test::{alloc_buffer, TestConfig, TestFilter},
+        test::{TestConfig, TestFilter, alloc_buffer},
     };
 
     use super::*;

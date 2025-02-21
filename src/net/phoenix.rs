@@ -403,15 +403,18 @@ impl<M: Measurement + 'static> Phoenix<M> {
             .map(|entry| *entry.key())
             .collect::<Vec<_>>()
         {
-            if let Some(mut node) = self.nodes.get_mut(&address) {
-                let Ok(distance) = self.measurement.measure_distance(address).await else {
-                    continue;
-                };
-                node.adjust_coordinates(distance);
-            } else {
-                self.nodes.entry(address).and_modify(|node| {
-                    node.increase_error_estimate();
-                });
+            match self.nodes.get_mut(&address) {
+                Some(mut node) => {
+                    let Ok(distance) = self.measurement.measure_distance(address).await else {
+                        continue;
+                    };
+                    node.adjust_coordinates(distance);
+                }
+                _ => {
+                    self.nodes.entry(address).and_modify(|node| {
+                        node.increase_error_estimate();
+                    });
+                }
             }
         }
     }

@@ -17,8 +17,8 @@
 #[cfg(doc)]
 use crate::filters::Filter;
 use crate::net::{
-    endpoint::{metadata::DynamicMetadata, EndpointAddress},
     ClusterMap,
+    endpoint::{EndpointAddress, metadata::DynamicMetadata},
 };
 
 /// The input arguments to [`Filter::read`].

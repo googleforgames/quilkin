@@ -24,7 +24,7 @@ use crate::{
     collections::PoolBuffer,
     components::proxy::{self, PipelineError},
     metrics,
-    net::{packet::queue::SendPacket, PacketQueue},
+    net::{PacketQueue, packet::queue::SendPacket},
     time::UtcTimestamp,
 };
 use io_uring::{squeue::Entry, types::Fd};

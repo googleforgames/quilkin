@@ -17,7 +17,7 @@
 use prometheus::IntCounter;
 
 use crate::{
-    filters::{metrics, StaticFilter},
+    filters::{StaticFilter, metrics},
     metrics::Direction,
 };
 

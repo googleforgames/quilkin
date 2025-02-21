@@ -65,22 +65,25 @@ impl Filter for Capture {
             metadata::Value::Bool(capture.is_some()),
         );
 
-        if let Some((value, remove)) = capture {
-            tracing::trace!(key=%self.metadata_key, %value, "captured value");
-            ctx.metadata.insert(self.metadata_key, value);
+        match capture {
+            Some((value, remove)) => {
+                tracing::trace!(key=%self.metadata_key, %value, "captured value");
+                ctx.metadata.insert(self.metadata_key, value);
 
-            if remove != 0 {
-                if remove < 0 {
-                    ctx.contents.remove_head(remove.unsigned_abs());
-                } else {
-                    ctx.contents.remove_tail(remove as _);
+                if remove != 0 {
+                    if remove < 0 {
+                        ctx.contents.remove_head(remove.unsigned_abs());
+                    } else {
+                        ctx.contents.remove_tail(remove as _);
+                    }
                 }
-            }
 
-            Ok(())
-        } else {
-            tracing::trace!(key = %self.metadata_key, "No value captured");
-            Err(FilterError::NoValueCaptured)
+                Ok(())
+            }
+            _ => {
+                tracing::trace!(key = %self.metadata_key, "No value captured");
+                Err(FilterError::NoValueCaptured)
+            }
         }
     }
 }
@@ -99,7 +102,7 @@ impl StaticFilter for Capture {
 mod tests {
     use super::CAPTURED_BYTES;
     use crate::{
-        net::endpoint::{metadata::Value, Endpoint},
+        net::endpoint::{Endpoint, metadata::Value},
         test::{alloc_buffer, assert_write_no_change},
     };
 
@@ -170,14 +173,16 @@ mod tests {
             [Endpoint::new("127.0.0.1:81".parse().unwrap())].into(),
         );
         let mut dest = Vec::new();
-        assert!(filter
-            .read(&mut ReadContext::new(
-                &endpoints,
-                (std::net::Ipv4Addr::LOCALHOST, 80).into(),
-                alloc_buffer(b"abc"),
-                &mut dest,
-            ))
-            .is_err());
+        assert!(
+            filter
+                .read(&mut ReadContext::new(
+                    &endpoints,
+                    (std::net::Ipv4Addr::LOCALHOST, 80).into(),
+                    alloc_buffer(b"abc"),
+                    &mut dest,
+                ))
+                .is_err()
+        );
     }
 
     #[tokio::test]

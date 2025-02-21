@@ -19,8 +19,8 @@ use parking_lot::Mutex;
 use std::{
     fmt,
     sync::{
-        atomic::{AtomicUsize, Ordering::Relaxed},
         Arc,
+        atomic::{AtomicUsize, Ordering::Relaxed},
     },
 };
 
@@ -177,14 +177,17 @@ impl PoolBuffer {
     /// The suffix will be [len - length, len) and this buffer will now be [0, len - length)
     #[inline]
     pub fn split_suffix(&mut self, length: usize) -> &[u8] {
-        if let Some(current) = self.suffix.take() {
-            let prev_len = current.len();
-            self.inner.unsplit(current);
-            self.suffix = Some(self.inner.split_off(self.inner.len() - length - prev_len));
-            self.suffix.as_deref().map(|b| &b[..length]).unwrap()
-        } else {
-            self.suffix = Some(self.inner.split_off(self.inner.len() - length));
-            self.suffix.as_deref().unwrap()
+        match self.suffix.take() {
+            Some(current) => {
+                let prev_len = current.len();
+                self.inner.unsplit(current);
+                self.suffix = Some(self.inner.split_off(self.inner.len() - length - prev_len));
+                self.suffix.as_deref().map(|b| &b[..length]).unwrap()
+            }
+            _ => {
+                self.suffix = Some(self.inner.split_off(self.inner.len() - length));
+                self.suffix.as_deref().unwrap()
+            }
         }
     }
 
@@ -193,15 +196,18 @@ impl PoolBuffer {
     /// The prefix will be [0, at) and this buffer will now be [at, len)
     #[inline]
     pub fn split_prefix(&mut self, at: usize) -> &[u8] {
-        if let Some(mut current) = self.prefix.take() {
-            let len = current.len();
-            current.unsplit(std::mem::replace(&mut self.inner, BytesMut::new()));
-            self.inner = current.split_off(at + len);
-            self.prefix = Some(current);
-            self.prefix.as_deref().map(|b| &b[..at]).unwrap()
-        } else {
-            self.prefix = Some(self.inner.split_to(at));
-            self.prefix.as_deref().unwrap()
+        match self.prefix.take() {
+            Some(mut current) => {
+                let len = current.len();
+                current.unsplit(std::mem::replace(&mut self.inner, BytesMut::new()));
+                self.inner = current.split_off(at + len);
+                self.prefix = Some(current);
+                self.prefix.as_deref().map(|b| &b[..at]).unwrap()
+            }
+            _ => {
+                self.prefix = Some(self.inner.split_to(at));
+                self.prefix.as_deref().unwrap()
+            }
         }
     }
 

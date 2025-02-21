@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-use tokio::time::timeout;
 use tokio::time::Duration;
+use tokio::time::timeout;
 
 use quilkin::{
     net::endpoint::Endpoint,
@@ -66,7 +66,9 @@ async fn echo() {
     assert_eq!("hello", value);
 
     // should only be two returned items
-    assert!(timeout(Duration::from_millis(500), recv_chan.recv())
-        .await
-        .is_err());
+    assert!(
+        timeout(Duration::from_millis(500), recv_chan.recv())
+            .await
+            .is_err()
+    );
 }

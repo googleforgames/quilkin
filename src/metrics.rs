@@ -17,8 +17,8 @@
 use crate::net::maxmind_db::MetricsIpNetEntry;
 use once_cell::sync::Lazy;
 use prometheus::{
-    core::Collector, Gauge, GaugeVec, Histogram, HistogramOpts, HistogramVec, IntCounter,
-    IntCounterVec, IntGauge, IntGaugeVec, Opts, Registry, DEFAULT_BUCKETS,
+    DEFAULT_BUCKETS, Gauge, GaugeVec, Histogram, HistogramOpts, HistogramVec, IntCounter,
+    IntCounterVec, IntGauge, IntGaugeVec, Opts, Registry, core::Collector,
 };
 
 pub use prometheus::Result;

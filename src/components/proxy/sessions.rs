@@ -18,24 +18,24 @@ use std::{
     collections::{HashMap, HashSet},
     fmt,
     net::SocketAddr,
-    sync::{atomic, Arc},
+    sync::{Arc, atomic},
     time::Duration,
 };
 
 use tokio::time::Instant;
 
 use crate::{
+    Loggable,
     collections::{BufferPool, FrozenPoolBuffer, PoolBuffer},
     config::Config,
     filters::Filter,
     metrics,
     net::{
+        PacketQueueSender,
         maxmind_db::{IpNetEntry, MetricsIpNetEntry},
         queue::SendPacket,
-        PacketQueueSender,
     },
     time::UtcTimestamp,
-    Loggable,
 };
 
 use parking_lot::RwLock;
@@ -273,18 +273,21 @@ impl SessionPool {
             .find(|(port, _)| !socket_set.contains(port))
             .map(|(port, socket)| (*port, socket.clone()));
 
-        if let Some((port, socket)) = available_socket {
-            drop(storage);
-            self.storage
-                .write()
-                .destination_to_sockets
-                .get_mut(&dest)
-                .ok_or(SessionError::MissingDestinationSocket)?
-                .insert(port);
-            self.create_session_from_existing_socket(key, socket, port)
-        } else {
-            drop(storage);
-            self.create_new_session_from_new_socket(key)
+        match available_socket {
+            Some((port, socket)) => {
+                drop(storage);
+                self.storage
+                    .write()
+                    .destination_to_sockets
+                    .get_mut(&dest)
+                    .ok_or(SessionError::MissingDestinationSocket)?
+                    .insert(port);
+                self.create_session_from_existing_socket(key, socket, port)
+            }
+            _ => {
+                drop(storage);
+                self.create_new_session_from_new_socket(key)
+            }
         }
     }
 
@@ -571,7 +574,7 @@ impl Loggable for Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test::{alloc_buffer, available_addr, AddressType, TestHelper};
+    use crate::test::{AddressType, TestHelper, alloc_buffer, available_addr};
     use std::sync::Arc;
 
     async fn new_pool() -> (Arc<SessionPool>, PacketQueueSender) {

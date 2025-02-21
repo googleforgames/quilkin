@@ -14,11 +14,11 @@
  *  limitations under the License.
  */
 
-pub use super::agent::Ready;
 use super::RunArgs;
+pub use super::agent::Ready;
 pub use crate::{
     config::Providers,
-    net::{endpoint::Locality, DualStackLocalSocket},
+    net::{DualStackLocalSocket, endpoint::Locality},
 };
 
 pub struct Manage {

@@ -15,12 +15,13 @@
  */
 
 use super::{
-    sessions::{SessionKey, SessionManager},
     PipelineError, SessionPool,
+    sessions::{SessionKey, SessionManager},
 };
 use crate::{
+    Config,
     filters::{Filter as _, ReadContext},
-    metrics, Config,
+    metrics,
 };
 use std::{net::SocketAddr, sync::Arc};
 

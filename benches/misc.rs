@@ -1,7 +1,7 @@
 #![cfg(target_pointer_width = "64")]
 
 use divan::Bencher;
-use prost_types::{value::Kind, Value};
+use prost_types::{Value, value::Kind};
 use rand::SeedableRng;
 
 use quilkin::{net::cluster::proto::Endpoint as ProtoEndpoint, xds::Resource};
@@ -79,21 +79,21 @@ impl GenAddress for Ip {
     fn generate(&mut self, slim: bool) -> (usize, ProtoEndpoint) {
         let ip = if self.counter % 2 == 0 {
             std::net::Ipv6Addr::new(
-                (self.counter >> 112 & 0xffff) as _,
-                (self.counter >> 96 & 0xffff) as _,
-                (self.counter >> 80 & 0xffff) as _,
-                (self.counter >> 64 & 0xffff) as _,
-                (self.counter >> 48 & 0xffff) as _,
-                (self.counter >> 32 & 0xffff) as _,
-                (self.counter >> 16 & 0xffff) as _,
+                ((self.counter >> 112) & 0xffff) as _,
+                ((self.counter >> 96) & 0xffff) as _,
+                ((self.counter >> 80) & 0xffff) as _,
+                ((self.counter >> 64) & 0xffff) as _,
+                ((self.counter >> 48) & 0xffff) as _,
+                ((self.counter >> 32) & 0xffff) as _,
+                ((self.counter >> 16) & 0xffff) as _,
                 (self.counter & 0xffff) as _,
             )
             .into()
         } else {
             std::net::Ipv4Addr::new(
-                (self.counter >> 24 & 0xff) as _,
-                (self.counter >> 16 & 0xff) as _,
-                (self.counter >> 8 & 0xff) as _,
+                ((self.counter >> 24) & 0xff) as _,
+                ((self.counter >> 16) & 0xff) as _,
+                ((self.counter >> 8) & 0xff) as _,
                 (self.counter & 0xff) as _,
             )
             .into()

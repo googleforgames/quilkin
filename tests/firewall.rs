@@ -16,7 +16,7 @@
 
 use tokio::{
     sync::mpsc,
-    time::{timeout, Duration},
+    time::{Duration, timeout},
 };
 
 use quilkin::{

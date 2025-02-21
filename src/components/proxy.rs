@@ -24,8 +24,8 @@ pub use sessions::SessionPool;
 use std::{
     net::SocketAddr,
     sync::{
-        atomic::{AtomicBool, Ordering},
         Arc,
+        atomic::{AtomicBool, Ordering},
     },
 };
 
@@ -126,74 +126,77 @@ impl Proxy {
         };
 
         if !self.to.is_empty() {
-            let endpoints = if let Some(tt) = &self.to_tokens {
-                let (unique, overflow) = 256u64.overflowing_pow(tt.length as _);
-                if overflow {
-                    panic!(
-                        "can't generate {} tokens of length {} maximum is {}",
-                        self.to.len() * tt.count,
-                        tt.length,
-                        u64::MAX,
-                    );
-                }
+            let endpoints = match &self.to_tokens {
+                Some(tt) => {
+                    let (unique, overflow) = 256u64.overflowing_pow(tt.length as _);
+                    if overflow {
+                        panic!(
+                            "can't generate {} tokens of length {} maximum is {}",
+                            self.to.len() * tt.count,
+                            tt.length,
+                            u64::MAX,
+                        );
+                    }
 
-                if unique < (self.to.len() * tt.count) as u64 {
-                    panic!(
-                        "we require {} unique tokens but only {unique} can be generated",
-                        self.to.len() * tt.count,
-                    );
-                }
+                    if unique < (self.to.len() * tt.count) as u64 {
+                        panic!(
+                            "we require {} unique tokens but only {unique} can be generated",
+                            self.to.len() * tt.count,
+                        );
+                    }
 
-                {
-                    use crate::filters::StaticFilter as _;
-                    let Some(filters) = config.dyn_cfg.filters() else {
-                        eyre::bail!("empty filters were not created")
-                    };
+                    {
+                        use crate::filters::StaticFilter as _;
+                        let Some(filters) = config.dyn_cfg.filters() else {
+                            eyre::bail!("empty filters were not created")
+                        };
 
-                    filters.store(Arc::new(
-                        crate::filters::FilterChain::try_create([
-                            crate::filters::Capture::as_filter_config(
-                                crate::filters::capture::Config {
-                                    metadata_key: crate::filters::capture::CAPTURED_BYTES.into(),
-                                    strategy: crate::filters::capture::Strategy::Suffix(
-                                        crate::filters::capture::Suffix {
-                                            size: tt.length as _,
-                                            remove: true,
-                                        },
-                                    ),
-                                },
-                            )
+                        filters.store(Arc::new(
+                            crate::filters::FilterChain::try_create([
+                                crate::filters::Capture::as_filter_config(
+                                    crate::filters::capture::Config {
+                                        metadata_key: crate::filters::capture::CAPTURED_BYTES
+                                            .into(),
+                                        strategy: crate::filters::capture::Strategy::Suffix(
+                                            crate::filters::capture::Suffix {
+                                                size: tt.length as _,
+                                                remove: true,
+                                            },
+                                        ),
+                                    },
+                                )
+                                .unwrap(),
+                                crate::filters::TokenRouter::as_filter_config(None).unwrap(),
+                            ])
                             .unwrap(),
-                            crate::filters::TokenRouter::as_filter_config(None).unwrap(),
-                        ])
-                        .unwrap(),
-                    ));
+                        ));
+                    }
+
+                    let count = tt.count as u64;
+
+                    self.to
+                        .iter()
+                        .enumerate()
+                        .map(|(ind, sa)| {
+                            let mut tokens = std::collections::BTreeSet::new();
+                            let start = ind as u64 * count;
+                            for i in start..(start + count) {
+                                tokens.insert(i.to_le_bytes()[..tt.length].to_vec());
+                            }
+
+                            crate::net::endpoint::Endpoint::with_metadata(
+                                (*sa).into(),
+                                crate::net::endpoint::Metadata { tokens },
+                            )
+                        })
+                        .collect()
                 }
-
-                let count = tt.count as u64;
-
-                self.to
-                    .iter()
-                    .enumerate()
-                    .map(|(ind, sa)| {
-                        let mut tokens = std::collections::BTreeSet::new();
-                        let start = ind as u64 * count;
-                        for i in start..(start + count) {
-                            tokens.insert(i.to_le_bytes()[..tt.length].to_vec());
-                        }
-
-                        crate::net::endpoint::Endpoint::with_metadata(
-                            (*sa).into(),
-                            crate::net::endpoint::Metadata { tokens },
-                        )
-                    })
-                    .collect()
-            } else {
-                self.to
+                _ => self
+                    .to
                     .iter()
                     .cloned()
                     .map(crate::net::endpoint::Endpoint::from)
-                    .collect()
+                    .collect(),
             };
 
             clusters.modify(|clusters| {
@@ -203,8 +206,8 @@ impl Proxy {
 
         if !clusters.read().has_endpoints() && self.management_servers.is_empty() {
             return Err(eyre::eyre!(
-                 "`quilkin proxy` requires at least one `to` address or `management_server` endpoint."
-             ));
+                "`quilkin proxy` requires at least one `to` address or `management_server` endpoint."
+            ));
         }
 
         #[allow(clippy::type_complexity)]

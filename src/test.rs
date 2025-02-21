@@ -24,10 +24,10 @@ use tracing_subscriber::EnvFilter;
 use crate::{
     collections::BufferPool,
     config::Config,
-    filters::{prelude::*, FilterRegistry},
+    filters::{FilterRegistry, prelude::*},
+    net::DualStackEpollSocket as DualStackLocalSocket,
     net::endpoint::metadata::Value,
     net::endpoint::{Endpoint, EndpointAddress},
-    net::DualStackEpollSocket as DualStackLocalSocket,
     signal::{ShutdownKind, ShutdownRx, ShutdownTx},
 };
 
@@ -496,7 +496,7 @@ macro_rules! __func_name {
 /// temporary directory named after the test
 #[macro_export]
 macro_rules! temp_file {
-    ($prefix:expr) => {{
+    ($prefix:expr_2021) => {{
         let name = $crate::__func_name!();
         let name = name.strip_suffix("::{{closure}}").unwrap_or(name);
         let mut name = name.replace("::", ".");

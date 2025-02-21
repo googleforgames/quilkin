@@ -16,8 +16,8 @@
 
 use futures::TryStreamExt;
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
     Arc,
+    atomic::{AtomicBool, Ordering},
 };
 
 use crate::net::endpoint::Locality;

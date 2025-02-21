@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
+use dashmap::DashMap;
 use dashmap::mapref::entry::Entry as DashMapEntry;
 use dashmap::mapref::one::{Ref, RefMut};
-use dashmap::DashMap;
 use tracing::warn;
 
 use std::hash::Hash;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
-use tokio::sync::oneshot::{channel, Receiver, Sender};
+use tokio::sync::oneshot::{Receiver, Sender, channel};
 
 pub use dashmap::try_result::TryResult;
 

@@ -15,28 +15,28 @@
  */
 
 use std::{
-    sync::atomic::{AtomicBool, Ordering},
     sync::Arc,
+    sync::atomic::{AtomicBool, Ordering},
     time::Duration,
 };
 
 use futures::StreamExt;
 use rand::Rng;
-use tonic::transport::{channel::Channel as TonicChannel, Endpoint, Error as TonicError};
+use tonic::transport::{Endpoint, Error as TonicError, channel::Channel as TonicChannel};
 use tracing::Instrument;
 use tryhard::{
-    backoff_strategies::{BackoffStrategy, ExponentialBackoff},
     RetryFutureConfig, RetryPolicy,
+    backoff_strategies::{BackoffStrategy, ExponentialBackoff},
 };
 
 use crate::{
+    Result,
     core::Node,
     discovery::{
-        aggregated_discovery_service_client::AggregatedDiscoveryServiceClient,
         DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
+        aggregated_discovery_service_client::AggregatedDiscoveryServiceClient,
     },
     generated::quilkin::relay::v1alpha1::aggregated_control_plane_discovery_service_client::AggregatedControlPlaneDiscoveryServiceClient,
-    Result,
 };
 
 type AdsGrpcClient = AggregatedDiscoveryServiceClient<TonicChannel>;
@@ -149,16 +149,16 @@ impl<C: ServiceClient> Client<C> {
             );
 
             match error {
-                RpcSessionError::InvalidEndpoint(ref error) => {
+                RpcSessionError::InvalidEndpoint(error) => {
                     tracing::error!(?error, "Error creating endpoint");
                     // Do not retry if this is an invalid URL error that we cannot recover from.
                     RetryPolicy::Break
                 }
-                RpcSessionError::InitialConnect(ref error) => {
+                RpcSessionError::InitialConnect(error) => {
                     tracing::warn!(?error, "Unable to connect to the XDS server");
                     RetryPolicy::Delay(delay)
                 }
-                RpcSessionError::Receive(ref status) => {
+                RpcSessionError::Receive(status) => {
                     tracing::warn!(status = ?status, "Failed to receive response from XDS server");
                     RetryPolicy::Delay(delay)
                 }
@@ -436,32 +436,35 @@ impl AdsClient {
             stream: &mut tonic::Streaming<DeltaDiscoveryResponse>,
             resources: &'static [(&'static str, &'static [(&'static str, Vec<String>)])],
         ) -> eyre::Result<&'static [(&'static str, Vec<String>)]> {
-            let resource_subscriptions = if let Some(first) = stream.message().await? {
-                let mut rsubs = None;
-                if first.type_url == "ignore-me" {
-                    if !first.system_version_info.is_empty() {
-                        rsubs = resources.iter().find_map(|(vers, subs)| {
-                            (*vers == first.system_version_info).then_some(subs)
-                        });
+            let resource_subscriptions = match stream.message().await? {
+                Some(first) => {
+                    let mut rsubs = None;
+                    if first.type_url == "ignore-me" {
+                        if !first.system_version_info.is_empty() {
+                            rsubs = resources.iter().find_map(|(vers, subs)| {
+                                (*vers == first.system_version_info).then_some(subs)
+                            });
+                        }
+                    } else {
+                        tracing::warn!("expected `ignore-me` response from management server");
                     }
-                } else {
-                    tracing::warn!("expected `ignore-me` response from management server");
-                }
 
-                if let Some(subs) = rsubs {
-                    subs
-                } else {
-                    let Some(subs) = resources
-                        .iter()
-                        .find_map(|(vers, subs)| vers.is_empty().then_some(subs))
-                    else {
-                        eyre::bail!("failed to find fallback resource subscription set");
-                    };
+                    if let Some(subs) = rsubs {
+                        subs
+                    } else {
+                        let Some(subs) = resources
+                            .iter()
+                            .find_map(|(vers, subs)| vers.is_empty().then_some(subs))
+                        else {
+                            eyre::bail!("failed to find fallback resource subscription set");
+                        };
 
-                    subs
+                        subs
+                    }
                 }
-            } else {
-                eyre::bail!("expected at least one response from the management server");
+                _ => {
+                    eyre::bail!("expected at least one response from the management server");
+                }
             };
 
             Ok(resource_subscriptions)

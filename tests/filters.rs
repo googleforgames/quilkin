@@ -24,7 +24,7 @@ use quilkin::{
     config::Filter,
     filters::{Debug, StaticFilter},
     net::endpoint::Endpoint,
-    test::{load_test_filters, AddressType, TestHelper},
+    test::{AddressType, TestHelper, load_test_filters},
 };
 
 #[tokio::test]

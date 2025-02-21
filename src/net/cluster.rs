@@ -238,12 +238,15 @@ impl EndpointSet {
         let mut hm = std::collections::HashMap::new();
 
         for (token, addrs) in &old_tm {
-            if let Some(naddrs) = self.token_map.get(token) {
-                if addrs.symmetric_difference(naddrs).count() > 0 {
-                    hm.insert(*token, Some(naddrs.iter().cloned().collect()));
+            match self.token_map.get(token) {
+                Some(naddrs) => {
+                    if addrs.symmetric_difference(naddrs).count() > 0 {
+                        hm.insert(*token, Some(naddrs.iter().cloned().collect()));
+                    }
                 }
-            } else {
-                hm.insert(*token, None);
+                _ => {
+                    hm.insert(*token, None);
+                }
             }
         }
 
@@ -305,35 +308,38 @@ where
 
     pub fn apply(&self, locality: Option<Locality>, cluster: EndpointSet) {
         let new_len = cluster.len();
-        if let Some(mut current) = self.map.get_mut(&locality) {
-            let current = current.value_mut();
+        match self.map.get_mut(&locality) {
+            Some(mut current) => {
+                let current = current.value_mut();
 
-            let (old_len, token_map_diff) = current.replace(cluster);
+                let (old_len, token_map_diff) = current.replace(cluster);
 
-            if new_len >= old_len {
-                self.num_endpoints.fetch_add(new_len - old_len, Relaxed);
-            } else {
-                self.num_endpoints.fetch_sub(old_len - new_len, Relaxed);
-            }
-
-            self.version.fetch_add(1, Relaxed);
-
-            for (token_hash, addrs) in token_map_diff {
-                if let Some(addrs) = addrs {
-                    self.token_map.insert(token_hash, addrs);
+                if new_len >= old_len {
+                    self.num_endpoints.fetch_add(new_len - old_len, Relaxed);
                 } else {
-                    self.token_map.remove(&token_hash);
+                    self.num_endpoints.fetch_sub(old_len - new_len, Relaxed);
+                }
+
+                self.version.fetch_add(1, Relaxed);
+
+                for (token_hash, addrs) in token_map_diff {
+                    if let Some(addrs) = addrs {
+                        self.token_map.insert(token_hash, addrs);
+                    } else {
+                        self.token_map.remove(&token_hash);
+                    }
                 }
             }
-        } else {
-            for (token_hash, addrs) in &cluster.token_map {
-                self.token_map
-                    .insert(*token_hash, addrs.iter().cloned().collect());
-            }
+            _ => {
+                for (token_hash, addrs) in &cluster.token_map {
+                    self.token_map
+                        .insert(*token_hash, addrs.iter().cloned().collect());
+                }
 
-            self.map.insert(locality, cluster);
-            self.num_endpoints.fetch_add(new_len, Relaxed);
-            self.version.fetch_add(1, Relaxed);
+                self.map.insert(locality, cluster);
+                self.num_endpoints.fetch_add(new_len, Relaxed);
+                self.version.fetch_add(1, Relaxed);
+            }
         }
     }
 
@@ -422,19 +428,22 @@ where
 
     #[inline]
     pub fn replace(&self, locality: Option<Locality>, endpoint: Endpoint) -> Option<Endpoint> {
-        if let Some(mut set) = self.map.get_mut(&locality) {
-            let replaced = set.endpoints.replace(endpoint);
-            set.update();
-            self.version.fetch_add(1, Relaxed);
+        match self.map.get_mut(&locality) {
+            Some(mut set) => {
+                let replaced = set.endpoints.replace(endpoint);
+                set.update();
+                self.version.fetch_add(1, Relaxed);
 
-            if replaced.is_none() {
-                self.num_endpoints.fetch_add(1, Relaxed);
+                if replaced.is_none() {
+                    self.num_endpoints.fetch_add(1, Relaxed);
+                }
+
+                replaced
             }
-
-            replaced
-        } else {
-            self.insert(locality, [endpoint].into());
-            None
+            _ => {
+                self.insert(locality, [endpoint].into());
+                None
+            }
         }
     }
 
@@ -600,8 +609,8 @@ impl schemars::JsonSchema for ClusterMap {
     fn schema_name() -> String {
         <Vec<EndpointWithLocality>>::schema_name()
     }
-    fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
-        <Vec<EndpointWithLocality>>::json_schema(gen)
+    fn json_schema(r#gen: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
+        <Vec<EndpointWithLocality>>::json_schema(r#gen)
     }
 
     fn is_referenceable() -> bool {
@@ -727,15 +736,19 @@ mod tests {
         cluster1.insert(Some(de1.clone()), [endpoint.clone()].into());
 
         assert_eq!(cluster1.get(&Some(nl1.clone())).unwrap().len(), 1);
-        assert!(cluster1
-            .get(&Some(nl1.clone()))
-            .unwrap()
-            .contains(&endpoint));
+        assert!(
+            cluster1
+                .get(&Some(nl1.clone()))
+                .unwrap()
+                .contains(&endpoint)
+        );
         assert_eq!(cluster1.get(&Some(de1.clone())).unwrap().len(), 1);
-        assert!(cluster1
-            .get(&Some(de1.clone()))
-            .unwrap()
-            .contains(&endpoint));
+        assert!(
+            cluster1
+                .get(&Some(de1.clone()))
+                .unwrap()
+                .contains(&endpoint)
+        );
 
         endpoint.address.port = 8080;
 
@@ -743,10 +756,12 @@ mod tests {
 
         assert_eq!(cluster1.get(&Some(nl1.clone())).unwrap().len(), 1);
         assert_eq!(cluster1.get(&Some(de1.clone())).unwrap().len(), 1);
-        assert!(cluster1
-            .get(&Some(de1.clone()))
-            .unwrap()
-            .contains(&endpoint));
+        assert!(
+            cluster1
+                .get(&Some(de1.clone()))
+                .unwrap()
+                .contains(&endpoint)
+        );
 
         cluster1.insert(Some(de1.clone()), <_>::default());
 

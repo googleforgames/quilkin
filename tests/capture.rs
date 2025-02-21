@@ -16,12 +16,12 @@
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-use tokio::time::{timeout, Duration};
+use tokio::time::{Duration, timeout};
 
 use quilkin::{
     config::Filter,
     filters::{Capture, StaticFilter, TokenRouter},
-    net::endpoint::{metadata::MetadataView, Endpoint},
+    net::endpoint::{Endpoint, metadata::MetadataView},
     test::{AddressType, TestHelper},
 };
 

@@ -16,7 +16,7 @@
 
 use std::net::Ipv4Addr;
 
-use tokio::time::{timeout, Duration};
+use tokio::time::{Duration, timeout};
 
 use quilkin::{
     config::Filter,

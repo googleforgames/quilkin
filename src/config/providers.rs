@@ -15,8 +15,8 @@
  */
 
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
     Arc,
+    atomic::{AtomicBool, Ordering},
 };
 pub mod k8s;
 
@@ -71,7 +71,9 @@ impl Providers {
                     (None, true) => None,
                     (None, false) => Some("default".into()),
                     (Some(cns), true) => {
-                        tracing::warn!("'{cns}' via --config-namespace, -c, or QUILKIN_AGONES_CONFIG_NAMESPACE is ignored for agents and should not be set");
+                        tracing::warn!(
+                            "'{cns}' via --config-namespace, -c, or QUILKIN_AGONES_CONFIG_NAMESPACE is ignored for agents and should not be set"
+                        );
                         None
                     }
                 };

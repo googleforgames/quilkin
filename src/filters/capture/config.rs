@@ -16,7 +16,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{proto, Prefix, Regex, Suffix, CAPTURED_BYTES};
+use super::{CAPTURED_BYTES, Prefix, Regex, Suffix, proto};
 use crate::filters::ConvertProtoConfigError;
 
 /// Strategy to apply for acquiring a set of bytes in the UDP packet

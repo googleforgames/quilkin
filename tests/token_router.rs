@@ -19,10 +19,10 @@ use std::net::{Ipv6Addr, SocketAddr};
 use quilkin::{
     config::Filter,
     filters::{Capture, StaticFilter, TokenRouter},
-    net::endpoint::{metadata::MetadataView, Endpoint},
+    net::endpoint::{Endpoint, metadata::MetadataView},
     test::{AddressType, TestHelper},
 };
-use tokio::time::{timeout, Duration};
+use tokio::time::{Duration, timeout};
 
 /// This test covers both token_router and capture filters,
 /// since they work in concert together.

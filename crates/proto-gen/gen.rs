@@ -19,7 +19,8 @@ use std::{
     process::{Command, Stdio},
 };
 
-const VERSION: &str = "0.2.6";
+// The proto-gen version to use, installing if needed
+const VERSION: &str = "0.3.0";
 
 fn check_version(name: &str, prefix: &str, wanted: &str) -> bool {
     if let Ok(output) = Command::new(name).arg("--version").output() {
@@ -31,7 +32,9 @@ fn check_version(name: &str, prefix: &str, wanted: &str) -> bool {
                 if v == wanted {
                     return true;
                 } else {
-                    println!("{name} version detected as '{v}' which did not match expected version '{wanted}'");
+                    println!(
+                        "{name} version detected as '{v}' which did not match expected version '{wanted}'"
+                    );
                 }
             }
         } else {
@@ -219,6 +222,7 @@ fn execute(which: &str) {
     cmd
         // Run rustfmt on the output, since they're committed they might as well be nice
         .arg("--format")
+        .arg("2024")
         .arg("--build-server")
         .arg("--build-client")
         .arg("--generate-transport")

@@ -16,10 +16,10 @@
 
 use super::RunArgs;
 use crate::config::{IcaoCode, Providers};
-pub use crate::net::{endpoint::Locality, DualStackLocalSocket};
+pub use crate::net::{DualStackLocalSocket, endpoint::Locality};
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
     Arc,
+    atomic::{AtomicBool, Ordering},
 };
 
 #[derive(Clone, Debug, Default)]

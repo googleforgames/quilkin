@@ -107,7 +107,7 @@ const SEEDS: &[u64] = &[100, 200, 300, 400, 500];
 #[divan::bench_group(sample_count = 10)]
 mod ops {
     use super::*;
-    use shared::{gen_cluster_map, GenCluster};
+    use shared::{GenCluster, gen_cluster_map};
 
     fn compute_hash<const S: u64>(gc: &GenCluster) -> usize {
         let mut total_endpoints = 0;

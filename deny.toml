@@ -54,7 +54,7 @@ skip-tree = [
     { crate = "tower@0.4.13", reason = "several crates use this old version" },
 ]
 
-[bans.workspace-dependencies]
+#[bans.workspace-dependencies]
 
 # This section is considered when running `cargo deny check licenses`
 # More documentation for the licenses section can be found here:

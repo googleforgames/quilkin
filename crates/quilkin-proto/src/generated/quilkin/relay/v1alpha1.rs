@@ -51,11 +51,11 @@ pub mod aggregated_control_plane_discovery_service_client {
             F: tonic::service::Interceptor,
             T::ResponseBody: Default,
             T: tonic::codegen::Service<
-                http::Request<tonic::body::BoxBody>,
-                Response = http::Response<
-                    <T as tonic::client::GrpcService<tonic::body::BoxBody>>::ResponseBody,
+                    http::Request<tonic::body::BoxBody>,
+                    Response = http::Response<
+                        <T as tonic::client::GrpcService<tonic::body::BoxBody>>::ResponseBody,
+                    >,
                 >,
-            >,
             <T as tonic::codegen::Service<http::Request<tonic::body::BoxBody>>>::Error:
                 Into<StdError> + Send + Sync,
         {
@@ -296,11 +296,10 @@ pub mod aggregated_control_plane_discovery_service_server {
         fn call(&mut self, req: http::Request<B>) -> Self::Future {
             let inner = self.inner.clone();
             match req.uri().path() {
-                "/quilkin.relay.v1alpha1.AggregatedControlPlaneDiscoveryService/StreamAggregatedResources" => {
+                "/quilkin.relay.v1alpha1.AggregatedControlPlaneDiscoveryService/StreamAggregatedResources" =>
+                {
                     #[allow(non_camel_case_types)]
-                    struct StreamAggregatedResourcesSvc<
-                        T: AggregatedControlPlaneDiscoveryService,
-                    >(
+                    struct StreamAggregatedResourcesSvc<T: AggregatedControlPlaneDiscoveryService>(
                         pub Arc<T>,
                     );
                     impl<
@@ -356,11 +355,10 @@ pub mod aggregated_control_plane_discovery_service_server {
                     };
                     Box::pin(fut)
                 }
-                "/quilkin.relay.v1alpha1.AggregatedControlPlaneDiscoveryService/DeltaAggregatedResources" => {
+                "/quilkin.relay.v1alpha1.AggregatedControlPlaneDiscoveryService/DeltaAggregatedResources" =>
+                {
                     #[allow(non_camel_case_types)]
-                    struct DeltaAggregatedResourcesSvc<
-                        T: AggregatedControlPlaneDiscoveryService,
-                    >(
+                    struct DeltaAggregatedResourcesSvc<T: AggregatedControlPlaneDiscoveryService>(
                         pub Arc<T>,
                     );
                     impl<
@@ -416,18 +414,14 @@ pub mod aggregated_control_plane_discovery_service_server {
                     };
                     Box::pin(fut)
                 }
-                _ => {
-                    Box::pin(async move {
-                        Ok(
-                            http::Response::builder()
-                                .status(200)
-                                .header("grpc-status", "12")
-                                .header("content-type", "application/grpc")
-                                .body(empty_body())
-                                .unwrap(),
-                        )
-                    })
-                }
+                _ => Box::pin(async move {
+                    Ok(http::Response::builder()
+                        .status(200)
+                        .header("grpc-status", "12")
+                        .header("content-type", "application/grpc")
+                        .body(empty_body())
+                        .unwrap())
+                }),
             }
         }
     }

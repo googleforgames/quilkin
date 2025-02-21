@@ -1,11 +1,11 @@
 use quilkin::{
+    Config,
     collections::{BufferPool, PoolBuffer},
     components::{self, RunArgs},
     config::Providers,
     net::TcpListener,
     signal::ShutdownTx,
     test::TestConfig,
-    Config,
 };
 pub use serde_json::json;
 use std::{net::SocketAddr, num::NonZeroUsize, path::PathBuf, sync::Arc};
@@ -49,10 +49,10 @@ macro_rules! temp_file {
     }};
 }
 
-pub use tracing::{subscriber::DefaultGuard, Level};
+pub use tracing::{Level, subscriber::DefaultGuard};
 
 pub fn init_logging(level: Level, test_pkg: &'static str) -> DefaultGuard {
-    use tracing_subscriber::{layer::SubscriberExt as _, Layer as _};
+    use tracing_subscriber::{Layer as _, layer::SubscriberExt as _};
     let layer = tracing_subscriber::fmt::layer()
         .with_test_writer()
         .with_filter(tracing_subscriber::filter::LevelFilter::from_level(level))

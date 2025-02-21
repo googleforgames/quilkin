@@ -26,7 +26,7 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
 use crate::generated::envoy::config::core::v3::{
-    address::Address as EnvoyAddress, SocketAddress as EnvoySocketAddress,
+    SocketAddress as EnvoySocketAddress, address::Address as EnvoyAddress,
 };
 
 /// A valid socket address. This differs from `std::net::SocketAddr`, in that it
@@ -236,7 +236,7 @@ impl TryFrom<EnvoySocketAddress> for EndpointAddress {
             port: match value.port_specifier {
                 Some(PortSpecifier::PortValue(value)) => value.try_into()?,
                 Some(PortSpecifier::NamedPort(_)) => {
-                    return Err(eyre::eyre!("named ports are not supported"))
+                    return Err(eyre::eyre!("named ports are not supported"));
                 }
                 None => return Err(eyre::eyre!("ports are required")),
             },
