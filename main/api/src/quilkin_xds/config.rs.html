@@ -494,7 +494,7 @@
         resource_type: <span class="kw-2">&amp;</span>str,
         resources: Vec&lt;Resource&gt;,
         removed_resources: <span class="kw-2">&amp;</span>[String],
-        remote_addr: <span class="prelude-ty">Option</span>&lt;std::net::SocketAddr&gt;,
+        remote_addr: <span class="prelude-ty">Option</span>&lt;std::net::IpAddr&gt;,
     ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt;;
 
     <span class="kw">fn </span>allow_request_processing(<span class="kw-2">&amp;</span><span class="self">self</span>, resource_type: <span class="kw-2">&amp;</span>str) -&gt; bool;
@@ -527,7 +527,7 @@
     stream: <span class="kw">impl </span>futures::Stream&lt;Item = tonic::Result&lt;DeltaDiscoveryResponse&gt;&gt; + <span class="lifetime">'static </span>+ Send,
     config: Arc&lt;C&gt;,
     local: Arc&lt;LocalVersions&gt;,
-    remote_addr: <span class="prelude-ty">Option</span>&lt;std::net::SocketAddr&gt;,
+    remote_addr: <span class="prelude-ty">Option</span>&lt;std::net::IpAddr&gt;,
     <span class="kw-2">mut </span>notifier: <span class="prelude-ty">Option</span>&lt;tokio::sync::mpsc::UnboundedSender&lt;String&gt;&gt;,
 ) -&gt; std::pin::Pin&lt;Box&lt;<span class="kw">dyn </span>futures::Stream&lt;Item = <span class="kw">crate</span>::Result&lt;DeltaDiscoveryRequest&gt;&gt; + Send&gt;&gt; {
     Box::pin(<span class="macro">async_stream::try_stream!</span> {

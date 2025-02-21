@@ -1279,9 +1279,7 @@
 <a href="#1278" id="1278">1278</a>
 <a href="#1279" id="1279">1279</a>
 <a href="#1280" id="1280">1280</a>
-<a href="#1281" id="1281">1281</a>
-<a href="#1282" id="1282">1282</a>
-<a href="#1283" id="1283">1283</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#1281" id="1281">1281</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2020 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -1675,7 +1673,7 @@
         type_url: <span class="kw-2">&amp;</span>str,
         resources: Vec&lt;XdsResource&gt;,
         removed_resources: <span class="kw-2">&amp;</span>[String],
-        remote_addr: <span class="prelude-ty">Option</span>&lt;std::net::SocketAddr&gt;,
+        remote_addr: <span class="prelude-ty">Option</span>&lt;std::net::IpAddr&gt;,
     ) -&gt; quilkin_xds::Result&lt;()&gt; {
         <span class="self">self</span>.apply_delta(type_url, resources, removed_resources, remote_addr)
     }
@@ -1971,7 +1969,7 @@
         type_url: <span class="kw-2">&amp;</span>str,
         <span class="kw-2">mut </span>resources: Vec&lt;XdsResource&gt;,
         removed_resources: <span class="kw-2">&amp;</span>[String],
-        remote_addr: <span class="prelude-ty">Option</span>&lt;std::net::SocketAddr&gt;,
+        remote_addr: <span class="prelude-ty">Option</span>&lt;std::net::IpAddr&gt;,
     ) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
         <span class="kw">let </span>resource_type = type_url.parse::&lt;ResourceType&gt;()<span class="question-mark">?</span>;
 
@@ -2016,8 +2014,6 @@
                 };
 
                 datacenters.modify(|wg| {
-                    <span class="kw">let </span>remote_addr = remote_addr.map(|ra| ra.ip().to_canonical());
-
                     wg.remove(removed_resources);
 
                     <span class="kw">for </span>res <span class="kw">in </span>resources {
