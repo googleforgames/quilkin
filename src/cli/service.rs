@@ -321,7 +321,9 @@ impl Service {
     )> {
         if self.phoenix_enabled {
             let Some(datacenters) = config.dyn_cfg.datacenters() else {
-                tracing::info!("not starting phoenix service even though it was requested, datacenters were not configured");
+                tracing::info!(
+                    "not starting phoenix service even though it was requested, datacenters were not configured"
+                );
                 return Ok((std::future::pending(), None));
             };
 
