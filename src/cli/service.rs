@@ -320,11 +320,16 @@ impl Service {
         Option<Finalizer>,
     )> {
         if self.phoenix_enabled {
+            let Some(datacenters) = config.dyn_cfg.datacenters() else {
+                tracing::info!("not starting phoenix service even though it was requested, datacenters were not configured");
+                return Ok((std::future::pending(), None));
+            };
+
             tracing::info!(port=%self.qcmp_port, "starting phoenix service");
             let phoenix = crate::net::TcpListener::bind(Some(self.phoenix_port))?;
             let finalizer = crate::net::phoenix::spawn(
                 phoenix,
-                config.datacenters().clone(),
+                datacenters.clone(),
                 crate::net::phoenix::Phoenix::new(crate::codec::qcmp::QcmpMeasurement::new()?),
             )?;
 

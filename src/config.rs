@@ -54,27 +54,9 @@ pub(crate) const BACKOFF_INITIAL_DELAY: Duration = Duration::from_millis(500);
 pub type ConfigMap = typemap_rev::TypeMap<dyn typemap_rev::CloneDebuggableStorage>;
 
 base64_serde_type!(pub Base64Standard, base64::engine::general_purpose::STANDARD);
-
-#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
-#[serde(untagged)]
-#[cfg_attr(test, derive(PartialEq))]
-pub enum DatacenterConfig {
-    NonAgent {
-        #[serde(default)]
-        datacenters: Watch<DatacenterMap>,
-    },
-    Agent {
-        #[serde(default)]
-        icao_code: Slot<IcaoCode>,
-        #[serde(default)]
-        qcmp_port: Slot<u16>,
-    },
-}
-
 #[derive(Clone)]
 #[cfg_attr(test, derive(Debug))]
 pub struct Config {
-    pub datacenter: DatacenterConfig,
     pub dyn_cfg: DynamicConfig,
 }
 
@@ -179,21 +161,18 @@ impl<'de> Deserialize<'de> for Config {
                     }
                 }
 
-                let datacenter = if let Some(datacenters) = datacenters {
-                    DatacenterConfig::NonAgent { datacenters }
+                if let Some(datacenters) = datacenters {
+                    typemap.insert::<DatacenterMap>(datacenters);
                 } else if icao_code.is_none() && qcmp_port.is_none() {
-                    DatacenterConfig::NonAgent {
-                        datacenters: Default::default(),
-                    }
+                    typemap.insert::<DatacenterMap>(Default::default());
                 } else {
-                    DatacenterConfig::Agent {
+                    typemap.insert::<Agent>(Agent {
                         icao_code: Slot::new(icao_code),
                         qcmp_port: Slot::new(qcmp_port),
-                    }
+                    });
                 };
 
                 Ok(Config {
-                    datacenter,
                     dyn_cfg: DynamicConfig {
                         version: version.unwrap_or_default(),
                         id: id.map_or_else(default_id, Slot::new),
@@ -210,15 +189,11 @@ impl<'de> Deserialize<'de> for Config {
 #[cfg(test)]
 impl PartialEq for Config {
     fn eq(&self, other: &Self) -> bool {
-        if self.datacenter != other.datacenter {
-            return false;
-        }
-
         self.dyn_cfg == other.dyn_cfg
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Agent {
     pub icao_code: Slot<IcaoCode>,
     pub qcmp_port: Slot<u16>,
@@ -252,8 +227,13 @@ impl<'de> Deserialize<'de> for DynamicConfig {
             where
                 A: serde::de::MapAccess<'de>,
             {
+                use serde::de::Error;
+
                 let mut version = None;
                 let mut id = None;
+                let mut icao_code = None;
+                let mut qcmp_port = None;
+                let mut datacenters = None;
                 let mut typemap = default_typemap();
 
                 macro_rules! tm_insert {
@@ -276,14 +256,58 @@ impl<'de> Deserialize<'de> for DynamicConfig {
                     match key {
                         "id" => id = Some(map.next_value()?),
                         "version" => version = Some(map.next_value()?),
+                        "datacenters" => {
+                            if icao_code.is_some() || qcmp_port.is_some() {
+                                return Err(Error::custom(
+                                    "agent specific fields have already been deserialized",
+                                ));
+                            } else if datacenters.is_some() {
+                                return Err(Error::duplicate_field("datacenters"));
+                            }
+
+                            datacenters = Some(map.next_value()?);
+                        }
+                        "icao_code" => {
+                            if datacenters.is_some() {
+                                return Err(Error::custom(
+                                    "non-agent `datacenters` field has already been deserialized",
+                                ));
+                            } else if icao_code.is_some() {
+                                return Err(Error::duplicate_field("icao_code"));
+                            }
+
+                            icao_code = Some(map.next_value()?);
+                        }
+                        "qcmp_port" => {
+                            if datacenters.is_some() {
+                                return Err(Error::custom(
+                                    "non-agent `datacenters` field has already been deserialized",
+                                ));
+                            } else if qcmp_port.is_some() {
+                                return Err(Error::duplicate_field("qcmp_port"));
+                            }
+
+                            qcmp_port = Some(map.next_value()?);
+                        }
                         other => {
                             tm_insert!(key, "filters", FilterChain);
                             tm_insert!(key, "clusters", ClusterMap);
 
-                            return Err(serde::de::Error::unknown_field(other, &["id"]));
+                            return Err(Error::unknown_field(other, &["id"]));
                         }
                     }
                 }
+
+                if let Some(datacenters) = datacenters {
+                    typemap.insert::<DatacenterMap>(datacenters);
+                } else if icao_code.is_none() && qcmp_port.is_none() {
+                    typemap.insert::<DatacenterMap>(Default::default());
+                } else {
+                    typemap.insert::<Agent>(Agent {
+                        icao_code: Slot::new(icao_code),
+                        qcmp_port: Slot::new(qcmp_port),
+                    });
+                };
 
                 Ok(DynamicConfig {
                     version: version.unwrap_or_default(),
@@ -414,15 +438,9 @@ impl quilkin_xds::config::Configuration for Config {
 
         async move {
             let clusters = control_plane.config.dyn_cfg.clusters();
+            let datacenters = control_plane.config.dyn_cfg.datacenters();
 
-            let dc = match &control_plane.config.datacenter {
-                crate::config::DatacenterConfig::Agent { .. } => None,
-                crate::config::DatacenterConfig::NonAgent { datacenters } => {
-                    Some(datacenters.clone())
-                }
-            };
-
-            match (clusters, dc) {
+            match (clusters, datacenters) {
                 (Some(clusters), Some(dc)) => {
                     let mut cw = clusters.watch();
                     let mut dcw = dc.watch();
@@ -533,26 +551,22 @@ impl Config {
                         cache_control: None,
                     });
                 }
-                crate::xds::ResourceType::Datacenter => match &self.datacenter {
-                    DatacenterConfig::Agent {
-                        qcmp_port,
-                        icao_code,
-                    } => {
-                        let name = icao_code.load().to_string();
-                        let qcmp_port = *qcmp_port.load();
+                ResourceType::Datacenter => {
+                    if let Some(agent) = self.dyn_cfg.agent() {
+                        let name = agent.icao_code.load().to_string();
+                        let qcmp_port = *agent.qcmp_port.load();
                         let port_s = qcmp_port.to_string();
 
                         if client_state.version_matches(&name, &port_s) {
                             break 'append;
                         }
 
-                        let resource = crate::xds::Resource::Datacenter(
-                            crate::net::cluster::proto::Datacenter {
+                        let resource =
+                            xds::Resource::Datacenter(crate::net::cluster::proto::Datacenter {
                                 qcmp_port: qcmp_port as _,
                                 icao_code: name.clone(),
                                 ..Default::default()
-                            },
-                        );
+                            });
 
                         resources.push(XdsResource {
                             name,
@@ -562,8 +576,7 @@ impl Config {
                             ttl: None,
                             cache_control: None,
                         });
-                    }
-                    DatacenterConfig::NonAgent { datacenters } => {
+                    } else if let Some(datacenters) = self.dyn_cfg.datacenters() {
                         for entry in datacenters.read().iter() {
                             let host = entry.key().to_string();
                             let qcmp_port = entry.qcmp_port;
@@ -603,7 +616,7 @@ impl Config {
                             }
                         }
                     }
-                },
+                }
                 ResourceType::Cluster => {
                     let mut push = |key: &Option<crate::net::endpoint::Locality>,
                                     value: &crate::net::cluster::EndpointSet|
@@ -714,9 +727,9 @@ impl Config {
 
                 filters.store(Arc::new(fc));
             }
-            crate::xds::ResourceType::Datacenter => {
-                let DatacenterConfig::NonAgent { datacenters } = &self.datacenter else {
-                    eyre::bail!("cannot apply delta datacenters resource to agent");
+            ResourceType::Datacenter => {
+                let Some(datacenters) = self.dyn_cfg.datacenters() else {
+                    return Ok(());
                 };
 
                 datacenters.modify(|wg| {
@@ -844,16 +857,13 @@ impl Config {
         let mut typemap = default_typemap();
         insert_default::<FilterChain>(&mut typemap);
         insert_default::<ClusterMap>(&mut typemap);
+        insert_default::<Agent>(&mut typemap);
 
         Self {
             dyn_cfg: DynamicConfig {
                 id: default_id(),
                 version: Version::default(),
                 typemap,
-            },
-            datacenter: DatacenterConfig::Agent {
-                icao_code: Default::default(),
-                qcmp_port: Default::default(),
             },
         }
     }
@@ -862,6 +872,7 @@ impl Config {
         let mut typemap = default_typemap();
         insert_default::<FilterChain>(&mut typemap);
         insert_default::<ClusterMap>(&mut typemap);
+        insert_default::<DatacenterMap>(&mut typemap);
 
         Self {
             dyn_cfg: DynamicConfig {
@@ -869,20 +880,6 @@ impl Config {
                 version: Version::default(),
                 typemap,
             },
-            datacenter: DatacenterConfig::NonAgent {
-                datacenters: Default::default(),
-            },
-        }
-    }
-
-    /// Gets the datacenters, panicking if this is an agent config
-    #[inline]
-    pub fn datacenters(&self) -> &Watch<DatacenterMap> {
-        match &self.datacenter {
-            DatacenterConfig::NonAgent { datacenters } => datacenters,
-            DatacenterConfig::Agent { .. } => {
-                unreachable!("this should not be called on an agent");
-            }
         }
     }
 

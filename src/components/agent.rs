@@ -57,17 +57,13 @@ impl Agent {
             mut shutdown_rx,
         }: RunArgs<Ready>,
     ) -> crate::Result<()> {
-        {
-            let crate::config::DatacenterConfig::Agent {
-                icao_code,
-                qcmp_port,
-            } = &config.datacenter
-            else {
-                unreachable!("this should be an agent config");
-            };
-
-            qcmp_port.store(self.port.into());
-            icao_code.store(self.icao_code.unwrap_or_default().into());
+        if let Some(agent) = config.dyn_cfg.agent() {
+            agent.qcmp_port.store(self.port.into());
+            agent
+                .icao_code
+                .store(self.icao_code.unwrap_or_default().into());
+        } else {
+            eyre::bail!("agent configuration missing");
         }
 
         let _mds_task = if !self.relay_servers.is_empty() {

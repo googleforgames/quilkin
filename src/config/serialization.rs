@@ -12,33 +12,17 @@ impl Config {
             version: Option<Version>,
             filters: Option<crate::filters::FilterChain>,
             clusters: Option<ClusterMap>,
-            #[serde(flatten)]
-            datacenter: DatacenterConfig,
+            datacenters: Option<DatacenterMap>,
+            icao_code: Option<IcaoCode>,
+            qcmp_port: Option<u16>,
         }
 
-        let mut cfg: AllConfig = serde_yaml::from_reader(input)?;
+        let cfg: AllConfig = serde_yaml::from_reader(input)?;
 
-        // Workaround deficiency in serde flatten + untagged
-        if is_agent {
-            cfg.datacenter = match cfg.datacenter {
-                DatacenterConfig::Agent {
-                    icao_code,
-                    qcmp_port,
-                } => DatacenterConfig::Agent {
-                    icao_code,
-                    qcmp_port,
-                },
-                DatacenterConfig::NonAgent { datacenters } => {
-                    eyre::ensure!(
-                        datacenters.read().is_empty(),
-                        "starting an agent, but the configuration file has `datacenters` set"
-                    );
-                    crate::config::DatacenterConfig::Agent {
-                        icao_code: crate::config::Slot::new(crate::config::IcaoCode::default()),
-                        qcmp_port: crate::config::Slot::new(0),
-                    }
-                }
-            };
+        if cfg.datacenters.is_some() && (cfg.icao_code.is_some() || cfg.qcmp_port.is_some()) {
+            eyre::bail!("`datacenters` and `icao_code` or `qcmp_port` were present");
+        } else if is_agent && cfg.datacenters.is_some() {
+            eyre::bail!("`datacenters` was set even though this is an agent");
         }
 
         let mut typemap = default_typemap();
@@ -48,9 +32,16 @@ impl Config {
         if let Some(clusters) = cfg.clusters {
             typemap.insert::<ClusterMap>(Watch::new(clusters));
         }
+        if let Some(datacenters) = cfg.datacenters {
+            typemap.insert::<DatacenterMap>(Watch::new(datacenters));
+        } else {
+            typemap.insert::<Agent>(Agent {
+                icao_code: Slot::new(cfg.icao_code),
+                qcmp_port: Slot::new(cfg.qcmp_port),
+            });
+        }
 
         Ok(Self {
-            datacenter: cfg.datacenter,
             dyn_cfg: DynamicConfig {
                 id: cfg.id.map_or_else(default_id, Slot::from),
                 version: cfg.version.unwrap_or_default(),
@@ -107,8 +98,7 @@ impl serde::Serialize for Config {
     where
         S: serde::Serializer,
     {
-        let len = self.dyn_cfg.typemap.len() + 1 /* id */ + 1 /* filters */ + 1 /* clusters */ + if matches!(self.datacenter, DatacenterConfig::Agent { .. }) { 2 } else { 1};
-        let mut map = serializer.serialize_map(Some(len))?;
+        let mut map = serializer.serialize_map(None)?;
 
         map.serialize_entry("version", &self.dyn_cfg.version)?;
         map.serialize_entry("id", &self.dyn_cfg.id)?;
@@ -118,18 +108,12 @@ impl serde::Serialize for Config {
         if let Some(clusters) = self.dyn_cfg.clusters() {
             map.serialize_entry("clusters", clusters)?;
         }
-
-        match &self.datacenter {
-            DatacenterConfig::Agent {
-                icao_code,
-                qcmp_port,
-            } => {
-                map.serialize_entry("icao_code", icao_code)?;
-                map.serialize_entry("qcmp_port", qcmp_port)?;
-            }
-            DatacenterConfig::NonAgent { datacenters } => {
-                map.serialize_entry("datacenters", datacenters)?;
-            }
+        if let Some(datacenters) = self.dyn_cfg.datacenters() {
+            map.serialize_entry("datacenters", datacenters)?;
+        }
+        if let Some(agent) = self.dyn_cfg.agent() {
+            map.serialize_entry("icao_code", &agent.icao_code)?;
+            map.serialize_entry("qcmp_port", &agent.qcmp_port)?;
         }
 
         map.end()
