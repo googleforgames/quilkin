@@ -187,7 +187,7 @@ pub trait Configuration: Send + Sync + Sized + 'static {
         resource_type: &str,
         resources: Vec<Resource>,
         removed_resources: &[String],
-        remote_addr: Option<std::net::SocketAddr>,
+        remote_addr: Option<std::net::IpAddr>,
     ) -> crate::Result<()>;
 
     fn allow_request_processing(&self, resource_type: &str) -> bool;
@@ -220,7 +220,7 @@ pub fn handle_delta_discovery_responses<C: Configuration>(
     stream: impl futures::Stream<Item = tonic::Result<DeltaDiscoveryResponse>> + 'static + Send,
     config: Arc<C>,
     local: Arc<LocalVersions>,
-    remote_addr: Option<std::net::SocketAddr>,
+    remote_addr: Option<std::net::IpAddr>,
     mut notifier: Option<tokio::sync::mpsc::UnboundedSender<String>>,
 ) -> std::pin::Pin<Box<dyn futures::Stream<Item = crate::Result<DeltaDiscoveryRequest>> + Send>> {
     Box::pin(async_stream::try_stream! {

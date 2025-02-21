@@ -392,7 +392,7 @@ impl quilkin_xds::config::Configuration for Config {
         type_url: &str,
         resources: Vec<XdsResource>,
         removed_resources: &[String],
-        remote_addr: Option<std::net::SocketAddr>,
+        remote_addr: Option<std::net::IpAddr>,
     ) -> quilkin_xds::Result<()> {
         self.apply_delta(type_url, resources, removed_resources, remote_addr)
     }
@@ -688,7 +688,7 @@ impl Config {
         type_url: &str,
         mut resources: Vec<XdsResource>,
         removed_resources: &[String],
-        remote_addr: Option<std::net::SocketAddr>,
+        remote_addr: Option<std::net::IpAddr>,
     ) -> crate::Result<()> {
         let resource_type = type_url.parse::<ResourceType>()?;
 
@@ -733,8 +733,6 @@ impl Config {
                 };
 
                 datacenters.modify(|wg| {
-                    let remote_addr = remote_addr.map(|ra| ra.ip().to_canonical());
-
                     wg.remove(removed_resources);
 
                     for res in resources {
