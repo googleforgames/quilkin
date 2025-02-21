@@ -34,6 +34,46 @@ use crate::{
     net::TcpListener,
 };
 
+const FORWARDED: &str = "forwarded";
+const X_FORWARDED_FOR: &str = "x-forwarded-for";
+const ENVOY_EXTERNAL_ADDRESS: &str = "x-envoy-external-address";
+
+/// Returns the true external address of a xDS client if available, checking for
+/// if we are behind a proxy and need to parse the forwarded headers. The header
+/// precendence is as follows:
+///
+/// - Forwarded
+/// - X-Forwarded-For
+/// - X-Envoy-External-Address
+/// - Host
+fn get_external_remote_addr<T>(request: &tonic::Request<T>) -> Option<std::net::IpAddr> {
+    let metadata = request.metadata();
+    let forwarded_for = metadata
+        .get(FORWARDED)
+        .and_then(|header| {
+            header.to_str().ok().and_then(|value| {
+                forwarded_header_value::ForwardedHeaderValue::from_forwarded(value).ok()
+            })
+        })
+        .and_then(|header| header.remotest().forwarded_for_ip());
+
+    forwarded_for
+        .or_else(|| {
+            metadata
+                .get(X_FORWARDED_FOR)
+                .and_then(|value| value.to_str().ok())
+                .and_then(|value| value.split(",").next().and_then(|value| value.parse().ok()))
+        })
+        .or_else(|| {
+            metadata
+                .get(ENVOY_EXTERNAL_ADDRESS)
+                .and_then(|value| value.to_str().ok())
+                .and_then(|value| value.parse().ok())
+        })
+        .or_else(|| request.remote_addr().map(|addr| addr.ip()))
+        .map(|ip| ip.to_canonical())
+}
+
 #[derive(Clone)]
 pub struct TlsIdentity {
     identity: tonic::transport::Identity,
@@ -451,8 +491,7 @@ impl<C: crate::config::Configuration> AggregatedControlPlaneDiscoveryService for
         &self,
         responses: tonic::Request<tonic::Streaming<DeltaDiscoveryResponse>>,
     ) -> Result<tonic::Response<Self::DeltaAggregatedResourcesStream>, tonic::Status> {
-        let remote_addr = responses
-            .remote_addr()
+        let remote_addr = get_external_remote_addr(&responses)
             .ok_or_else(|| tonic::Status::invalid_argument("no remote address available"))?;
 
         tracing::info!("control plane discovery delta stream attempt");
@@ -538,5 +577,63 @@ impl<C: crate::config::Configuration> AggregatedControlPlaneDiscoveryService for
                 yield Ok(req);
             }
         })))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn get_external_address() {
+        let mut request = tonic::Request::new("");
+
+        assert_eq!(None, get_external_remote_addr(&request));
+
+        request
+            .extensions_mut()
+            .insert(tonic::transport::server::TcpConnectInfo {
+                local_addr: None,
+                remote_addr: Some((std::net::Ipv4Addr::LOCALHOST, 8888).into()),
+            });
+
+        assert_eq!(
+            Some(std::net::Ipv4Addr::LOCALHOST.into()),
+            get_external_remote_addr(&request)
+        );
+
+        request
+            .metadata_mut()
+            .insert(ENVOY_EXTERNAL_ADDRESS, "127.0.0.2".parse().unwrap());
+        assert_eq!(
+            Some([127, 0, 0, 2].into()),
+            get_external_remote_addr(&request)
+        );
+
+        request
+            .metadata_mut()
+            .insert(ENVOY_EXTERNAL_ADDRESS, "::ffff:127.0.0.2".parse().unwrap());
+        assert_eq!(
+            Some([127, 0, 0, 2].into()),
+            get_external_remote_addr(&request)
+        );
+
+        request.metadata_mut().insert(
+            X_FORWARDED_FOR,
+            "127.0.0.3,255.255.255.255".parse().unwrap(),
+        );
+        assert_eq!(
+            Some([127, 0, 0, 3].into()),
+            get_external_remote_addr(&request)
+        );
+
+        request.metadata_mut().insert(
+            FORWARDED,
+            "for=127.0.0.4,for=255.255.255.255".parse().unwrap(),
+        );
+        assert_eq!(
+            Some([127, 0, 0, 4].into()),
+            get_external_remote_addr(&request)
+        );
     }
 }

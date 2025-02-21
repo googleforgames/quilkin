@@ -38,3 +38,4 @@ tracing.workspace = true
 tryhard.workspace = true
 uuid.workspace = true
 url.workspace = true
+forwarded-header-value = "0.1.1"
