@@ -188,7 +188,7 @@ trace_test!(datacenter_discovery, {
 
     #[track_caller]
     fn assert_config(config: &quilkin::Config, datacenter: &quilkin::config::Datacenter) {
-        let dcs = config.datacenters().read();
+        let dcs = config.dyn_cfg.datacenters().unwrap().read();
         let ipv4_dc = dcs.get(&std::net::Ipv4Addr::LOCALHOST.into());
         let ipv6_dc = dcs.get(&std::net::Ipv6Addr::LOCALHOST.into());
 
