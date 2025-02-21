@@ -122,8 +122,8 @@ impl<T: schemars::JsonSchema> schemars::JsonSchema for Watch<T> {
     fn schema_name() -> String {
         <T>::schema_name()
     }
-    fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
-        <T>::json_schema(gen)
+    fn json_schema(r#gen: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
+        <T>::json_schema(r#gen)
     }
 
     fn is_referenceable() -> bool {

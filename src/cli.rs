@@ -33,7 +33,7 @@ pub use self::{
 };
 
 macro_rules! define_port {
-    ($port:expr) => {
+    ($port:expr_2021) => {
         pub const PORT: u16 = $port;
 
         pub fn default_port() -> u16 {
@@ -349,7 +349,7 @@ impl std::str::FromStr for Timeout {
                 return Err(clap::Error::raw(
                     clap::error::ErrorKind::ValueValidation,
                     format!("unknown duration suffix '{s}'"),
-                ))
+                ));
             }
         };
 

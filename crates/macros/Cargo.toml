@@ -18,14 +18,14 @@
 name = "quilkin-macros"
 version = "0.10.0-dev"
 authors = ["Erin Power <erin.power@embark-studios.com>"]
-license = "Apache-2.0"
+license.workspace = true
 description = "Quilkin is a non-transparent UDP proxy specifically designed for use with large scale multiplayer dedicated game server deployments, to ensure security, access control, telemetry data, metrics and more."
 homepage = "https://github.com/googleforgames/quilkin"
 repository = "https://github.com/googleforgames/quilkin"
 readme = "README.md"
 keywords = ["proxy", "game-server", "game-development", "networking", "multiplayer"]
 categories = ["game-development", "network-programming"]
-edition = "2018"
+edition.workspace = true
 
 [lib]
 proc-macro = true

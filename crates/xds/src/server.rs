@@ -22,10 +22,10 @@ use tracing_futures::Instrument;
 
 use crate::{
     discovery::{
+        DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
         aggregated_discovery_service_server::{
             AggregatedDiscoveryService, AggregatedDiscoveryServiceServer,
         },
-        DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
     },
     generated::quilkin::relay::v1alpha1::aggregated_control_plane_discovery_service_server::{
         AggregatedControlPlaneDiscoveryService, AggregatedControlPlaneDiscoveryServiceServer,
@@ -203,7 +203,7 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
         &self,
         mut streaming: S,
     ) -> Result<
-        impl Stream<Item = Result<DeltaDiscoveryResponse, tonic::Status>> + Send,
+        impl Stream<Item = Result<DeltaDiscoveryResponse, tonic::Status>> + Send + use<S, C>,
         tonic::Status,
     >
     where
@@ -551,20 +551,23 @@ impl<C: crate::config::Configuration> AggregatedControlPlaneDiscoveryService for
                     let next_response =
                         tokio::time::timeout(idle_request_interval, response_stream.next());
 
-                    if let Ok(Some(ack)) = next_response.await {
-                        tracing::trace!("sending ack request");
-                        ds.send_response(ack?)
+                    match next_response.await {
+                        Ok(Some(ack)) => {
+                            tracing::trace!("sending ack request");
+                            ds.send_response(ack?).await.map_err(|_| {
+                                tonic::Status::internal("this should not be reachable")
+                            })?;
+                        }
+                        _ => {
+                            tracing::trace!("exceeded idle interval, sending request");
+                            ds.refresh(
+                                &identifier,
+                                config.interested_resources(&server_version).collect(),
+                                &local,
+                            )
                             .await
-                            .map_err(|_| tonic::Status::internal("this should not be reachable"))?;
-                    } else {
-                        tracing::trace!("exceeded idle interval, sending request");
-                        ds.refresh(
-                            &identifier,
-                            config.interested_resources(&server_version).collect(),
-                            &local,
-                        )
-                        .await
-                        .map_err(|error| tonic::Status::internal(error.to_string()))?;
+                            .map_err(|error| tonic::Status::internal(error.to_string()))?;
+                        }
                     }
                 }
             }

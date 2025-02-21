@@ -97,7 +97,7 @@ impl std::fmt::Display for Value {
 
 /// Convenience macro for generating From<T> implementations.
 macro_rules! from_value {
-    (($name:ident) { $($typ:ty => $ex:expr),+ $(,)? }) => {
+    (($name:ident) { $($typ:ty => $ex:expr_2021),+ $(,)? }) => {
         $(
             impl From<$typ> for Value {
                 fn from($name: $typ) -> Self {

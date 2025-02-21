@@ -31,7 +31,9 @@ fn check_version(name: &str, prefix: &str, wanted: &str) -> bool {
                 if v == wanted {
                     return true;
                 } else {
-                    println!("{name} version detected as '{v}' which did not match expected version '{wanted}'");
+                    println!(
+                        "{name} version detected as '{v}' which did not match expected version '{wanted}'"
+                    );
                 }
             }
         } else {

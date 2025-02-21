@@ -158,7 +158,7 @@ mod tests {
 
     use crate::{
         filters::*,
-        net::endpoint::{metadata, Endpoint},
+        net::endpoint::{Endpoint, metadata},
         test::alloc_buffer,
     };
 

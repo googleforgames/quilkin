@@ -20,11 +20,11 @@ mod tests {
         api::core::v1::{Pod, PodSpec},
         apimachinery::pkg::apis::meta::v1::ObjectMeta,
     };
-    use kube::{api::PostParams, runtime::wait::await_condition, Api, ResourceExt};
+    use kube::{Api, ResourceExt, api::PostParams, runtime::wait::await_condition};
     use std::time::Duration;
     use tokio::time::timeout;
 
-    use crate::{is_pod_ready, quilkin_container, Client};
+    use crate::{Client, is_pod_ready, quilkin_container};
 
     #[tokio::test]
     async fn create_quilkin_pod() {

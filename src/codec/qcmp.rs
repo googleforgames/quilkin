@@ -18,8 +18,8 @@
 
 use crate::{
     net::{
-        phoenix::{DistanceMeasure, Measurement},
         DualStackEpollSocket,
+        phoenix::{DistanceMeasure, Measurement},
     },
     time::{DurationNanos, UtcTimestamp},
 };
@@ -196,7 +196,7 @@ pub fn spawn(
     socket: socket2::Socket,
     mut shutdown_rx: crate::signal::ShutdownRx,
 ) -> crate::Result<()> {
-    use tracing::{instrument::WithSubscriber as _, Instrument as _};
+    use tracing::{Instrument as _, instrument::WithSubscriber as _};
 
     let port = crate::net::socket_port(&socket);
 

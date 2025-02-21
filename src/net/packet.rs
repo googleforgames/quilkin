@@ -1,3 +1,3 @@
 pub mod queue;
 
-pub use self::queue::{queue, PacketQueue, PacketQueueSender};
+pub use self::queue::{PacketQueue, PacketQueueSender, queue};

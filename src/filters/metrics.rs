@@ -17,7 +17,7 @@
 use once_cell::sync::Lazy;
 use prometheus::{HistogramVec, IntCounterVec};
 
-use crate::metrics::{registry, Direction};
+use crate::metrics::{Direction, registry};
 
 pub(crate) fn counter(
     id: &str,

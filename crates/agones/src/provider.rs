@@ -33,9 +33,9 @@ mod tests {
         },
     };
     use kube::{
+        Api, ResourceExt,
         api::{DeleteParams, PostParams},
         runtime::wait::await_condition,
-        Api, ResourceExt,
     };
     use serial_test::serial;
     use tokio::time::timeout;
@@ -46,9 +46,9 @@ mod tests {
     };
 
     use crate::{
-        create_agones_rbac_read_account, create_token_router_config, create_tokenised_gameserver,
-        debug_pods, is_deployment_ready, quilkin_container, quilkin_proxy_deployment, Client,
-        TOKEN_KEY,
+        Client, TOKEN_KEY, create_agones_rbac_read_account, create_token_router_config,
+        create_tokenised_gameserver, debug_pods, is_deployment_ready, quilkin_container,
+        quilkin_proxy_deployment,
     };
 
     const PROXY_DEPLOYMENT: &str = "quilkin-xds-proxies";

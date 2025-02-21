@@ -124,7 +124,9 @@ impl std::str::FromStr for Locality {
         let _subzone = iter.next();
 
         if let Some(invalid) = iter.next() {
-            return Err(eyre::eyre!("locality identifier '{input}' had more than 3 components, '{invalid}' is not a region, zone, or subzone"));
+            return Err(eyre::eyre!(
+                "locality identifier '{input}' had more than 3 components, '{invalid}' is not a region, zone, or subzone"
+            ));
         }
 
         Ok(Self {
@@ -215,14 +217,14 @@ impl schemars::JsonSchema for Locality {
         String::schema_id()
     }
 
-    fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
-        String::json_schema(gen)
+    fn json_schema(r#gen: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
+        String::json_schema(r#gen)
     }
 
     fn _schemars_private_non_optional_json_schema(
-        gen: &mut schemars::gen::SchemaGenerator,
+        r#gen: &mut schemars::r#gen::SchemaGenerator,
     ) -> schemars::schema::Schema {
-        String::_schemars_private_non_optional_json_schema(gen)
+        String::_schemars_private_non_optional_json_schema(r#gen)
     }
 
     fn _schemars_private_is_option() -> bool {

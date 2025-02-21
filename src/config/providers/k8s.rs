@@ -26,7 +26,7 @@ use agones::GameServer;
 
 use crate::{
     config,
-    net::{endpoint::Locality, ClusterMap},
+    net::{ClusterMap, endpoint::Locality},
 };
 
 pub fn update_filters_from_configmap(

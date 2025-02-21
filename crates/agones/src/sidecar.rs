@@ -16,9 +16,9 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::{game_server, is_gameserver_ready, quilkin_config_map, quilkin_container, Client};
+    use crate::{Client, game_server, is_gameserver_ready, quilkin_config_map, quilkin_container};
     use k8s_openapi::api::core::v1::{ConfigMap, ConfigMapVolumeSource, Volume};
-    use kube::{api::PostParams, runtime::wait::await_condition, Api, ResourceExt};
+    use kube::{Api, ResourceExt, api::PostParams, runtime::wait::await_condition};
     use quilkin::{config::providers::k8s::agones::GameServer, test::TestHelper};
     use std::time::Duration;
     use tokio::time::timeout;

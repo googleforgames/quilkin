@@ -284,17 +284,17 @@ pub fn handle_delta_discovery_responses<C: Configuration>(
                 }
             }
 
-            let error_detail = if let Err(error) = result {
+            let error_detail = match result { Err(error) => {
                 crate::metrics::nacks(control_plane_identifier, &type_url).inc();
                 Some(quilkin_proto::generated::google::rpc::Status {
                     code: 3,
                     message: error.to_string(),
                     ..Default::default()
                 })
-            } else {
+            } _ => {
                 crate::metrics::acks(control_plane_identifier, &type_url).inc();
                 None
-            };
+            }};
 
             yield DeltaDiscoveryRequest {
                 type_url,

@@ -94,7 +94,9 @@ pub enum XdpSetupError {
     ZeroCopyUnavailable(NicName),
     #[error("`XDP_TXMD_FLAGS_TIMESTAMP` is unavailable for {0}")]
     TxChecksumUnavailable(NicName),
-    #[error("the requested maximum packet memory {max:.2}{xunit} must be at least {min:.2}{nunit} as {nic} has a queue count of {queue_count}")]
+    #[error(
+        "the requested maximum packet memory {max:.2}{xunit} must be at least {min:.2}{nunit} as {nic} has a queue count of {queue_count}"
+    )]
     MinimumMemoryRequirementsExceeded {
         max: f64,
         xunit: &'static str,

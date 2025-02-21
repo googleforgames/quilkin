@@ -19,7 +19,7 @@ pub mod packet;
 /// On linux spawns a io-uring runtime + thread, everywhere else spawns a regular tokio task.
 #[cfg(not(target_os = "linux"))]
 macro_rules! uring_spawn {
-    ($span:expr, $future:expr) => {{
+    ($span:expr_2021, $future:expr_2021) => {{
         let (tx, rx) = std::sync::mpsc::channel::<()>();
         use tracing::Instrument as _;
 
@@ -42,7 +42,7 @@ macro_rules! uring_spawn {
 /// On linux spawns a io-uring task, everywhere else spawns a regular tokio task.
 #[cfg(not(target_os = "linux"))]
 macro_rules! uring_inner_spawn {
-    ($future:expr) => {
+    ($future:expr_2021) => {
         tokio::spawn($future);
     };
 }
@@ -51,7 +51,7 @@ macro_rules! uring_inner_spawn {
 /// hitting the cap of 4096 threads that is unconfigurable in tracing_subscriber -> sharded_slab
 /// for span ids
 macro_rules! uring_span {
-    ($span:expr) => {{
+    ($span:expr_2021) => {{
         cfg_if::cfg_if! {
             if #[cfg(debug_assertions)] {
                 Some($span)
@@ -93,7 +93,7 @@ pub use self::{
     endpoint::{Endpoint, EndpointAddress},
 };
 
-pub use self::packet::{queue, PacketQueue, PacketQueueSender};
+pub use self::packet::{PacketQueue, PacketQueueSender, queue};
 
 fn socket_with_reuse_and_address(addr: SocketAddr) -> std::io::Result<UdpSocket> {
     cfg_if::cfg_if! {
@@ -316,7 +316,7 @@ mod tests {
     use tokio::time::timeout;
 
     use crate::net::endpoint::address::AddressKind;
-    use crate::test::{available_addr, AddressType, TestHelper};
+    use crate::test::{AddressType, TestHelper, available_addr};
 
     #[tokio::test]
     async fn dual_stack_socket_reusable() {

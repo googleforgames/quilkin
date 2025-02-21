@@ -19,8 +19,8 @@
 use std::{
     net::{IpAddr, SocketAddr},
     sync::{
-        atomic::{AtomicU64, Ordering::Relaxed},
         Arc,
+        atomic::{AtomicU64, Ordering::Relaxed},
     },
     time::Duration,
 };
@@ -31,7 +31,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    filters::{prelude::*, FilterChain},
+    filters::{FilterChain, prelude::*},
     generated::envoy::service::discovery::v3::Resource as XdsResource,
     net::cluster::{self, ClusterMap},
     xds::{self, ResourceType},
@@ -89,7 +89,7 @@ impl<'de> Deserialize<'de> for Config {
                 let mut typemap = default_typemap();
 
                 macro_rules! tm_insert {
-                    ($key:expr, $field:expr, $kind:ty) => {{
+                    ($key:expr_2021, $field:expr_2021, $kind:ty) => {{
                         if $key == $field {
                             if typemap.contains_key::<$kind>() {
                                 return Err(serde::de::Error::duplicate_field($field));
@@ -237,7 +237,7 @@ impl<'de> Deserialize<'de> for DynamicConfig {
                 let mut typemap = default_typemap();
 
                 macro_rules! tm_insert {
-                    ($key:expr, $field:expr, $kind:ty) => {{
+                    ($key:expr_2021, $field:expr_2021, $kind:ty) => {{
                         if $key == $field {
                             if typemap.contains_key::<$kind>() {
                                 return Err(serde::de::Error::duplicate_field($field));
@@ -988,8 +988,8 @@ impl schemars::JsonSchema for DatacenterMap {
     fn schema_name() -> String {
         <std::collections::HashMap<IpAddr, Datacenter>>::schema_name()
     }
-    fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
-        <std::collections::HashMap<IpAddr, Datacenter>>::json_schema(gen)
+    fn json_schema(r#gen: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
+        <std::collections::HashMap<IpAddr, Datacenter>>::json_schema(r#gen)
     }
 
     fn is_referenceable() -> bool {
@@ -1116,8 +1116,8 @@ impl schemars::JsonSchema for IcaoCode {
         false
     }
 
-    fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
-        let mut schema = gen.subschema_for::<String>();
+    fn json_schema(r#gen: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
+        let mut schema = r#gen.subschema_for::<String>();
         if let schemars::schema::Schema::Object(schema_object) = &mut schema {
             if schema_object.has_type(schemars::schema::InstanceType::String) {
                 let validation = schema_object.string();
@@ -1192,7 +1192,7 @@ impl TryFrom<listener::Filter> for Filter {
                     return Err(CreationError::FieldInvalid {
                         field: "config_type".into(),
                         reason: "ConfigDiscovery is currently unsupported".into(),
-                    })
+                    });
                 }
             };
             Some(

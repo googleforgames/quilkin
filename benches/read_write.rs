@@ -22,9 +22,11 @@ mod read {
         let (tx, rx) = channel();
         let writer = Writer::<N>::new(writer, reader.local_addr().unwrap(), rx);
 
-        spawn(format!("direct_writer_{N}"), move || loop {
-            if !writer.write_all(NUMBER_OF_PACKETS) {
-                break;
+        spawn(format!("direct_writer_{N}"), move || {
+            loop {
+                if !writer.write_all(NUMBER_OF_PACKETS) {
+                    break;
+                }
             }
         });
 
@@ -42,9 +44,11 @@ mod read {
         let writer = Writer::<N>::new(writer, (Ipv4Addr::LOCALHOST, READ_QUILKIN_PORT).into(), rx);
         let _quilkin_loop = writer.wait_ready(quilkin_loop, &reader);
 
-        spawn(format!("quilkin_writer_{N}"), move || loop {
-            if !writer.write_all(NUMBER_OF_PACKETS) {
-                break;
+        spawn(format!("quilkin_writer_{N}"), move || {
+            loop {
+                if !writer.write_all(NUMBER_OF_PACKETS) {
+                    break;
+                }
             }
         });
 

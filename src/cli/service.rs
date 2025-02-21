@@ -316,7 +316,7 @@ impl Service {
         &self,
         config: &Arc<Config>,
     ) -> crate::Result<(
-        impl std::future::Future<Output = crate::Result<()>>,
+        impl std::future::Future<Output = crate::Result<()>> + use<>,
         Option<Finalizer>,
     )> {
         if self.phoenix_enabled {
@@ -343,7 +343,7 @@ impl Service {
     fn publish_qcmp(
         &self,
         shutdown_rx: &crate::signal::ShutdownRx,
-    ) -> crate::Result<impl Future<Output = crate::Result<()>>> {
+    ) -> crate::Result<impl Future<Output = crate::Result<()>> + use<>> {
         if self.qcmp_enabled {
             tracing::info!(port=%self.qcmp_port, "starting qcmp service");
             let qcmp = crate::net::raw_socket_with_reuse(self.qcmp_port)?;
@@ -357,7 +357,7 @@ impl Service {
     fn publish_mds(
         &self,
         config: &Arc<Config>,
-    ) -> crate::Result<impl Future<Output = crate::Result<()>>> {
+    ) -> crate::Result<impl Future<Output = crate::Result<()>> + use<>> {
         if !self.mds_enabled {
             return Ok(either::Left(std::future::pending()));
         }
@@ -384,7 +384,7 @@ impl Service {
     fn publish_xds(
         &self,
         config: &Arc<Config>,
-    ) -> crate::Result<impl Future<Output = crate::Result<()>>> {
+    ) -> crate::Result<impl Future<Output = crate::Result<()>> + use<>> {
         if !self.xds_enabled {
             return Ok(either::Left(std::future::pending()));
         }
@@ -411,7 +411,7 @@ impl Service {
         &mut self,
         config: &Arc<Config>,
     ) -> eyre::Result<(
-        impl Future<Output = crate::Result<()>>,
+        impl Future<Output = crate::Result<()>> + use<>,
         Option<Finalizer>,
         Option<Arc<crate::components::proxy::SessionPool>>,
     )> {
@@ -458,7 +458,7 @@ impl Service {
         &self,
         config: Arc<Config>,
     ) -> crate::Result<(
-        impl Future<Output = crate::Result<()>>,
+        impl Future<Output = crate::Result<()>> + use<>,
         Finalizer,
         Arc<crate::components::proxy::SessionPool>,
     )> {

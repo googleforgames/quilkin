@@ -2,7 +2,7 @@
 
 pub use std::{
     net::{Ipv4Addr, SocketAddr, UdpSocket},
-    sync::{mpsc, Arc},
+    sync::{Arc, mpsc},
 };
 
 pub const READ_QUILKIN_PORT: u16 = 9001;
@@ -138,7 +138,7 @@ pub fn read_to_end<const N: usize>(
         assert_eq!(length, N);
 
         {
-            let seq = (packet[1] as u16) << 8 | packet[0] as u16;
+            let seq = ((packet[1] as u16) << 8) | packet[0] as u16;
 
             let batch = batches.iter_mut().find(|b| b.range.contains(&seq)).unwrap();
 
@@ -367,7 +367,7 @@ impl Drop for QuilkinLoop {
     }
 }
 
-use quilkin::net::{cluster::ClusterMap, endpoint::Locality, Endpoint, EndpointAddress};
+use quilkin::net::{Endpoint, EndpointAddress, cluster::ClusterMap, endpoint::Locality};
 use rand::Rng;
 use std::{
     collections::BTreeSet,

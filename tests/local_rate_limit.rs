@@ -76,7 +76,9 @@ period: 1
     // Allow enough time to have received any response.
     tokio::time::sleep(Duration::from_millis(100)).await;
     // Check that we do not get any response.
-    assert!(timeout(Duration::from_millis(500), rx.recv())
-        .await
-        .is_err());
+    assert!(
+        timeout(Duration::from_millis(500), rx.recv())
+            .await
+            .is_err()
+    );
 }

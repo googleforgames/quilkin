@@ -108,16 +108,20 @@ mod tests {
 
         let endpoints = crate::net::cluster::ClusterMap::new_default([endpoint.clone()].into());
         let mut dest = Vec::new();
-        assert!(filter
-            .read(&mut ReadContext::new(
-                &endpoints,
-                addr.clone(),
-                alloc_buffer([]),
-                &mut dest,
-            ))
-            .is_ok());
-        assert!(filter
-            .write(&mut WriteContext::new(addr.clone(), addr, alloc_buffer([])))
-            .is_ok());
+        assert!(
+            filter
+                .read(&mut ReadContext::new(
+                    &endpoints,
+                    addr.clone(),
+                    alloc_buffer([]),
+                    &mut dest,
+                ))
+                .is_ok()
+        );
+        assert!(
+            filter
+                .write(&mut WriteContext::new(addr.clone(), addr, alloc_buffer([])))
+                .is_ok()
+        );
     }
 }

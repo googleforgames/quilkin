@@ -198,7 +198,7 @@ impl TryFrom<proto::TokenRouter> for Config {
 #[cfg(test)]
 mod tests {
     use crate::{
-        net::endpoint::{metadata::Value, Endpoint, Metadata},
+        net::endpoint::{Endpoint, Metadata, metadata::Value},
         test::assert_write_no_change,
     };
 
