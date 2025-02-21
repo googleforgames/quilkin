@@ -142,11 +142,11 @@ pub mod aggregated_discovery_service_client {
             F: tonic::service::Interceptor,
             T::ResponseBody: Default,
             T: tonic::codegen::Service<
-                    http::Request<tonic::body::BoxBody>,
-                    Response = http::Response<
-                        <T as tonic::client::GrpcService<tonic::body::BoxBody>>::ResponseBody,
-                    >,
+                http::Request<tonic::body::BoxBody>,
+                Response = http::Response<
+                    <T as tonic::client::GrpcService<tonic::body::BoxBody>>::ResponseBody,
                 >,
+            >,
             <T as tonic::codegen::Service<http::Request<tonic::body::BoxBody>>>::Error:
                 Into<StdError> + Send + Sync,
         {
@@ -346,28 +346,34 @@ pub mod aggregated_discovery_service_server {
         fn call(&mut self, req: http::Request<B>) -> Self::Future {
             let inner = self.inner.clone();
             match req.uri().path() {
-                "/envoy.service.discovery.v3.AggregatedDiscoveryService/StreamAggregatedResources" =>
-                {
+                "/envoy.service.discovery.v3.AggregatedDiscoveryService/StreamAggregatedResources" => {
                     #[allow(non_camel_case_types)]
-                    struct StreamAggregatedResourcesSvc<T: AggregatedDiscoveryService>(pub Arc<T>);
-                    impl<T: AggregatedDiscoveryService>
-                        tonic::server::StreamingService<super::DiscoveryRequest>
-                        for StreamAggregatedResourcesSvc<T>
-                    {
+                    struct StreamAggregatedResourcesSvc<T: AggregatedDiscoveryService>(
+                        pub Arc<T>,
+                    );
+                    impl<
+                        T: AggregatedDiscoveryService,
+                    > tonic::server::StreamingService<super::DiscoveryRequest>
+                    for StreamAggregatedResourcesSvc<T> {
                         type Response = super::DiscoveryResponse;
                         type ResponseStream = T::StreamAggregatedResourcesStream;
-                        type Future =
-                            BoxFuture<tonic::Response<Self::ResponseStream>, tonic::Status>;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::ResponseStream>,
+                            tonic::Status,
+                        >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<tonic::Streaming<super::DiscoveryRequest>>,
+                            request: tonic::Request<
+                                tonic::Streaming<super::DiscoveryRequest>,
+                            >,
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
                                 <T as AggregatedDiscoveryService>::stream_aggregated_resources(
-                                    &inner, request,
-                                )
-                                .await
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
                             };
                             Box::pin(fut)
                         }
@@ -395,28 +401,34 @@ pub mod aggregated_discovery_service_server {
                     };
                     Box::pin(fut)
                 }
-                "/envoy.service.discovery.v3.AggregatedDiscoveryService/DeltaAggregatedResources" =>
-                {
+                "/envoy.service.discovery.v3.AggregatedDiscoveryService/DeltaAggregatedResources" => {
                     #[allow(non_camel_case_types)]
-                    struct DeltaAggregatedResourcesSvc<T: AggregatedDiscoveryService>(pub Arc<T>);
-                    impl<T: AggregatedDiscoveryService>
-                        tonic::server::StreamingService<super::DeltaDiscoveryRequest>
-                        for DeltaAggregatedResourcesSvc<T>
-                    {
+                    struct DeltaAggregatedResourcesSvc<T: AggregatedDiscoveryService>(
+                        pub Arc<T>,
+                    );
+                    impl<
+                        T: AggregatedDiscoveryService,
+                    > tonic::server::StreamingService<super::DeltaDiscoveryRequest>
+                    for DeltaAggregatedResourcesSvc<T> {
                         type Response = super::DeltaDiscoveryResponse;
                         type ResponseStream = T::DeltaAggregatedResourcesStream;
-                        type Future =
-                            BoxFuture<tonic::Response<Self::ResponseStream>, tonic::Status>;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::ResponseStream>,
+                            tonic::Status,
+                        >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<tonic::Streaming<super::DeltaDiscoveryRequest>>,
+                            request: tonic::Request<
+                                tonic::Streaming<super::DeltaDiscoveryRequest>,
+                            >,
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
                                 <T as AggregatedDiscoveryService>::delta_aggregated_resources(
-                                    &inner, request,
-                                )
-                                .await
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
                             };
                             Box::pin(fut)
                         }
@@ -444,14 +456,18 @@ pub mod aggregated_discovery_service_server {
                     };
                     Box::pin(fut)
                 }
-                _ => Box::pin(async move {
-                    Ok(http::Response::builder()
-                        .status(200)
-                        .header("grpc-status", "12")
-                        .header("content-type", "application/grpc")
-                        .body(empty_body())
-                        .unwrap())
-                }),
+                _ => {
+                    Box::pin(async move {
+                        Ok(
+                            http::Response::builder()
+                                .status(200)
+                                .header("grpc-status", "12")
+                                .header("content-type", "application/grpc")
+                                .body(empty_body())
+                                .unwrap(),
+                        )
+                    })
+                }
             }
         }
     }
