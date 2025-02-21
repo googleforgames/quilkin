@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/xds/src/server.rs`."><title>server.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-42caa33d.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="quilkin_xds" data-themes="" data-resource-suffix="" data-rustdoc-version="1.84.0 (9fc6b4312 2025-01-07)" data-channel="1.84.0" data-search-js="search-92e6798f.js" data-settings-js="settings-0f613d39.js" ><script src="../../static.files/storage-59e33391.js"></script><script defer src="../../static.files/src-script-56102188.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-5f194d8c.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">quilkin_xds/</div>server.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/xds/src/server.rs`."><title>server.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-46132b98.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="quilkin_xds" data-themes="" data-resource-suffix="" data-rustdoc-version="1.85.0 (4d91de4e4 2025-02-17)" data-channel="1.85.0" data-search-js="search-75f5ac3e.js" data-settings-js="settings-0f613d39.js" ><script src="../../static.files/storage-59e33391.js"></script><script defer src="../../static.files/src-script-56102188.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-5f194d8c.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">quilkin_xds/</div>server.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
 <a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
@@ -637,7 +637,10 @@
 <a href="#636" id="636">636</a>
 <a href="#637" id="637">637</a>
 <a href="#638" id="638">638</a>
-<a href="#639" id="639">639</a></pre></div><pre class="rust"><code><span class="comment">/*
+<a href="#639" id="639">639</a>
+<a href="#640" id="640">640</a>
+<a href="#641" id="641">641</a>
+<a href="#642" id="642">642</a></pre></div><pre class="rust"><code><span class="comment">/*
  * Copyright 2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -661,10 +664,10 @@
 
 <span class="kw">use crate</span>::{
     discovery::{
+        DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
         aggregated_discovery_service_server::{
             AggregatedDiscoveryService, AggregatedDiscoveryServiceServer,
         },
-        DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
     },
     generated::quilkin::relay::v1alpha1::aggregated_control_plane_discovery_service_server::{
         AggregatedControlPlaneDiscoveryService, AggregatedControlPlaneDiscoveryServiceServer,
@@ -842,7 +845,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="kw-2">mut </span>streaming: S,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;
-        <span class="kw">impl </span>Stream&lt;Item = <span class="prelude-ty">Result</span>&lt;DeltaDiscoveryResponse, tonic::Status&gt;&gt; + Send,
+        <span class="kw">impl </span>Stream&lt;Item = <span class="prelude-ty">Result</span>&lt;DeltaDiscoveryResponse, tonic::Status&gt;&gt; + Send + <span class="kw">use</span>&lt;S, C&gt;,
         tonic::Status,
     &gt;
     <span class="kw">where
@@ -1190,20 +1193,23 @@
                     <span class="kw">let </span>next_response =
                         tokio::time::timeout(idle_request_interval, response_stream.next());
 
-                    <span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(ack)) = next_response.<span class="kw">await </span>{
-                        <span class="macro">tracing::trace!</span>(<span class="string">"sending ack request"</span>);
-                        ds.send_response(ack<span class="question-mark">?</span>)
+                    <span class="kw">match </span>next_response.<span class="kw">await </span>{
+                        <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(ack)) =&gt; {
+                            <span class="macro">tracing::trace!</span>(<span class="string">"sending ack request"</span>);
+                            ds.send_response(ack<span class="question-mark">?</span>).<span class="kw">await</span>.map_err(|<span class="kw">_</span>| {
+                                tonic::Status::internal(<span class="string">"this should not be reachable"</span>)
+                            })<span class="question-mark">?</span>;
+                        }
+                        <span class="kw">_ </span>=&gt; {
+                            <span class="macro">tracing::trace!</span>(<span class="string">"exceeded idle interval, sending request"</span>);
+                            ds.refresh(
+                                <span class="kw-2">&amp;</span>identifier,
+                                config.interested_resources(<span class="kw-2">&amp;</span>server_version).collect(),
+                                <span class="kw-2">&amp;</span>local,
+                            )
                             .<span class="kw">await
-                            </span>.map_err(|<span class="kw">_</span>| tonic::Status::internal(<span class="string">"this should not be reachable"</span>))<span class="question-mark">?</span>;
-                    } <span class="kw">else </span>{
-                        <span class="macro">tracing::trace!</span>(<span class="string">"exceeded idle interval, sending request"</span>);
-                        ds.refresh(
-                            <span class="kw-2">&amp;</span>identifier,
-                            config.interested_resources(<span class="kw-2">&amp;</span>server_version).collect(),
-                            <span class="kw-2">&amp;</span>local,
-                        )
-                        .<span class="kw">await
-                        </span>.map_err(|error| tonic::Status::internal(error.to_string()))<span class="question-mark">?</span>;
+                            </span>.map_err(|error| tonic::Status::internal(error.to_string()))<span class="question-mark">?</span>;
+                        }
                     }
                 }
             }
