@@ -457,7 +457,21 @@ fn io_loop(
             let enqueued_sends = match tx.send(&mut tx_slab, true) {
                 Ok(es) => es,
                 Err(error) => {
-                    tracing::error!(%error, "TX kick failed");
+                    // These are all temporary errors that can occur during normal
+                    // operation
+                    if !matches!(
+                        error.raw_os_error(),
+                        Some(libc::EBUSY | libc::ENOBUFS | libc::EAGAIN | libc::ENETDOWN)
+                    ) {
+                        // This is shoehorning an error that isn't attributable to a particular packet
+                        crate::metrics::errors_total(
+                            crate::metrics::Direction::Read,
+                            &error.to_string(),
+                            &crate::metrics::EMPTY,
+                        )
+                        .inc();
+                    }
+
                     before - tx_slab.len()
                 }
             };
