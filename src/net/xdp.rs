@@ -447,38 +447,60 @@ fn io_loop(
 
             // Ensure the fill ring doesn't get starved, which could drop packets
             if let Err(error) = fill.enqueue(&mut umem, BATCH_SIZE * 2 - recvd, true) {
-                tracing::error!(%error, "RX kick failed");
+                // This is shoehorning an error that isn't attributable to a particular packet
+                crate::metrics::errors_total(
+                    crate::metrics::Direction::Read,
+                    &io_error_to_discriminant(error),
+                    &crate::metrics::EMPTY,
+                )
+                .inc();
             }
 
             // Process each of the packets that we received, potentially queuing
             // packets to be sent
             process::process_packets(&mut rx_slab, &mut umem, &mut tx_slab, &mut state);
+
             let before = tx_slab.len();
             let enqueued_sends = match tx.send(&mut tx_slab, true) {
                 Ok(es) => es,
                 Err(error) => {
                     // These are all temporary errors that can occur during normal
                     // operation
-                    if !matches!(
-                        error.raw_os_error(),
-                        Some(libc::EBUSY | libc::ENOBUFS | libc::EAGAIN | libc::ENETDOWN)
-                    ) {
-                        // This is shoehorning an error that isn't attributable to a particular packet
-                        crate::metrics::errors_total(
-                            crate::metrics::Direction::Read,
-                            &error.to_string(),
-                            &crate::metrics::EMPTY,
-                        )
-                        .inc();
-                    }
+                    // if !matches!(
+                    //     error.raw_os_error(),
+                    //     Some(libc::EBUSY | libc::ENOBUFS | libc::EAGAIN | libc::ENETDOWN)
+                    // ) {
+                    // This is shoehorning an error that isn't attributable to a particular packet
+                    crate::metrics::errors_total(
+                        crate::metrics::Direction::Read,
+                        &io_error_to_discriminant(error),
+                        &crate::metrics::EMPTY,
+                    )
+                    .inc();
+                    //}
 
                     before - tx_slab.len()
                 }
             };
 
             // Return frames that have completed sending
-            pending_sends -= completion.dequeue(&mut umem, pending_sends);
             pending_sends += enqueued_sends;
+            pending_sends -= completion.dequeue(&mut umem, pending_sends);
         }
+    }
+}
+
+#[inline]
+fn io_error_to_discriminant(error: std::io::Error) -> std::borrow::Cow<'static, str> {
+    let Some(code) = error.raw_os_error() else {
+        return error.to_string().into();
+    };
+
+    match code {
+        libc::EBUSY => "EBUSY".into(),
+        libc::ENOBUFS => "ENOBUFS".into(),
+        libc::EAGAIN => "EAGAIN".into(),
+        libc::ENETDOWN => "ENETDOWN".into(),
+        other => format!("{other}").into(),
     }
 }
