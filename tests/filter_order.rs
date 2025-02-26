@@ -52,7 +52,7 @@ async fn multiple_mutations() {
         .await;
 
     quilkin::test::map_to_localhost(&mut echo);
-    let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
+    let server_config = std::sync::Arc::new(quilkin::Config::default());
     server_config
         .dyn_cfg
         .clusters()

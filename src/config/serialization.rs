@@ -4,7 +4,7 @@ use super::*;
 
 impl Config {
     /// Attempts to deserialize `input` as a YAML object representing `Self`.
-    pub fn from_reader<R: std::io::Read>(input: R, is_agent: bool) -> Result<Self, eyre::Error> {
+    pub fn from_reader<R: std::io::Read>(input: R) -> Result<Self, eyre::Error> {
         #[derive(Deserialize)]
         #[serde(deny_unknown_fields)]
         struct AllConfig {
@@ -18,12 +18,6 @@ impl Config {
         }
 
         let cfg: AllConfig = serde_yaml::from_reader(input)?;
-
-        if cfg.datacenters.is_some() && (cfg.icao_code.is_some() || cfg.qcmp_port.is_some()) {
-            eyre::bail!("`datacenters` and `icao_code` or `qcmp_port` were present");
-        } else if is_agent && cfg.datacenters.is_some() {
-            eyre::bail!("`datacenters` was set even though this is an agent");
-        }
 
         let mut typemap = default_typemap();
         if let Some(filters) = cfg.filters {
@@ -130,7 +124,7 @@ mod tests {
 
     #[test]
     fn deserialise_client() {
-        let config = Config::default_non_agent();
+        let config = Config::default();
         config.dyn_cfg.clusters().unwrap().modify(|clusters| {
             clusters.insert_default([Endpoint::new("127.0.0.1:25999".parse().unwrap())].into());
         });
@@ -140,7 +134,7 @@ mod tests {
 
     #[test]
     fn deserialise_server() {
-        let config = Config::default_non_agent();
+        let config = Config::default();
         config.dyn_cfg.clusters().unwrap().modify(|clusters| {
             clusters.insert_default(
                 [
@@ -241,7 +235,7 @@ mod tests {
                 ],
             }]
         }))
-        .unwrap_or_else(|_| Config::default_agent());
+        .unwrap_or_else(|_| Config::default());
 
         let value = config.dyn_cfg.clusters().unwrap().read();
         assert_eq!(
@@ -325,7 +319,7 @@ dynamic:
         ];
 
         for config in configs {
-            let result = Config::from_reader(config.as_bytes(), false);
+            let result = Config::from_reader(config.as_bytes());
             let error = result.unwrap_err();
             println!("here: {}", error);
             assert!(format!("{error:?}").contains("unknown field"));

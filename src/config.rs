@@ -60,6 +60,13 @@ pub struct Config {
     pub dyn_cfg: DynamicConfig,
 }
 
+impl std::ops::Deref for Config {
+    type Target = DynamicConfig;
+    fn deref(&self) -> &Self::Target {
+        &self.dyn_cfg
+    }
+}
+
 #[cfg(test)]
 impl<'de> Deserialize<'de> for Config {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -851,25 +858,18 @@ impl Config {
         crate::metrics::apply_clusters(clusters);
     }
 
-    pub fn default_agent() -> Self {
+    #[inline]
+    pub fn id(&self) -> String {
+        String::clone(&self.dyn_cfg.id.load())
+    }
+}
+
+impl Default for Config {
+    fn default() -> Self {
         let mut typemap = default_typemap();
         insert_default::<FilterChain>(&mut typemap);
         insert_default::<ClusterMap>(&mut typemap);
         insert_default::<Agent>(&mut typemap);
-
-        Self {
-            dyn_cfg: DynamicConfig {
-                id: default_id(),
-                version: Version::default(),
-                typemap,
-            },
-        }
-    }
-
-    pub fn default_non_agent() -> Self {
-        let mut typemap = default_typemap();
-        insert_default::<FilterChain>(&mut typemap);
-        insert_default::<ClusterMap>(&mut typemap);
         insert_default::<DatacenterMap>(&mut typemap);
 
         Self {
@@ -879,11 +879,6 @@ impl Config {
                 typemap,
             },
         }
-    }
-
-    #[inline]
-    pub fn id(&self) -> String {
-        String::clone(&self.dyn_cfg.id.load())
     }
 }
 
@@ -1278,4 +1273,19 @@ pub enum AddrKind {
     Ipv4,
     Ipv6,
     Any,
+}
+
+impl clap::ValueEnum for AddrKind {
+    fn value_variants<'a>() -> &'a [Self] {
+        &[Self::Ipv4, Self::Ipv6, Self::Any]
+    }
+
+    fn to_possible_value(&self) -> Option<clap::builder::PossibleValue> {
+        use clap::builder::PossibleValue as pv;
+        Some(match self {
+            Self::Ipv4 => pv::new("v4"),
+            Self::Ipv6 => pv::new("v6"),
+            Self::Any => pv::new("any"),
+        })
+    }
 }

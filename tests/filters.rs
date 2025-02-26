@@ -37,7 +37,7 @@ async fn test_filter() {
     let echo = t.run_echo_server(AddressType::Random).await;
 
     // create server configuration
-    let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
+    let server_config = std::sync::Arc::new(quilkin::Config::default());
     server_config.dyn_cfg.filters().unwrap().store(
         quilkin::filters::FilterChain::try_create([Filter {
             name: "TestFilter".to_string(),
@@ -57,7 +57,7 @@ async fn test_filter() {
     let server_port = t.run_server(server_config, None, None).await;
 
     // create a local client
-    let client_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
+    let client_config = std::sync::Arc::new(quilkin::Config::default());
     client_config
         .dyn_cfg
         .clusters()
@@ -125,7 +125,7 @@ async fn debug_filter() {
 
     tracing::trace!(%echo, "running echo server");
     // create server configuration
-    let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
+    let server_config = std::sync::Arc::new(quilkin::Config::default());
     server_config
         .dyn_cfg
         .clusters()
@@ -144,7 +144,7 @@ async fn debug_filter() {
     let server_port = t.run_server(server_config, None, None).await;
 
     // create a local client
-    let client_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
+    let client_config = std::sync::Arc::new(quilkin::Config::default());
     client_config
         .dyn_cfg
         .clusters()

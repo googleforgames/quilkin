@@ -196,7 +196,7 @@ async fn test(t: &mut TestHelper, yaml: &str, address_type: AddressType) -> mpsc
         .replace("%2", echo.port().to_string().as_str());
     tracing::info!(config = yaml.as_str(), "Config");
 
-    let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
+    let server_config = std::sync::Arc::new(quilkin::Config::default());
     server_config.dyn_cfg.filters().unwrap().store(
         quilkin::filters::FilterChain::try_create([Filter {
             name: Firewall::factory().name().into(),

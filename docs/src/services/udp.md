@@ -1,19 +1,11 @@
-# Proxy
+# UDP
 
-| Services | Ports | Protocol           |
-|----------|-------|--------------------|
-| Proxy    | 7777  | UDP (IPv4 OR IPv6) |
-| QCMP     | 7600  | UDP (IPv4 OR IPv6) |
+| Ports | Protocol           |
+|-------|--------------------|
+| 7777  | UDP (IPv4 OR IPv6) |
 
-"Proxy" is the primary Quilkin service, which acts as a non-transparent UDP
+UDP is the primary Quilkin service, which acts as a non-transparent UDP
 proxy.
-
-To view all the options for the `proxy` subcommand, run:
-
-```shell
-$ quilkin proxy --help
-{{#include ../../../target/quilkin.proxy.commands}}
-```
 
 ## Endpoints
 

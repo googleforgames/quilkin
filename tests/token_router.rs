@@ -89,7 +89,7 @@ async fn multiple_clients() {
     let mut success = 0;
     let mut failed = 0;
     for _ in 0..limit {
-        match timeout(Duration::from_millis(60), a_rx.recv()).await {
+        match timeout(Duration::from_millis(20), a_rx.recv()).await {
             Ok(packet) => {
                 assert_eq!("A", packet.unwrap());
                 success += 1;
@@ -98,7 +98,7 @@ async fn multiple_clients() {
                 failed += 1;
             }
         }
-        match timeout(Duration::from_millis(60), b_rx.recv()).await {
+        match timeout(Duration::from_millis(20), b_rx.recv()).await {
             Ok(packet) => {
                 assert_eq!("B", packet.unwrap());
                 success += 1;
@@ -135,7 +135,7 @@ quilkin.dev:
         - YWJj # abc
         ";
 
-    let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
+    let server_config = std::sync::Arc::new(quilkin::Config::default());
     server_config
         .dyn_cfg
         .clusters()

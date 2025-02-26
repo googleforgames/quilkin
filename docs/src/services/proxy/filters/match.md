@@ -36,7 +36,7 @@ filters:
           name: quilkin.filters.drop.v1alpha1.Drop
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-# assert_eq!(config.filters.load().len(), 2);
+# assert_eq!(config.filters().unwrap().load().len(), 2);
 ```
 <!--  ANCHOR_END: example -->
 
