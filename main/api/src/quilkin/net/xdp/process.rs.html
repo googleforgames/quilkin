@@ -839,7 +839,14 @@
 <a href="#838" id="838">838</a>
 <a href="#839" id="839">839</a>
 <a href="#840" id="840">840</a>
-<a href="#841" id="841">841</a></pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
+<a href="#841" id="841">841</a>
+<a href="#842" id="842">842</a>
+<a href="#843" id="843">843</a>
+<a href="#844" id="844">844</a>
+<a href="#845" id="845">845</a>
+<a href="#846" id="846">846</a>
+<a href="#847" id="847">847</a>
+<a href="#848" id="848">848</a></pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
     components::proxy::{PipelineError, sessions::inner_metrics <span class="kw">as </span>session_metrics},
     filters::{<span class="self">self</span>, Filter <span class="kw">as _</span>},
     metrics::{<span class="self">self</span>, AsnInfo},
@@ -1314,6 +1321,13 @@
         } <span class="kw">else </span>{
             metrics::WRITE
         };
+
+        <span class="comment">// This indicates a packet that is split, which we don't handle _at all_ right now
+        </span><span class="kw">if </span>inner.is_continued() {
+            metrics::packets_dropped_total(direction, <span class="string">"split packet"</span>, <span class="kw-2">&amp;</span>metrics::EMPTY).inc();
+            umem.free_packet(inner);
+            <span class="kw">continue</span>;
+        }
 
         <span class="kw">let </span>packet = PacketWrapper { inner, udp };
 
