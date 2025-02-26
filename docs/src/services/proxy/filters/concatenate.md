@@ -23,7 +23,7 @@ clusters:
       - address: 127.0.0.1:7001
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-# assert_eq!(config.filters.load().len(), 1);
+# assert_eq!(config.filters().unwrap().load().len(), 1);
 ```
 
 ## Configuration Options ([Rust Doc](../../../../api/quilkin/filters/concatenate/struct.Config.html))

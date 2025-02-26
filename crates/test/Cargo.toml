@@ -24,6 +24,7 @@ publish = false
 workspace = true
 
 [dependencies]
+assert_cmd = "2.0.16"
 # Packet creation/parsing to validate the packet processing for XDP
 etherparse = "0.17"
 insta = { version = "1.42", features = ["json"] }

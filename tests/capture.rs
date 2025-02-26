@@ -34,7 +34,7 @@ async fn token_router() {
     let mut echo = t.run_echo_server(AddressType::Random).await;
     quilkin::test::map_to_localhost(&mut echo);
 
-    let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
+    let server_config = std::sync::Arc::new(quilkin::Config::default());
     server_config.dyn_cfg.filters().unwrap().store(
         quilkin::filters::FilterChain::try_create([
             Filter {

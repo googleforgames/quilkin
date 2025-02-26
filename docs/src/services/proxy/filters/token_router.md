@@ -34,7 +34,7 @@ clusters:
             - bmt1eTcweA==
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-# assert_eq!(config.filters.load().len(), 1);
+# assert_eq!(config.filters().unwrap().load().len(), 1);
 ```
 
 View the [CaptureBytes](capture.md) filter documentation for more details.
@@ -96,7 +96,7 @@ clusters:
              - bmt1eTcweA==
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-# assert_eq!(config.filters.load().len(), 2);
+# assert_eq!(config.filters().unwrap().load().len(), 2);
 ```
 
 On the game client side the [Concatenate](concatenate.md) filter could also be used to add authentication
