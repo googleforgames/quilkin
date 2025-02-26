@@ -474,6 +474,13 @@ pub fn process_packets(
             metrics::WRITE
         };
 
+        // This indicates a packet that is split, which we don't handle _at all_ right now
+        if inner.is_continued() {
+            metrics::packets_dropped_total(direction, "split packet", &metrics::EMPTY).inc();
+            umem.free_packet(inner);
+            continue;
+        }
+
         let packet = PacketWrapper { inner, udp };
 
         let res = {
