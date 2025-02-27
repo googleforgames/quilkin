@@ -377,7 +377,7 @@ async fn packet_manipulation() {
             let udp = UdpHeaders::parse_packet(&server_packet).unwrap().unwrap();
             len -= 1;
             assert_eq!(
-                &server_packet[udp.data_offset..udp.data_offset + dbg!(udp.data_length)],
+                &server_packet[udp.data_offset..udp.data_offset + udp.data_length],
                 &data[..len]
             );
 
