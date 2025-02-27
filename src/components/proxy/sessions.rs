@@ -581,7 +581,7 @@ mod tests {
         let (pending_sends, _srecv) = crate::net::queue(1).unwrap();
         (
             SessionPool::new(
-                Arc::new(Config::default_agent()),
+                Arc::new(Config::default()),
                 vec![pending_sends.clone()],
                 Arc::new(BufferPool::default()),
             ),

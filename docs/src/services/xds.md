@@ -10,13 +10,6 @@ configuration multiple [`proxy`s](./proxy.md). With each provider automating the
 complexity of a full xDS management control plane via integrations with popular
 projects and common architecture patterns.
 
-To view all the providers and options for the `manage` subcommand, run:
-
-```shell
-$ quilkin manage --help
-{{#include ../../../target/quilkin.manage.commands}}
-```
-
 ## Overview
 
 In addition to static configuration provided upon startup, a Quiklin proxy's configuration can also be updated at
