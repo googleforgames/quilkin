@@ -7,7 +7,10 @@ use quilkin::{
         self,
         xdp::process::{
             self,
-            xdp::{self, packet::net_types as nt},
+            xdp::{
+                self,
+                packet::net_types::{self as nt, UdpHeaders},
+            },
         },
     },
     time::UtcTimestamp,
@@ -312,9 +315,7 @@ async fn packet_manipulation() {
             assert!(rx_slab.is_empty());
             let server_packet = tx_slab.pop_back().unwrap();
 
-            let udp = xdp::packet::net_types::UdpPacket::parse_packet(&server_packet)
-                .unwrap()
-                .unwrap();
+            let udp = UdpHeaders::parse_packet(&server_packet).unwrap().unwrap();
             len -= 1;
             assert_eq!(
                 &server_packet[udp.data_offset..udp.data_offset + udp.data_length],
@@ -358,7 +359,7 @@ async fn packet_manipulation() {
         let data = [0xf1u8; 11];
         let mut len = data.len();
 
-        while len > 0 {
+        while dbg!(len) > 0 {
             let mut client_packet = unsafe { umem.alloc().unwrap() };
 
             etherparse::PacketBuilder::ethernet2([3, 3, 3, 3, 3, 3], [4, 4, 4, 4, 4, 4])
@@ -373,12 +374,10 @@ async fn packet_manipulation() {
             assert!(rx_slab.is_empty());
             let server_packet = tx_slab.pop_back().unwrap();
 
-            let udp = xdp::packet::net_types::UdpPacket::parse_packet(&server_packet)
-                .unwrap()
-                .unwrap();
+            let udp = UdpHeaders::parse_packet(&server_packet).unwrap().unwrap();
             len -= 1;
             assert_eq!(
-                &server_packet[udp.data_offset..udp.data_offset + udp.data_length],
+                &server_packet[udp.data_offset..udp.data_offset + dbg!(udp.data_length)],
                 &data[..len]
             );
 
@@ -437,9 +436,7 @@ async fn packet_manipulation() {
 
         let server_packet = tx_slab.pop_back().unwrap();
 
-        let udp = xdp::packet::net_types::UdpPacket::parse_packet(&server_packet)
-            .unwrap()
-            .unwrap();
+        let udp = UdpHeaders::parse_packet(&server_packet).unwrap().unwrap();
         let pdata = server_packet[udp.data_offset..udp.data_offset + udp.data_length].to_vec();
         assert_eq!(&pdata[..2], &data[..2]);
         assert_eq!(&pdata[2..], &concat_data,);
@@ -448,7 +445,7 @@ async fn packet_manipulation() {
         let mut server_packet = unsafe { umem.alloc().unwrap() };
         etherparse::PacketBuilder::ethernet2([3, 3, 3, 3, 3, 3], [4, 4, 4, 4, 4, 4])
             .ipv4(SERVER.ip().octets(), PROXY.ip().octets(), 64)
-            .udp(SERVER.port(), udp.src_port.host())
+            .udp(SERVER.port(), udp.udp.source.host())
             .write(&mut server_packet, &pdata)
             .unwrap();
 
@@ -456,9 +453,7 @@ async fn packet_manipulation() {
         process::process_packets(&mut rx_slab, &mut umem, &mut tx_slab, &mut state);
         let server_packet = tx_slab.pop_back().unwrap();
 
-        let udp = xdp::packet::net_types::UdpPacket::parse_packet(&server_packet)
-            .unwrap()
-            .unwrap();
+        let udp = UdpHeaders::parse_packet(&server_packet).unwrap().unwrap();
         let pdata = &server_packet[udp.data_offset..udp.data_offset + udp.data_length];
         assert_eq!(&pdata[..concat_data.len()], &concat_data,);
         assert_eq!(&pdata[concat_data.len()..concat_data.len() + 2], &data[..2]);
@@ -540,11 +535,9 @@ async fn multiple_servers() {
     process::process_packets(&mut rx_slab, &mut umem, &mut tx_slab, &mut state);
 
     while let Some(sp) = tx_slab.pop_front() {
-        let udp = xdp::packet::net_types::UdpPacket::parse_packet(&sp)
-            .unwrap()
-            .unwrap();
+        let udp = UdpHeaders::parse_packet(&sp).unwrap().unwrap();
 
-        let std::net::IpAddr::V6(dip) = udp.ips.destination() else {
+        let std::net::IpAddr::V6(dip) = udp.destination_address().ip() else {
             unreachable!("expected ipv6 adddress");
         };
 
@@ -603,30 +596,17 @@ async fn many_sessions() {
     .unwrap();
 
     fn swap(packet: &mut xdp::Packet) {
-        let udp = nt::UdpPacket::parse_packet(packet).unwrap().unwrap();
+        let udp = UdpHeaders::parse_packet(packet).unwrap().unwrap();
 
-        let new = nt::UdpPacket {
-            src_mac: udp.dst_mac,
-            src_port: udp.dst_port,
-            dst_mac: udp.src_mac,
-            dst_port: udp.src_port,
-            ips: match udp.ips {
-                nt::IpAddresses::V4 {
-                    source,
-                    destination,
-                } => nt::IpAddresses::V4 {
-                    source: destination,
-                    destination: source,
-                },
-                _ => unreachable!(),
-            },
+        let mut new = UdpHeaders {
+            eth: udp.eth.swapped(),
+            ip: udp.ip.swapped(),
+            udp: udp.udp.swapped(),
             data_offset: udp.data_offset,
             data_length: udp.data_length,
-            hop: udp.hop - 1,
-            checksum: 0.into(),
         };
 
-        new.set_packet_headers(packet).unwrap();
+        new.set_packet_headers(packet, true).unwrap();
         packet.calc_udp_checksum().unwrap();
     }
 
@@ -653,20 +633,18 @@ async fn many_sessions() {
 
         let client_packet = tx_slab.pop_back().unwrap();
 
-        let udp = nt::UdpPacket::parse_packet(&client_packet)
-            .unwrap()
-            .unwrap();
+        let udp = UdpHeaders::parse_packet(&client_packet).unwrap().unwrap();
 
         assert_eq!(
             &client_packet[udp.data_offset..udp.data_offset + udp.data_length],
             &data
         );
-        assert_eq!(udp.dst_mac, nt::MacAddress([3, 3, 3, 3, 3, 3]));
-        assert_eq!(udp.dst_port, (i as u16).into());
-        assert_eq!(udp.src_mac, nt::MacAddress([4, 4, 4, 4, 4, 4]));
-        assert_eq!(udp.src_port.host(), PROXY.port());
+        assert_eq!(udp.eth.destination.0, [3; 6]);
+        assert_eq!(udp.udp.destination.host(), i as u16);
+        assert_eq!(udp.eth.source.0, [4; 6]);
+        assert_eq!(udp.udp.source.host(), PROXY.port());
         assert_eq!(
-            udp.ips,
+            udp.ip,
             nt::IpAddresses::V4 {
                 source: *PROXY.ip(),
                 destination: Ipv4Addr::from_bits(i.to_be())
@@ -859,14 +837,11 @@ async fn qcmp() {
         process::process_packets(&mut rx_slab, &mut umem, &mut tx_slab, &mut state);
 
         let pong_packet = tx_slab.pop_back().unwrap();
-        let udp = nt::UdpPacket::parse_packet(&pong_packet).unwrap().unwrap();
-        let pong = qcmp::Protocol::parse(
-            pong_packet
-                .slice_at_offset(udp.data_offset, udp.data_length)
-                .unwrap(),
-        )
-        .unwrap()
-        .unwrap();
+        let udp = UdpHeaders::parse_packet(&pong_packet).unwrap().unwrap();
+        let pong =
+            qcmp::Protocol::parse(&pong_packet[udp.data_offset..udp.data_offset + udp.data_length])
+                .unwrap()
+                .unwrap();
 
         match pong {
             qcmp::Protocol::PingReply {

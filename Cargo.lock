@@ -2654,6 +2654,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "xdp",
 ]
 
 [[package]]
