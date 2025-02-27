@@ -25,9 +25,9 @@ use std::{
 
 use crate::net::{ClusterMap, EndpointAddress};
 
-/// EndpointChooser chooses from a set of endpoints that a proxy is connected to.
+/// Chooses from a set of endpoints that a proxy is connected to.
 pub trait EndpointChooser: Send + Sync {
-    /// choose_endpoints asks for the next endpoint(s) to use.
+    /// Asks for the next endpoint(s) to use.
     fn choose_endpoints(
         &self,
         destinations: &mut Vec<EndpointAddress>,
@@ -36,7 +36,7 @@ pub trait EndpointChooser: Send + Sync {
     );
 }
 
-/// RoundRobinEndpointChooser chooses endpoints in round-robin order.
+/// Chooses endpoints in round-robin order.
 pub struct RoundRobinEndpointChooser {
     next_endpoint: AtomicUsize,
 }
@@ -68,7 +68,7 @@ impl EndpointChooser for RoundRobinEndpointChooser {
     }
 }
 
-/// RandomEndpointChooser chooses endpoints in random order.
+/// Chooses endpoints in random order.
 pub struct RandomEndpointChooser;
 
 impl EndpointChooser for RandomEndpointChooser {
@@ -84,7 +84,7 @@ impl EndpointChooser for RandomEndpointChooser {
     }
 }
 
-/// HashEndpointChooser chooses endpoints based on a hash of source IP and port.
+/// Chooses endpoints based on a hash of source IP and port.
 pub struct HashEndpointChooser;
 
 impl EndpointChooser for HashEndpointChooser {

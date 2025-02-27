@@ -317,7 +317,7 @@ mod base64_set {
         impl<'de> serde::de::Visitor<'de> for TokenVisitor {
             type Value = Set;
 
-            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 formatter.write_str("an array of base64 encoded tokens")
             }
 

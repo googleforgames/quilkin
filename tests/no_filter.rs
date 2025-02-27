@@ -44,7 +44,7 @@ async fn echo() {
                     Endpoint::new(server2.clone()),
                 ]
                 .into(),
-            )
+            );
         });
 
     let local_port = t.run_server(server_config, None, None).await;

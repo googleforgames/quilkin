@@ -29,10 +29,10 @@ use crate::{
 use crate::generated::quilkin::filters::local_rate_limit::v1alpha1 as proto;
 
 // TODO: we should make these values configurable and transparent to the filter.
-/// SESSION_TIMEOUT_SECONDS is the default session timeout.
+/// The default session timeout.
 pub const SESSION_TIMEOUT_SECONDS: Duration = Duration::from_secs(60);
 
-/// SESSION_EXPIRY_POLL_INTERVAL is the default interval to check for expired sessions.
+/// The default interval to check for expired sessions.
 const SESSION_EXPIRY_POLL_INTERVAL: Duration = Duration::from_secs(60);
 
 /// Bucket stores two atomics.
@@ -55,10 +55,13 @@ struct Bucket {
 }
 
 /// A filter that implements rate limiting on packets based on the token-bucket
-/// algorithm.  PacketMuts that violate the rate limit are dropped.  It only
-/// applies rate limiting on packets received from a downstream connection (processed
-/// through [`LocalRateLimit::read`]). PacketMuts coming from upstream endpoints
-/// flow through the filter untouched.
+/// algorithm.
+///
+/// Packets that violate the rate limit are dropped. It only applies rate
+/// limiting on packets received from a downstream connection (processed
+/// through [`Self::read`]).
+///
+/// Packets coming from upstream endpoints flow through the filter untouched.
 pub struct LocalRateLimit {
     /// Tracks rate limiting state per source address.
     state: TtlMap<EndpointAddress, Bucket>,
@@ -67,7 +70,7 @@ pub struct LocalRateLimit {
 }
 
 impl LocalRateLimit {
-    /// new returns a new LocalRateLimit. It spawns a future in the background
+    /// new returns a new [`Self`]. It spawns a future in the background
     /// that periodically refills the rate limiter's tokens.
     fn new(config: Config) -> Result<Self, CreationError> {
         if config.period < 1 {
@@ -83,7 +86,7 @@ impl LocalRateLimit {
         })
     }
 
-    /// acquire_token is called on behalf of every packet that is eligible
+    /// This is called on behalf of every packet that is eligible
     /// for rate limiting.
     ///
     /// It returns whether there exists a token for the corresponding address in
@@ -173,7 +176,7 @@ pub struct Config {
     /// The maximum number of packets allowed to be forwarded by the rate
     /// limiter in a given duration.
     pub max_packets: usize,
-    /// The duration in seconds during which max_packets applies. If none is provided, it
+    /// The duration in seconds during which `max_packets` applies. If none is provided, it
     /// defaults to one second.
     pub period: u32,
 }

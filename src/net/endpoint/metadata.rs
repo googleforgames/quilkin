@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#![allow(clippy::trait_duplication_in_bounds)]
+
 pub(crate) mod symbol;
 
 #[doc(hidden)]
@@ -135,19 +137,18 @@ impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Bool(a), Self::Bool(b)) => a == b,
-            (Self::Bool(_), _) => false,
             (Self::Number(a), Self::Number(b)) => a == b,
             (Self::Number(num), Self::Bytes(bytes)) => {
                 bytes.len() == 1 && *num == u64::from(bytes[0])
             }
-            (Self::Number(_), _) => false,
             (Self::List(a), Self::List(b)) => a == b,
-            (Self::List(_), _) => false,
             (Self::String(a), Self::String(b)) => a == b,
             (Self::Bytes(a), Self::Bytes(b)) => a == b,
             (Self::String(a), Self::Bytes(b)) | (Self::Bytes(b), Self::String(a)) => a == b,
-            (Self::String(_), _) => false,
-            (Self::Bytes(_), _) => false,
+            (
+                Self::String(_) | Self::Bytes(_) | Self::List(_) | Self::Number(_) | Self::Bool(_),
+                _,
+            ) => false,
         }
     }
 }

@@ -303,43 +303,40 @@ where
 
     #[inline]
     pub fn insert(&self, locality: Option<Locality>, cluster: BTreeSet<Endpoint>) {
-        self.apply(locality, EndpointSet::new(cluster))
+        self.apply(locality, EndpointSet::new(cluster));
     }
 
     pub fn apply(&self, locality: Option<Locality>, cluster: EndpointSet) {
         let new_len = cluster.len();
-        match self.map.get_mut(&locality) {
-            Some(mut current) => {
-                let current = current.value_mut();
+        if let Some(mut current) = self.map.get_mut(&locality) {
+            let current = current.value_mut();
 
-                let (old_len, token_map_diff) = current.replace(cluster);
+            let (old_len, token_map_diff) = current.replace(cluster);
 
-                if new_len >= old_len {
-                    self.num_endpoints.fetch_add(new_len - old_len, Relaxed);
+            if new_len >= old_len {
+                self.num_endpoints.fetch_add(new_len - old_len, Relaxed);
+            } else {
+                self.num_endpoints.fetch_sub(old_len - new_len, Relaxed);
+            }
+
+            self.version.fetch_add(1, Relaxed);
+
+            for (token_hash, addrs) in token_map_diff {
+                if let Some(addrs) = addrs {
+                    self.token_map.insert(token_hash, addrs);
                 } else {
-                    self.num_endpoints.fetch_sub(old_len - new_len, Relaxed);
-                }
-
-                self.version.fetch_add(1, Relaxed);
-
-                for (token_hash, addrs) in token_map_diff {
-                    if let Some(addrs) = addrs {
-                        self.token_map.insert(token_hash, addrs);
-                    } else {
-                        self.token_map.remove(&token_hash);
-                    }
+                    self.token_map.remove(&token_hash);
                 }
             }
-            _ => {
-                for (token_hash, addrs) in &cluster.token_map {
-                    self.token_map
-                        .insert(*token_hash, addrs.iter().cloned().collect());
-                }
-
-                self.map.insert(locality, cluster);
-                self.num_endpoints.fetch_add(new_len, Relaxed);
-                self.version.fetch_add(1, Relaxed);
+        } else {
+            for (token_hash, addrs) in &cluster.token_map {
+                self.token_map
+                    .insert(*token_hash, addrs.iter().cloned().collect());
             }
+
+            self.map.insert(locality, cluster);
+            self.num_endpoints.fetch_add(new_len, Relaxed);
+            self.version.fetch_add(1, Relaxed);
         }
     }
 
@@ -353,19 +350,19 @@ where
         self.map.is_empty()
     }
 
-    pub fn get(&self, key: &Option<Locality>) -> Option<DashMapRef> {
+    pub fn get(&self, key: &Option<Locality>) -> Option<DashMapRef<'_>> {
         self.map.get(key)
     }
 
-    pub fn get_mut(&self, key: &Option<Locality>) -> Option<DashMapRefMut> {
+    pub fn get_mut(&self, key: &Option<Locality>) -> Option<DashMapRefMut<'_>> {
         self.map.get_mut(key)
     }
 
-    pub fn get_default(&self) -> Option<DashMapRef> {
+    pub fn get_default(&self) -> Option<DashMapRef<'_>> {
         self.get(&None)
     }
 
-    pub fn get_default_mut(&self) -> Option<DashMapRefMut> {
+    pub fn get_default_mut(&self) -> Option<DashMapRefMut<'_>> {
         self.get_mut(&None)
     }
 
@@ -415,35 +412,32 @@ where
     }
 
     #[inline]
-    pub fn iter(&self) -> dashmap::iter::Iter<Option<Locality>, EndpointSet, S> {
+    pub fn iter(&self) -> dashmap::iter::Iter<'_, Option<Locality>, EndpointSet, S> {
         self.map.iter()
     }
 
     pub fn entry(
         &self,
         key: Option<Locality>,
-    ) -> dashmap::mapref::entry::Entry<Option<Locality>, EndpointSet> {
+    ) -> dashmap::mapref::entry::Entry<'_, Option<Locality>, EndpointSet> {
         self.map.entry(key)
     }
 
     #[inline]
     pub fn replace(&self, locality: Option<Locality>, endpoint: Endpoint) -> Option<Endpoint> {
-        match self.map.get_mut(&locality) {
-            Some(mut set) => {
-                let replaced = set.endpoints.replace(endpoint);
-                set.update();
-                self.version.fetch_add(1, Relaxed);
+        if let Some(mut set) = self.map.get_mut(&locality) {
+            let replaced = set.endpoints.replace(endpoint);
+            set.update();
+            self.version.fetch_add(1, Relaxed);
 
-                if replaced.is_none() {
-                    self.num_endpoints.fetch_add(1, Relaxed);
-                }
+            if replaced.is_none() {
+                self.num_endpoints.fetch_add(1, Relaxed);
+            }
 
-                replaced
-            }
-            _ => {
-                self.insert(locality, [endpoint].into());
-                None
-            }
+            replaced
+        } else {
+            self.insert(locality, [endpoint].into());
+            None
         }
     }
 
@@ -673,12 +667,16 @@ where
     S: Default + std::hash::BuildHasher + Clone,
 {
     fn from(cmd: ClusterMapDeser) -> Self {
-        let map = DashMap::from_iter(cmd.endpoints.into_iter().map(
-            |EndpointWithLocality {
-                 locality,
-                 endpoints,
-             }| { (locality, EndpointSet::new(endpoints)) },
-        ));
+        let map = cmd
+            .endpoints
+            .into_iter()
+            .map(
+                |EndpointWithLocality {
+                     locality,
+                     endpoints,
+                 }| { (locality, EndpointSet::new(endpoints)) },
+            )
+            .collect::<DashMap<_, _, _>>();
 
         Self::from(map)
     }

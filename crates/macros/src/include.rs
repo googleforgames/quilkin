@@ -23,7 +23,7 @@ pub(crate) struct IncludeProto {
 }
 
 impl Parse for IncludeProto {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let lit = input.parse::<syn::LitStr>()?;
         let id = lit.value();
 

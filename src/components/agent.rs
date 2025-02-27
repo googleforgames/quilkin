@@ -93,7 +93,7 @@ impl Agent {
 
                     // Attempt to connect to a delta stream if the relay has one
                     // available, otherwise fallback to the regular aggregated stream
-                    Some(client.delta_stream(config.clone(), ready.relay_is_healthy.clone()).await.map_err(|_| eyre::eyre!("failed to acquire delta stream"))?)
+                    Some(client.delta_stream(config.clone(), ready.relay_is_healthy.clone()).await.map_err(|_err| eyre::eyre!("failed to acquire delta stream"))?)
                 }
                 _ = shutdown_rx.changed() => return Ok(()),
             }

@@ -204,6 +204,6 @@ on_read:
                 }),
                 on_write: None,
             }
-        )
+        );
     }
 }

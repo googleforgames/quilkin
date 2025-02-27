@@ -124,7 +124,7 @@ mod endpoint {
     #[divan::bench(
         types = [Name, Ip],
     )]
-    fn slower<G: GenAddress>(bencher: Bencher) {
+    fn slower<G: GenAddress>(bencher: Bencher<'_, '_>) {
         let mut genn = G::default();
         bencher
             .with_inputs(|| genn.generate(false))
@@ -135,7 +135,7 @@ mod endpoint {
     #[divan::bench(
         types = [Name, Ip],
     )]
-    fn faster<G: GenAddress>(bencher: Bencher) {
+    fn faster<G: GenAddress>(bencher: Bencher<'_, '_>) {
         let mut genn = G::default();
         bencher
             .with_inputs(|| genn.generate(true))
@@ -220,7 +220,7 @@ impl GenResource for Cluster {
 fn deserialize(a: prost_types::Any) {
     match Resource::try_decode(a).unwrap() {
         Resource::Listener(_) => {
-            todo!()
+            unreachable!()
         }
         Resource::FilterChain(fc) => {
             let chain: quilkin::filters::FilterChain = if fc.filters.is_empty() {
@@ -254,7 +254,7 @@ fn deserialize(a: prost_types::Any) {
 fn deserialize_faster(a: prost_types::Any) {
     match Resource::try_decode(a).unwrap() {
         Resource::Listener(_) => {
-            unimplemented!()
+            unreachable!()
         }
         Resource::FilterChain(fc) => {
             quilkin::filters::FilterChain::try_create_fallible(fc.filters).unwrap();
@@ -286,7 +286,7 @@ mod resource {
     #[divan::bench(
         types = [Listener, Cluster],
     )]
-    fn slower<G: GenResource>(bencher: Bencher) {
+    fn slower<G: GenResource>(bencher: Bencher<'_, '_>) {
         let mut genn = G::default();
         bencher
             .with_inputs(|| genn.generate(false))
@@ -297,7 +297,7 @@ mod resource {
     #[divan::bench(
         types = [Listener, Cluster],
     )]
-    fn faster<G: GenResource>(bencher: Bencher) {
+    fn faster<G: GenResource>(bencher: Bencher<'_, '_>) {
         let mut genn = G::default();
         bencher
             .with_inputs(|| genn.generate(true))

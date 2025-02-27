@@ -77,12 +77,9 @@ impl MaxmindDb {
     }
 
     pub fn lookup(ip: std::net::IpAddr) -> Option<IpNetEntry> {
-        let mmdb = match crate::MaxmindDb::instance().clone() {
-            Some(mmdb) => mmdb,
-            None => {
-                tracing::trace!("skipping mmdb telemetry, no maxmind database available");
-                return None;
-            }
+        let Some(mmdb) = crate::MaxmindDb::instance().clone() else {
+            tracing::trace!("skipping mmdb telemetry, no maxmind database available");
+            return None;
         };
 
         match mmdb.lookup::<IpNetEntry>(ip) {

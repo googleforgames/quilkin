@@ -354,7 +354,7 @@ pub fn spawn(workers: XdpWorkers, config: process::ConfigState) -> Result<XdpLoo
                     ipv4,
                     ipv6,
                     shutdown.clone(),
-                )
+                );
             })
             .map_err(XdpSpawnError::Thread)?;
 

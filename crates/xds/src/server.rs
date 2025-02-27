@@ -399,7 +399,7 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                             continue;
                         }
 
-                        let id = client_request.node.as_ref().map(|node| node.id.as_str()).unwrap_or(node_id.as_str());
+                        let id = client_request.node.as_ref().map_or(node_id.as_str(), |node| node.id.as_str());
 
                         tracing::trace!(resource_type = client_request.type_url, "new delta message");
 
@@ -551,23 +551,20 @@ impl<C: crate::config::Configuration> AggregatedControlPlaneDiscoveryService for
                     let next_response =
                         tokio::time::timeout(idle_request_interval, response_stream.next());
 
-                    match next_response.await {
-                        Ok(Some(ack)) => {
-                            tracing::trace!("sending ack request");
-                            ds.send_response(ack?).await.map_err(|_| {
-                                tonic::Status::internal("this should not be reachable")
-                            })?;
-                        }
-                        _ => {
-                            tracing::trace!("exceeded idle interval, sending request");
-                            ds.refresh(
-                                &identifier,
-                                config.interested_resources(&server_version).collect(),
-                                &local,
-                            )
-                            .await
-                            .map_err(|error| tonic::Status::internal(error.to_string()))?;
-                        }
+                    if let Ok(Some(ack)) = next_response.await {
+                        tracing::trace!("sending ack request");
+                        ds.send_response(ack?).await.map_err(|_err| {
+                            tonic::Status::internal("this should not be reachable")
+                        })?;
+                    } else {
+                        tracing::trace!("exceeded idle interval, sending request");
+                        ds.refresh(
+                            &identifier,
+                            config.interested_resources(&server_version).collect(),
+                            &local,
+                        )
+                        .await
+                        .map_err(|error| tonic::Status::internal(error.to_string()))?;
                     }
                 }
             }

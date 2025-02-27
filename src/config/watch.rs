@@ -59,14 +59,14 @@ pub trait Watchable {
 }
 
 impl<T: Watchable + std::fmt::Debug> Watch<T> {
-    pub fn read(&self) -> ReadGuard<T> {
+    pub fn read(&self) -> ReadGuard<'_, T> {
         ReadGuard {
             inner: self,
             marker: self.value.mark(),
         }
     }
 
-    pub fn write(&self) -> WatchGuard<T> {
+    pub fn write(&self) -> WatchGuard<'_, T> {
         WatchGuard {
             inner: self,
             marker: self.value.mark(),
@@ -74,7 +74,7 @@ impl<T: Watchable + std::fmt::Debug> Watch<T> {
     }
 
     #[inline]
-    pub fn modify<R>(&self, func: impl FnOnce(&WatchGuard<T>) -> R) -> R {
+    pub fn modify<R>(&self, func: impl FnOnce(&WatchGuard<'_, T>) -> R) -> R {
         (func)(&WatchGuard {
             inner: self,
             marker: self.value.mark(),

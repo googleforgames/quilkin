@@ -34,13 +34,13 @@ impl ConfigType {
     /// Deserializes takes two type arguments `Static` and `Dynamic` representing
     /// the types of a static and dynamic configuration respectively.
     ///
-    /// If the configuration input is a [ConfigType::Static], then it is directly
+    /// If the configuration input is a [`ConfigType::Static`], then it is directly
     /// deserialized into the returned `Static` instance.
     ///
-    /// Otherwise if the input is a [ConfigType::Dynamic] then the contained Protobuf
+    /// Otherwise if the input is a [`ConfigType::Dynamic`] then the contained Protobuf
     /// data is decoded into a type `Dynamic` instance, after which the decoded
     /// value is converted into the returned `Static` instance.
-    /// As a result [TryFrom] must be implemented from the `Dynamic` to the `Static`
+    /// As a result `TryFrom` must be implemented from the `Dynamic` to the `Static`
     /// type.
     ///
     /// It returns both the deserialized, as well as, a JSON representation
@@ -150,6 +150,6 @@ mod tests {
                 "value": 98,
             }),
             config_json
-        )
+        );
     }
 }

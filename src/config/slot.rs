@@ -139,7 +139,7 @@ impl<T: Default> Default for Slot<T> {
 }
 
 impl<T: std::fmt::Debug> std::fmt::Debug for Slot<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.inner.load().fmt(f)
     }
 }

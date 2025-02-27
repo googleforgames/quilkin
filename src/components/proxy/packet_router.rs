@@ -33,7 +33,7 @@ mod reference;
 /// Representation of an immutable set of bytes pulled from the network, this trait
 /// provides an abstraction over however the packet was received (epoll, io-uring, xdp)
 ///
-/// Use [PacketMut] if you need a mutable representation.
+/// Use [`PacketMut`] if you need a mutable representation.
 pub trait Packet: Sized {
     /// Returns the underlying slice of bytes representing the packet.
     fn as_slice(&self) -> &[u8];

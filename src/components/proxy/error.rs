@@ -31,7 +31,7 @@ impl PipelineError {
     pub(crate) fn inc_system_errors_total(
         &self,
         direction: crate::metrics::Direction,
-        asn_info: &crate::metrics::AsnInfo,
+        asn_info: &crate::metrics::AsnInfo<'_>,
     ) {
         if matches!(
             self,

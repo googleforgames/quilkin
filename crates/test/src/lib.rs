@@ -161,7 +161,7 @@ pub struct ConfigFile {
 impl ConfigFile {
     pub fn update(&mut self, update: impl FnOnce(&mut TestConfig)) {
         update(&mut self.config);
-        self.config.write_to_file(&self.path)
+        self.config.write_to_file(&self.path);
     }
 }
 
@@ -672,7 +672,7 @@ impl Sandbox {
         match pail {
             Pail::Relay(rp) => rp.config_file.take().unwrap(),
             Pail::Agent(ap) => ap.config_file.take().unwrap(),
-            _ => unimplemented!("no config_file for this pail"),
+            _ => unreachable!("no config_file for this pail"),
         }
     }
 
@@ -697,7 +697,7 @@ impl Sandbox {
     /// Sleeps for the specified number of milliseconds
     #[inline]
     pub async fn sleep(&self, ms: u64) {
-        tokio::time::sleep(std::time::Duration::from_millis(ms)).await
+        tokio::time::sleep(std::time::Duration::from_millis(ms)).await;
     }
 
     /// Runs a future, expecting it complete before the specified timeout

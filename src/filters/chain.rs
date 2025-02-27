@@ -31,7 +31,7 @@ const BUCKET_START: f64 = 0.000125;
 
 const BUCKET_FACTOR: f64 = 2.5;
 
-/// At an exponential factor of 2.5 (BUCKET_FACTOR), 11 iterations gets us to just over half a
+/// At an exponential factor of 2.5 ([`BUCKET_FACTOR`]), 11 iterations gets us to just over half a
 /// second. Any processing that occurs over half a second is far too long, so we end
 /// the bucketing there as we don't care about granularity past this value.
 const BUCKET_COUNT: usize = 11;
@@ -115,7 +115,7 @@ impl FilterChain {
     }
 
     /// Validates the filter configurations in the provided config and constructs
-    /// a FilterChain if all configurations are valid, including the conversion
+    /// a [`Self`] if all configurations are valid, including the conversion
     /// into a [`Filter`]
     pub fn try_create_fallible<Item>(
         filter_configs: impl IntoIterator<Item = Item>,
@@ -139,7 +139,7 @@ impl FilterChain {
     }
 
     /// Validates the filter configurations in the provided config and constructs
-    /// a FilterChain if all configurations are valid.
+    /// a [`Self`] if all configurations are valid.
     pub fn try_create(
         filter_configs: impl IntoIterator<Item = FilterConfig>,
     ) -> Result<Self, CreationError> {
@@ -491,6 +491,6 @@ mod tests {
                 config: None,
             },],
             configs
-        )
+        );
     }
 }

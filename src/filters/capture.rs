@@ -65,25 +65,22 @@ impl Filter for Capture {
             metadata::Value::Bool(capture.is_some()),
         );
 
-        match capture {
-            Some((value, remove)) => {
-                tracing::trace!(key=%self.metadata_key, %value, "captured value");
-                ctx.metadata.insert(self.metadata_key, value);
+        if let Some((value, remove)) = capture {
+            tracing::trace!(key=%self.metadata_key, %value, "captured value");
+            ctx.metadata.insert(self.metadata_key, value);
 
-                if remove != 0 {
-                    if remove < 0 {
-                        ctx.contents.remove_head(remove.unsigned_abs());
-                    } else {
-                        ctx.contents.remove_tail(remove as _);
-                    }
+            if remove != 0 {
+                if remove < 0 {
+                    ctx.contents.remove_head(remove.unsigned_abs());
+                } else {
+                    ctx.contents.remove_tail(remove as _);
                 }
+            }
 
-                Ok(())
-            }
-            _ => {
-                tracing::trace!(key = %self.metadata_key, "No value captured");
-                Err(FilterError::NoValueCaptured)
-            }
+            Ok(())
+        } else {
+            tracing::trace!(key = %self.metadata_key, "No value captured");
+            Err(FilterError::NoValueCaptured)
         }
     }
 }

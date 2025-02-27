@@ -353,8 +353,7 @@ impl Protocol {
     /// Returns the packet's nonce.
     pub fn nonce(&self) -> u8 {
         match self {
-            Protocol::Ping { nonce, .. } => *nonce,
-            Protocol::PingReply { nonce, .. } => *nonce,
+            Protocol::Ping { nonce, .. } | Protocol::PingReply { nonce, .. } => *nonce,
         }
     }
 

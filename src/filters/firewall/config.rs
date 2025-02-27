@@ -158,7 +158,7 @@ impl From<Rule> for proto::firewall::Rule {
     }
 }
 
-/// Invalid min and max values for a [PortRange].
+/// Invalid min and max values for a [`PortRange`].
 #[derive(Debug, thiserror::Error)]
 pub enum PortRangeError {
     #[error("invalid port range: min {min:?} is greater than or equal to max {max:?}")]
@@ -170,8 +170,9 @@ pub enum PortRangeError {
 pub struct PortRange(Range<u16>);
 
 impl PortRange {
-    /// Creates a new [PortRange], where min is inclusive, max is exclusive.
-    /// [Result] will be a [PortRangeError] if `min >= max`.
+    /// Creates a new [`Self`], where min is inclusive, max is exclusive.
+    ///
+    /// Result will be a [`PortRangeError`] if `min >= max`.
     pub fn new(min: u16, max: u16) -> Result<Self, PortRangeError> {
         if min >= max {
             return Err(PortRangeError::InvalidRange { min, max });
@@ -199,7 +200,7 @@ impl From<PortRange> for proto::firewall::PortRange {
 }
 
 impl Serialize for PortRange {
-    /// Serialise the [PortRange] into a single digit if min and max are the same
+    /// Serialise the [`Self`] into a single digit if min and max are the same
     /// otherwise, serialise it to "min-max".
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -217,7 +218,8 @@ impl Serialize for PortRange {
 impl<'de> Deserialize<'de> for PortRange {
     /// Port ranges can be specified in yaml as either "10" as as single value
     /// or as "10-20" as a range, between a minimum and a maximum.
-    /// This deserializes either format into a [PortRange].
+    ///
+    /// This deserializes either format into a [`Self`].
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -227,7 +229,7 @@ impl<'de> Deserialize<'de> for PortRange {
         impl Visitor<'_> for PortRangeVisitor {
             type Value = PortRange;
 
-            fn expecting(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+            fn expecting(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
                 f.write_str("A port range in the format of '10' or '10-20'")
             }
 

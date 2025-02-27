@@ -187,8 +187,7 @@ async fn test(t: &mut TestHelper, yaml: &str, address_type: AddressType) -> mpsc
     };
 
     let client_addr = match address_type {
-        AddressType::Ipv4 => socket.local_addr().unwrap(),
-        AddressType::Ipv6 => socket.local_addr().unwrap(),
+        AddressType::Ipv4 | AddressType::Ipv6 => socket.local_addr().unwrap(),
         AddressType::Random => unreachable!(),
     };
 

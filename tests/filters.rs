@@ -68,7 +68,7 @@ async fn test_filter() {
                     SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port).into(),
                 )]
                 .into(),
-            )
+            );
         });
     client_config.dyn_cfg.filters().unwrap().store(
         quilkin::filters::FilterChain::try_create([Filter {
@@ -155,7 +155,7 @@ async fn debug_filter() {
                     SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), server_port).into(),
                 )]
                 .into(),
-            )
+            );
         });
     client_config.dyn_cfg.filters().unwrap().store(
         quilkin::filters::FilterChain::try_create([Filter {

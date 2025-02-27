@@ -33,7 +33,7 @@ pub struct Relay {
     /// Port for mDS service.
     #[clap(short, long, env = "QUILKIN_MDS_PORT", default_value_t = PORT)]
     pub mds_port: u16,
-    /// Port for xDS management_server service
+    /// Port for xDS management server service
     #[clap(short, long, env = super::PORT_ENV_VAR, default_value_t = super::manage::PORT)]
     pub xds_port: u16,
     /// The interval in seconds at which the relay will send a discovery request

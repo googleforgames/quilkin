@@ -30,7 +30,7 @@ use crate::net::endpoint::Endpoint;
 
 const QUILKIN_TOKEN_LABEL: &str = "quilkin.dev/tokens";
 
-/// Auto-generated derived type for GameServerSpec via `CustomResource`
+/// Auto-generated derived type for [`GameServerSpec`] via `CustomResource`
 #[derive(Clone, Debug, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct GameServer {
@@ -367,11 +367,12 @@ impl Default for Health {
 pub struct GameServerPort {
     /// Name is the descriptive name of the port
     pub name: String,
-    /// PortPolicy defines the policy for how the HostPort is populated.
-    /// Dynamic port will allocate a HostPort within the selected MIN_PORT and MAX_PORT range passed to the controller
-    /// at installation time.
-    /// When `Static` portPolicy is specified, `HostPort` is required, to specify the port that game clients will
-    /// connect to
+    /// Defines the policy for how the [`Self::host_port`] is populated.
+    ///
+    /// - Dynamic port will allocate a `HostPort` within the selected `MIN_PORT`
+    ///   and `MAX_PORT` range passed to the controller at installation time.
+    /// - When `Static` portPolicy is specified, `HostPort` is required, to
+    ///   specify the port that game clients will connect to
     #[serde(default)]
     pub port_policy: PortPolicy,
     /// The name of the container on which to open the port. Defaults to the
@@ -405,33 +406,33 @@ pub struct GameServerStatus {
 
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 pub enum GameServerState {
-    /// A dynamically allocating GameServer is being created, an open port needs
+    /// A dynamically allocating [`GameServer`] is being created, an open port needs
     /// to be allocated
     PortAllocation,
-    /// The Pod for the GameServer is being created.
+    /// The Pod for the [`GameServer`] is being created.
     Creating,
-    /// The Pods for the GameServer are being created but are not yet Scheduled
+    /// The Pods for the [`GameServer`] are being created but are not yet Scheduled
     Starting,
     /// We have determined that the Pod has been scheduled in the cluster --
-    /// basically, we have a NodeName
+    /// basically, we have a `NodeName`
     Scheduled,
-    /// The GameServer has declared that it is ready
+    /// The [`GameServer`] has declared that it is ready
     RequestReady,
-    /// The GameServer is ready to take connections from game clients.
+    /// The [`GameServer`] is ready to take connections from game clients.
     Ready,
-    /// The GameServer has shutdown and everything needs to be deleted from the cluster
+    /// The [`GameServer`] has shutdown and everything needs to be deleted from the cluster
     Shutdown,
-    /// Something has gone wrong with the Gameserver and it cannot be resolved
+    /// Something has gone wrong with the [`GameServer`] and it cannot be resolved
     Error,
-    /// The GameServer has failed its health checks
+    /// The [`GameServer`] has failed its health checks
     Unhealthy,
-    /// The GameServer is reserved and therefore can be allocated but not removed
+    /// The [`GameServer`] is reserved and therefore can be allocated but not removed
     Reserved,
-    /// The GameServer has been allocated to a session
+    /// The [`GameServer`] has been allocated to a session
     Allocated,
 }
 
-/// The port that was allocated to a GameServer.
+/// The port that was allocated to a [`GameServer`].
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 pub struct GameServerStatusPort {
     pub name: String,
@@ -442,13 +443,13 @@ pub struct GameServerStatusPort {
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SdkServer {
-    /// LogLevel for SDK server (sidecar) logs. Defaults to "Info"
+    /// The log level for SDK server (sidecar) logs. Defaults to [`SdkServerLogLevel::Info`]
     #[serde(default)]
     pub log_level: SdkServerLogLevel,
-    /// GRPCPort is the port on which the SDK Server binds the gRPC server to accept incoming connections
+    /// The port on which the SDK Server binds the gRPC server to accept incoming connections
     #[serde(default = "default_sdk_grpc_port")]
     pub grpc_port: u16,
-    /// HTTPPort is the port on which the SDK Server binds the HTTP gRPC gateway server to accept incoming connections
+    /// The port on which the SDK Server binds the HTTP gRPC gateway server to accept incoming connections
     #[serde(default = "default_sdk_http_port")]
     pub http_port: u16,
 }
@@ -505,18 +506,18 @@ impl Default for PortPolicy {
     }
 }
 
-/// the strategy that a Fleet & GameServers will use when scheduling
-/// GameServers' Pods across a cluster. In future versions, this will also
+/// The strategy that a [`Fleet`] & [`GameServer`]s will use when scheduling
+/// [`GameServer`]s' Pods across a cluster. In future versions, this will also
 /// impact Fleet scale down, and Pod Scheduling.
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 pub enum SchedulingStrategy {
-    /// Prioritise allocating GameServers on Nodes with the most Allocated, and
-    /// then Ready GameServers to bin pack as many Allocated GameServers on a
+    /// Prioritise allocating [`GameServer`]s on Nodes with the most Allocated, and
+    /// then Ready [`GameServer`]s to bin pack as many Allocated [`GameServer`]s on a
     /// single node.  This is most useful for dynamic Kubernetes clusters - such
     /// as on Cloud Providers.
     Packed,
-    /// prioritise allocating GameServers on Nodes with the least Allocated, and
-    /// then Ready GameServers to distribute Allocated GameServers across many
+    /// Prioritise allocating [`GameServer`]s on Nodes with the least Allocated, and
+    /// then Ready [`GameServer`]s to distribute Allocated [`GameServer`]s across many
     /// nodes. This is most useful for statically sized Kubernetes clusters -
     /// such as on physical hardware.
     Distributed,
@@ -646,18 +647,17 @@ impl ::kube::core::crd::v1::CustomResourceExt for Fleet {
             if scale.is_some() {
                 ::serde_json::Value::Object({
                     let mut object = ::serde_json::Map::new();
-                    let _ = object.insert(
+                    object.insert(
                         ("status").into(),
                         ::serde_json::Value::Object(::serde_json::Map::new()),
                     );
-                    let _ =
-                        object.insert(("scale").into(), ::serde_json::to_value(&scale).unwrap());
+                    object.insert(("scale").into(), ::serde_json::to_value(&scale).unwrap());
                     object
                 })
             } else {
                 ::serde_json::Value::Object({
                     let mut object = ::serde_json::Map::new();
-                    let _ = object.insert(
+                    object.insert(
                         ("status").into(),
                         ::serde_json::Value::Object(::serde_json::Map::new()),
                     );
@@ -677,81 +677,79 @@ impl ::kube::core::crd::v1::CustomResourceExt for Fleet {
         let schema = r#gen.into_root_schema_for::<Self>();
         let jsondata = ::serde_json::Value::Object({
             let mut object = ::serde_json::Map::new();
-            let _ = object.insert(
+            object.insert(
                 ("metadata").into(),
                 ::serde_json::Value::Object({
                     let mut object = ::serde_json::Map::new();
-                    let _ = object.insert(
+                    object.insert(
                         ("name").into(),
                         ::serde_json::to_value("fleets.agones.dev").unwrap(),
                     );
                     object
                 }),
             );
-            let _ = object.insert(
+            object.insert(
                 ("spec").into(),
                 ::serde_json::Value::Object({
                     let mut object = ::serde_json::Map::new();
-                    let _ = object.insert(
+                    object.insert(
                         ("group").into(),
                         ::serde_json::to_value("agones.dev").unwrap(),
                     );
-                    let _ = object.insert(
+                    object.insert(
                         ("scope").into(),
                         ::serde_json::to_value("Namespaced").unwrap(),
                     );
-                    let _ = object.insert(
+                    object.insert(
                         ("names").into(),
                         ::serde_json::Value::Object({
                             let mut object = ::serde_json::Map::new();
-                            let _ = object.insert(
+                            object.insert(
                                 ("categories").into(),
                                 ::serde_json::to_value(categories).unwrap(),
                             );
-                            let _ = object.insert(
+                            object.insert(
                                 ("plural").into(),
                                 ::serde_json::to_value("fleets").unwrap(),
                             );
-                            let _ = object.insert(
+                            object.insert(
                                 ("singular").into(),
                                 ::serde_json::to_value("fleet").unwrap(),
                             );
-                            let _ = object
+                            object
                                 .insert(("kind").into(), ::serde_json::to_value("Fleet").unwrap());
-                            let _ = object.insert(
+                            object.insert(
                                 ("shortNames").into(),
                                 ::serde_json::to_value(shorts).unwrap(),
                             );
                             object
                         }),
                     );
-                    let _ = object.insert(
+                    object.insert(
                         ("versions").into(),
                         ::serde_json::Value::Array(<[_]>::into_vec(Box::new([
                             ::serde_json::Value::Object({
                                 let mut object = ::serde_json::Map::new();
-                                let _ = object
+                                object
                                     .insert(("name").into(), ::serde_json::to_value("v1").unwrap());
-                                let _ = object
-                                    .insert(("served").into(), ::serde_json::Value::Bool(true));
-                                let _ = object
-                                    .insert(("storage").into(), ::serde_json::Value::Bool(true));
-                                let _ = object.insert(
+                                object.insert(("served").into(), ::serde_json::Value::Bool(true));
+                                object.insert(("storage").into(), ::serde_json::Value::Bool(true));
+                                object.insert(
                                     ("schema").into(),
                                     ::serde_json::Value::Object({
                                         let mut object = ::serde_json::Map::new();
-                                        let _ = object.insert(
+                                        object.insert(
                                             ("openAPIV3Schema").into(),
                                             ::serde_json::to_value(&schema).unwrap(),
                                         );
                                         object
                                     }),
                                 );
-                                let _ = object.insert(
+                                object.insert(
                                     ("additionalPrinterColumns").into(),
                                     ::serde_json::to_value(columns).unwrap(),
                                 );
-                                let _ = object.insert(
+                                object.insert(
                                     ("subresources").into(),
                                     ::serde_json::to_value(subres).unwrap(),
                                 );
@@ -797,7 +795,7 @@ impl ::kube::core::object::HasStatus for Fleet {
     }
 }
 
-/// FleetSpec is the spec for a Fleet. More info: <https://agones.dev/site/docs/reference/agones_crd_api_reference/#agones.dev/v1.Fleet>
+/// The spec for a [`Fleet`]. More info: <https://agones.dev/site/docs/reference/agones_crd_api_reference/#agones.dev/v1.Fleet>
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema, Default)]
 pub struct FleetSpec {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -806,11 +804,10 @@ pub struct FleetSpec {
     pub scheduling: Option<FleetScheduling>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub strategy: Option<FleetStrategy>,
-    /// GameServer is the data structure for a GameServer resource.
+    /// Template for a [`GameServer`] resource.
     pub template: GameServerTemplateSpec,
 }
 
-/// FleetSpec is the spec for a Fleet. More info: <https://agones.dev/site/docs/reference/agones_crd_api_reference/#agones.dev/v1.Fleet>
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
 pub enum FleetScheduling {
     Packed,
@@ -847,16 +844,16 @@ pub enum FleetStrategyType {
     RollingUpdate,
 }
 
-/// GameServer is the data structure for a GameServer resource.
+/// Spec for a [`GameServer`] resource.
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema, Default)]
 pub struct GameServerTemplateSpec {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub metadata: Option<ObjectMeta>,
-    /// GameServerSpec is the spec for a GameServer resource. More info: <https://agones.dev/site/docs/reference/agones_crd_api_reference/#agones.dev/v1.GameServer>
+    /// The spec for a [`GameServer`] resource. More info: <https://agones.dev/site/docs/reference/agones_crd_api_reference/#agones.dev/v1.GameServer>
     pub spec: GameServerSpec,
 }
 
-/// FleetStatus is the status of a Fleet. More info: <https://agones.dev/site/docs/reference/agones_crd_api_reference/#agones.dev/v1.Fleet>
+/// The status of a Fleet. More info: <https://agones.dev/site/docs/reference/agones_crd_api_reference/#agones.dev/v1.Fleet>
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
 pub struct FleetStatus {
     #[serde(

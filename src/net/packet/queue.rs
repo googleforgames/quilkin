@@ -16,7 +16,7 @@ pub fn queue(capacity: usize) -> std::io::Result<PacketQueue> {
 
 /// A simple packet queue that signals when a packet is pushed
 ///
-/// For io_uring this notifies an eventfd that will be processed on the next
+/// For `io_uring` this notifies an eventfd that will be processed on the next
 /// completion loop
 #[derive(Clone)]
 pub struct PacketQueueSender {

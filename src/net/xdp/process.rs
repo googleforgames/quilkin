@@ -179,12 +179,10 @@ impl State {
 
         (
             port,
-            asn.as_ref()
-                .map(|(ipe, asn)| AsnInfo {
-                    prefix: &ipe.prefix,
-                    asn: asn.as_str(),
-                })
-                .unwrap_or(metrics::EMPTY),
+            asn.as_ref().map_or(metrics::EMPTY, |(ipe, asn)| AsnInfo {
+                prefix: &ipe.prefix,
+                asn: asn.as_str(),
+            }),
             ips,
         )
     }
@@ -205,7 +203,7 @@ impl State {
 }
 
 /// Linux by default only allocates ephemeral ports between 32768..=60999
-/// (see /proc/sys/net/ipv4/ip_local_port_range), so we take advantage and only
+/// (see `/proc/sys/net/ipv4/ip_local_port_range`), so we take advantage and only
 /// allocate ports above that range. Note that we check that this range hasn't
 /// been modified during XDP initialization, if that changes the port mapping
 /// code could cause issues
@@ -304,7 +302,7 @@ impl PortMap {
             self.buckets
                 .get_unchecked_mut(bucket)
                 .get_unchecked_mut(i % BUCKET_SIZE)
-                .set(client_addr)
+                .set(client_addr);
         }
     }
 }
