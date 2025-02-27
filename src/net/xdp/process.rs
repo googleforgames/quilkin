@@ -68,7 +68,7 @@ impl filters::PacketMut for PacketWrapper {
     fn remove_head(&mut self, length: usize) {
         let mut data = [0u8; 2048];
 
-        if length > self.headers.data_length {
+        if length > self.headers.data_length || length == 0 {
             return;
         }
 
@@ -76,6 +76,9 @@ impl filters::PacketMut for PacketWrapper {
             self.headers.data_offset + length
                 ..self.headers.data_offset + self.headers.data_length - length,
         ) else {
+            if self.buffer.adjust_tail(-(length as i32)).is_ok() {
+                self.headers.data_length -= length;
+            }
             return;
         };
         let remainder = slice.len();
