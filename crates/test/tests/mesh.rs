@@ -193,8 +193,7 @@ trace_test!(datacenter_discovery, {
         let ipv6_dc = dcs.get(&std::net::Ipv6Addr::LOCALHOST.into());
 
         match (ipv4_dc, ipv6_dc) {
-            (Some(dc), None) => assert_eq!(&*dc, datacenter),
-            (None, Some(dc)) => assert_eq!(&*dc, datacenter),
+            (Some(dc), None) | (None, Some(dc)) => assert_eq!(&*dc, datacenter),
             (Some(dc1), Some(dc2)) => {
                 assert_eq!(&*dc1, datacenter);
                 assert_eq!(&*dc2, datacenter);

@@ -24,7 +24,7 @@ use crate::{
 use quilkin_xds::generated::quilkin::filters::token_router::v1alpha1 as proto;
 
 /// Filter that only allows packets to be passed to Endpoints that have a matching
-/// connection_id to the token stored in the Filter's dynamic metadata.
+/// `connection_id` to the token stored in the Filter's dynamic metadata.
 #[derive(Default)]
 pub struct TokenRouter {
     config: Config,
@@ -189,8 +189,7 @@ impl TryFrom<proto::TokenRouter> for Config {
         Ok(Self {
             metadata_key: p
                 .metadata_key
-                .map(metadata::Key::new)
-                .unwrap_or_else(default_metadata_key),
+                .map_or_else(default_metadata_key, metadata::Key::new),
         })
     }
 }
@@ -333,7 +332,7 @@ mod tests {
             "127.0.0.1:100".parse().unwrap(),
             pool.alloc_slice(b"hello"),
             dest,
-        ))
+        ));
     }
 
     fn assert_read<F, P>(filter: &F, mut ctx: ReadContext<'_, P>)

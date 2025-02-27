@@ -68,7 +68,7 @@ mod tests {
         let response = health.check_liveness();
         assert_eq!(response.status(), StatusCode::OK);
 
-        let _ = std::panic::catch_unwind(|| {
+        let _unused = std::panic::catch_unwind(|| {
             panic!("oh no!");
         });
 

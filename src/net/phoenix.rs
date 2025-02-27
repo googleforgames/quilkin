@@ -578,6 +578,7 @@ impl Coordinates {
     fn distance_to(&self, other: &Coordinates) -> f64 {
         let x_diff = self.x - other.x;
         let y_diff = self.y - other.y;
+        #[allow(clippy::imprecise_flops)]
         (x_diff.powi(2) + y_diff.powi(2)).sqrt()
     }
 }
@@ -622,7 +623,7 @@ impl Node {
         coordinates.y = (coordinates.y + (outgoing * weight)) / 2.0;
 
         crate::metrics::phoenix_distance(self.icao_code, self.error_estimate)
-            .set(Coordinates::ORIGIN.distance_to(coordinates))
+            .set(Coordinates::ORIGIN.distance_to(coordinates));
     }
 }
 

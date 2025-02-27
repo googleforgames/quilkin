@@ -78,13 +78,13 @@ impl Eq for FilterError {}
 impl PartialEq for FilterError {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Self::NoValueCaptured, Self::NoValueCaptured) => true,
+            (Self::FirewallDenied, Self::FirewallDenied)
+            | (Self::MatchNoMetadata, Self::MatchNoMetadata)
+            | (Self::Dropped, Self::Dropped)
+            | (Self::RateLimitExceeded, Self::RateLimitExceeded)
+            | (Self::NoValueCaptured, Self::NoValueCaptured) => true,
             (Self::TokenRouter(tra), Self::TokenRouter(trb)) => tra.eq(trb),
             (Self::Io(ia), Self::Io(ib)) => ia.kind().eq(&ib.kind()),
-            (Self::FirewallDenied, Self::FirewallDenied) => true,
-            (Self::MatchNoMetadata, Self::MatchNoMetadata) => true,
-            (Self::Dropped, Self::Dropped) => true,
-            (Self::RateLimitExceeded, Self::RateLimitExceeded) => true,
             (Self::Custom(a), Self::Custom(b)) => a == b,
             _ => false,
         }

@@ -77,14 +77,15 @@ fn install() {
         }
 
         // Determine the appropriate cargo/bin directory to place the binary in
-        let mut cargo_root = std::env::var_os("CARGO_HOME")
-            .map(PathBuf::from)
-            .unwrap_or_else(|| {
+        let mut cargo_root = std::env::var_os("CARGO_HOME").map_or_else(
+            || {
                 let home = std::env::var_os("HOME").expect("failed to locate CARGO_HOME or HOME");
                 let mut home = PathBuf::from(home);
                 home.push(".cargo");
                 home
-            });
+            },
+            PathBuf::from,
+        );
 
         cargo_root.push("bin");
 
@@ -145,14 +146,15 @@ fn install_protoc() {
         panic!("curl failed to download protoc zip");
     }
 
-    let mut cargo_root = std::env::var_os("CARGO_HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| {
+    let mut cargo_root = std::env::var_os("CARGO_HOME").map_or_else(
+        || {
             let home = std::env::var_os("HOME").expect("failed to locate CARGO_HOME or HOME");
             let mut home = PathBuf::from(home);
             home.push(".cargo");
             home
-        });
+        },
+        PathBuf::from,
+    );
 
     if !Command::new("unzip")
         .arg("-q")

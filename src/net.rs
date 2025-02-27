@@ -47,9 +47,9 @@ macro_rules! uring_inner_spawn {
     };
 }
 
-/// Allows creation of spans only when debug_assertions are enabled, to avoid
-/// hitting the cap of 4096 threads that is unconfigurable in tracing_subscriber -> sharded_slab
-/// for span ids
+/// Allows creation of spans only when `debug_assertions` are enabled, to avoid
+/// hitting the cap of 4096 threads that is unconfigurable in
+/// `tracing_subscriber` -> `sharded_slab` for span ids
 macro_rules! uring_span {
     ($span:expr_2021) => {{
         cfg_if::cfg_if! {
@@ -162,7 +162,7 @@ fn enable_reuse(sock: &Socket) -> io::Result<()> {
 }
 
 /// An ipv6 socket that can accept and send data from either a local ipv4 address or ipv6 address
-/// with port reuse enabled and only_v6 set to false.
+/// with port reuse enabled and `only_v6` set to false.
 pub struct DualStackLocalSocket {
     socket: UdpSocket,
     local_addr: SocketAddr,
@@ -244,7 +244,7 @@ cfg_if::cfg_if! {
     }
 }
 
-/// The same as DualStackSocket but uses epoll instead of uring.
+/// The same as [`DualStackSocket`] but uses epoll instead of uring.
 #[derive(Debug)]
 pub struct DualStackEpollSocket {
     socket: tokio::net::UdpSocket,

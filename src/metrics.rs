@@ -32,13 +32,12 @@ pub(crate) const WRITE: Direction = Direction::Write;
 pub(crate) const ASN_LABEL: &str = "asn";
 pub(crate) const PREFIX_LABEL: &str = "ip_prefix";
 
-/// Label value for [DIRECTION_LABEL] for `read` events
+/// Label value for [`DIRECTION_LABEL`] for `read` events
 pub const READ_DIRECTION_LABEL: &str = "read";
-/// Label value for [DIRECTION_LABEL] for `write` events
+/// Label value for [`DIRECTION_LABEL`] for `write` events
 pub const WRITE_DIRECTION_LABEL: &str = "write";
 
-/// Returns the [prometheus::Registry] containing all the metrics
-/// registered in Quilkin.
+/// Returns the [`Registry`] containing all the metrics registered in Quilkin.
 pub fn registry() -> &'static Registry {
     static REGISTRY: Lazy<Registry> =
         Lazy::new(|| Registry::new_custom(Some("quilkin".into()), None).unwrap());
@@ -53,7 +52,7 @@ pub(crate) const BUCKET_START: f64 = 0.00025;
 
 pub(crate) const BUCKET_FACTOR: f64 = 2.0;
 
-/// At an exponential factor of 2.0 (BUCKET_FACTOR), 13 iterations gets us to just over 1 second.
+/// At an exponential factor of 2.0 (`BUCKET_FACTOR`), 13 iterations gets us to just over 1 second.
 /// Any processing that occurs over a second is far too long, so we end bucketing there as we don't
 /// care about granularity past 1 second.
 pub(crate) const BUCKET_COUNT: usize = 13;
@@ -224,7 +223,7 @@ pub(crate) fn processing_time(direction: Direction) -> Histogram {
     PROCESSING_TIME.with_label_values(&[direction.label()])
 }
 
-pub(crate) fn bytes_total(direction: Direction, asn: &AsnInfo) -> IntCounter {
+pub(crate) fn bytes_total(direction: Direction, asn: &AsnInfo<'_>) -> IntCounter {
     static BYTES_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
         prometheus::register_int_counter_vec_with_registry! {
             prometheus::opts! {
@@ -240,7 +239,7 @@ pub(crate) fn bytes_total(direction: Direction, asn: &AsnInfo) -> IntCounter {
     BYTES_TOTAL.with_label_values(&[direction.label(), asn.asn, asn.prefix])
 }
 
-pub(crate) fn errors_total(direction: Direction, display: &str, asn: &AsnInfo) -> IntCounter {
+pub(crate) fn errors_total(direction: Direction, display: &str, asn: &AsnInfo<'_>) -> IntCounter {
     static ERRORS_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
         prometheus::register_int_counter_vec_with_registry! {
             prometheus::opts! {
@@ -256,7 +255,7 @@ pub(crate) fn errors_total(direction: Direction, display: &str, asn: &AsnInfo) -
     ERRORS_TOTAL.with_label_values(&[direction.label(), display, asn.asn, asn.prefix])
 }
 
-pub(crate) fn packet_jitter(direction: Direction, asn: &AsnInfo) -> IntGauge {
+pub(crate) fn packet_jitter(direction: Direction, asn: &AsnInfo<'_>) -> IntGauge {
     static PACKET_JITTER: Lazy<IntGaugeVec> = Lazy::new(|| {
         prometheus::register_int_gauge_vec_with_registry! {
             prometheus::opts! {
@@ -272,7 +271,7 @@ pub(crate) fn packet_jitter(direction: Direction, asn: &AsnInfo) -> IntGauge {
     PACKET_JITTER.with_label_values(&[direction.label(), asn.asn, asn.prefix])
 }
 
-pub(crate) fn packets_total(direction: Direction, asn: &AsnInfo) -> IntCounter {
+pub(crate) fn packets_total(direction: Direction, asn: &AsnInfo<'_>) -> IntCounter {
     static PACKETS_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
         prometheus::register_int_counter_vec_with_registry! {
             prometheus::opts! {
@@ -291,7 +290,7 @@ pub(crate) fn packets_total(direction: Direction, asn: &AsnInfo) -> IntCounter {
 pub(crate) fn packets_dropped_total(
     direction: Direction,
     source: &str,
-    asn: &AsnInfo,
+    asn: &AsnInfo<'_>,
 ) -> IntCounter {
     static PACKETS_DROPPED: Lazy<IntCounterVec> = Lazy::new(|| {
         prometheus::register_int_counter_vec_with_registry! {
@@ -309,7 +308,7 @@ pub(crate) fn packets_dropped_total(
 }
 
 /// Create a generic metrics options.
-/// Use [filter_opts] instead if the intended target is a filter.
+/// Use `filter_opts` instead if the intended target is a filter.
 pub fn opts(name: &str, subsystem: &str, description: &str) -> Opts {
     Opts::new(name, description).subsystem(subsystem)
 }

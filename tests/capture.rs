@@ -73,7 +73,7 @@ async fn token_router() {
                     .unwrap(),
                 )]
                 .into(),
-            )
+            );
         });
 
     let server_port = t.run_server(server_config, None, None).await;

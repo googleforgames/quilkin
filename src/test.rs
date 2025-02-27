@@ -41,7 +41,7 @@ pub fn enable_log(filter: impl Into<EnvFilter>) {
             .pretty()
             .with_ansi(false)
             .with_env_filter(filter)
-            .init()
+            .init();
     });
 }
 
@@ -151,14 +151,18 @@ pub struct OpenSocketRecvPacket {
 
 impl Drop for TestHelper {
     fn drop(&mut self) {
-        for shutdown_tx in self.server_shutdown_tx.iter_mut().flat_map(|tx| tx.take()) {
+        for shutdown_tx in self
+            .server_shutdown_tx
+            .iter_mut()
+            .filter_map(|tx| tx.take())
+        {
             shutdown_tx
                 .send(ShutdownKind::Testing)
                 .map_err(|error| {
                     tracing::warn!(
                         %error,
                         "Failed to send server shutdown over channel"
-                    )
+                    );
                 })
                 .ok();
         }
@@ -335,14 +339,13 @@ impl TestHelper {
     /// Returns a receiver subscribed to the helper's shutdown event.
     async fn get_shutdown_subscriber(&mut self) -> ShutdownRx {
         // If this is the first call, then we set up the channel first.
-        match self.shutdown_ch {
-            Some((_, ref rx)) => rx.clone(),
-            None => {
-                let ch = crate::signal::channel(ShutdownKind::Testing);
-                let recv = ch.1.clone();
-                self.shutdown_ch = Some(ch);
-                recv
-            }
+        if let Some((_, rx)) = &self.shutdown_ch {
+            rx.clone()
+        } else {
+            let ch = crate::signal::channel(ShutdownKind::Testing);
+            let recv = ch.1.clone();
+            self.shutdown_ch = Some(ch);
+            recv
         }
     }
 }

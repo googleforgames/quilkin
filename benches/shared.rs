@@ -326,8 +326,9 @@ impl QuilkinLoop {
             let runtime = tokio::runtime::Runtime::new().unwrap();
             let config = Arc::new(quilkin::Config::default_non_agent());
             config.dyn_cfg.clusters().unwrap().modify(|clusters| {
-                clusters
-                    .insert_default([quilkin::net::endpoint::Endpoint::new(endpoint.into())].into())
+                clusters.insert_default(
+                    [quilkin::net::endpoint::Endpoint::new(endpoint.into())].into(),
+                );
             });
 
             let proxy = quilkin::cli::Proxy {
@@ -559,7 +560,7 @@ fn write_locality(hasher: &mut Hasher, loc: &Option<Locality>) {
     if let Some(key) = loc {
         key.hash(hasher);
     } else {
-        hasher.write("None".as_bytes());
+        hasher.write(b"None");
     }
 }
 

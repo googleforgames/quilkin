@@ -32,7 +32,7 @@ async fn health_server() {
         .clusters()
         .unwrap()
         .modify(|clusters| {
-            clusters.insert_default(["127.0.0.1:0".parse::<Endpoint>().unwrap()].into())
+            clusters.insert_default(["127.0.0.1:0".parse::<Endpoint>().unwrap()].into());
         });
     t.run_server(
         server_config,
@@ -58,7 +58,7 @@ async fn health_server() {
 
     assert_eq!("ok", String::from_utf8(resp).unwrap());
 
-    let _ = panic::catch_unwind(|| {
+    let _unused = panic::catch_unwind(|| {
         panic!("oh no!");
     });
 

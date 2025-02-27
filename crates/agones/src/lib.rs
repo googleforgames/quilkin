@@ -89,7 +89,7 @@ impl Client {
     /// Executes the setup required:
     /// * Creates a test namespace for this test
     /// * Removes previous test namespaces
-    /// * Retrieves the IMAGE_TAG to test from env vars, and panics if it if not available.
+    /// * Retrieves the `IMAGE_TAG` to test from env vars, and panics if it if not available.
     pub async fn new() -> Client {
         let mut client = CLIENT
             .get_or_init(|| async {
@@ -224,11 +224,11 @@ async fn add_agones_service_account(client: kube::Client, namespace: String) {
         }]),
     };
 
-    let _ = role_bindings.create(&pp, &role_binding).await.unwrap();
+    role_bindings.create(&pp, &role_binding).await.unwrap();
 }
 
 /// Creates a Service account and related RBAC objects to enable a process to query Agones
-/// and ConfigMap resources within a cluster
+/// and [`ConfigMap`] resources within a cluster
 pub async fn create_agones_rbac_read_account(
     client: &Client,
     service_accounts: Api<ServiceAccount>,
@@ -408,8 +408,8 @@ pub async fn quilkin_proxy_deployment(
     SocketAddr::new(external_ip.parse().unwrap(), host_port)
 }
 
-/// Create a Fleet, and pick on it's GameServers and add the token to it.
-/// Returns the details of the GameServer that has been selected.
+/// Create a Fleet, and pick on it's [`GameServer`]s and add the token to it.
+/// Returns the details of the [`GameServer`] that has been selected.
 pub async fn create_tokenised_gameserver(
     fleets: Api<Fleet>,
     gameservers: Api<GameServer>,
@@ -453,7 +453,7 @@ pub async fn create_tokenised_gameserver(
     gs
 }
 
-/// Returns a test GameServer with the UDP test binary that is used for
+/// Returns a test [`GameServer`] with the UDP test binary that is used for
 /// Agones e2e tests.
 pub fn game_server() -> GameServer {
     let mut resources = BTreeMap::new();
@@ -497,7 +497,7 @@ pub fn game_server() -> GameServer {
     }
 }
 
-/// Returns a Fleet of 3 replicas of the UDP testing GameServer
+/// Returns a Fleet of 3 replicas of the UDP testing [`GameServer`]
 pub fn fleet() -> Fleet {
     let gs = game_server();
     Fleet {
@@ -517,12 +517,11 @@ pub fn fleet() -> Fleet {
     }
 }
 
-/// Condition to wait for a GameServer to become Ready.
+/// Condition to wait for a [`GameServer`] to become Ready.
 pub fn is_gameserver_ready() -> impl Condition<GameServer> {
     |obj: Option<&GameServer>| {
         obj.and_then(|gs| gs.status.clone())
-            .map(|status| matches!(status.state, GameServerState::Ready))
-            .unwrap_or(false)
+            .is_some_and(|status| matches!(status.state, GameServerState::Ready))
     }
 }
 
@@ -554,8 +553,7 @@ pub fn is_deployment_ready() -> impl Condition<Deployment> {
                 .status
                 .as_ref()
                 .and_then(|status| status.ready_replicas)
-                .map(|replicas| &replicas == expected)
-                .unwrap_or(false);
+                .is_some_and(|replicas| &replicas == expected);
         }
         false
     }
@@ -571,8 +569,7 @@ pub fn is_fleet_ready() -> impl Condition<Fleet> {
                 .status
                 .as_ref()
                 .and_then(|status| status.ready_replicas)
-                .map(|replicas| &replicas == expected)
-                .unwrap_or(false);
+                .is_some_and(|replicas| &replicas == expected);
         }
         false
     }
@@ -628,13 +625,13 @@ pub fn quilkin_container(
             name,
             mount_path: "/etc/quilkin".into(),
             ..Default::default()
-        }])
+        }]);
     };
 
     container
 }
 
-/// Return a ConfigMap in the format that Quilkin expects it to be able to
+/// Return a [`ConfigMap`] in the format that Quilkin expects it to be able to
 /// consume the config yaml.
 pub fn quilkin_config_map(config: &str) -> ConfigMap {
     ConfigMap {
@@ -650,7 +647,7 @@ pub fn quilkin_config_map(config: &str) -> ConfigMap {
     }
 }
 
-/// Return a ConfigMap that has a standard testing Token Router configuration
+/// Return a [`ConfigMap`] that has a standard testing Token Router configuration
 pub async fn create_token_router_config(config_maps: &Api<ConfigMap>) -> ConfigMap {
     let pp = PostParams::default();
 
@@ -674,7 +671,7 @@ filters:
     config_maps.create(&pp, &config_map).await.unwrap()
 }
 
-/// Convenience function to return the address with the first port of GameServer
+/// Convenience function to return the address with the first port of [`GameServer`]
 pub fn gameserver_address(gs: &GameServer) -> String {
     let status = gs.status.as_ref().unwrap();
     let address = format!(

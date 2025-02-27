@@ -359,7 +359,7 @@ async fn packet_manipulation() {
         let data = [0xf1u8; 11];
         let mut len = data.len();
 
-        while dbg!(len) > 0 {
+        while len > 0 {
             let mut client_packet = unsafe { umem.alloc().unwrap() };
 
             etherparse::PacketBuilder::ethernet2([3, 3, 3, 3, 3, 3], [4, 4, 4, 4, 4, 4])
@@ -852,7 +852,7 @@ async fn qcmp() {
                 assert_eq!(ping_time, client_timestamp);
                 assert_eq!(nonce, 99);
             }
-            _ => unreachable!(),
+            qcmp::Protocol::Ping { .. } => unreachable!(),
         }
 
         umem.free_packet(pong_packet);

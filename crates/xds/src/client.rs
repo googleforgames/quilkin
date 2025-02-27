@@ -258,7 +258,7 @@ impl MdsClient {
                         }
 
                         change_watcher.abort();
-                        let _ = change_watcher.await;
+                        let _unused = change_watcher.await;
                     }
 
                     is_healthy.store(false, Ordering::SeqCst);

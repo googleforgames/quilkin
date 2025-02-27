@@ -74,7 +74,7 @@ impl Manage {
                 client
                     .delta_stream(config.clone(), ready.relay_is_healthy.clone())
                     .await
-                    .map_err(|_| eyre::eyre!("failed to acquire delta stream"))?,
+                    .map_err(|_err| eyre::eyre!("failed to acquire delta stream"))?,
             )
         } else {
             None

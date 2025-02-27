@@ -90,10 +90,7 @@ mod tests {
         // let's allocate this specific game server
         let mut t = TestHelper::default();
         let (mut rx, socket) = t.open_socket_and_recv_multiple_packets().await;
-        socket
-            .send_to("ALLOCATE".as_bytes(), gs_address)
-            .await
-            .unwrap();
+        socket.send_to(b"ALLOCATE", gs_address).await.unwrap();
 
         let response = timeout(SLOW, rx.recv())
             .await
@@ -169,7 +166,7 @@ mod tests {
             .unwrap();
     }
 
-    /// Creates Quilkin xDS management instance that is in the mode to watch Agones GameServers
+    /// Creates Quilkin xDS management instance that is in the mode to watch Agones `GameServers`
     /// in this test namespace
     async fn agones_control_plane(client: &Client, deployments: Api<Deployment>) {
         let services: Api<Service> = client.namespaced_api();

@@ -273,7 +273,7 @@ impl Proxy {
                             let _stream = client
                                 .delta_subscribe(config.clone(), xds_is_healthy.clone(), tx, SUBS)
                                 .await
-                                .map_err(|_| eyre::eyre!("failed to acquire delta stream"))?;
+                                .map_err(|_err| eyre::eyre!("failed to acquire delta stream"))?;
 
                             let _ = shutdown_rx.changed().await;
                             Ok::<_, eyre::Error>(())

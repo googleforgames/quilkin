@@ -71,7 +71,7 @@ impl<'de> Deserialize<'de> for Config {
         impl<'de> serde::de::Visitor<'de> for Visitor {
             type Value = Config;
 
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("Quilkin config")
             }
 
@@ -219,7 +219,7 @@ impl<'de> Deserialize<'de> for DynamicConfig {
         impl<'de> serde::de::Visitor<'de> for DynVisitor {
             type Value = DynamicConfig;
 
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("Quilkin dynamic config")
             }
 
@@ -919,12 +919,12 @@ impl DatacenterMap {
     }
 
     #[inline]
-    pub fn get(&self, key: &IpAddr) -> Option<dashmap::mapref::one::Ref<IpAddr, Datacenter>> {
+    pub fn get(&self, key: &IpAddr) -> Option<dashmap::mapref::one::Ref<'_, IpAddr, Datacenter>> {
         self.map.get(key)
     }
 
     #[inline]
-    pub fn iter(&self) -> dashmap::iter::Iter<IpAddr, Datacenter> {
+    pub fn iter(&self) -> dashmap::iter::Iter<'_, IpAddr, Datacenter> {
         self.map.iter()
     }
 
@@ -1165,7 +1165,7 @@ where
     T: typemap_rev::TypeMapKey,
     T::Value: Default + Clone + std::fmt::Debug,
 {
-    tm.insert::<T>(T::Value::default())
+    tm.insert::<T>(T::Value::default());
 }
 
 /// Filter is the configuration for a single filter
