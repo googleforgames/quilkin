@@ -13,7 +13,7 @@ use quilkin_xdp::xdp::{
     HeapSlab, Umem,
     packet::{
         Packet, PacketError, csum,
-        net_types::{IpAddresses, NetworkU16, UdpPacket},
+        net_types::{IpAddresses, NetworkU16, UdpHdr, UdpHeaders},
     },
 };
 use std::{
@@ -29,21 +29,19 @@ use std::{
 /// Wrapper around the actual packet buffer and the UDP metadata it parsed to
 /// so that we can satisify the filter traits
 struct PacketWrapper {
-    inner: Packet,
-    udp: UdpPacket,
+    buffer: Packet,
+    headers: UdpHeaders,
 }
 
 impl filters::Packet for PacketWrapper {
     #[inline]
     fn as_slice(&self) -> &[u8] {
-        self.inner
-            .slice_at_offset(self.udp.data_offset, self.udp.data_length)
-            .unwrap()
+        &self.buffer[self.headers.data_offset..self.headers.data_offset + self.headers.data_length]
     }
 
     #[inline]
     fn len(&self) -> usize {
-        self.udp.data_length
+        self.headers.data_length
     }
 }
 
@@ -52,49 +50,55 @@ impl filters::PacketMut for PacketWrapper {
 
     #[inline]
     fn extend_head(&mut self, bytes: &[u8]) {
-        self.inner
-            .insert(self.udp.data_offset, bytes)
+        self.buffer
+            .insert(self.headers.data_offset, bytes)
             .expect("failed to extend head");
-        self.udp.data_length += bytes.len();
+        self.headers.data_length += bytes.len();
     }
 
     #[inline]
     fn extend_tail(&mut self, bytes: &[u8]) {
-        self.inner
-            .insert(self.inner.len(), bytes)
+        self.buffer
+            .insert(self.buffer.len(), bytes)
             .expect("failed to extend head");
-        self.udp.data_length += bytes.len();
+        self.headers.data_length += bytes.len();
     }
 
     #[inline]
     fn remove_head(&mut self, length: usize) {
         let mut data = [0u8; 2048];
 
-        let Ok(slice) = self
-            .inner
-            .slice_at_offset(self.udp.data_offset + length, self.udp.data_length - length)
-        else {
+        if length > self.headers.data_length {
+            return;
+        }
+
+        let Some(slice) = self.buffer.get(
+            self.headers.data_offset + length
+                ..self.headers.data_offset + self.headers.data_length - length,
+        ) else {
             return;
         };
         let remainder = slice.len();
         data[..remainder].copy_from_slice(slice);
 
-        let Ok(slice) = self
-            .inner
-            .slice_at_offset_mut(self.udp.data_offset, remainder)
+        let Some(slice) = self
+            .buffer
+            .get_mut(self.headers.data_offset..self.headers.data_offset + remainder)
         else {
             return;
         };
         slice.copy_from_slice(&data[..remainder]);
 
-        let _ = self.inner.adjust_tail(-(length as i32));
-        self.udp.data_length -= length;
+        if self.buffer.adjust_tail(-(length as i32)).is_ok() {
+            self.headers.data_length -= length;
+        }
     }
 
     #[inline]
     fn remove_tail(&mut self, length: usize) {
-        let _ = self.inner.adjust_tail(-(length as i32));
-        self.udp.data_length -= length;
+        if self.buffer.adjust_tail(-(length as i32)).is_ok() {
+            self.headers.data_length -= length;
+        }
     }
 
     // Only used in the io-uring implementation
@@ -454,19 +458,19 @@ pub fn process_packets(
     state.last_receive = now;
     let mut had_read = false;
 
-    while let Some(inner) = rx_slab.pop_front() {
-        let Ok(Some(udp)) = UdpPacket::parse_packet(&inner) else {
+    while let Some(buffer) = rx_slab.pop_front() {
+        let Ok(Some(headers)) = UdpHeaders::parse_packet(&buffer) else {
             unreachable!(
                 "we somehow got a non-UDP packet, this should be impossible with the eBPF program we use to route packets"
             );
         };
 
-        if udp.dst_port == state.qcmp_port {
-            process_qcmp_packet(inner, udp, umem, tx_slab);
+        if headers.udp.destination == state.qcmp_port {
+            process_qcmp_packet(buffer, headers, umem, tx_slab);
             continue;
         }
 
-        let is_client = udp.dst_port == state.external_port;
+        let is_client = headers.udp.destination == state.external_port;
         let direction = if is_client {
             had_read = true;
             metrics::READ
@@ -475,13 +479,13 @@ pub fn process_packets(
         };
 
         // This indicates a packet that is split, which we don't handle _at all_ right now
-        if inner.is_continued() {
+        if buffer.is_continued() {
             metrics::packets_dropped_total(direction, "split packet", &metrics::EMPTY).inc();
-            umem.free_packet(inner);
+            umem.free_packet(buffer);
             continue;
         }
 
-        let packet = PacketWrapper { inner, udp };
+        let packet = PacketWrapper { buffer, headers };
 
         let res = {
             let _timer = metrics::processing_time(direction).start_timer();
@@ -551,30 +555,30 @@ fn process_client_packet(
     state: &mut State,
     tx_slab: &mut HeapSlab,
 ) -> Result<Option<Packet>, (PipelineError, Packet)> {
-    let source_addr = SocketAddr::from((packet.udp.ips.source(), packet.udp.src_port.host()));
+    let source_addr = packet.headers.source_address();
     let mut ctx =
         filters::ReadContext::new(cm, source_addr.into(), packet, &mut state.destinations);
 
     let mut packet = match filters.read(&mut ctx) {
         Ok(()) => ctx.contents,
         Err(err) => {
-            return Err((PipelineError::Filter(err), ctx.contents.inner));
+            return Err((PipelineError::Filter(err), ctx.contents.buffer));
         }
     };
 
     let Some(dest_addr) = state.destinations.pop() else {
-        return Ok(Some(packet.inner));
+        return Ok(Some(packet.buffer));
     };
 
-    let data = packet
-        .inner
-        .slice_at_offset(packet.udp.data_offset, packet.udp.data_length)
-        .expect("data out of bounds");
+    let data = &packet.buffer
+        [packet.headers.data_offset..packet.headers.data_offset + packet.headers.data_length];
 
     // TODO: We _could_ be more clever with this and do a running checksum calculation
     // as the packet data is modified by the filters, but for now we just do the
     // full checksum for the sake of simplicity
     let data_checksum = csum::partial(data, 0);
+
+    let eth = packet.headers.eth.swapped();
 
     // If we have more than 1 destination we need to clone the packet data to
     // a new packet for each destination, only modifying
@@ -583,18 +587,19 @@ fn process_client_packet(
             let Ok(dest_addr) = daddr.to_socket_addr() else {
                 continue;
             };
-            let (src_port, asn, ips) = state.session(source_addr, dest_addr);
+            let (source, asn, ips) = state.session(source_addr, dest_addr);
 
-            let mut headers = UdpPacket {
-                src_mac: packet.udp.dst_mac,
-                src_port,
-                dst_mac: packet.udp.src_mac,
-                dst_port: dest_addr.port().into(),
-                ips,
-                data_offset: packet.udp.data_offset,
-                data_length: packet.udp.data_length,
-                hop: packet.udp.hop - 1,
-                checksum: NetworkU16(0),
+            let mut headers = UdpHeaders {
+                eth,
+                ip: ips.with_header(&packet.headers.ip),
+                udp: UdpHdr {
+                    source,
+                    destination: dest_addr.port().into(),
+                    check: 0,
+                    length: NetworkU16(0),
+                },
+                data_offset: packet.headers.data_offset,
+                data_length: packet.headers.data_length,
             };
 
             // SAFETY: the umem outlives the frame
@@ -610,7 +615,7 @@ fn process_client_packet(
                 metrics::Direction::Read,
                 new_packet,
                 asn,
-                packet.udp.data_length,
+                packet.headers.data_length,
                 res,
                 tx_slab,
                 umem,
@@ -619,30 +624,31 @@ fn process_client_packet(
     }
 
     let Ok(dest_addr) = dest_addr.to_socket_addr() else {
-        return Ok(Some(packet.inner));
+        return Ok(Some(packet.buffer));
     };
-    let (src_port, asn, ips) = state.session(source_addr, dest_addr);
+    let (source, asn, ips) = state.session(source_addr, dest_addr);
 
-    let mut headers = UdpPacket {
-        src_mac: packet.udp.dst_mac,
-        src_port,
-        dst_mac: packet.udp.src_mac,
-        dst_port: dest_addr.port().into(),
-        ips,
-        data_offset: packet.udp.data_offset,
-        data_length: packet.udp.data_length,
-        hop: packet.udp.hop - 1,
-        checksum: NetworkU16(0),
+    let mut headers = UdpHeaders {
+        eth,
+        ip: ips.with_header(&packet.headers.ip),
+        udp: UdpHdr {
+            source,
+            destination: dest_addr.port().into(),
+            check: 0,
+            length: NetworkU16(0),
+        },
+        data_offset: packet.headers.data_offset,
+        data_length: packet.headers.data_length,
     };
 
     headers.calc_checksum(data.len(), data_checksum);
 
-    let res = modify_packet_headers(&packet.udp, &headers, &mut packet.inner);
+    let res = modify_packet_headers(&packet.headers, &mut headers, &mut packet.buffer);
     push_packet(
         metrics::Direction::Read,
-        packet.inner,
+        packet.buffer,
         asn,
-        packet.udp.data_length,
+        packet.headers.data_length,
         res,
         tx_slab,
         umem,
@@ -660,11 +666,12 @@ fn process_server_packet(
     tx_slab: &mut HeapSlab,
     jitter: i64,
 ) -> Result<Option<Packet>, (PipelineError, Packet)> {
-    let server_addr = SocketAddr::new(packet.udp.ips.source(), packet.udp.src_port.host());
+    let server_addr = packet.headers.source_address();
 
-    let Some((client_addr, asn)) = state.lookup_client(server_addr, packet.udp.dst_port) else {
+    let Some((client_addr, asn)) = state.lookup_client(server_addr, packet.headers.udp.destination)
+    else {
         tracing::debug!(address = %server_addr, "received traffic from a server that has no downstream");
-        return Ok(Some(packet.inner));
+        return Ok(Some(packet.buffer));
     };
 
     metrics::packet_jitter(metrics::Direction::Write, &asn).set(jitter);
@@ -674,32 +681,33 @@ fn process_server_packet(
     let mut packet = match filters.write(&mut ctx) {
         Ok(()) => ctx.contents,
         Err(err) => {
-            return Err((PipelineError::Filter(err), ctx.contents.inner));
+            return Err((PipelineError::Filter(err), ctx.contents.buffer));
         }
     };
 
-    let headers = UdpPacket {
-        src_mac: packet.udp.dst_mac,
-        src_port: state.external_port,
-        dst_mac: packet.udp.src_mac,
-        dst_port: client_addr.port().into(),
-        ips: state.ips(client_addr.ip()),
-        data_offset: packet.udp.data_offset,
-        data_length: packet.udp.data_length,
-        hop: packet.udp.hop - 1,
-        checksum: NetworkU16(0),
+    let mut headers = UdpHeaders {
+        eth: packet.headers.eth.swapped(),
+        ip: state.ips(client_addr.ip()).with_header(&packet.headers.ip),
+        udp: UdpHdr {
+            source: state.external_port,
+            destination: client_addr.port().into(),
+            length: NetworkU16(0),
+            check: 0,
+        },
+        data_offset: packet.headers.data_offset,
+        data_length: packet.headers.data_length,
     };
 
-    let res = modify_packet_headers(&packet.udp, &headers, &mut packet.inner);
+    let res = modify_packet_headers(&packet.headers, &mut headers, &mut packet.buffer);
     if res.is_ok() {
-        let _ = packet.inner.calc_udp_checksum();
+        let _ = packet.buffer.calc_udp_checksum();
     }
 
     push_packet(
         metrics::Direction::Write,
-        packet.inner,
+        packet.buffer,
         asn,
-        packet.udp.data_length,
+        packet.headers.data_length,
         res,
         tx_slab,
         umem,
@@ -711,8 +719,8 @@ fn process_server_packet(
 /// resizing the header portion as needed if changing between ipv4 and ipv6
 #[inline]
 fn modify_packet_headers(
-    original: &UdpPacket,
-    new: &UdpPacket,
+    original: &UdpHeaders,
+    new: &mut UdpHeaders,
     packet: &mut Packet,
 ) -> Result<(), PacketError> {
     match (original.is_ipv4(), new.is_ipv4()) {
@@ -721,13 +729,13 @@ fn modify_packet_headers(
         (_, _) => {}
     }
 
-    new.set_packet_headers(packet)?;
+    new.set_packet_headers(packet, true)?;
     Ok(())
 }
 
 #[inline]
 fn fill_packet(
-    headers: &mut UdpPacket,
+    headers: &mut UdpHeaders,
     data: &[u8],
     data_checksum: u32,
     frame: &mut Packet,
@@ -735,27 +743,25 @@ fn fill_packet(
     let hdr_len = headers.header_length();
     frame.adjust_tail(hdr_len as i32)?;
     headers.calc_checksum(data.len(), data_checksum);
-    headers.set_packet_headers(frame)?;
+    headers.set_packet_headers(frame, true)?;
     frame.insert(hdr_len, data)?;
     Ok(())
 }
 
 fn process_qcmp_packet(
     mut packet: Packet,
-    udp: UdpPacket,
+    headers: UdpHeaders,
     umem: &mut Umem,
     tx_slab: &mut HeapSlab,
 ) {
     use crate::{codec::qcmp, time::UtcTimestamp};
 
-    fn inner(packet: &mut Packet, udp: UdpPacket) -> bool {
+    fn inner(packet: &mut Packet, headers: UdpHeaders) -> bool {
         let received_at = UtcTimestamp::now();
-        let data = match packet.slice_at_offset(udp.data_offset, udp.data_length) {
-            Ok(d) => d,
-            Err(error) => {
-                tracing::debug!(%error, "corrupt UDP packet");
-                return false;
-            }
+        let Some(data) = packet.get(headers.data_offset..headers.data_offset + headers.data_length)
+        else {
+            tracing::debug!("corrupt UDP packet, data payload is out of range");
+            return false;
         };
         let command = match qcmp::Protocol::parse(data) {
             Ok(Some(command)) => command,
@@ -781,44 +787,26 @@ fn process_qcmp_packet(
         let mut ob = qcmp::QcmpPacket::default();
         let buf = qcmp::Protocol::ping_reply(nonce, client_timestamp, received_at).encode(&mut ob);
 
-        if let Err(error) = packet.adjust_tail(-(udp.data_length as i32)) {
+        if let Err(error) = packet.adjust_tail(-(headers.data_length as i32)) {
             tracing::debug!(%error, "unable to trim QCMP ping data");
             return false;
         }
 
-        if let Err(error) = packet.insert(udp.data_offset, buf) {
+        if let Err(error) = packet.insert(headers.data_offset, buf) {
             tracing::debug!(%error, "unable to write QCMP pong data");
             return false;
         }
 
-        let new = UdpPacket {
-            src_mac: udp.dst_mac,
-            dst_mac: udp.src_mac,
-            ips: match udp.ips {
-                IpAddresses::V4 {
-                    source,
-                    destination,
-                } => IpAddresses::V4 {
-                    source: destination,
-                    destination: source,
-                },
-                IpAddresses::V6 {
-                    source,
-                    destination,
-                } => IpAddresses::V6 {
-                    source: destination,
-                    destination: source,
-                },
-            },
-            src_port: udp.dst_port,
-            dst_port: udp.src_port,
-            data_offset: udp.data_offset,
+        let mut new = UdpHeaders {
+            eth: headers.eth.swapped(),
+            ip: headers.ip.swapped(),
+            udp: headers.udp.swapped(),
+            data_offset: headers.data_offset,
             data_length: buf.len(),
-            hop: udp.hop - 1,
-            checksum: 0.into(),
         };
+        new.decrement_hop();
 
-        if let Err(error) = modify_packet_headers(&udp, &new, packet) {
+        if let Err(error) = modify_packet_headers(&headers, &mut new, packet) {
             tracing::debug!(%error, "unable to modify QCMP packet headers");
             return false;
         }
@@ -831,7 +819,7 @@ fn process_qcmp_packet(
         true
     }
 
-    let packet = if inner(&mut packet, udp) {
+    let packet = if inner(&mut packet, headers) {
         tracing::debug!("sending QCMP pong");
 
         if let Some(packet) = tx_slab.push_back(packet) {
@@ -845,4 +833,72 @@ fn process_qcmp_packet(
     };
 
     umem.free_packet(packet);
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use quilkin_xdp::xdp::packet::Pod;
+    use xdp::packet::net_types as nt;
+
+    #[test]
+    fn xdp_buffer_manipulation() {
+        let payload = [0xfdu8; 21];
+
+        let mut v6 = nt::Ipv6Hdr::zeroed();
+        v6.reset(64, nt::IpProto::Udp);
+        v6.source = [13; 16];
+        v6.destination = [8; 16];
+        let mut headers = UdpHeaders {
+            eth: nt::EthHdr {
+                source: nt::MacAddress([1; 6]),
+                destination: nt::MacAddress([2; 6]),
+                ether_type: nt::EtherType::Ipv6,
+            },
+            ip: nt::IpHdr::V6(v6),
+            udp: UdpHdr {
+                source: 22.into(),
+                destination: 20021.into(),
+                length: NetworkU16(0),
+                check: 0,
+            },
+            data_offset: nt::EthHdr::LEN + nt::Ipv6Hdr::LEN + nt::UdpHdr::LEN,
+            data_length: payload.len(),
+        };
+
+        let mut data = [0u8; 2048];
+        let mut buffer = xdp::Packet::testing_new(&mut data);
+        buffer.adjust_tail(headers.data_offset as _).unwrap();
+        headers.set_packet_headers(&mut buffer, false).unwrap();
+        buffer.insert(headers.data_offset, &payload).unwrap();
+        buffer.calc_udp_checksum().unwrap();
+
+        let mut wrapper = PacketWrapper { buffer, headers };
+
+        use crate::filters::{Packet, PacketMut};
+
+        assert_eq!(wrapper.as_slice(), payload);
+
+        {
+            const HEAD: &[u8] = &[1; 3];
+            wrapper.extend_head(HEAD);
+            assert_eq!(&wrapper.as_slice()[..HEAD.len()], HEAD);
+            assert_eq!(wrapper.as_slice()[HEAD.len()..], payload);
+            assert_eq!(wrapper.headers.data_length, payload.len() + HEAD.len());
+            wrapper.remove_head(HEAD.len());
+        }
+
+        assert_eq!(wrapper.as_slice(), payload);
+
+        {
+            const TAIL: &[u8] = &[8; 20];
+            wrapper.extend_tail(TAIL);
+            assert_eq!(wrapper.as_slice()[..payload.len()], payload);
+            assert_eq!(&wrapper.as_slice()[payload.len()..], TAIL);
+            assert_eq!(wrapper.headers.data_length, payload.len() + TAIL.len());
+            wrapper.remove_tail(TAIL.len());
+        }
+
+        assert_eq!(wrapper.as_slice(), payload);
+    }
 }
