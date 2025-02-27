@@ -29,14 +29,12 @@ static REGISTRY: Lazy<ArcSwap<Registry>> = Lazy::new(|| {
     ))
 });
 
-/// Sets the [prometheus::Registry] containing all the metrics
-/// registered in xDS.
+/// Sets the [`Registry`] containing all the metrics registered in xDS.
 pub fn set_registry(registry: std::sync::Arc<Registry>) {
     REGISTRY.store(registry);
 }
 
-/// Returns the [prometheus::Registry] containing all the metrics
-/// registered in xDS.
+/// Returns the [`Registry`] containing all the metrics registered in xDS.
 pub fn registry() -> arc_swap::Guard<std::sync::Arc<Registry>> {
     REGISTRY.load()
 }

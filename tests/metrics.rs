@@ -59,7 +59,7 @@ async fn metrics_server() {
                     (std::net::Ipv6Addr::LOCALHOST, server_port).into(),
                 )]
                 .into(),
-            )
+            );
         });
     let client_port = t.run_server(client_config, None, None).await;
 
@@ -71,7 +71,7 @@ async fn metrics_server() {
     tracing::info!(address = %local_addr, "Sending hello");
     socket.send_to(b"hello", &local_addr).await.unwrap();
 
-    let _ = tokio::time::timeout(std::time::Duration::from_millis(100), recv_chan.recv())
+    tokio::time::timeout(std::time::Duration::from_millis(100), recv_chan.recv())
         .await
         .unwrap()
         .unwrap();

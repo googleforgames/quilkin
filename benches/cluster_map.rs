@@ -68,21 +68,21 @@ mod serde {
     }
 
     #[divan::bench(consts = SEEDS)]
-    fn serialize_proto<const S: u64>(b: Bencher) {
+    fn serialize_proto<const S: u64>(b: Bencher<'_, '_>) {
         let gc = gen_cluster_map::<S>(TokenKind::None);
         b.counter(gc.total_endpoints)
             .bench(|| divan::black_box(serialize_to_protobuf(&gc.cm)));
     }
 
     #[divan::bench(consts = SEEDS)]
-    fn serialize_json<const S: u64>(b: Bencher) {
+    fn serialize_json<const S: u64>(b: Bencher<'_, '_>) {
         let gc = gen_cluster_map::<S>(TokenKind::None);
         b.counter(gc.total_endpoints)
             .bench(|| divan::black_box(serialize_to_json(&gc.cm)));
     }
 
     #[divan::bench(consts = SEEDS)]
-    fn deserialize_json<const S: u64>(b: Bencher) {
+    fn deserialize_json<const S: u64>(b: Bencher<'_, '_>) {
         let gc = gen_cluster_map::<S>(TokenKind::None);
         let json = serialize_to_json(&gc.cm);
 
@@ -92,7 +92,7 @@ mod serde {
     }
 
     #[divan::bench(consts = SEEDS)]
-    fn deserialize_proto<const S: u64>(b: Bencher) {
+    fn deserialize_proto<const S: u64>(b: Bencher<'_, '_>) {
         let gc = gen_cluster_map::<S>(TokenKind::None);
         let pv = serialize_to_protobuf(&gc.cm);
 
@@ -127,7 +127,7 @@ mod ops {
     // }
 
     #[divan::bench(consts = SEEDS)]
-    fn iterate<const S: u64>(b: Bencher) {
+    fn iterate<const S: u64>(b: Bencher<'_, '_>) {
         let cm = gen_cluster_map::<S>(TokenKind::None);
 
         b.counter(cm.total_endpoints)
@@ -137,11 +137,11 @@ mod ops {
     }
 
     #[divan::bench(consts = SEEDS)]
-    fn iterate_par<const S: u64>(b: Bencher) {
+    fn iterate_par<const S: u64>(b: Bencher<'_, '_>) {
         let cm = gen_cluster_map::<S>(TokenKind::None);
 
         b.counter(cm.total_endpoints)
-            .bench(|| divan::black_box(compute_hash::<S>(&cm)))
+            .bench(|| divan::black_box(compute_hash::<S>(&cm)));
     }
 
     // #[divan::bench(consts = SEEDS)]

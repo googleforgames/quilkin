@@ -81,7 +81,7 @@ impl FilterSet {
     }
 
     /// Returns a by reference iterator over the set of filters.
-    pub fn iter(&self) -> Iter {
+    pub fn iter(&self) -> Iter<'_> {
         Iter {
             inner: self.0.iter(),
         }

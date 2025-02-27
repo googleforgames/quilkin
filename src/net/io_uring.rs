@@ -76,7 +76,7 @@ impl EventFd {
     pub(crate) fn io_uring_entry(&mut self) -> Entry {
         io_uring::opcode::Read::new(
             Fd(self.fd.as_raw_fd()),
-            &mut self.val as *mut u64 as *mut u8,
+            (&mut self.val as *mut u64).cast(),
             8,
         )
         .build()
@@ -103,7 +103,7 @@ impl EventFdWriter {
 }
 
 struct RecvPacket {
-    /// The buffer filled with data during recv_from
+    /// The buffer filled with data during `recv_from`
     buffer: PoolBuffer,
     /// The IP of the sender
     source: std::net::SocketAddr,
@@ -155,7 +155,7 @@ impl LoopPacket {
                 // For sends, the length of the buffer is the actual number of initialized bytes,
                 // and note that iov_base is a *mut even though for sends the buffer is not actually
                 // mutated
-                self.io_vec.iov_base = send.data.as_ptr() as *mut u8 as *mut _;
+                self.io_vec.iov_base = (send.data.as_ptr() as *mut u8).cast();
                 self.io_vec.iov_len = send.data.len();
 
                 // SAFETY: both pointers are valid at this point, with the same size
@@ -292,7 +292,7 @@ impl<'uring> LoopCtx<'uring> {
         self.sq.sync();
     }
 
-    /// Enqueues a recv_from on the socket
+    /// Enqueues a `recv_from` on the socket
     #[inline]
     fn enqueue_recv(&mut self, buffer: crate::collections::PoolBuffer) {
         let packet = LoopPacketInner::Recv(RecvPacket {
@@ -316,7 +316,7 @@ impl<'uring> LoopCtx<'uring> {
         );
     }
 
-    /// Enqueues a send_to on the socket
+    /// Enqueues a `send_to` on the socket
     #[inline]
     fn enqueue_send(&mut self, packet: SendPacket) {
         // We rely on sends using state with stable addresses, but realistically we should

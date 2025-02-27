@@ -53,7 +53,7 @@ policy: ROUND_ROBIN
         .clusters()
         .unwrap()
         .modify(|clusters| {
-            clusters.insert_default(echo_addresses.iter().cloned().map(Endpoint::new).collect())
+            clusters.insert_default(echo_addresses.iter().cloned().map(Endpoint::new).collect());
         });
     server_config.dyn_cfg.filters().unwrap().store(
         quilkin::filters::FilterChain::try_create([Filter {

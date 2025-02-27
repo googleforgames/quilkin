@@ -417,7 +417,7 @@ impl Providers {
                 let _stream = client
                     .delta_subscribe(config, health_check.clone(), tx, Self::SUBS)
                     .await
-                    .map_err(|_| eyre::eyre!("failed to acquire delta stream"))?;
+                    .map_err(|_err| eyre::eyre!("failed to acquire delta stream"))?;
 
                 health_check.store(true, Ordering::SeqCst);
 

@@ -55,7 +55,7 @@ async fn agent_ping() {
         agent
             .run(None, server_config, Default::default(), rx)
             .await
-            .expect("Agent should run")
+            .expect("Agent should run");
     });
     ping(qcmp_port).await;
 }

@@ -96,21 +96,18 @@ fn match_filter<'config, 'ctx, Ctx>(
             let value =
                 (get_metadata)(ctx, &config.metadata_key).ok_or(FilterError::MatchNoMetadata)?;
 
-            match config.branches.iter().find(|(key, _)| key == value) {
-                Some((value, instance)) => {
-                    tracing::trace!(key=%config.metadata_key, %value, filter=%instance.0, "Matched against branch");
-                    metrics.packets_matched_total.inc();
-                    (and_then)(ctx, &instance.1)
-                }
-                None => {
-                    tracing::trace!(
-                        key = %config.metadata_key,
-                        fallthrough = %config.fallthrough.0,
-                        "No match found, calling fallthrough"
-                    );
-                    metrics.packets_fallthrough_total.inc();
-                    (and_then)(ctx, &config.fallthrough.1)
-                }
+            if let Some((value, instance)) = config.branches.iter().find(|(key, _)| key == value) {
+                tracing::trace!(key=%config.metadata_key, %value, filter=%instance.0, "Matched against branch");
+                metrics.packets_matched_total.inc();
+                (and_then)(ctx, &instance.1)
+            } else {
+                tracing::trace!(
+                    key = %config.metadata_key,
+                    fallthrough = %config.fallthrough.0,
+                    "No match found, calling fallthrough"
+                );
+                metrics.packets_fallthrough_total.inc();
+                (and_then)(ctx, &config.fallthrough.1)
             }
         }
         None => Ok(()),

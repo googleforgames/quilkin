@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#[allow(clippy::exit)]
 fn main() {
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
@@ -33,8 +34,9 @@ fn main() {
                 Ok(()) => std::process::exit(0),
                 Err(error) => {
                     tracing::error!(%error, error_debug=?error, "fatal error");
+
                     std::process::exit(-1)
                 }
             }
-        })
+        });
 }

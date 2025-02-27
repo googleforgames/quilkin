@@ -71,7 +71,7 @@ impl ClientState {
     }
 
     pub fn reset(&mut self, versions: VersionMap) {
-        let _ = std::mem::replace(&mut self.versions, versions);
+        drop(std::mem::replace(&mut self.versions, versions));
         self.subscribed.clear();
     }
 
@@ -284,17 +284,17 @@ pub fn handle_delta_discovery_responses<C: Configuration>(
                 }
             }
 
-            let error_detail = match result { Err(error) => {
+            let error_detail = if let Err(error) = result {
                 crate::metrics::nacks(control_plane_identifier, &type_url).inc();
                 Some(quilkin_proto::generated::google::rpc::Status {
                     code: 3,
                     message: error.to_string(),
                     ..Default::default()
                 })
-            } _ => {
+            } else {
                 crate::metrics::acks(control_plane_identifier, &type_url).inc();
                 None
-            }};
+            };
 
             yield DeltaDiscoveryRequest {
                 type_url,

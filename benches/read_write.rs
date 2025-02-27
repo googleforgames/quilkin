@@ -17,7 +17,7 @@ mod read {
     use super::*;
 
     #[divan::bench(consts = PACKET_SIZES)]
-    fn direct<const N: usize>(b: Bencher) {
+    fn direct<const N: usize>(b: Bencher<'_, '_>) {
         let (writer, reader) = socket_pair(None, None);
         let (tx, rx) = channel();
         let writer = Writer::<N>::new(writer, reader.local_addr().unwrap(), rx);
@@ -36,7 +36,7 @@ mod read {
     }
 
     #[divan::bench(consts = PACKET_SIZES)]
-    fn quilkin<const N: usize>(b: Bencher) {
+    fn quilkin<const N: usize>(b: Bencher<'_, '_>) {
         let (writer, reader) = socket_pair(None, None);
         let (tx, rx) = channel();
 
@@ -63,7 +63,7 @@ mod write {
     use super::*;
 
     #[divan::bench(consts = PACKET_SIZES)]
-    fn direct<const N: usize>(b: Bencher) {
+    fn direct<const N: usize>(b: Bencher<'_, '_>) {
         let (writer, reader) = socket_pair(None, None);
         let (tx, rx) = channel();
 
@@ -86,7 +86,7 @@ mod write {
     }
 
     #[divan::bench(consts = PACKET_SIZES)]
-    fn quilkin<const N: usize>(b: Bencher) {
+    fn quilkin<const N: usize>(b: Bencher<'_, '_>) {
         let (writer, reader) = socket_pair(None, None);
         let (tx, rx) = channel();
 

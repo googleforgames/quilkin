@@ -132,10 +132,10 @@ mod tests {
     fn deserialise_client() {
         let config = Config::default_non_agent();
         config.dyn_cfg.clusters().unwrap().modify(|clusters| {
-            clusters.insert_default([Endpoint::new("127.0.0.1:25999".parse().unwrap())].into())
+            clusters.insert_default([Endpoint::new("127.0.0.1:25999".parse().unwrap())].into());
         });
 
-        let _ = serde_yaml::to_string(&config).unwrap();
+        serde_yaml::to_string(&config).unwrap();
     }
 
     #[test]
@@ -148,10 +148,10 @@ mod tests {
                     Endpoint::new("127.0.0.1:26001".parse().unwrap()),
                 ]
                 .into(),
-            )
+            );
         });
 
-        let _ = serde_yaml::to_string(&config).unwrap();
+        serde_yaml::to_string(&config).unwrap();
     }
 
     #[test]
@@ -183,7 +183,7 @@ mod tests {
             &ClusterMap::new_default(
                 [Endpoint::new((std::net::Ipv4Addr::LOCALHOST, 25999).into(),)].into()
             )
-        )
+        );
     }
 
     #[test]
@@ -213,7 +213,7 @@ mod tests {
                 )]
                 .into()
             )
-        )
+        );
     }
 
     #[test]

@@ -5,7 +5,7 @@ use rand::SeedableRng;
 mod shared;
 
 #[divan::bench(args = ["single:duplicates", "single:unique", "multi:2..128:duplicates", "multi:2..128:unique"])]
-fn token_router(b: Bencher, token_kind: &str) {
+fn token_router(b: Bencher<'_, '_>, token_kind: &str) {
     let filter = TokenRouter::default();
     let gc = shared::gen_cluster_map::<42>(token_kind.parse().unwrap());
 
@@ -57,8 +57,8 @@ fn token_router(b: Bencher, token_kind: &str) {
         };
 
         use quilkin::filters::Filter;
-        let _ = divan::black_box(filter.read(&mut rc));
-    })
+        let _unused = divan::black_box(filter.read(&mut rc));
+    });
 }
 
 fn main() {

@@ -127,13 +127,13 @@ impl Symbol {
     ) -> Option<&'metadata Value> {
         match self {
             Self::Literal(value) => Some(value),
-            Self::Reference(reference) => match metadata.get(&reference.key()) {
-                Some(value) => Some(value),
-                None => {
-                    tracing::warn!(key=%self.as_reference().unwrap(), "couldn't resolve key");
-                    None
+            Self::Reference(reference) => {
+                let v = metadata.get(&reference.key());
+                if v.is_none() {
+                    tracing::warn!(key = %self.as_reference().unwrap(), "couldn't resolve key");
                 }
-            },
+                v
+            }
         }
     }
 

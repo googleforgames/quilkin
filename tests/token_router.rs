@@ -150,7 +150,7 @@ quilkin.dev:
                     "127.0.0.2:5000".parse().unwrap(), // goes nowhere, so shouldn't do anything.
                 ]
                 .into(),
-            )
+            );
         });
 
     server_config.dyn_cfg.filters().unwrap().store(

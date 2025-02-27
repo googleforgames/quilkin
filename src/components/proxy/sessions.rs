@@ -273,21 +273,18 @@ impl SessionPool {
             .find(|(port, _)| !socket_set.contains(port))
             .map(|(port, socket)| (*port, socket.clone()));
 
-        match available_socket {
-            Some((port, socket)) => {
-                drop(storage);
-                self.storage
-                    .write()
-                    .destination_to_sockets
-                    .get_mut(&dest)
-                    .ok_or(SessionError::MissingDestinationSocket)?
-                    .insert(port);
-                self.create_session_from_existing_socket(key, socket, port)
-            }
-            _ => {
-                drop(storage);
-                self.create_new_session_from_new_socket(key)
-            }
+        if let Some((port, socket)) = available_socket {
+            drop(storage);
+            self.storage
+                .write()
+                .destination_to_sockets
+                .get_mut(&dest)
+                .ok_or(SessionError::MissingDestinationSocket)?
+                .insert(port);
+            self.create_session_from_existing_socket(key, socket, port)
+        } else {
+            drop(storage);
+            self.create_new_session_from_new_socket(key)
         }
     }
 
@@ -341,7 +338,7 @@ impl SessionPool {
         Ok((asn_metrics_info, pending_sends))
     }
 
-    /// process_recv_packet processes a packet that is received by this session.
+    /// Processes a packet that is received by this session.
     fn process_recv_packet(
         config: Arc<crate::Config>,
         source: SocketAddr,
@@ -478,7 +475,7 @@ impl Drop for SessionPool {
 
 /// Session encapsulates a UDP stream session
 pub struct Session {
-    /// created_at is time at which the session was created
+    /// The time at which the session was created
     created_at: Instant,
     /// The source and destination pair.
     key: SessionKey,
@@ -486,7 +483,7 @@ pub struct Session {
     socket_port: u16,
     /// The queue of packets being sent to the upstream (server)
     pending_sends: PacketQueueSender,
-    /// The GeoIP information of the source.
+    /// The `GeoIP` information of the source.
     asn_info: Option<IpNetEntry>,
     /// The socket pool of the session.
     pool: Arc<SessionPool>,
@@ -541,7 +538,7 @@ impl Session {
 
 impl Drop for Session {
     fn drop(&mut self) {
-        self.release()
+        self.release();
     }
 }
 
@@ -695,7 +692,7 @@ mod tests {
         let socket1 = pool.get(key1).unwrap();
 
         let task = tokio::spawn(async move {
-            let _ = socket1;
+            drop(socket1);
         });
 
         let _socket2 = pool.get(key2).unwrap();
@@ -720,7 +717,7 @@ mod tests {
         let socket1 = pool.get(key1).unwrap();
 
         let task = tokio::spawn(async move {
-            let _ = socket1;
+            drop(socket1);
         });
 
         let _socket2 = pool.get(key2).unwrap();
