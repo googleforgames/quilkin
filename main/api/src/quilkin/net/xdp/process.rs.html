@@ -846,7 +846,66 @@
 <a href="#845" id="845">845</a>
 <a href="#846" id="846">846</a>
 <a href="#847" id="847">847</a>
-<a href="#848" id="848">848</a></pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
+<a href="#848" id="848">848</a>
+<a href="#849" id="849">849</a>
+<a href="#850" id="850">850</a>
+<a href="#851" id="851">851</a>
+<a href="#852" id="852">852</a>
+<a href="#853" id="853">853</a>
+<a href="#854" id="854">854</a>
+<a href="#855" id="855">855</a>
+<a href="#856" id="856">856</a>
+<a href="#857" id="857">857</a>
+<a href="#858" id="858">858</a>
+<a href="#859" id="859">859</a>
+<a href="#860" id="860">860</a>
+<a href="#861" id="861">861</a>
+<a href="#862" id="862">862</a>
+<a href="#863" id="863">863</a>
+<a href="#864" id="864">864</a>
+<a href="#865" id="865">865</a>
+<a href="#866" id="866">866</a>
+<a href="#867" id="867">867</a>
+<a href="#868" id="868">868</a>
+<a href="#869" id="869">869</a>
+<a href="#870" id="870">870</a>
+<a href="#871" id="871">871</a>
+<a href="#872" id="872">872</a>
+<a href="#873" id="873">873</a>
+<a href="#874" id="874">874</a>
+<a href="#875" id="875">875</a>
+<a href="#876" id="876">876</a>
+<a href="#877" id="877">877</a>
+<a href="#878" id="878">878</a>
+<a href="#879" id="879">879</a>
+<a href="#880" id="880">880</a>
+<a href="#881" id="881">881</a>
+<a href="#882" id="882">882</a>
+<a href="#883" id="883">883</a>
+<a href="#884" id="884">884</a>
+<a href="#885" id="885">885</a>
+<a href="#886" id="886">886</a>
+<a href="#887" id="887">887</a>
+<a href="#888" id="888">888</a>
+<a href="#889" id="889">889</a>
+<a href="#890" id="890">890</a>
+<a href="#891" id="891">891</a>
+<a href="#892" id="892">892</a>
+<a href="#893" id="893">893</a>
+<a href="#894" id="894">894</a>
+<a href="#895" id="895">895</a>
+<a href="#896" id="896">896</a>
+<a href="#897" id="897">897</a>
+<a href="#898" id="898">898</a>
+<a href="#899" id="899">899</a>
+<a href="#900" id="900">900</a>
+<a href="#901" id="901">901</a>
+<a href="#902" id="902">902</a>
+<a href="#903" id="903">903</a>
+<a href="#904" id="904">904</a>
+<a href="#905" id="905">905</a>
+<a href="#906" id="906">906</a>
+<a href="#907" id="907">907</a></pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
     components::proxy::{PipelineError, sessions::inner_metrics <span class="kw">as </span>session_metrics},
     filters::{<span class="self">self</span>, Filter <span class="kw">as _</span>},
     metrics::{<span class="self">self</span>, AsnInfo},
@@ -861,7 +920,7 @@
     HeapSlab, Umem,
     packet::{
         Packet, PacketError, csum,
-        net_types::{IpAddresses, NetworkU16, UdpPacket},
+        net_types::{IpAddresses, NetworkU16, UdpHdr, UdpHeaders},
     },
 };
 <span class="kw">use </span>std::{
@@ -877,21 +936,19 @@
 <span class="doccomment">/// Wrapper around the actual packet buffer and the UDP metadata it parsed to
 /// so that we can satisify the filter traits
 </span><span class="kw">struct </span>PacketWrapper {
-    inner: Packet,
-    udp: UdpPacket,
+    buffer: Packet,
+    headers: UdpHeaders,
 }
 
 <span class="kw">impl </span>filters::Packet <span class="kw">for </span>PacketWrapper {
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>as_slice(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[u8] {
-        <span class="self">self</span>.inner
-            .slice_at_offset(<span class="self">self</span>.udp.data_offset, <span class="self">self</span>.udp.data_length)
-            .unwrap()
+        <span class="kw-2">&amp;</span><span class="self">self</span>.buffer[<span class="self">self</span>.headers.data_offset..<span class="self">self</span>.headers.data_offset + <span class="self">self</span>.headers.data_length]
     }
 
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
-        <span class="self">self</span>.udp.data_length
+        <span class="self">self</span>.headers.data_length
     }
 }
 
@@ -900,49 +957,58 @@
 
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>extend_head(<span class="kw-2">&amp;mut </span><span class="self">self</span>, bytes: <span class="kw-2">&amp;</span>[u8]) {
-        <span class="self">self</span>.inner
-            .insert(<span class="self">self</span>.udp.data_offset, bytes)
+        <span class="self">self</span>.buffer
+            .insert(<span class="self">self</span>.headers.data_offset, bytes)
             .expect(<span class="string">"failed to extend head"</span>);
-        <span class="self">self</span>.udp.data_length += bytes.len();
+        <span class="self">self</span>.headers.data_length += bytes.len();
     }
 
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>extend_tail(<span class="kw-2">&amp;mut </span><span class="self">self</span>, bytes: <span class="kw-2">&amp;</span>[u8]) {
-        <span class="self">self</span>.inner
-            .insert(<span class="self">self</span>.inner.len(), bytes)
+        <span class="self">self</span>.buffer
+            .insert(<span class="self">self</span>.buffer.len(), bytes)
             .expect(<span class="string">"failed to extend head"</span>);
-        <span class="self">self</span>.udp.data_length += bytes.len();
+        <span class="self">self</span>.headers.data_length += bytes.len();
     }
 
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>remove_head(<span class="kw-2">&amp;mut </span><span class="self">self</span>, length: usize) {
         <span class="kw">let </span><span class="kw-2">mut </span>data = [<span class="number">0u8</span>; <span class="number">2048</span>];
 
-        <span class="kw">let </span><span class="prelude-val">Ok</span>(slice) = <span class="self">self
-            </span>.inner
-            .slice_at_offset(<span class="self">self</span>.udp.data_offset + length, <span class="self">self</span>.udp.data_length - length)
-        <span class="kw">else </span>{
+        <span class="kw">if </span>length &gt; <span class="self">self</span>.headers.data_length || length == <span class="number">0 </span>{
+            <span class="kw">return</span>;
+        }
+
+        <span class="kw">let </span><span class="prelude-val">Some</span>(slice) = <span class="self">self</span>.buffer.get(
+            <span class="self">self</span>.headers.data_offset + length
+                ..<span class="self">self</span>.headers.data_offset + <span class="self">self</span>.headers.data_length - length,
+        ) <span class="kw">else </span>{
+            <span class="kw">if </span><span class="self">self</span>.buffer.adjust_tail(-(length <span class="kw">as </span>i32)).is_ok() {
+                <span class="self">self</span>.headers.data_length -= length;
+            }
             <span class="kw">return</span>;
         };
         <span class="kw">let </span>remainder = slice.len();
         data[..remainder].copy_from_slice(slice);
 
-        <span class="kw">let </span><span class="prelude-val">Ok</span>(slice) = <span class="self">self
-            </span>.inner
-            .slice_at_offset_mut(<span class="self">self</span>.udp.data_offset, remainder)
+        <span class="kw">let </span><span class="prelude-val">Some</span>(slice) = <span class="self">self
+            </span>.buffer
+            .get_mut(<span class="self">self</span>.headers.data_offset..<span class="self">self</span>.headers.data_offset + remainder)
         <span class="kw">else </span>{
             <span class="kw">return</span>;
         };
         slice.copy_from_slice(<span class="kw-2">&amp;</span>data[..remainder]);
 
-        <span class="kw">let _ </span>= <span class="self">self</span>.inner.adjust_tail(-(length <span class="kw">as </span>i32));
-        <span class="self">self</span>.udp.data_length -= length;
+        <span class="kw">if </span><span class="self">self</span>.buffer.adjust_tail(-(length <span class="kw">as </span>i32)).is_ok() {
+            <span class="self">self</span>.headers.data_length -= length;
+        }
     }
 
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>remove_tail(<span class="kw-2">&amp;mut </span><span class="self">self</span>, length: usize) {
-        <span class="kw">let _ </span>= <span class="self">self</span>.inner.adjust_tail(-(length <span class="kw">as </span>i32));
-        <span class="self">self</span>.udp.data_length -= length;
+        <span class="kw">if </span><span class="self">self</span>.buffer.adjust_tail(-(length <span class="kw">as </span>i32)).is_ok() {
+            <span class="self">self</span>.headers.data_length -= length;
+        }
     }
 
     <span class="comment">// Only used in the io-uring implementation
@@ -1302,19 +1368,19 @@
     state.last_receive = now;
     <span class="kw">let </span><span class="kw-2">mut </span>had_read = <span class="bool-val">false</span>;
 
-    <span class="kw">while let </span><span class="prelude-val">Some</span>(inner) = rx_slab.pop_front() {
-        <span class="kw">let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(udp)) = UdpPacket::parse_packet(<span class="kw-2">&amp;</span>inner) <span class="kw">else </span>{
+    <span class="kw">while let </span><span class="prelude-val">Some</span>(buffer) = rx_slab.pop_front() {
+        <span class="kw">let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(headers)) = UdpHeaders::parse_packet(<span class="kw-2">&amp;</span>buffer) <span class="kw">else </span>{
             <span class="macro">unreachable!</span>(
                 <span class="string">"we somehow got a non-UDP packet, this should be impossible with the eBPF program we use to route packets"
             </span>);
         };
 
-        <span class="kw">if </span>udp.dst_port == state.qcmp_port {
-            process_qcmp_packet(inner, udp, umem, tx_slab);
+        <span class="kw">if </span>headers.udp.destination == state.qcmp_port {
+            process_qcmp_packet(buffer, headers, umem, tx_slab);
             <span class="kw">continue</span>;
         }
 
-        <span class="kw">let </span>is_client = udp.dst_port == state.external_port;
+        <span class="kw">let </span>is_client = headers.udp.destination == state.external_port;
         <span class="kw">let </span>direction = <span class="kw">if </span>is_client {
             had_read = <span class="bool-val">true</span>;
             metrics::READ
@@ -1323,13 +1389,13 @@
         };
 
         <span class="comment">// This indicates a packet that is split, which we don't handle _at all_ right now
-        </span><span class="kw">if </span>inner.is_continued() {
+        </span><span class="kw">if </span>buffer.is_continued() {
             metrics::packets_dropped_total(direction, <span class="string">"split packet"</span>, <span class="kw-2">&amp;</span>metrics::EMPTY).inc();
-            umem.free_packet(inner);
+            umem.free_packet(buffer);
             <span class="kw">continue</span>;
         }
 
-        <span class="kw">let </span>packet = PacketWrapper { inner, udp };
+        <span class="kw">let </span>packet = PacketWrapper { buffer, headers };
 
         <span class="kw">let </span>res = {
             <span class="kw">let </span>_timer = metrics::processing_time(direction).start_timer();
@@ -1399,30 +1465,30 @@
     state: <span class="kw-2">&amp;mut </span>State,
     tx_slab: <span class="kw-2">&amp;mut </span>HeapSlab,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Packet&gt;, (PipelineError, Packet)&gt; {
-    <span class="kw">let </span>source_addr = SocketAddr::from((packet.udp.ips.source(), packet.udp.src_port.host()));
+    <span class="kw">let </span>source_addr = packet.headers.source_address();
     <span class="kw">let </span><span class="kw-2">mut </span>ctx =
         filters::ReadContext::new(cm, source_addr.into(), packet, <span class="kw-2">&amp;mut </span>state.destinations);
 
     <span class="kw">let </span><span class="kw-2">mut </span>packet = <span class="kw">match </span>filters.read(<span class="kw-2">&amp;mut </span>ctx) {
         <span class="prelude-val">Ok</span>(()) =&gt; ctx.contents,
         <span class="prelude-val">Err</span>(err) =&gt; {
-            <span class="kw">return </span><span class="prelude-val">Err</span>((PipelineError::Filter(err), ctx.contents.inner));
+            <span class="kw">return </span><span class="prelude-val">Err</span>((PipelineError::Filter(err), ctx.contents.buffer));
         }
     };
 
     <span class="kw">let </span><span class="prelude-val">Some</span>(dest_addr) = state.destinations.pop() <span class="kw">else </span>{
-        <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(packet.inner));
+        <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(packet.buffer));
     };
 
-    <span class="kw">let </span>data = packet
-        .inner
-        .slice_at_offset(packet.udp.data_offset, packet.udp.data_length)
-        .expect(<span class="string">"data out of bounds"</span>);
+    <span class="kw">let </span>data = <span class="kw-2">&amp;</span>packet.buffer
+        [packet.headers.data_offset..packet.headers.data_offset + packet.headers.data_length];
 
     <span class="comment">// TODO: We _could_ be more clever with this and do a running checksum calculation
     // as the packet data is modified by the filters, but for now we just do the
     // full checksum for the sake of simplicity
     </span><span class="kw">let </span>data_checksum = csum::partial(data, <span class="number">0</span>);
+
+    <span class="kw">let </span>eth = packet.headers.eth.swapped();
 
     <span class="comment">// If we have more than 1 destination we need to clone the packet data to
     // a new packet for each destination, only modifying
@@ -1431,18 +1497,19 @@
             <span class="kw">let </span><span class="prelude-val">Ok</span>(dest_addr) = daddr.to_socket_addr() <span class="kw">else </span>{
                 <span class="kw">continue</span>;
             };
-            <span class="kw">let </span>(src_port, asn, ips) = state.session(source_addr, dest_addr);
+            <span class="kw">let </span>(source, asn, ips) = state.session(source_addr, dest_addr);
 
-            <span class="kw">let </span><span class="kw-2">mut </span>headers = UdpPacket {
-                src_mac: packet.udp.dst_mac,
-                src_port,
-                dst_mac: packet.udp.src_mac,
-                dst_port: dest_addr.port().into(),
-                ips,
-                data_offset: packet.udp.data_offset,
-                data_length: packet.udp.data_length,
-                hop: packet.udp.hop - <span class="number">1</span>,
-                checksum: NetworkU16(<span class="number">0</span>),
+            <span class="kw">let </span><span class="kw-2">mut </span>headers = UdpHeaders {
+                eth,
+                ip: ips.with_header(<span class="kw-2">&amp;</span>packet.headers.ip),
+                udp: UdpHdr {
+                    source,
+                    destination: dest_addr.port().into(),
+                    check: <span class="number">0</span>,
+                    length: NetworkU16(<span class="number">0</span>),
+                },
+                data_offset: packet.headers.data_offset,
+                data_length: packet.headers.data_length,
             };
 
             <span class="comment">// SAFETY: the umem outlives the frame
@@ -1458,7 +1525,7 @@
                 metrics::Direction::Read,
                 new_packet,
                 asn,
-                packet.udp.data_length,
+                packet.headers.data_length,
                 res,
                 tx_slab,
                 umem,
@@ -1467,30 +1534,31 @@
     }
 
     <span class="kw">let </span><span class="prelude-val">Ok</span>(dest_addr) = dest_addr.to_socket_addr() <span class="kw">else </span>{
-        <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(packet.inner));
+        <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(packet.buffer));
     };
-    <span class="kw">let </span>(src_port, asn, ips) = state.session(source_addr, dest_addr);
+    <span class="kw">let </span>(source, asn, ips) = state.session(source_addr, dest_addr);
 
-    <span class="kw">let </span><span class="kw-2">mut </span>headers = UdpPacket {
-        src_mac: packet.udp.dst_mac,
-        src_port,
-        dst_mac: packet.udp.src_mac,
-        dst_port: dest_addr.port().into(),
-        ips,
-        data_offset: packet.udp.data_offset,
-        data_length: packet.udp.data_length,
-        hop: packet.udp.hop - <span class="number">1</span>,
-        checksum: NetworkU16(<span class="number">0</span>),
+    <span class="kw">let </span><span class="kw-2">mut </span>headers = UdpHeaders {
+        eth,
+        ip: ips.with_header(<span class="kw-2">&amp;</span>packet.headers.ip),
+        udp: UdpHdr {
+            source,
+            destination: dest_addr.port().into(),
+            check: <span class="number">0</span>,
+            length: NetworkU16(<span class="number">0</span>),
+        },
+        data_offset: packet.headers.data_offset,
+        data_length: packet.headers.data_length,
     };
 
     headers.calc_checksum(data.len(), data_checksum);
 
-    <span class="kw">let </span>res = modify_packet_headers(<span class="kw-2">&amp;</span>packet.udp, <span class="kw-2">&amp;</span>headers, <span class="kw-2">&amp;mut </span>packet.inner);
+    <span class="kw">let </span>res = modify_packet_headers(<span class="kw-2">&amp;</span>packet.headers, <span class="kw-2">&amp;mut </span>headers, <span class="kw-2">&amp;mut </span>packet.buffer);
     push_packet(
         metrics::Direction::Read,
-        packet.inner,
+        packet.buffer,
         asn,
-        packet.udp.data_length,
+        packet.headers.data_length,
         res,
         tx_slab,
         umem,
@@ -1508,11 +1576,12 @@
     tx_slab: <span class="kw-2">&amp;mut </span>HeapSlab,
     jitter: i64,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Packet&gt;, (PipelineError, Packet)&gt; {
-    <span class="kw">let </span>server_addr = SocketAddr::new(packet.udp.ips.source(), packet.udp.src_port.host());
+    <span class="kw">let </span>server_addr = packet.headers.source_address();
 
-    <span class="kw">let </span><span class="prelude-val">Some</span>((client_addr, asn)) = state.lookup_client(server_addr, packet.udp.dst_port) <span class="kw">else </span>{
+    <span class="kw">let </span><span class="prelude-val">Some</span>((client_addr, asn)) = state.lookup_client(server_addr, packet.headers.udp.destination)
+    <span class="kw">else </span>{
         <span class="macro">tracing::debug!</span>(address = %server_addr, <span class="string">"received traffic from a server that has no downstream"</span>);
-        <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(packet.inner));
+        <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(packet.buffer));
     };
 
     metrics::packet_jitter(metrics::Direction::Write, <span class="kw-2">&amp;</span>asn).set(jitter);
@@ -1522,32 +1591,33 @@
     <span class="kw">let </span><span class="kw-2">mut </span>packet = <span class="kw">match </span>filters.write(<span class="kw-2">&amp;mut </span>ctx) {
         <span class="prelude-val">Ok</span>(()) =&gt; ctx.contents,
         <span class="prelude-val">Err</span>(err) =&gt; {
-            <span class="kw">return </span><span class="prelude-val">Err</span>((PipelineError::Filter(err), ctx.contents.inner));
+            <span class="kw">return </span><span class="prelude-val">Err</span>((PipelineError::Filter(err), ctx.contents.buffer));
         }
     };
 
-    <span class="kw">let </span>headers = UdpPacket {
-        src_mac: packet.udp.dst_mac,
-        src_port: state.external_port,
-        dst_mac: packet.udp.src_mac,
-        dst_port: client_addr.port().into(),
-        ips: state.ips(client_addr.ip()),
-        data_offset: packet.udp.data_offset,
-        data_length: packet.udp.data_length,
-        hop: packet.udp.hop - <span class="number">1</span>,
-        checksum: NetworkU16(<span class="number">0</span>),
+    <span class="kw">let </span><span class="kw-2">mut </span>headers = UdpHeaders {
+        eth: packet.headers.eth.swapped(),
+        ip: state.ips(client_addr.ip()).with_header(<span class="kw-2">&amp;</span>packet.headers.ip),
+        udp: UdpHdr {
+            source: state.external_port,
+            destination: client_addr.port().into(),
+            length: NetworkU16(<span class="number">0</span>),
+            check: <span class="number">0</span>,
+        },
+        data_offset: packet.headers.data_offset,
+        data_length: packet.headers.data_length,
     };
 
-    <span class="kw">let </span>res = modify_packet_headers(<span class="kw-2">&amp;</span>packet.udp, <span class="kw-2">&amp;</span>headers, <span class="kw-2">&amp;mut </span>packet.inner);
+    <span class="kw">let </span>res = modify_packet_headers(<span class="kw-2">&amp;</span>packet.headers, <span class="kw-2">&amp;mut </span>headers, <span class="kw-2">&amp;mut </span>packet.buffer);
     <span class="kw">if </span>res.is_ok() {
-        <span class="kw">let _ </span>= packet.inner.calc_udp_checksum();
+        <span class="kw">let _ </span>= packet.buffer.calc_udp_checksum();
     }
 
     push_packet(
         metrics::Direction::Write,
-        packet.inner,
+        packet.buffer,
         asn,
-        packet.udp.data_length,
+        packet.headers.data_length,
         res,
         tx_slab,
         umem,
@@ -1559,8 +1629,8 @@
 /// resizing the header portion as needed if changing between ipv4 and ipv6
 </span><span class="attr">#[inline]
 </span><span class="kw">fn </span>modify_packet_headers(
-    original: <span class="kw-2">&amp;</span>UdpPacket,
-    new: <span class="kw-2">&amp;</span>UdpPacket,
+    original: <span class="kw-2">&amp;</span>UdpHeaders,
+    new: <span class="kw-2">&amp;mut </span>UdpHeaders,
     packet: <span class="kw-2">&amp;mut </span>Packet,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), PacketError&gt; {
     <span class="kw">match </span>(original.is_ipv4(), new.is_ipv4()) {
@@ -1569,13 +1639,13 @@
         (<span class="kw">_</span>, <span class="kw">_</span>) =&gt; {}
     }
 
-    new.set_packet_headers(packet)<span class="question-mark">?</span>;
+    new.set_packet_headers(packet, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(())
 }
 
 <span class="attr">#[inline]
 </span><span class="kw">fn </span>fill_packet(
-    headers: <span class="kw-2">&amp;mut </span>UdpPacket,
+    headers: <span class="kw-2">&amp;mut </span>UdpHeaders,
     data: <span class="kw-2">&amp;</span>[u8],
     data_checksum: u32,
     frame: <span class="kw-2">&amp;mut </span>Packet,
@@ -1583,27 +1653,25 @@
     <span class="kw">let </span>hdr_len = headers.header_length();
     frame.adjust_tail(hdr_len <span class="kw">as </span>i32)<span class="question-mark">?</span>;
     headers.calc_checksum(data.len(), data_checksum);
-    headers.set_packet_headers(frame)<span class="question-mark">?</span>;
+    headers.set_packet_headers(frame, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
     frame.insert(hdr_len, data)<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(())
 }
 
 <span class="kw">fn </span>process_qcmp_packet(
     <span class="kw-2">mut </span>packet: Packet,
-    udp: UdpPacket,
+    headers: UdpHeaders,
     umem: <span class="kw-2">&amp;mut </span>Umem,
     tx_slab: <span class="kw-2">&amp;mut </span>HeapSlab,
 ) {
     <span class="kw">use crate</span>::{codec::qcmp, time::UtcTimestamp};
 
-    <span class="kw">fn </span>inner(packet: <span class="kw-2">&amp;mut </span>Packet, udp: UdpPacket) -&gt; bool {
+    <span class="kw">fn </span>inner(packet: <span class="kw-2">&amp;mut </span>Packet, headers: UdpHeaders) -&gt; bool {
         <span class="kw">let </span>received_at = UtcTimestamp::now();
-        <span class="kw">let </span>data = <span class="kw">match </span>packet.slice_at_offset(udp.data_offset, udp.data_length) {
-            <span class="prelude-val">Ok</span>(d) =&gt; d,
-            <span class="prelude-val">Err</span>(error) =&gt; {
-                <span class="macro">tracing::debug!</span>(%error, <span class="string">"corrupt UDP packet"</span>);
-                <span class="kw">return </span><span class="bool-val">false</span>;
-            }
+        <span class="kw">let </span><span class="prelude-val">Some</span>(data) = packet.get(headers.data_offset..headers.data_offset + headers.data_length)
+        <span class="kw">else </span>{
+            <span class="macro">tracing::debug!</span>(<span class="string">"corrupt UDP packet, data payload is out of range"</span>);
+            <span class="kw">return </span><span class="bool-val">false</span>;
         };
         <span class="kw">let </span>command = <span class="kw">match </span>qcmp::Protocol::parse(data) {
             <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(command)) =&gt; command,
@@ -1629,44 +1697,26 @@
         <span class="kw">let </span><span class="kw-2">mut </span>ob = qcmp::QcmpPacket::default();
         <span class="kw">let </span>buf = qcmp::Protocol::ping_reply(nonce, client_timestamp, received_at).encode(<span class="kw-2">&amp;mut </span>ob);
 
-        <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = packet.adjust_tail(-(udp.data_length <span class="kw">as </span>i32)) {
+        <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = packet.adjust_tail(-(headers.data_length <span class="kw">as </span>i32)) {
             <span class="macro">tracing::debug!</span>(%error, <span class="string">"unable to trim QCMP ping data"</span>);
             <span class="kw">return </span><span class="bool-val">false</span>;
         }
 
-        <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = packet.insert(udp.data_offset, buf) {
+        <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = packet.insert(headers.data_offset, buf) {
             <span class="macro">tracing::debug!</span>(%error, <span class="string">"unable to write QCMP pong data"</span>);
             <span class="kw">return </span><span class="bool-val">false</span>;
         }
 
-        <span class="kw">let </span>new = UdpPacket {
-            src_mac: udp.dst_mac,
-            dst_mac: udp.src_mac,
-            ips: <span class="kw">match </span>udp.ips {
-                IpAddresses::V4 {
-                    source,
-                    destination,
-                } =&gt; IpAddresses::V4 {
-                    source: destination,
-                    destination: source,
-                },
-                IpAddresses::V6 {
-                    source,
-                    destination,
-                } =&gt; IpAddresses::V6 {
-                    source: destination,
-                    destination: source,
-                },
-            },
-            src_port: udp.dst_port,
-            dst_port: udp.src_port,
-            data_offset: udp.data_offset,
+        <span class="kw">let </span><span class="kw-2">mut </span>new = UdpHeaders {
+            eth: headers.eth.swapped(),
+            ip: headers.ip.swapped(),
+            udp: headers.udp.swapped(),
+            data_offset: headers.data_offset,
             data_length: buf.len(),
-            hop: udp.hop - <span class="number">1</span>,
-            checksum: <span class="number">0</span>.into(),
         };
+        new.decrement_hop();
 
-        <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = modify_packet_headers(<span class="kw-2">&amp;</span>udp, <span class="kw-2">&amp;</span>new, packet) {
+        <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = modify_packet_headers(<span class="kw-2">&amp;</span>headers, <span class="kw-2">&amp;mut </span>new, packet) {
             <span class="macro">tracing::debug!</span>(%error, <span class="string">"unable to modify QCMP packet headers"</span>);
             <span class="kw">return </span><span class="bool-val">false</span>;
         }
@@ -1679,7 +1729,7 @@
         <span class="bool-val">true
     </span>}
 
-    <span class="kw">let </span>packet = <span class="kw">if </span>inner(<span class="kw-2">&amp;mut </span>packet, udp) {
+    <span class="kw">let </span>packet = <span class="kw">if </span>inner(<span class="kw-2">&amp;mut </span>packet, headers) {
         <span class="macro">tracing::debug!</span>(<span class="string">"sending QCMP pong"</span>);
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(packet) = tx_slab.push_back(packet) {
@@ -1693,5 +1743,73 @@
     };
 
     umem.free_packet(packet);
+}
+
+<span class="attr">#[cfg(test)]
+</span><span class="kw">mod </span>test {
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+    <span class="kw">use </span>quilkin_xdp::xdp::packet::Pod;
+    <span class="kw">use </span>xdp::packet::net_types <span class="kw">as </span>nt;
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>xdp_buffer_manipulation() {
+        <span class="kw">let </span>payload = [<span class="number">0xfdu8</span>; <span class="number">21</span>];
+
+        <span class="kw">let </span><span class="kw-2">mut </span>v6 = nt::Ipv6Hdr::zeroed();
+        v6.reset(<span class="number">64</span>, nt::IpProto::Udp);
+        v6.source = [<span class="number">13</span>; <span class="number">16</span>];
+        v6.destination = [<span class="number">8</span>; <span class="number">16</span>];
+        <span class="kw">let </span><span class="kw-2">mut </span>headers = UdpHeaders {
+            eth: nt::EthHdr {
+                source: nt::MacAddress([<span class="number">1</span>; <span class="number">6</span>]),
+                destination: nt::MacAddress([<span class="number">2</span>; <span class="number">6</span>]),
+                ether_type: nt::EtherType::Ipv6,
+            },
+            ip: nt::IpHdr::V6(v6),
+            udp: UdpHdr {
+                source: <span class="number">22</span>.into(),
+                destination: <span class="number">20021</span>.into(),
+                length: NetworkU16(<span class="number">0</span>),
+                check: <span class="number">0</span>,
+            },
+            data_offset: nt::EthHdr::LEN + nt::Ipv6Hdr::LEN + nt::UdpHdr::LEN,
+            data_length: payload.len(),
+        };
+
+        <span class="kw">let </span><span class="kw-2">mut </span>data = [<span class="number">0u8</span>; <span class="number">2048</span>];
+        <span class="kw">let </span><span class="kw-2">mut </span>buffer = xdp::Packet::testing_new(<span class="kw-2">&amp;mut </span>data);
+        buffer.adjust_tail(headers.data_offset <span class="kw">as _</span>).unwrap();
+        headers.set_packet_headers(<span class="kw-2">&amp;mut </span>buffer, <span class="bool-val">false</span>).unwrap();
+        buffer.insert(headers.data_offset, <span class="kw-2">&amp;</span>payload).unwrap();
+        buffer.calc_udp_checksum().unwrap();
+
+        <span class="kw">let </span><span class="kw-2">mut </span>wrapper = PacketWrapper { buffer, headers };
+
+        <span class="kw">use </span><span class="kw">crate</span>::filters::{Packet, PacketMut};
+
+        <span class="macro">assert_eq!</span>(wrapper.as_slice(), payload);
+
+        {
+            <span class="kw">const </span>HEAD: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span>[<span class="number">1</span>; <span class="number">3</span>];
+            wrapper.extend_head(HEAD);
+            <span class="macro">assert_eq!</span>(<span class="kw-2">&amp;</span>wrapper.as_slice()[..HEAD.len()], HEAD);
+            <span class="macro">assert_eq!</span>(wrapper.as_slice()[HEAD.len()..], payload);
+            <span class="macro">assert_eq!</span>(wrapper.headers.data_length, payload.len() + HEAD.len());
+            wrapper.remove_head(HEAD.len());
+        }
+
+        <span class="macro">assert_eq!</span>(wrapper.as_slice(), payload);
+
+        {
+            <span class="kw">const </span>TAIL: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span>[<span class="number">8</span>; <span class="number">20</span>];
+            wrapper.extend_tail(TAIL);
+            <span class="macro">assert_eq!</span>(wrapper.as_slice()[..payload.len()], payload);
+            <span class="macro">assert_eq!</span>(<span class="kw-2">&amp;</span>wrapper.as_slice()[payload.len()..], TAIL);
+            <span class="macro">assert_eq!</span>(wrapper.headers.data_length, payload.len() + TAIL.len());
+            wrapper.remove_tail(TAIL.len());
+        }
+
+        <span class="macro">assert_eq!</span>(wrapper.as_slice(), payload);
+    }
 }
 </code></pre></div></section></main></body></html>
