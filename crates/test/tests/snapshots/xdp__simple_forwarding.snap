@@ -38,14 +38,14 @@ PacketHeaders {
                 ),
                 total_len: 39,
                 identification: 0,
-                dont_fragment: false,
+                dont_fragment: true,
                 more_fragments: false,
                 fragment_offset: IpFragOffset(
                     0,
                 ),
                 time_to_live: 63,
                 protocol: 17 (UDP - User Datagram),
-                header_checksum: 30145,
+                header_checksum: 13761,
                 source: [
                     2,
                     2,

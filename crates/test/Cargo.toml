@@ -36,3 +36,4 @@ tempfile.workspace = true
 tokio = { workspace = true, features = ["macros"] }
 tracing.workspace = true
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
+xdp = { workspace = true, features = ["__debug"] }
