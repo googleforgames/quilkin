@@ -32,3 +32,6 @@ pub use generated::quilkin::config::v1alpha1 as proto;
 pub use quilkin_proto::generated;
 
 pub type Result<T, E = eyre::Error> = std::result::Result<T, E>;
+
+const HTTP2_KEEPALIVE_INTERVAL: std::time::Duration = std::time::Duration::from_secs(20);
+const HTTP2_KEEPALIVE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
