@@ -130,6 +130,12 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
         }
     }
 
+    fn server_builder() -> tonic::transport::Server {
+        tonic::transport::Server::builder()
+            .http2_keepalive_interval(Some(crate::HTTP2_KEEPALIVE_INTERVAL))
+            .http2_keepalive_timeout(Some(crate::HTTP2_KEEPALIVE_TIMEOUT))
+    }
+
     pub fn management_server(
         mut self,
         listener: TcpListener,
@@ -143,7 +149,7 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
 
         let server = AggregatedDiscoveryServiceServer::new(self)
             .max_encoding_message_size(crate::config::max_grpc_message_size());
-        let builder = tonic::transport::Server::builder();
+        let builder = Self::server_builder();
 
         let mut builder = if let Some(tls) = tls {
             builder.tls_config(tonic::transport::ServerTlsConfig::new().identity(tls.identity))?
@@ -171,7 +177,7 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
 
         let server = AggregatedControlPlaneDiscoveryServiceServer::new(self)
             .max_encoding_message_size(crate::config::max_grpc_message_size());
-        let builder = tonic::transport::Server::builder();
+        let builder = Self::server_builder();
 
         let mut builder = if let Some(tls) = tls {
             builder.tls_config(tonic::transport::ServerTlsConfig::new().identity(tls.identity))?

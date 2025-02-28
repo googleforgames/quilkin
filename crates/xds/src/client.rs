@@ -20,6 +20,7 @@ use std::{
     time::Duration,
 };
 
+use eyre::ContextCompat;
 use futures::StreamExt;
 use rand::Rng;
 use tonic::transport::{Endpoint, Error as TonicError, channel::Channel as TonicChannel};
@@ -69,10 +70,14 @@ impl ServiceClient for AdsGrpcClient {
     async fn connect_to_endpoint(
         endpoint: tonic::transport::Endpoint,
     ) -> Result<Self, tonic::transport::Error> {
-        Ok(AdsGrpcClient::connect(endpoint)
-            .await?
-            .max_decoding_message_size(crate::config::max_grpc_message_size())
-            .max_encoding_message_size(crate::config::max_grpc_message_size()))
+        Ok(AdsGrpcClient::connect(
+            endpoint
+                .tcp_keepalive(Some(crate::HTTP2_KEEPALIVE_INTERVAL))
+                .timeout(crate::HTTP2_KEEPALIVE_TIMEOUT),
+        )
+        .await?
+        .max_decoding_message_size(crate::config::max_grpc_message_size())
+        .max_encoding_message_size(crate::config::max_grpc_message_size()))
     }
 
     async fn stream_requests<S: tonic::IntoStreamingRequest<Message = Self::Request> + Send>(
@@ -91,10 +96,14 @@ impl ServiceClient for MdsGrpcClient {
     async fn connect_to_endpoint(
         endpoint: tonic::transport::Endpoint,
     ) -> Result<Self, tonic::transport::Error> {
-        Ok(MdsGrpcClient::connect(endpoint)
-            .await?
-            .max_decoding_message_size(crate::config::max_grpc_message_size())
-            .max_encoding_message_size(crate::config::max_grpc_message_size()))
+        Ok(MdsGrpcClient::connect(
+            endpoint
+                .tcp_keepalive(Some(crate::HTTP2_KEEPALIVE_INTERVAL))
+                .timeout(crate::HTTP2_KEEPALIVE_TIMEOUT),
+        )
+        .await?
+        .max_decoding_message_size(crate::config::max_grpc_message_size())
+        .max_encoding_message_size(crate::config::max_grpc_message_size()))
     }
 
     async fn stream_requests<S: tonic::IntoStreamingRequest<Message = Self::Request> + Send>(
@@ -436,38 +445,28 @@ impl AdsClient {
             stream: &mut tonic::Streaming<DeltaDiscoveryResponse>,
             resources: &'static [(&'static str, &'static [(&'static str, Vec<String>)])],
         ) -> eyre::Result<&'static [(&'static str, Vec<String>)]> {
-            let resource_subscriptions = match stream.message().await? {
+            match stream.message().await? {
                 Some(first) => {
-                    let mut rsubs = None;
-                    if first.type_url == "ignore-me" {
-                        if !first.system_version_info.is_empty() {
-                            rsubs = resources.iter().find_map(|(vers, subs)| {
-                                (*vers == first.system_version_info).then_some(subs)
-                            });
-                        }
-                    } else {
+                    if first.type_url != "ignore-me" {
                         tracing::warn!("expected `ignore-me` response from management server");
                     }
 
-                    if let Some(subs) = rsubs {
-                        subs
-                    } else {
-                        let Some(subs) = resources
-                            .iter()
-                            .find_map(|(vers, subs)| vers.is_empty().then_some(subs))
-                        else {
-                            eyre::bail!("failed to find fallback resource subscription set");
-                        };
-
-                        subs
-                    }
+                    resources
+                        .iter()
+                        .find_map(|(vers, subs)| {
+                            (*vers == first.system_version_info).then_some(*subs)
+                        })
+                        .with_context(|| {
+                            format!(
+                                "failed to find resources with version `{}` to subscribe to",
+                                first.system_version_info
+                            )
+                        })
                 }
                 _ => {
                     eyre::bail!("expected at least one response from the management server");
                 }
-            };
-
-            Ok(resource_subscriptions)
+            }
         }
 
         let resource_subscriptions = match handle_first_response(&mut stream, resources).await {
