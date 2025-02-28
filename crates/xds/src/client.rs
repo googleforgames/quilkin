@@ -69,10 +69,14 @@ impl ServiceClient for AdsGrpcClient {
     async fn connect_to_endpoint(
         endpoint: tonic::transport::Endpoint,
     ) -> Result<Self, tonic::transport::Error> {
-        Ok(AdsGrpcClient::connect(endpoint)
-            .await?
-            .max_decoding_message_size(crate::config::max_grpc_message_size())
-            .max_encoding_message_size(crate::config::max_grpc_message_size()))
+        Ok(AdsGrpcClient::connect(
+            endpoint
+                .tcp_keepalive(Some(crate::HTTP2_KEEPALIVE_INTERVAL))
+                .timeout(crate::HTTP2_KEEPALIVE_TIMEOUT),
+        )
+        .await?
+        .max_decoding_message_size(crate::config::max_grpc_message_size())
+        .max_encoding_message_size(crate::config::max_grpc_message_size()))
     }
 
     async fn stream_requests<S: tonic::IntoStreamingRequest<Message = Self::Request> + Send>(
@@ -91,10 +95,14 @@ impl ServiceClient for MdsGrpcClient {
     async fn connect_to_endpoint(
         endpoint: tonic::transport::Endpoint,
     ) -> Result<Self, tonic::transport::Error> {
-        Ok(MdsGrpcClient::connect(endpoint)
-            .await?
-            .max_decoding_message_size(crate::config::max_grpc_message_size())
-            .max_encoding_message_size(crate::config::max_grpc_message_size()))
+        Ok(MdsGrpcClient::connect(
+            endpoint
+                .tcp_keepalive(Some(crate::HTTP2_KEEPALIVE_INTERVAL))
+                .timeout(crate::HTTP2_KEEPALIVE_TIMEOUT),
+        )
+        .await?
+        .max_decoding_message_size(crate::config::max_grpc_message_size())
+        .max_encoding_message_size(crate::config::max_grpc_message_size()))
     }
 
     async fn stream_requests<S: tonic::IntoStreamingRequest<Message = Self::Request> + Send>(
