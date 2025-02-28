@@ -294,11 +294,11 @@ impl TestHelper {
     ) -> u16 {
         let (shutdown_tx, shutdown_rx) =
             crate::signal::channel(crate::signal::ShutdownKind::Testing);
-        self.server_shutdown_tx.push(Some(shutdown_tx));
+        self.server_shutdown_tx.push(Some(shutdown_tx.clone()));
         let ready = <_>::default();
 
         if let Some(address) = with_admin {
-            crate::components::admin::server(config.clone(), ready, address);
+            crate::components::admin::server(config.clone(), ready, shutdown_tx, address);
         }
 
         let server = server.unwrap_or_else(|| {

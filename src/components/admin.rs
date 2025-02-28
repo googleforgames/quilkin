@@ -36,13 +36,14 @@ pub(crate) const IDLE_REQUEST_INTERVAL: Duration = Duration::from_secs(30);
 pub fn server<C>(
     config: Arc<C>,
     ready: Arc<AtomicBool>,
+    shutdown_tx: crate::signal::ShutdownTx,
     address: Option<std::net::SocketAddr>,
 ) -> std::thread::JoinHandle<eyre::Result<()>>
 where
     C: serde::Serialize + Send + Sync + 'static,
 {
     let address = address.unwrap_or_else(|| (std::net::Ipv6Addr::UNSPECIFIED, PORT).into());
-    let health = Health::new();
+    let health = Health::new(shutdown_tx);
     tracing::info!(address = %address, "Starting admin endpoint");
 
     std::thread::Builder::new()

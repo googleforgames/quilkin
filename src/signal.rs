@@ -5,10 +5,10 @@ pub type ShutdownTx = tokio::sync::watch::Sender<ShutdownKind>;
 /// Creates a new handler for shutdown signal (e.g. SIGTERM, SIGINT), and
 /// returns a receiver channel that will receive an event when a shutdown has
 /// been requested.
-pub fn spawn_handler() -> ShutdownRx {
+pub fn spawn_handler() -> (ShutdownTx, ShutdownRx) {
     let (tx, rx) = channel(ShutdownKind::default());
-    ShutdownKind::spawn_signal_handler(tx);
-    rx
+    ShutdownKind::spawn_signal_handler(tx.clone());
+    (tx, rx)
 }
 
 pub fn channel(kind: ShutdownKind) -> (ShutdownTx, ShutdownRx) {

@@ -24,19 +24,23 @@ use std::sync::atomic::Ordering::Relaxed;
 #[derive(Clone)]
 pub struct Health {
     healthy: Arc<AtomicBool>,
+    shutdown_tx: crate::signal::ShutdownTx,
 }
 
 impl Health {
-    pub fn new() -> Self {
+    pub fn new(shutdown_tx: crate::signal::ShutdownTx) -> Self {
         let health = Self {
             healthy: Arc::new(AtomicBool::new(true)),
+            shutdown_tx,
         };
 
         let healthy = health.healthy.clone();
+        let shutdown_tx = health.shutdown_tx.clone();
         let default_hook = panic::take_hook();
         panic::set_hook(Box::new(move |panic_info| {
             tracing::error!(%panic_info, "Panic has occurred. Moving to Unhealthy");
             healthy.swap(false, Relaxed);
+            let _ = shutdown_tx.send(crate::signal::ShutdownKind::Normal);
             default_hook(panic_info);
         }));
 
@@ -63,7 +67,9 @@ mod tests {
 
     #[test]
     fn panic_hook() {
-        let health = Health::new();
+        let (shutdown_tx, _shutdown_rx) =
+            crate::signal::channel(crate::signal::ShutdownKind::Testing);
+        let health = Health::new(shutdown_tx);
 
         let response = health.check_liveness();
         assert_eq!(response.status(), StatusCode::OK);

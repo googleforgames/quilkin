@@ -229,11 +229,15 @@ impl Cli {
         let config = self.read_config()?;
 
         let ready = Arc::<std::sync::atomic::AtomicBool>::default();
+        let (shutdown_tx, mut shutdown_rx) = crate::signal::spawn_handler();
         if self.admin.enabled {
-            crate::components::admin::server(config.clone(), ready.clone(), self.admin.address);
+            crate::components::admin::server(
+                config.clone(),
+                ready.clone(),
+                shutdown_tx,
+                self.admin.address,
+            );
         }
-
-        let mut shutdown_rx = crate::signal::spawn_handler();
 
         crate::alloc::spawn_heap_stats_updates(
             std::time::Duration::from_secs(10),
