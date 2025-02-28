@@ -610,10 +610,13 @@ impl Node {
         let outgoing = distance.outgoing.nanos() as f64;
 
         let Some(coordinates) = &mut self.coordinates else {
-            self.coordinates = Some(Coordinates {
+            let coordinates = Coordinates {
                 x: incoming,
                 y: outgoing,
-            });
+            };
+            crate::metrics::phoenix_distance(self.icao_code, self.error_estimate)
+                .set(Coordinates::ORIGIN.distance_to(&coordinates));
+            self.coordinates = Some(coordinates);
             return;
         };
 
