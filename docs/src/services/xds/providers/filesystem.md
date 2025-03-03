@@ -39,7 +39,7 @@ clusters:
              - 'MXg3aWp5Ng=='
 # ";
 # let config = quilkin::config::Config::from_reader(yaml.as_bytes()).unwrap();
-# assert_eq!(config.filters.load().len(), 1);
+# assert_eq!(config.filters().unwrap().load().len(), 1);
 ```
 
 [configuration]: ../../../services/proxy/configuration.md
