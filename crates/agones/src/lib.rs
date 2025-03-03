@@ -318,8 +318,10 @@ pub async fn quilkin_proxy_deployment(
     let mut container = quilkin_container(
         client,
         Some(vec![
-            "proxy".into(),
-            format!("--management-server={management_server}"),
+            "--service.udp".into(),
+            "--service.qcmp".into(),
+            "--service.phoenix".into(),
+            format!("--provider.xds.endpoints={management_server}"),
         ]),
         None,
         current,

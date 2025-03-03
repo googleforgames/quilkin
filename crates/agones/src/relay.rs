@@ -260,10 +260,12 @@ mod tests {
 
         // Setup the relay
         let args = [
-            "relay",
-            "agones",
-            "--config-namespace",
+            "--service.mds",
+            "--service.xds",
+            "--provider.k8s",
+            "--provider.k8s.namespace",
             client.namespace.as_str(),
+            "--provider.k8s.agones",
         ]
         .map(String::from)
         .to_vec();
