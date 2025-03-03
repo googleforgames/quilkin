@@ -104,7 +104,6 @@ pub struct ControlPlane<C> {
     pub config: Arc<C>,
     pub idle_request_interval: Duration,
     tx: tokio::sync::broadcast::Sender<&'static str>,
-    pub is_relay: bool,
 }
 
 impl<C> Clone for ControlPlane<C> {
@@ -113,7 +112,6 @@ impl<C> Clone for ControlPlane<C> {
             config: self.config.clone(),
             idle_request_interval: self.idle_request_interval,
             tx: self.tx.clone(),
-            is_relay: self.is_relay,
         }
     }
 }
@@ -126,7 +124,6 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
             config,
             idle_request_interval,
             tx,
-            is_relay: false,
         }
     }
 
@@ -137,11 +134,10 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
     }
 
     pub fn management_server(
-        mut self,
+        self,
         listener: TcpListener,
         tls: Option<TlsIdentity>,
     ) -> eyre::Result<impl std::future::Future<Output = crate::Result<()>>> {
-        self.is_relay = false;
         tokio::spawn({
             let this = self.clone();
             self.config.on_changed(this)
@@ -165,11 +161,10 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
     }
 
     pub fn relay_server(
-        mut self,
+        self,
         listener: TcpListener,
         tls: Option<TlsIdentity>,
     ) -> eyre::Result<impl std::future::Future<Output = crate::Result<()>>> {
-        self.is_relay = true;
         tokio::spawn({
             let this = self.clone();
             self.config.on_changed(this)
@@ -197,7 +192,6 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
         tracing::debug!(
             %resource_type,
             id = self.config.identifier(),
-            is_relay = self.is_relay,
             "pushing update"
         );
         if self.tx.send(resource_type).is_err() {
@@ -239,7 +233,6 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
             id,
             client = node_id,
             count = this.tx.receiver_count(),
-            is_relay = this.is_relay,
             "subscribed to config updates"
         );
 
