@@ -346,7 +346,7 @@ impl QuilkinLoop {
                 .unwrap();
 
             runtime.block_on(async move {
-                proxy.await.unwrap();
+                proxy.await.unwrap().unwrap();
             });
         });
 
