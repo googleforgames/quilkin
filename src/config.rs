@@ -419,13 +419,7 @@ impl quilkin_xds::config::Configuration for Config {
         &self,
         control_plane: quilkin_xds::server::ControlPlane<Self>,
     ) -> impl std::future::Future<Output = ()> + Send + 'static {
-        if let Some(fc) = control_plane
-            .config
-            .dyn_cfg
-            .typemap
-            .get::<FilterChain>()
-            .filter(|_| !control_plane.is_relay)
-        {
+        if let Some(fc) = control_plane.config.dyn_cfg.typemap.get::<FilterChain>() {
             fc.watch({
                 let this = control_plane.clone();
                 move |_| {
