@@ -619,6 +619,38 @@ pub fn quilkin_container(
             period_seconds: Some(1),
             ..Default::default()
         }),
+        ports: Some(vec![
+            ContainerPort {
+                container_port: 7600,
+                protocol: Some("UDP".into()),
+                ..<_>::default()
+            },
+            ContainerPort {
+                container_port: 7600,
+                protocol: Some("TCP".into()),
+                ..<_>::default()
+            },
+            ContainerPort {
+                container_port: 7777,
+                protocol: Some("UDP".into()),
+                ..<_>::default()
+            },
+            ContainerPort {
+                container_port: 7800,
+                protocol: Some("TCP".into()),
+                ..<_>::default()
+            },
+            ContainerPort {
+                container_port: 7900,
+                protocol: Some("TCP".into()),
+                ..<_>::default()
+            },
+            ContainerPort {
+                container_port: 8000,
+                protocol: Some("TCP".into()),
+                ..<_>::default()
+            },
+        ]),
         ..Default::default()
     };
 
