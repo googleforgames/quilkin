@@ -253,9 +253,8 @@ pub fn setup_xdp_io(config: XdpConfig<'_>) -> Result<XdpWorkers, XdpSetupError> 
         // TODO: This should be done in the type system so we can avoid logic
         // that doesn't change during the course of operation, but for now just
         // do it at runtime
-        tx_metadata: device_caps.tx_metadata.checksum(),
-        #[cfg(debug_assertions)]
-        software_checksum: false,
+        tx_checksum: device_caps.tx_metadata.checksum(),
+        ..Default::default()
     }
     .build()?;
 
@@ -426,8 +425,10 @@ fn io_loop(
         last_receive: UtcTimestamp::now(),
     };
 
-    let mut rx_slab = xdp::HeapSlab::with_capacity(BATCH_SIZE);
-    let mut tx_slab = xdp::HeapSlab::with_capacity(BATCH_SIZE * 4);
+    use xdp::slab::Slab;
+
+    let mut rx_slab = xdp::slab::StackSlab::<BATCH_SIZE>::new();
+    let mut tx_slab = xdp::slab::StackSlab::<{ BATCH_SIZE << 2 }>::new();
     let mut pending_sends = 0;
 
     // SAFETY: the cases of unsafe in this code block all concern the relationship
