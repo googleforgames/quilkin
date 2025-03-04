@@ -10,11 +10,12 @@ use crate::{
 };
 pub use quilkin_xdp::xdp;
 use quilkin_xdp::xdp::{
-    HeapSlab, Umem,
+    Umem,
     packet::{
         Packet, PacketError, csum,
         net_types::{IpAddresses, NetworkU16, UdpHdr, UdpHeaders},
     },
+    slab::{Slab, StackSlab},
 };
 use std::{
     collections::hash_map::Entry,
@@ -445,10 +446,10 @@ impl SessionState {
 }
 
 #[inline]
-pub fn process_packets(
-    rx_slab: &mut HeapSlab,
+pub fn process_packets<const RXN: usize, const TXN: usize>(
+    rx_slab: &mut StackSlab<RXN>,
     umem: &mut Umem,
-    tx_slab: &mut HeapSlab,
+    tx_slab: &mut StackSlab<TXN>,
     state: &mut State,
 ) {
     let filters = state.config.filters.load();
@@ -459,7 +460,7 @@ pub fn process_packets(
     state.last_receive = now;
     let mut had_read = false;
 
-    while let Some(buffer) = rx_slab.pop_front() {
+    while let Some(buffer) = rx_slab.pop_back() {
         let Ok(Some(headers)) = UdpHeaders::parse_packet(&buffer) else {
             unreachable!(
                 "we somehow got a non-UDP packet, this should be impossible with the eBPF program we use to route packets"
@@ -519,18 +520,18 @@ pub fn process_packets(
 }
 
 #[inline]
-fn push_packet(
+fn push_packet<const TXN: usize>(
     direction: metrics::Direction,
     packet: Packet,
     asn: AsnInfo<'_>,
     data_length: usize,
     res: Result<(), PacketError>,
-    tx_slab: &mut HeapSlab,
+    tx_slab: &mut StackSlab<TXN>,
     umem: &mut Umem,
 ) {
     match res {
         Ok(()) => {
-            if let Some(packet) = tx_slab.push_back(packet) {
+            if let Some(packet) = tx_slab.push_front(packet) {
                 metrics::packets_dropped_total(direction, "tx slab full", &metrics::EMPTY).inc();
                 umem.free_packet(packet);
             } else {
@@ -548,13 +549,13 @@ fn push_packet(
 }
 
 #[inline]
-fn process_client_packet(
+fn process_client_packet<const TXN: usize>(
     packet: PacketWrapper,
     umem: &mut Umem,
     filters: &filters::FilterChain,
     cm: &crate::net::ClusterMap,
     state: &mut State,
-    tx_slab: &mut HeapSlab,
+    tx_slab: &mut StackSlab<TXN>,
 ) -> Result<Option<Packet>, (PipelineError, Packet)> {
     let source_addr = packet.headers.source_address();
     let mut ctx =
@@ -659,12 +660,12 @@ fn process_client_packet(
 }
 
 #[inline]
-fn process_server_packet(
+fn process_server_packet<const TXN: usize>(
     packet: PacketWrapper,
     umem: &mut Umem,
     filters: &crate::filters::FilterChain,
     state: &mut State,
-    tx_slab: &mut HeapSlab,
+    tx_slab: &mut StackSlab<TXN>,
     jitter: i64,
 ) -> Result<Option<Packet>, (PipelineError, Packet)> {
     let server_addr = packet.headers.source_address();
@@ -749,11 +750,11 @@ fn fill_packet(
     Ok(())
 }
 
-fn process_qcmp_packet(
+fn process_qcmp_packet<const TXN: usize>(
     mut packet: Packet,
     headers: UdpHeaders,
     umem: &mut Umem,
-    tx_slab: &mut HeapSlab,
+    tx_slab: &mut StackSlab<TXN>,
 ) {
     use crate::{codec::qcmp, time::UtcTimestamp};
 
@@ -823,7 +824,7 @@ fn process_qcmp_packet(
     let packet = if inner(&mut packet, headers) {
         tracing::debug!("sending QCMP pong");
 
-        if let Some(packet) = tx_slab.push_back(packet) {
+        if let Some(packet) = tx_slab.push_front(packet) {
             tracing::debug!("tx slab full, unable to send QCMP pong");
             packet
         } else {

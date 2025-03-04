@@ -10,6 +10,7 @@ use quilkin::{
             xdp::{
                 self,
                 packet::net_types::{self as nt, UdpHeaders},
+                slab::Slab,
             },
         },
     },
@@ -20,6 +21,8 @@ use std::{
     net::{Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
     sync::Arc,
 };
+
+type LittleSlab = xdp::slab::StackSlab<1>;
 
 #[inline]
 fn endpoints(eps: &[(SocketAddr, &[u8])]) -> BTreeSet<net::Endpoint> {
@@ -106,9 +109,9 @@ async fn simple_forwarding() {
         .write(&mut client_packet, &data)
         .unwrap();
 
-    let mut rx_slab = xdp::HeapSlab::with_capacity(1);
+    let mut rx_slab = LittleSlab::new();
     rx_slab.push_front(client_packet);
-    let mut tx_slab = xdp::HeapSlab::with_capacity(1);
+    let mut tx_slab = LittleSlab::new();
     process::process_packets(&mut rx_slab, &mut umem, &mut tx_slab, &mut state);
 
     assert!(rx_slab.is_empty());
@@ -180,8 +183,8 @@ async fn changes_ip_version() {
     )
     .unwrap();
 
-    let mut rx_slab = xdp::HeapSlab::with_capacity(1);
-    let mut tx_slab = xdp::HeapSlab::with_capacity(1);
+    let mut rx_slab = LittleSlab::new();
+    let mut tx_slab = LittleSlab::new();
 
     let port = {
         let mut client_packet = unsafe { umem.alloc().unwrap() };
@@ -264,8 +267,8 @@ async fn packet_manipulation() {
     )
     .unwrap();
 
-    let mut rx_slab = xdp::HeapSlab::with_capacity(1);
-    let mut tx_slab = xdp::HeapSlab::with_capacity(1);
+    let mut rx_slab = LittleSlab::new();
+    let mut tx_slab = LittleSlab::new();
 
     // Test suffix removal
     {
@@ -469,7 +472,9 @@ async fn multiple_servers() {
     const CLIENT: SocketAddrV6 =
         SocketAddrV6::new(Ipv6Addr::new(5, 5, 5, 5, 5, 5, 5, 5), 8888, 0, 0);
 
-    let mut servers: Vec<_> = (1..20)
+    const COUNT: usize = 32;
+
+    let mut servers: Vec<_> = (1..COUNT as u16)
         .map(|i| SocketAddrV6::new(Ipv6Addr::new(i, i, i, i, i, i, i, i), 1000 + i, 0, 0))
         .collect();
     let tok = [0xf1u8];
@@ -512,7 +517,7 @@ async fn multiple_servers() {
         xdp::umem::UmemCfgBuilder {
             frame_size: xdp::umem::FrameSize::TwoK,
             head_room: 20,
-            frame_count: 20,
+            frame_count: COUNT as u32,
             ..Default::default()
         }
         .build()
@@ -520,8 +525,8 @@ async fn multiple_servers() {
     )
     .unwrap();
 
-    let mut rx_slab = xdp::HeapSlab::with_capacity(1);
-    let mut tx_slab = xdp::HeapSlab::with_capacity(20);
+    let mut rx_slab = LittleSlab::new();
+    let mut tx_slab = xdp::slab::StackSlab::<COUNT>::new();
 
     let mut client_packet = unsafe { umem.alloc().unwrap() };
 
@@ -534,7 +539,7 @@ async fn multiple_servers() {
     rx_slab.push_front(client_packet);
     process::process_packets(&mut rx_slab, &mut umem, &mut tx_slab, &mut state);
 
-    while let Some(sp) = tx_slab.pop_front() {
+    while let Some(sp) = tx_slab.pop_back() {
         let udp = UdpHeaders::parse_packet(&sp).unwrap().unwrap();
 
         let std::net::IpAddr::V6(dip) = udp.destination_address().ip() else {
@@ -610,8 +615,8 @@ async fn many_sessions() {
         packet.calc_udp_checksum().unwrap();
     }
 
-    let mut rx_slab = xdp::HeapSlab::with_capacity(1);
-    let mut tx_slab = xdp::HeapSlab::with_capacity(1);
+    let mut rx_slab = LittleSlab::new();
+    let mut tx_slab = LittleSlab::new();
     for i in 1..10000u32 {
         let mut client_packet = unsafe { umem.alloc().unwrap() };
 
@@ -707,8 +712,8 @@ async fn frees_dropped_packets() {
     )
     .unwrap();
 
-    let mut rx_slab = xdp::HeapSlab::with_capacity(1);
-    let mut tx_slab = xdp::HeapSlab::with_capacity(1);
+    let mut rx_slab = LittleSlab::new();
+    let mut tx_slab = LittleSlab::new();
 
     // sanity check the umem won't allow more than 1 packet at a time
     unsafe {
@@ -801,8 +806,8 @@ async fn qcmp() {
     )
     .unwrap();
 
-    let mut rx_slab = xdp::HeapSlab::with_capacity(1);
-    let mut tx_slab = xdp::HeapSlab::with_capacity(1);
+    let mut rx_slab = LittleSlab::new();
+    let mut tx_slab = LittleSlab::new();
 
     // sanity check the umem won't allow more than 1 packet at a time
     unsafe {
