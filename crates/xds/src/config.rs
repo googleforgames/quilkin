@@ -38,11 +38,17 @@ impl LocalVersions {
 
     #[inline]
     pub fn get(&self, ty: &str) -> parking_lot::MutexGuard<'_, HashMap<String, String>> {
-        self.versions
+        let g = self
+            .versions
             .iter()
-            .find_map(|(t, hm)| (*t == ty).then_some(hm))
-            .unwrap()
-            .lock()
+            .find_map(|(t, hm)| (*t == ty).then_some(hm));
+
+        if let Some(ml) = g {
+            ml.lock()
+        } else {
+            let versions = self.versions.iter().map(|(ty, _)| *ty).collect::<Vec<_>>();
+            panic!("unable to retrieve `{ty}` versions, available versions are {versions:?}");
+        }
     }
 
     #[inline]
