@@ -46,19 +46,20 @@ pub(crate) fn active_clusters() -> &'static prometheus::IntGauge {
     &ACTIVE_CLUSTERS
 }
 
-pub(crate) fn active_endpoints() -> &'static prometheus::IntGauge {
-    static ACTIVE_ENDPOINTS: Lazy<prometheus::IntGauge> = Lazy::new(|| {
-        crate::metrics::register(
-            prometheus::IntGauge::with_opts(crate::metrics::opts(
+pub(crate) fn active_endpoints(cluster: &str) -> prometheus::IntGauge {
+    static ACTIVE_ENDPOINTS: Lazy<prometheus::IntGaugeVec> = Lazy::new(|| {
+        prometheus::register_int_gauge_vec_with_registry! {
+            prometheus::opts! {
                 "active_endpoints",
-                SUBSYSTEM,
-                "Number of currently active endpoints.",
-            ))
-            .unwrap(),
-        )
+                "Number of currently available endpoints across clusters",
+            },
+            &["cluster"],
+            crate::metrics::registry(),
+        }
+        .unwrap()
     });
 
-    &ACTIVE_ENDPOINTS
+    ACTIVE_ENDPOINTS.with_label_values(&[cluster])
 }
 
 pub type TokenAddressMap = gxhash::HashMap<u64, gxhash::HashSet<EndpointAddress>>;

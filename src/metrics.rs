@@ -357,5 +357,15 @@ impl<C: Collector + Clone + 'static> CollectorExt for C {}
 pub(crate) fn apply_clusters(clusters: &crate::config::Watch<crate::net::ClusterMap>) {
     let clusters = clusters.read();
     crate::net::cluster::active_clusters().set(clusters.len() as i64);
-    crate::net::cluster::active_endpoints().set(clusters.num_of_endpoints() as i64);
+
+    for entry in clusters.iter() {
+        crate::net::cluster::active_endpoints(
+            &entry
+                .key()
+                .clone()
+                .map(|key| key.to_string())
+                .unwrap_or_default(),
+        )
+        .set(entry.value().len() as i64);
+    }
 }
