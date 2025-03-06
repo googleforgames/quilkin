@@ -95,7 +95,10 @@ clusters:
         let mount_name = "config".to_string();
         template.containers.push(quilkin_container(
             &client,
-            Some(vec!["proxy".into()]),
+            Some(vec![
+                "--service.udp".into(),
+                "--config.file.path=/etc/quilkin".into(),
+            ]),
             Some(mount_name.clone()),
             true,
         ));

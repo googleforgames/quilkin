@@ -72,7 +72,7 @@ pub struct Proxy {
     pub qcmp: socket2::Socket,
     pub phoenix: crate::net::TcpListener,
     pub notifier: Option<tokio::sync::mpsc::UnboundedSender<String>>,
-    pub xdp: crate::cli::proxy::XdpOptions,
+    pub xdp: crate::cli::service::XdpOptions,
     pub termination_timeout: Option<crate::cli::Timeout>,
 }
 
