@@ -98,6 +98,12 @@ fn get_address(address_type: AddressType, socket: &DualStackLocalSocket) -> Sock
 // TestFilter is useful for testing that commands are executing filters appropriately.
 pub struct TestFilter;
 
+impl TestFilter {
+    pub fn testing(_config: Option<()>) -> Self {
+        Self
+    }
+}
+
 impl Filter for TestFilter {
     fn read<P: PacketMut>(&self, ctx: &mut ReadContext<'_, P>) -> Result<(), FilterError> {
         // append values on each run

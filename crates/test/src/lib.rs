@@ -11,6 +11,8 @@ pub use serde_json::json;
 use std::{net::SocketAddr, num::NonZeroUsize, path::PathBuf, sync::Arc};
 use tokio::sync::mpsc;
 
+pub mod xdp_util;
+
 pub static BUFFER_POOL: once_cell::sync::Lazy<Arc<BufferPool>> =
     once_cell::sync::Lazy::new(|| Arc::new(BufferPool::default()));
 
@@ -733,4 +735,22 @@ impl Sandbox {
             .await
             .expect_err("expected future to timeout");
     }
+}
+
+#[macro_export]
+macro_rules! filter_chain {
+    ([$($kind:ident => $filter:expr,)*]) => {
+        quilkin::filters::FilterChain::testing([
+            $(
+                quilkin::filters::FilterInstance::testing(quilkin::filters::$kind::testing($filter))
+            ),*
+        ])
+    };
+    ([$($kind:ident => $filter:expr),*]) => {
+        quilkin::filters::FilterChain::testing([
+            $(
+                quilkin::filters::FilterInstance::testing(quilkin::filters::$kind::testing($filter))
+            ),*
+        ])
+    };
 }

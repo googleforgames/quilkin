@@ -79,6 +79,10 @@ impl Match {
             on_write_filters,
         })
     }
+
+    pub fn testing(config: Config) -> Self {
+        Self::new(config, Metrics::new()).unwrap()
+    }
 }
 
 fn match_filter<'config, 'ctx, Ctx>(

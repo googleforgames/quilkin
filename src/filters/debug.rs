@@ -34,6 +34,10 @@ impl Debug {
             config: config.unwrap_or_default(),
         }
     }
+
+    pub fn testing(config: Option<Config>) -> Self {
+        Self::new(config)
+    }
 }
 
 impl Filter for Debug {

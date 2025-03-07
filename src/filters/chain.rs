@@ -91,6 +91,11 @@ impl FilterChain {
         })
     }
 
+    pub fn testing<const N: usize>(filters: [FilterInstance; N]) -> Self {
+        let filters = filters.into_iter().map(|f| (String::new(), f)).collect();
+        Self::new(filters).unwrap()
+    }
+
     #[inline]
     pub fn len(&self) -> usize {
         self.filters.len()

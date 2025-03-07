@@ -21,7 +21,8 @@ use tracing::debug;
 use crate::filters::prelude::*;
 use crate::generated::quilkin::filters::firewall::v1alpha1 as proto;
 
-pub use config::{Action, Config, PortRange, PortRangeError, Rule};
+pub use config::{Action, Cidr, Config, PortRange, PortRangeError, Rule};
+pub use ipnetwork::IpNetwork;
 
 /// Filter for allowing/blocking traffic by IP and port.
 pub struct Firewall {
@@ -31,6 +32,13 @@ pub struct Firewall {
 
 impl Firewall {
     fn new(config: Config) -> Self {
+        Self {
+            on_read: config.on_read,
+            on_write: config.on_write,
+        }
+    }
+
+    pub fn testing(config: Config) -> Self {
         Self {
             on_read: config.on_read,
             on_write: config.on_write,

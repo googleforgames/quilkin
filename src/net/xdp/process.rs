@@ -74,8 +74,7 @@ impl filters::PacketMut for PacketWrapper {
         }
 
         let Some(slice) = self.buffer.get(
-            self.headers.data_offset + length
-                ..self.headers.data_offset + self.headers.data_length - length,
+            self.headers.data_offset + length..self.headers.data_offset + self.headers.data_length,
         ) else {
             if self.buffer.adjust_tail(-(length as i32)).is_ok() {
                 self.headers.data_length -= length;

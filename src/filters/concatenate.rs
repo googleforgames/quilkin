@@ -34,11 +34,15 @@ pub struct Concatenate {
 
 impl Concatenate {
     pub fn new(config: Config) -> Self {
-        Concatenate {
+        Self {
             on_read: config.on_read,
             on_write: config.on_write,
             bytes: config.bytes,
         }
+    }
+
+    pub fn testing(config: Config) -> Self {
+        Self::new(config)
     }
 }
 

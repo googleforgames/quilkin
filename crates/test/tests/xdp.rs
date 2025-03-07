@@ -1,56 +1,25 @@
 #![cfg(target_os = "linux")]
 #![allow(clippy::undocumented_unsafe_blocks)]
 
+use qt::xdp_util::{endpoints, make_config};
 use quilkin::{
-    filters::{self, StaticFilter as _},
-    net::{
+    filters,
+    net::xdp::process::{
         self,
-        xdp::process::{
+        xdp::{
             self,
-            xdp::{
-                self,
-                packet::net_types::{self as nt, UdpHeaders},
-                slab::Slab,
-            },
+            packet::net_types::{self as nt, UdpHeaders},
+            slab::Slab,
         },
     },
     time::UtcTimestamp,
 };
 use std::{
-    collections::BTreeSet,
     net::{Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
     sync::Arc,
 };
 
 type LittleSlab = xdp::slab::StackSlab<1>;
-
-#[inline]
-fn endpoints(eps: &[(SocketAddr, &[u8])]) -> BTreeSet<net::Endpoint> {
-    eps.iter()
-        .map(|(addr, token)| {
-            quilkin::net::Endpoint::with_metadata(
-                (*addr).into(),
-                net::endpoint::Metadata {
-                    tokens: [token.to_vec()].into_iter().collect(),
-                },
-            )
-        })
-        .collect()
-}
-
-#[inline]
-fn make_config(
-    filters: filters::FilterChain,
-    endpoints: BTreeSet<net::Endpoint>,
-) -> process::ConfigState {
-    let cm = quilkin::net::ClusterMap::new();
-    cm.insert(None, endpoints);
-
-    process::ConfigState {
-        filters: quilkin::config::Slot::new(filters),
-        clusters: quilkin::config::Watch::new(cm),
-    }
-}
 
 /// Validates we can do basic processing and forwarding of packets
 #[tokio::test]
@@ -60,19 +29,14 @@ async fn simple_forwarding() {
     const CLIENT: SocketAddrV4 = SocketAddrV4::new(Ipv4Addr::new(5, 5, 5, 5), 8888);
 
     let config = make_config(
-        filters::FilterChain::try_create([
-            filters::Capture::as_filter_config(filters::capture::Config {
-                metadata_key: filters::capture::CAPTURED_BYTES.into(),
-                strategy: filters::capture::Strategy::Suffix(filters::capture::Suffix {
-                    size: 1,
-                    remove: false,
-                }),
-            })
-            .unwrap(),
-            filters::TokenRouter::as_filter_config(None).unwrap(),
-        ])
-        .unwrap(),
-        endpoints(&[(SERVER.into(), &[0xf0])]),
+        qt::filter_chain!([
+            Capture => filters::capture::Config::with_strategy(filters::capture::Suffix {
+                size: 1,
+                remove: false,
+            }),
+            TokenRouter => None,
+        ]),
+        endpoints(&[(SERVER.into(), &[&[0xf0]])]),
     );
 
     let mut state = process::State {
@@ -142,19 +106,14 @@ async fn changes_ip_version() {
     const CLIENT: SocketAddrV4 = SocketAddrV4::new(Ipv4Addr::new(5, 5, 5, 5), 8888);
 
     let config = make_config(
-        filters::FilterChain::try_create([
-            filters::Capture::as_filter_config(filters::capture::Config {
-                metadata_key: filters::capture::CAPTURED_BYTES.into(),
-                strategy: filters::capture::Strategy::Suffix(filters::capture::Suffix {
-                    size: 1,
-                    remove: false,
-                }),
-            })
-            .unwrap(),
-            filters::TokenRouter::as_filter_config(None).unwrap(),
-        ])
-        .unwrap(),
-        endpoints(&[(SERVER.into(), &[0xf1])]),
+        qt::filter_chain!([
+            Capture => filters::capture::Config::with_strategy(filters::capture::Suffix {
+                size: 1,
+                remove: false,
+            }),
+            TokenRouter => None,
+        ]),
+        endpoints(&[(SERVER.into(), &[&[0xf1]])]),
     );
 
     let mut state = process::State {
@@ -273,19 +232,14 @@ async fn packet_manipulation() {
     // Test suffix removal
     {
         let config = make_config(
-            filters::FilterChain::try_create([
-                filters::Capture::as_filter_config(filters::capture::Config {
-                    metadata_key: filters::capture::CAPTURED_BYTES.into(),
-                    strategy: filters::capture::Strategy::Suffix(filters::capture::Suffix {
-                        size: 1,
-                        remove: true,
-                    }),
-                })
-                .unwrap(),
-                filters::TokenRouter::as_filter_config(None).unwrap(),
-            ])
-            .unwrap(),
-            endpoints(&[(SERVER.into(), &[0xf1])]),
+            qt::filter_chain!([
+                Capture => filters::capture::Config::with_strategy(filters::capture::Suffix {
+                    size: 1,
+                    remove: true,
+                }),
+                TokenRouter => None,
+            ]),
+            endpoints(&[(SERVER.into(), &[&[0xf1]])]),
         );
 
         let mut state = process::State {
@@ -332,19 +286,14 @@ async fn packet_manipulation() {
     // Test prefix removal
     {
         let config = make_config(
-            filters::FilterChain::try_create([
-                filters::Capture::as_filter_config(filters::capture::Config {
-                    metadata_key: filters::capture::CAPTURED_BYTES.into(),
-                    strategy: filters::capture::Strategy::Prefix(filters::capture::Prefix {
-                        size: 1,
-                        remove: true,
-                    }),
-                })
-                .unwrap(),
-                filters::TokenRouter::as_filter_config(None).unwrap(),
-            ])
-            .unwrap(),
-            endpoints(&[(SERVER.into(), &[0xf1])]),
+            qt::filter_chain!([
+                Capture => filters::capture::Config::with_strategy(filters::capture::Prefix {
+                    size: 1,
+                    remove: true,
+                }),
+                TokenRouter => None,
+            ]),
+            endpoints(&[(SERVER.into(), &[&[0xf1]])]),
         );
 
         let mut state = process::State {
@@ -393,25 +342,19 @@ async fn packet_manipulation() {
         let concat_data = [0xff; 11];
         let data = [0xf1u8; 20];
         let config = make_config(
-            filters::FilterChain::try_create([
-                filters::Capture::as_filter_config(filters::capture::Config {
-                    metadata_key: filters::capture::CAPTURED_BYTES.into(),
-                    strategy: filters::capture::Strategy::Suffix(filters::capture::Suffix {
-                        size: 18,
-                        remove: true,
-                    }),
-                })
-                .unwrap(),
-                filters::TokenRouter::as_filter_config(None).unwrap(),
-                filters::Concatenate::as_filter_config(filters::concatenate::Config {
+            qt::filter_chain!([
+                Capture => filters::capture::Config::with_strategy(filters::capture::Suffix {
+                    size: 18,
+                    remove: true,
+                }),
+                TokenRouter => None,
+                Concatenate => filters::concatenate::Config {
                     on_read: filters::concatenate::Strategy::Append,
                     on_write: filters::concatenate::Strategy::Prepend,
                     bytes: concat_data.to_vec(),
-                })
-                .unwrap(),
-            ])
-            .unwrap(),
-            endpoints(&[(SERVER.into(), &data[..data.len() - 2])]),
+                },
+            ]),
+            endpoints(&[(SERVER.into(), &[&data[..data.len() - 2]])]),
         );
 
         let mut state = process::State {
@@ -478,20 +421,16 @@ async fn multiple_servers() {
         .map(|i| SocketAddrV6::new(Ipv6Addr::new(i, i, i, i, i, i, i, i), 1000 + i, 0, 0))
         .collect();
     let tok = [0xf1u8];
+    let tok = [&tok[..]];
 
     let config = make_config(
-        filters::FilterChain::try_create([
-            filters::Capture::as_filter_config(filters::capture::Config {
-                metadata_key: filters::capture::CAPTURED_BYTES.into(),
-                strategy: filters::capture::Strategy::Prefix(filters::capture::Prefix {
-                    size: 1,
-                    remove: false,
-                }),
-            })
-            .unwrap(),
-            filters::TokenRouter::as_filter_config(None).unwrap(),
-        ])
-        .unwrap(),
+        qt::filter_chain!([
+            Capture => filters::capture::Config::with_strategy(filters::capture::Prefix {
+                size: 1,
+                remove: false,
+            }),
+            TokenRouter => None,
+        ]),
         endpoints(
             servers
                 .iter()
@@ -533,7 +472,7 @@ async fn multiple_servers() {
     etherparse::PacketBuilder::ethernet2([3, 3, 3, 3, 3, 3], [4, 4, 4, 4, 4, 4])
         .ipv6(CLIENT.ip().octets(), PROXY.ip().octets(), 64)
         .udp(CLIENT.port(), PROXY.port())
-        .write(&mut client_packet, &tok)
+        .write(&mut client_packet, tok[0])
         .unwrap();
 
     rx_slab.push_front(client_packet);
@@ -559,19 +498,14 @@ async fn many_sessions() {
     const PROXY: SocketAddrV4 = SocketAddrV4::new(Ipv4Addr::new(2, 2, 2, 2), 7777);
 
     let config = make_config(
-        filters::FilterChain::try_create([
-            filters::Capture::as_filter_config(filters::capture::Config {
-                metadata_key: filters::capture::CAPTURED_BYTES.into(),
-                strategy: filters::capture::Strategy::Suffix(filters::capture::Suffix {
-                    size: 1,
-                    remove: false,
-                }),
-            })
-            .unwrap(),
-            filters::TokenRouter::as_filter_config(None).unwrap(),
-        ])
-        .unwrap(),
-        endpoints(&[(SERVER.into(), &[0xf0])]),
+        qt::filter_chain!([
+            Capture => filters::capture::Config::with_strategy(filters::capture::Suffix {
+                size: 1,
+                remove: false,
+            }),
+            TokenRouter => None,
+        ]),
+        endpoints(&[(SERVER.into(), &[&[0xf0]])]),
     );
 
     let mut state = process::State {
@@ -671,19 +605,14 @@ async fn frees_dropped_packets() {
         SocketAddrV6::new(Ipv6Addr::new(1, 2, 3, 4, 5, 6, 7, 8), 9999, 0, 0);
 
     let config = make_config(
-        filters::FilterChain::try_create([
-            filters::Capture::as_filter_config(filters::capture::Config {
-                metadata_key: filters::capture::CAPTURED_BYTES.into(),
-                strategy: filters::capture::Strategy::Suffix(filters::capture::Suffix {
-                    size: 1,
-                    remove: false,
-                }),
-            })
-            .unwrap(),
-            filters::TokenRouter::as_filter_config(None).unwrap(),
-        ])
-        .unwrap(),
-        endpoints(&[(SERVER.into(), &[0xf0])]),
+        qt::filter_chain!([
+            Capture => filters::capture::Config::with_strategy(filters::capture::Suffix {
+                size: 1,
+                remove: false,
+            }),
+            TokenRouter => None,
+        ]),
+        endpoints(&[(SERVER.into(), &[&[0xf0]])]),
     );
 
     let mut state = process::State {

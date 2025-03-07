@@ -86,6 +86,10 @@ impl LocalRateLimit {
         })
     }
 
+    pub fn testing(config: Config) -> Self {
+        Self::new(config).unwrap()
+    }
+
     /// This is called on behalf of every packet that is eligible
     /// for rate limiting.
     ///
