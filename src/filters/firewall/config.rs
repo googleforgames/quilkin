@@ -30,7 +30,6 @@ use super::proto;
 /// Represents how a Firewall filter is configured for read and write
 /// operations.
 #[derive(Clone, Deserialize, Debug, Eq, PartialEq, Serialize, JsonSchema)]
-#[non_exhaustive]
 pub struct Config {
     pub on_read: Vec<Rule>,
     pub on_write: Vec<Rule>,
@@ -65,9 +64,15 @@ impl From<proto::firewall::Action> for Action {
     }
 }
 
+impl From<bool> for Action {
+    fn from(value: bool) -> Self {
+        if value { Self::Allow } else { Self::Deny }
+    }
+}
+
 /// Cidr notation for an ipv6 or ipv4 netmask
 #[derive(Clone, Deserialize, Debug, Eq, PartialEq, Serialize, JsonSchema)]
-pub struct Cidr(#[schemars(with = "String")] IpNetwork);
+pub struct Cidr(#[schemars(with = "String")] pub IpNetwork);
 
 impl FromStr for Cidr {
     type Err = IpNetworkError;
@@ -196,6 +201,13 @@ impl From<PortRange> for proto::firewall::PortRange {
             min: range.0.start.into(),
             max: range.0.end.into(),
         }
+    }
+}
+
+#[allow(clippy::fallible_impl_from)]
+impl From<u16> for PortRange {
+    fn from(value: u16) -> Self {
+        Self::new(value, value + 1).unwrap()
     }
 }
 

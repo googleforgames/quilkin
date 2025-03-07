@@ -48,6 +48,14 @@ impl FilterInstance {
         }))
     }
 
+    pub fn testing(filter: impl Into<FilterKind>) -> Self {
+        Self(Arc::new(FilterInstanceData {
+            config: serde_json::Value::Null,
+            label: None,
+            filter: filter.into(),
+        }))
+    }
+
     pub fn config(&self) -> &serde_json::Value {
         &self.0.config
     }

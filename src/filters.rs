@@ -68,7 +68,7 @@ pub use self::{
     write::WriteContext,
 };
 
-use crate::test::TestFilter;
+pub use crate::test::TestFilter;
 
 pub use self::chain::FilterChain;
 pub use crate::components::proxy::packet_router::{Packet, PacketMut};

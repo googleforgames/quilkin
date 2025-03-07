@@ -72,6 +72,15 @@ pub struct Config {
     pub strategy: Strategy,
 }
 
+impl Config {
+    pub fn with_strategy(strategy: impl Into<Strategy>) -> Self {
+        Self {
+            metadata_key: crate::net::endpoint::metadata::Key::from_static(CAPTURED_BYTES),
+            strategy: strategy.into(),
+        }
+    }
+}
+
 impl Serialize for Config {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where

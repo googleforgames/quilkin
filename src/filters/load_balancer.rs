@@ -35,6 +35,10 @@ impl LoadBalancer {
             endpoint_chooser: config.policy.as_endpoint_chooser(),
         }
     }
+
+    pub fn testing(config: Config) -> Self {
+        Self::new(config)
+    }
 }
 
 impl Filter for LoadBalancer {

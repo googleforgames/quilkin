@@ -24,7 +24,6 @@ use super::proto;
 
 /// The configuration for [`load_balancer`][super].
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, JsonSchema)]
-#[non_exhaustive]
 pub struct Config {
     #[serde(default)]
     pub policy: Policy,

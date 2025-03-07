@@ -54,6 +54,10 @@ impl Capture {
             metadata_key: config.metadata_key,
         }
     }
+
+    pub fn testing(config: Config) -> Self {
+        Self::new(config)
+    }
 }
 
 impl Filter for Capture {

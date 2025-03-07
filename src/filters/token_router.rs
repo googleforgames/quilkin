@@ -30,6 +30,14 @@ pub struct TokenRouter {
     config: Config,
 }
 
+impl TokenRouter {
+    pub fn testing(config: Option<Config>) -> Self {
+        Self {
+            config: config.unwrap_or_default(),
+        }
+    }
+}
+
 impl StaticFilter for TokenRouter {
     const NAME: &'static str = "quilkin.filters.token_router.v1alpha1.TokenRouter";
     type Configuration = Config;
