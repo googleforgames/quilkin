@@ -23,9 +23,8 @@ targets = [
 all-features = true
 
 [advisories]
+unmaintained = 'workspace'
 ignore = [
-    { id = "RUSTSEC-2024-0384", reason = "instant is unmaintained, it's only used a transitive dependency, and it doesn't matter, at least for now" },
-    { id = "RUSTSEC-2025-0012", reason = "backoff is unmaintained, it doesn't matter" },
 ]
 
 [bans]
