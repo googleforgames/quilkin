@@ -420,7 +420,7 @@ impl AdsClient {
     /// management server does not support delta xDS we return the client as an error
     #[allow(clippy::type_complexity)]
     pub async fn delta_subscribe<C: crate::config::Configuration>(
-        self,
+        mut self,
         config: Arc<C>,
         is_healthy: Arc<AtomicBool>,
         notifier: Option<tokio::sync::mpsc::UnboundedSender<String>>,
@@ -524,7 +524,14 @@ impl AdsClient {
                                 continue;
                             }
                             Ok(Some(Err(error))) => {
-                                tracing::warn!(%error, "xds stream error");
+                                if crate::is_broken_pipe(&error) {
+                                    tracing::info!(
+                                        "remote {} terminated the connection",
+                                        self.connected_endpoint.uri(),
+                                    );
+                                } else {
+                                    tracing::warn!(%error, "xds stream error");
+                                }
                                 break;
                             }
                             Ok(None) => {
@@ -543,8 +550,14 @@ impl AdsClient {
 
                     is_healthy.store(false, Ordering::SeqCst);
 
+                    // Assume a new server we might connect to has completely different
+                    // state from the previous one, so get rid of our current state
+                    // and get a full refresh from the new relay, as well as
+                    // getting rid of any state the previously connected server gave us
+                    local.clear(&config, None);
+
                     tracing::info!("Lost connection to xDS, retrying");
-                    let (new_client, _) =
+                    let (new_client, new_endpoint) =
                         Self::connect_with_backoff(&self.management_servers).await?;
 
                     (ds, stream) =
@@ -552,10 +565,8 @@ impl AdsClient {
 
                     resource_subscriptions = handle_first_response(&mut stream, resources).await?;
 
-                    // Assume the new server we've connected to has completely different
-                    // state from the previous one, so get rid of our current state
-                    // and get a full refresh from the new relay
-                    local.reset();
+                    self.connected_endpoint = new_endpoint;
+
                     ds.refresh(&identifier, resource_subscriptions.to_vec(), &local)
                         .await?;
                 }

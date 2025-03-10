@@ -427,8 +427,12 @@ impl Service {
         {
             match self.spawn_xdp(config.clone(), self.xdp.force_xdp) {
                 Ok(xdp) => {
-                    self.qcmp_enabled = false;
-                    return Ok((either::Left(std::future::pending()), Some(xdp), None));
+                    if let Some(xdp) = xdp {
+                        self.qcmp_enabled = false;
+                        return Ok((either::Left(std::future::pending()), Some(xdp), None));
+                    } else if self.xdp.force_xdp {
+                        eyre::bail!("XDP was forced on, but failed to initialize");
+                    }
                 }
                 Err(err) => {
                     if self.xdp.force_xdp {
@@ -494,13 +498,13 @@ impl Service {
     }
 
     #[cfg(target_os = "linux")]
-    fn spawn_xdp(&self, config: Arc<Config>, force_xdp: bool) -> eyre::Result<Finalizer> {
+    fn spawn_xdp(&self, config: Arc<Config>, force_xdp: bool) -> eyre::Result<Option<Finalizer>> {
         use crate::net::xdp;
         use eyre::{Context as _, ContextCompat as _};
 
         // TODO: remove this once it's been more stabilized
         if !force_xdp {
-            eyre::bail!("XDP currently disabled by default");
+            return Ok(None);
         }
 
         let filters = config
@@ -535,9 +539,9 @@ impl Service {
         .context("failed to setup XDP")?;
 
         let io_loop = xdp::spawn(workers, config).context("failed to spawn XDP I/O loop")?;
-        Ok(Box::new(move |srx: &crate::signal::ShutdownRx| {
+        Ok(Some(Box::new(move |srx: &crate::signal::ShutdownRx| {
             io_loop.shutdown(*srx.borrow() == crate::signal::ShutdownKind::Normal);
-        }))
+        })))
     }
 }
 

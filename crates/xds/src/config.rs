@@ -21,23 +21,26 @@ pub fn max_grpc_message_size() -> usize {
         .unwrap_or(256 * 1024 * 1024)
 }
 
+pub type VersionMap = HashMap<String, String>;
+pub type TypeUrl = &'static str;
+
 /// Keeps tracking of the local versions of each resource sent from the management
 /// server, allowing reconnections to the same/new management servers to send initial
 /// versions to reduce the initial response size
 pub struct LocalVersions {
-    versions: Vec<(&'static str, parking_lot::Mutex<HashMap<String, String>>)>,
+    versions: Vec<(TypeUrl, parking_lot::Mutex<VersionMap>)>,
 }
 
 impl LocalVersions {
     #[inline]
-    pub fn new(types: impl Iterator<Item = &'static str>) -> Self {
+    pub fn new(types: impl Iterator<Item = TypeUrl>) -> Self {
         Self {
             versions: types.map(|ty| (ty, Default::default())).collect(),
         }
     }
 
     #[inline]
-    pub fn get(&self, ty: &str) -> parking_lot::MutexGuard<'_, HashMap<String, String>> {
+    pub fn get(&self, ty: &str) -> parking_lot::MutexGuard<'_, VersionMap> {
         let g = self
             .versions
             .iter()
@@ -52,14 +55,21 @@ impl LocalVersions {
     }
 
     #[inline]
-    pub fn reset(&self) {
-        for (_, map) in &self.versions {
-            map.lock().clear();
+    pub fn clear<C: crate::config::Configuration>(
+        &self,
+        config: &Arc<C>,
+        remote_addr: Option<std::net::IpAddr>,
+    ) {
+        for (type_url, map) in &self.versions {
+            let mut map = map.lock();
+            let remove = map.keys().cloned().collect::<Vec<_>>();
+            if let Err(error) = config.apply_delta(type_url, vec![], &remove, remote_addr) {
+                tracing::warn!(%error, count = remove.len(), type_url, "failed to remove resources upon connection loss");
+            }
+            map.clear();
         }
     }
 }
-
-pub type VersionMap = HashMap<String, String>;
 
 pub struct ClientState {
     pub resource_type: String,
@@ -228,7 +238,7 @@ pub fn handle_delta_discovery_responses<C: Configuration>(
     local: Arc<LocalVersions>,
     remote_addr: Option<std::net::IpAddr>,
     mut notifier: Option<tokio::sync::mpsc::UnboundedSender<String>>,
-) -> std::pin::Pin<Box<dyn futures::Stream<Item = crate::Result<DeltaDiscoveryRequest>> + Send>> {
+) -> std::pin::Pin<Box<dyn futures::Stream<Item = tonic::Result<DeltaDiscoveryRequest>> + Send>> {
     Box::pin(async_stream::try_stream! {
         let _stream_metrics = crate::metrics::StreamConnectionMetrics::new(identifier.clone());
         tracing::trace!("awaiting delta response");
@@ -237,7 +247,7 @@ pub fn handle_delta_discovery_responses<C: Configuration>(
             let response = match response {
                 Ok(response) => response,
                 Err(error) => {
-                    tracing::warn!(%error, "Error from xDS server");
+                    yield Err(error)?;
                     break;
                 }
             };

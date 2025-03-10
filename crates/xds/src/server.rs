@@ -553,33 +553,56 @@ impl<C: crate::config::Configuration> AggregatedControlPlaneDiscoveryService for
                     None,
                 );
 
-                loop {
+                let res = loop {
                     let next_response =
                         tokio::time::timeout(idle_request_interval, response_stream.next());
 
-                    if let Ok(Some(ack)) = next_response.await {
-                        tracing::trace!("sending ack request");
-                        ds.send_response(ack?).await.map_err(|_err| {
-                            tonic::Status::internal("this should not be reachable")
-                        })?;
-                    } else {
-                        tracing::trace!("exceeded idle interval, sending request");
-                        ds.refresh(
-                            &identifier,
-                            config.interested_resources(&server_version).collect(),
-                            &local,
-                        )
-                        .await
-                        .map_err(|error| tonic::Status::internal(error.to_string()))?;
+                    match next_response.await {
+                        Ok(Some(Ok(ack))) => {
+                            tracing::trace!("sending ack request");
+                            ds.send_response(ack).await.map_err(|_err| {
+                                tonic::Status::internal("this should not be reachable")
+                            })?;
+                        }
+                        Ok(Some(Err(error))) => {
+                            if crate::is_broken_pipe(&error) {
+                                break Ok(());
+                            } else {
+                                break Err(eyre::eyre!(error));
+                            }
+                        }
+                        Ok(None) => {
+                            break Ok(());
+                        }
+                        Err(_) => {
+                            tracing::trace!("exceeded idle interval, sending request");
+                            ds.refresh(
+                                &identifier,
+                                config.interested_resources(&server_version).collect(),
+                                &local,
+                            )
+                            .await
+                            .map_err(|error| tonic::Status::internal(error.to_string()))?;
+                        }
                     }
+                };
+
+                if res.is_ok() {
+                    tracing::info!("xds stream terminated");
                 }
+
+                local.clear(&config, Some(remote_addr));
+
+                res
             }
             .instrument(tracing::trace_span!("handle_delta_discovery_response")),
         );
 
         Ok(tonic::Response::new(Box::pin(async_stream::stream! {
             loop {
-                let Some(req) = request_stream.recv().await else { break; };
+                let Some(req) = request_stream.recv().await else {
+                    break;
+                };
                 yield Ok(req);
             }
         })))
