@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM gcr.io/distroless/cc-debian12:nonroot as base
+FROM gcr.io/distroless/cc-debian12:latest as base
 WORKDIR /
 COPY ./license.html .
 COPY ./dependencies-src.zip .
 COPY --chown=nonroot:nonroot ./target/image/quilkin .
 
-USER nonroot:nonroot
+USER root:root
 ENTRYPOINT ["/quilkin"]
