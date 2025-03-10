@@ -733,7 +733,9 @@ impl Config {
                 };
 
                 datacenters.modify(|wg| {
-                    wg.remove(removed_resources);
+                    if let Some(ip) = remote_addr.filter(|_| !removed_resources.is_empty()) {
+                        wg.remove(ip);
+                    }
 
                     for res in resources {
                         let Some(resource) = res.resource else {
@@ -929,24 +931,16 @@ impl DatacenterMap {
     }
 
     #[inline]
-    pub fn remove(&self, removed: &[String]) {
-        if removed.is_empty() {
-            return;
-        }
-
+    pub fn remove(&self, ip: IpAddr) {
         let mut lock = self.removed.lock();
         let mut version = 0;
-        for addr in removed {
-            let Ok(ip) = addr.parse() else {
-                continue;
-            };
-            let Some((_k, v)) = self.map.remove(&ip) else {
-                continue;
-            };
 
-            lock.push((ip, v.qcmp_port).into());
-            version += 1;
-        }
+        let Some((_k, v)) = self.map.remove(&ip) else {
+            return;
+        };
+
+        lock.push((ip, v.qcmp_port).into());
+        version += 1;
 
         self.version.fetch_add(version, Relaxed);
     }
