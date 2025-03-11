@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use crate::net::maxmind_db::MetricsIpNetEntry;
+use crate::{net::maxmind_db::MetricsIpNetEntry, time::UtcTimestamp};
 use once_cell::sync::Lazy;
 use prometheus::{
     DEFAULT_BUCKETS, Gauge, GaugeVec, Histogram, HistogramOpts, HistogramVec, IntCounter,
@@ -56,6 +56,107 @@ pub(crate) const BUCKET_FACTOR: f64 = 2.0;
 /// Any processing that occurs over a second is far too long, so we end bucketing there as we don't
 /// care about granularity past 1 second.
 pub(crate) const BUCKET_COUNT: usize = 13;
+
+pub(crate) mod qcmp {
+    use super::*;
+
+    pub(crate) fn active(active: bool) {
+        static METRIC: Lazy<IntGauge> = Lazy::new(|| {
+            prometheus::register_int_gauge_with_registry! {
+                prometheus::opts! {
+                    "service_qcmp_active",
+                    "Whether the QCMP service is currently running, either 1 for running or 0 for not.",
+                },
+                registry(),
+            }
+            .unwrap()
+        });
+
+        METRIC.set(active as _);
+    }
+
+    fn bytes_total(kind: &'static str) -> IntCounter {
+        static METRIC: Lazy<IntCounterVec> = Lazy::new(|| {
+            prometheus::register_int_counter_vec_with_registry! {
+                prometheus::opts! {
+                    "service_qcmp_bytes_total",
+                    "Total number of bytes processed through QCMP",
+                },
+                &["kind"],
+                registry(),
+            }
+            .unwrap()
+        });
+
+        METRIC.with_label_values(&[kind])
+    }
+
+    pub(crate) fn errors_total(reason: &str) -> IntCounter {
+        static ERRORS_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+            prometheus::register_int_counter_vec_with_registry! {
+                prometheus::opts! {
+                    "service_qcmp_errors_total",
+                    "total number of errors QCMP has encountered",
+                },
+                &["reason"],
+                registry(),
+            }
+            .unwrap()
+        });
+
+        ERRORS_TOTAL.with_label_values(&[reason])
+    }
+
+    fn packets_total(kind: &'static str) -> IntCounter {
+        static METRIC: Lazy<IntCounterVec> = Lazy::new(|| {
+            prometheus::register_int_counter_vec_with_registry! {
+                prometheus::opts! {
+                    "service_qcmp_packets_total",
+                    "Total number of packets processed through QCMP",
+                },
+                &["kind"],
+                registry(),
+            }
+            .unwrap()
+        });
+
+        METRIC.with_label_values(&[kind])
+    }
+
+    pub fn ingress_latency(client_timestamp: UtcTimestamp, received_at: UtcTimestamp) {
+        static METRIC: Lazy<Histogram> = Lazy::new(|| {
+            prometheus::register_histogram_with_registry! {
+                prometheus::histogram_opts! {
+                    "service_qcmp_ingress_latency_seconds",
+                    "The time from when the client created the packet, to when QCMP received it.",
+                    prometheus::exponential_buckets(BUCKET_START, BUCKET_FACTOR, BUCKET_COUNT).unwrap(),
+                },
+                registry(),
+            }
+            .unwrap()
+        });
+
+        METRIC.observe((received_at - client_timestamp).duration().as_secs_f64());
+    }
+
+    pub(crate) fn packets_total_invalid(size: usize) {
+        const KIND: &str = "invalid";
+        bytes_total(KIND).inc_by(size as u64);
+        packets_total(KIND).inc();
+    }
+
+    pub(crate) fn packets_total_unsupported(size: usize) {
+        const KIND: &str = "unsupported";
+        bytes_total(KIND).inc_by(size as u64);
+        packets_total(KIND).inc();
+    }
+
+    pub(crate) fn packets_total_valid(size: usize) {
+        const KIND: &str = "valid";
+        bytes_total(KIND).inc_by(size as u64);
+        packets_total(KIND).inc();
+    }
+}
 
 #[derive(Clone, Copy, Debug)]
 pub enum Direction {
