@@ -57,6 +57,119 @@ pub(crate) const BUCKET_FACTOR: f64 = 2.0;
 /// care about granularity past 1 second.
 pub(crate) const BUCKET_COUNT: usize = 13;
 
+pub(crate) mod k8s {
+    use super::*;
+
+    pub(crate) fn active(active: bool) {
+        static METRIC: Lazy<IntGauge> = Lazy::new(|| {
+            prometheus::register_int_gauge_with_registry! {
+                prometheus::opts! {
+                    "provider_k8s_active",
+                    "Whether the kubernetes configuration provider is active or not (either 1 or 0).",
+                },
+                registry(),
+            }
+            .unwrap()
+        });
+
+        METRIC.set(active as _);
+    }
+
+    pub(crate) fn filters(active: bool) {
+        static METRIC: Lazy<IntGauge> = Lazy::new(|| {
+            prometheus::register_int_gauge_with_registry! {
+                prometheus::opts! {
+                    "provider_k8s_filters",
+                    "Whether the kubernetes configuration provider has set the filter chain.",
+                },
+                registry(),
+            }
+            .unwrap()
+        });
+
+        METRIC.set(active as _);
+    }
+
+    pub(crate) fn events_total(kind: &'static str, ty: &'static str) -> IntCounter {
+        static METRIC: Lazy<IntCounterVec> = Lazy::new(|| {
+            prometheus::register_int_counter_vec_with_registry! {
+                prometheus::opts! {
+                    "provider_k8s_events_total",
+                    "Total number of kubernetes events by `type` for a given resource (`kind`)",
+                },
+                &["kind", "type"],
+                registry(),
+            }
+            .unwrap()
+        });
+
+        METRIC.with_label_values(&[kind, ty])
+    }
+
+    fn gameservers_total(kind: &'static str) -> IntCounter {
+        static METRIC: Lazy<IntCounterVec> = Lazy::new(|| {
+            prometheus::register_int_counter_vec_with_registry! {
+                prometheus::opts! {
+                    "provider_k8s_gameservers_total",
+                    "Total number of gameservers applied (or failed to) by events and by `kind` (either `invalid`, `unallocated`, or `valid`) ",
+                },
+                &["kind"],
+                registry(),
+            }
+            .unwrap()
+        });
+
+        METRIC.with_label_values(&[kind])
+    }
+
+    pub(crate) fn gameservers_total_invalid() {
+        const KIND: &str = "invalid";
+        gameservers_total(KIND).inc();
+    }
+
+    pub(crate) fn gameservers_total_valid() {
+        const KIND: &str = "valid";
+        gameservers_total(KIND).inc();
+    }
+
+    pub(crate) fn gameservers_total_unallocated() {
+        const KIND: &str = "invalid";
+        gameservers_total(KIND).inc();
+    }
+
+    pub(crate) fn gameservers_deletions_total(success: bool) {
+        static METRIC: Lazy<IntCounterVec> = Lazy::new(|| {
+            prometheus::register_int_counter_vec_with_registry! {
+                prometheus::opts! {
+                    "provider_k8s_events_total",
+                    "Total number of gameserver applied deletion events by `success` (either `true` or `false`) ",
+                },
+                &["kind"],
+                registry(),
+            }
+            .unwrap()
+        });
+
+        METRIC.with_label_values(&[&success.to_string()]).inc();
+    }
+
+    pub(crate) fn errors_total(kind: &'static str, reason: &impl std::fmt::Display) -> IntCounter {
+        static METRIC: Lazy<IntCounterVec> = Lazy::new(|| {
+            prometheus::register_int_counter_vec_with_registry! {
+                prometheus::opts! {
+                    "providers_k8s_errors_total",
+                    "total number of errors the kubernetes provider has encountered",
+                },
+                &["kind", "reason"],
+                registry(),
+            }
+            .unwrap()
+        });
+
+        METRIC.with_label_values(&[kind, &reason.to_string()])
+    }
+}
+
 pub(crate) mod qcmp {
     use super::*;
 

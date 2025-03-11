@@ -39,50 +39,43 @@ pub async fn watch(
     )
     .await??;
 
-    if let Some(cns) = config_namespace {
-        let configmap_reflector = crate::config::providers::k8s::update_filters_from_configmap(
-            client.clone(),
-            cns,
-            filters,
-        );
-        let gameserver_reflector = crate::config::providers::k8s::update_endpoints_from_gameservers(
-            client,
-            gameservers_namespace,
-            clusters,
-            locality,
-            address_selector,
-        );
-        tokio::pin!(configmap_reflector);
-        tokio::pin!(gameserver_reflector);
+    let mut configmap_reflector: std::pin::Pin<Box<dyn futures::Stream<Item = _> + Send>> =
+        if let Some(cns) = config_namespace {
+            Box::pin(
+                crate::config::providers::k8s::update_filters_from_configmap(
+                    client.clone(),
+                    cns,
+                    filters,
+                ),
+            )
+        } else {
+            Box::pin(futures::stream::pending())
+        };
 
-        loop {
-            let result = tokio::select! {
-                result = configmap_reflector.try_next() => result,
-                result = gameserver_reflector.try_next() => result,
-            };
+    let gameserver_reflector = crate::config::providers::k8s::update_endpoints_from_gameservers(
+        client,
+        gameservers_namespace,
+        clusters,
+        locality,
+        address_selector,
+    );
 
-            match result {
-                Ok(Some(_)) => health_check.store(true, Ordering::SeqCst),
-                Ok(None) => break Err(eyre::eyre!("kubernetes watch stream terminated")),
-                Err(error) => break Err(error),
+    tokio::pin!(gameserver_reflector);
+
+    loop {
+        let result = tokio::select! {
+            result = configmap_reflector.try_next() => result,
+            result = gameserver_reflector.try_next() => result,
+        };
+
+        match result
+            .and_then(|opt| opt.ok_or_else(|| eyre::eyre!("kubernetes watch stream terminated")))
+        {
+            Ok(_) => {
+                crate::metrics::k8s::active(true);
+                health_check.store(true, Ordering::SeqCst);
             }
-        }
-    } else {
-        let gameserver_reflector = crate::config::providers::k8s::update_endpoints_from_gameservers(
-            client,
-            gameservers_namespace,
-            clusters,
-            locality,
-            address_selector,
-        );
-        tokio::pin!(gameserver_reflector);
-
-        loop {
-            match gameserver_reflector.try_next().await {
-                Ok(Some(_)) => health_check.store(true, Ordering::SeqCst),
-                Ok(None) => break Err(eyre::eyre!("kubernetes watch stream terminated")),
-                Err(error) => break Err(error),
-            }
+            Err(error) => break Err(error),
         }
     }
 }
