@@ -116,3 +116,23 @@ datacentre, and the value being the latency in nanoseconds.
 * `quilkin_phoenix_server_errors`
 
   The amount of errors attempting to spawn the phoenix HTTP server
+
+* `quilkin_service_qcmp_active`
+
+  Whether the QCMP service is currently running, either 1 for running or 0 for not.
+
+* `quilkin_service_qcmp_bytes_total{kind}`
+
+  Total number of bytes processed through QCMP. `kind` is either `valid`, `invalid`, or `unsupported`.
+
+* `quilkin_service_qcmp_errors_total`
+
+  Total number of errors QCMP has encountered.
+
+* `quilkin_service_qcmp_packets_total{kind}`
+
+  Total number of packets processed through QCMP. `kind` is either `valid`, `invalid`, or `unsupported`.
+
+* `quilkin_service_qcmp_ingress_latency_seconds`
+
+  The time from when the client created the packet, to when QCMP received it.
