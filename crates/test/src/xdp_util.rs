@@ -54,8 +54,7 @@ pub struct TestPacket {
 impl TestPacket {
     pub fn payload(&self) -> &[u8] {
         let packet = self.inner.as_ref().unwrap();
-        &packet[self.udp_headers.data_offset
-            ..self.udp_headers.data_offset + self.udp_headers.data_length]
+        &packet[self.udp_headers.data]
     }
 }
 
