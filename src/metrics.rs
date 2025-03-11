@@ -75,86 +75,93 @@ pub(crate) mod qcmp {
         METRIC.set(active as _);
     }
 
-    fn bytes_total(kind: &'static str) -> IntCounter {
+    fn bytes_total(kind: &'static str, asn: &AsnInfo<'_>) -> IntCounter {
         static METRIC: Lazy<IntCounterVec> = Lazy::new(|| {
             prometheus::register_int_counter_vec_with_registry! {
                 prometheus::opts! {
                     "service_qcmp_bytes_total",
                     "Total number of bytes processed through QCMP",
                 },
-                &["kind"],
+                &["kind", ASN_LABEL, PREFIX_LABEL],
                 registry(),
             }
             .unwrap()
         });
 
-        METRIC.with_label_values(&[kind])
+        METRIC.with_label_values(&[kind, asn.asn, asn.prefix])
     }
 
-    pub(crate) fn errors_total(reason: &str) -> IntCounter {
-        static ERRORS_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+    pub(crate) fn errors_total(reason: &str, asn: &AsnInfo<'_>) -> IntCounter {
+        static METRIC: Lazy<IntCounterVec> = Lazy::new(|| {
             prometheus::register_int_counter_vec_with_registry! {
                 prometheus::opts! {
                     "service_qcmp_errors_total",
                     "total number of errors QCMP has encountered",
                 },
-                &["reason"],
+                &["reason", ASN_LABEL, PREFIX_LABEL],
                 registry(),
             }
             .unwrap()
         });
 
-        ERRORS_TOTAL.with_label_values(&[reason])
+        METRIC.with_label_values(&[reason, asn.asn, asn.prefix])
     }
 
-    fn packets_total(kind: &'static str) -> IntCounter {
+    fn packets_total(kind: &'static str, asn: &AsnInfo<'_>) -> IntCounter {
         static METRIC: Lazy<IntCounterVec> = Lazy::new(|| {
             prometheus::register_int_counter_vec_with_registry! {
                 prometheus::opts! {
                     "service_qcmp_packets_total",
                     "Total number of packets processed through QCMP",
                 },
-                &["kind"],
+                &["kind", ASN_LABEL, PREFIX_LABEL],
                 registry(),
             }
             .unwrap()
         });
 
-        METRIC.with_label_values(&[kind])
+        METRIC.with_label_values(&[kind, asn.asn, asn.prefix])
     }
 
-    pub fn ingress_latency(client_timestamp: UtcTimestamp, received_at: UtcTimestamp) {
-        static METRIC: Lazy<Histogram> = Lazy::new(|| {
-            prometheus::register_histogram_with_registry! {
+    pub fn ingress_latency(
+        client_timestamp: UtcTimestamp,
+        received_at: UtcTimestamp,
+        asn: &AsnInfo<'_>,
+    ) {
+        static METRIC: Lazy<HistogramVec> = Lazy::new(|| {
+            prometheus::register_histogram_vec_with_registry! {
                 prometheus::histogram_opts! {
                     "service_qcmp_ingress_latency_seconds",
                     "The time from when the client created the packet, to when QCMP received it.",
                     prometheus::exponential_buckets(BUCKET_START, BUCKET_FACTOR, BUCKET_COUNT).unwrap(),
                 },
+                &[ASN_LABEL, PREFIX_LABEL],
                 registry(),
             }
             .unwrap()
         });
 
-        METRIC.observe((received_at - client_timestamp).duration().as_secs_f64());
+        METRIC
+            .with_label_values(&[asn.asn, asn.prefix])
+            .observe((received_at - client_timestamp).duration().as_secs_f64());
     }
 
-    pub(crate) fn packets_total_invalid(size: usize) {
+    pub(crate) fn packets_total_invalid(size: usize, asn_info: &AsnInfo<'_>) {
         const KIND: &str = "invalid";
-        bytes_total(KIND).inc_by(size as u64);
-        packets_total(KIND).inc();
+        bytes_total(KIND, asn_info).inc_by(size as u64);
+        packets_total(KIND, asn_info).inc();
     }
 
-    pub(crate) fn packets_total_unsupported(size: usize) {
+    pub(crate) fn packets_total_unsupported(size: usize, asn_info: &AsnInfo<'_>) {
         const KIND: &str = "unsupported";
-        bytes_total(KIND).inc_by(size as u64);
-        packets_total(KIND).inc();
+        bytes_total(KIND, asn_info).inc_by(size as u64);
+        packets_total(KIND, asn_info).inc();
     }
 
-    pub(crate) fn packets_total_valid(size: usize) {
+    pub(crate) fn packets_total_valid(size: usize, asn_info: &AsnInfo<'_>) {
         const KIND: &str = "valid";
-        bytes_total(KIND).inc_by(size as u64);
-        packets_total(KIND).inc();
+        bytes_total(KIND, asn_info).inc_by(size as u64);
+        packets_total(KIND, asn_info).inc();
     }
 }
 
@@ -179,6 +186,10 @@ impl Direction {
 pub struct AsnInfo<'a> {
     pub asn: &'a str,
     pub prefix: &'a str,
+}
+
+impl AsnInfo<'static> {
+    pub const EMPTY: AsnInfo<'static> = EMPTY;
 }
 
 pub const EMPTY: AsnInfo<'static> = AsnInfo {

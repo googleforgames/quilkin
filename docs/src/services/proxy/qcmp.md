@@ -121,18 +121,18 @@ datacentre, and the value being the latency in nanoseconds.
 
   Whether the QCMP service is currently running, either 1 for running or 0 for not.
 
-* `quilkin_service_qcmp_bytes_total{kind}`
+* `quilkin_service_qcmp_bytes_total{kind, asn, ip_prefix}`
 
   Total number of bytes processed through QCMP. `kind` is either `valid`, `invalid`, or `unsupported`.
 
-* `quilkin_service_qcmp_errors_total`
+* `quilkin_service_qcmp_errors_total{asn, ip_prefix}`
 
   Total number of errors QCMP has encountered.
 
-* `quilkin_service_qcmp_packets_total{kind}`
+* `quilkin_service_qcmp_packets_total{kind, asn, ip_prefix}`
 
   Total number of packets processed through QCMP. `kind` is either `valid`, `invalid`, or `unsupported`.
 
-* `quilkin_service_qcmp_ingress_latency_seconds`
+* `quilkin_service_qcmp_ingress_latency_seconds{asn, ip_prefix}`
 
   The time from when the client created the packet, to when QCMP received it.
