@@ -4433,9 +4433,9 @@ checksum = "1e9df38ee2d2c3c5948ea468a8406ff0db0b29ae1ffde1bcf20ef305bcc95c51"
 
 [[package]]
 name = "xdp"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e033e861c55386d35a176792bfe78a614bfc97aebc1ebe41f1039ac0604e8c2"
+checksum = "e5b07a8482a69822d750786b566d9728c9ed7aff0dca60c3e7b1162b95ad1dc7"
 
 [[package]]
 name = "xxhash-rust"
