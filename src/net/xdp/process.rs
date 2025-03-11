@@ -37,12 +37,12 @@ struct PacketWrapper {
 impl filters::Packet for PacketWrapper {
     #[inline]
     fn as_slice(&self) -> &[u8] {
-        &self.buffer[self.headers.data_offset..self.headers.data_offset + self.headers.data_length]
+        &self.buffer[self.headers.data.start..self.headers.data.end]
     }
 
     #[inline]
     fn len(&self) -> usize {
-        self.headers.data_length
+        self.headers.data_length()
     }
 }
 
@@ -52,32 +52,31 @@ impl filters::PacketMut for PacketWrapper {
     #[inline]
     fn extend_head(&mut self, bytes: &[u8]) {
         self.buffer
-            .insert(self.headers.data_offset, bytes)
+            .insert(self.headers.data.start, bytes)
             .expect("failed to extend head");
-        self.headers.data_length += bytes.len();
+        self.headers.data.end += bytes.len();
     }
 
     #[inline]
     fn extend_tail(&mut self, bytes: &[u8]) {
-        self.buffer
-            .insert(self.buffer.len(), bytes)
-            .expect("failed to extend head");
-        self.headers.data_length += bytes.len();
+        self.buffer.append(bytes).expect("failed to extend head");
+        self.headers.data.end += bytes.len();
     }
 
     #[inline]
     fn remove_head(&mut self, length: usize) {
         let mut data = [0u8; 2048];
 
-        if length > self.headers.data_length || length == 0 {
+        if length > self.headers.data_length() || length == 0 {
             return;
         }
 
-        let Some(slice) = self.buffer.get(
-            self.headers.data_offset + length..self.headers.data_offset + self.headers.data_length,
-        ) else {
+        let Some(slice) = self
+            .buffer
+            .get(self.headers.data.start + length..self.headers.data.end)
+        else {
             if self.buffer.adjust_tail(-(length as i32)).is_ok() {
-                self.headers.data_length -= length;
+                self.headers.data.end -= length;
             }
             return;
         };
@@ -86,21 +85,21 @@ impl filters::PacketMut for PacketWrapper {
 
         let Some(slice) = self
             .buffer
-            .get_mut(self.headers.data_offset..self.headers.data_offset + remainder)
+            .get_mut(self.headers.data.start..self.headers.data.start + remainder)
         else {
             return;
         };
         slice.copy_from_slice(&data[..remainder]);
 
         if self.buffer.adjust_tail(-(length as i32)).is_ok() {
-            self.headers.data_length -= length;
+            self.headers.data.end -= length;
         }
     }
 
     #[inline]
     fn remove_tail(&mut self, length: usize) {
         if self.buffer.adjust_tail(-(length as i32)).is_ok() {
-            self.headers.data_length -= length;
+            self.headers.data.end -= length;
         }
     }
 
@@ -571,18 +570,18 @@ fn process_client_packet<const TXN: usize>(
         return Ok(Some(packet.buffer));
     };
 
-    let data = &packet.buffer
-        [packet.headers.data_offset..packet.headers.data_offset + packet.headers.data_length];
+    let data = &packet.buffer[packet.headers.data];
 
     // TODO: We _could_ be more clever with this and do a running checksum calculation
     // as the packet data is modified by the filters, but for now we just do the
     // full checksum for the sake of simplicity
-    let data_checksum = csum::partial(data, 0);
+    let data_checksum = csum::DataChecksum::calculate_if_needed(data, &packet.buffer);
+    let data_length = data.len();
 
     let eth = packet.headers.eth.swapped();
 
     // If we have more than 1 destination we need to clone the packet data to
-    // a new packet for each destination, only modifying
+    // a new packet for each destination, only modifying the headers
     if !state.destinations.is_empty() {
         while let Some(daddr) = state.destinations.pop() {
             let Ok(dest_addr) = daddr.to_socket_addr() else {
@@ -599,8 +598,7 @@ fn process_client_packet<const TXN: usize>(
                     check: 0,
                     length: NetworkU16(0),
                 },
-                data_offset: packet.headers.data_offset,
-                data_length: packet.headers.data_length,
+                data: packet.headers.data,
             };
 
             // SAFETY: the umem outlives the frame
@@ -616,7 +614,7 @@ fn process_client_packet<const TXN: usize>(
                 metrics::Direction::Read,
                 new_packet,
                 asn,
-                packet.headers.data_length,
+                data_length,
                 res,
                 tx_slab,
                 umem,
@@ -638,18 +636,17 @@ fn process_client_packet<const TXN: usize>(
             check: 0,
             length: NetworkU16(0),
         },
-        data_offset: packet.headers.data_offset,
-        data_length: packet.headers.data_length,
+        data: packet.headers.data,
     };
 
-    headers.calc_checksum(data.len(), data_checksum);
+    headers.calc_checksum(data_checksum);
 
     let res = modify_packet_headers(&packet.headers, &mut headers, &mut packet.buffer);
     push_packet(
         metrics::Direction::Read,
         packet.buffer,
         asn,
-        packet.headers.data_length,
+        data_length,
         res,
         tx_slab,
         umem,
@@ -695,8 +692,7 @@ fn process_server_packet<const TXN: usize>(
             length: NetworkU16(0),
             check: 0,
         },
-        data_offset: packet.headers.data_offset,
-        data_length: packet.headers.data_length,
+        data: packet.headers.data,
     };
 
     let res = modify_packet_headers(&packet.headers, &mut headers, &mut packet.buffer);
@@ -708,7 +704,7 @@ fn process_server_packet<const TXN: usize>(
         metrics::Direction::Write,
         packet.buffer,
         asn,
-        packet.headers.data_length,
+        packet.headers.data_length(),
         res,
         tx_slab,
         umem,
@@ -730,7 +726,7 @@ fn modify_packet_headers(
         (_, _) => {}
     }
 
-    new.set_packet_headers(packet, true)?;
+    new.set_packet_headers(packet)?;
     Ok(())
 }
 
@@ -738,13 +734,13 @@ fn modify_packet_headers(
 fn fill_packet(
     headers: &mut UdpHeaders,
     data: &[u8],
-    data_checksum: u32,
+    data_checksum: csum::DataChecksum,
     frame: &mut Packet,
 ) -> Result<(), PacketError> {
     let hdr_len = headers.header_length();
     frame.adjust_tail(hdr_len as i32)?;
-    headers.calc_checksum(data.len(), data_checksum);
-    headers.set_packet_headers(frame, true)?;
+    headers.calc_checksum(data_checksum);
+    headers.set_packet_headers(frame)?;
     frame.insert(hdr_len, data)?;
     Ok(())
 }
@@ -759,8 +755,7 @@ fn process_qcmp_packet<const TXN: usize>(
 
     fn inner(packet: &mut Packet, headers: UdpHeaders) -> bool {
         let received_at = UtcTimestamp::now();
-        let Some(data) = packet.get(headers.data_offset..headers.data_offset + headers.data_length)
-        else {
+        let Some(data) = packet.get(headers.data.start..headers.data.end) else {
             tracing::debug!("corrupt UDP packet, data payload is out of range");
             return false;
         };
@@ -788,23 +783,22 @@ fn process_qcmp_packet<const TXN: usize>(
         let mut ob = qcmp::QcmpPacket::default();
         let buf = qcmp::Protocol::ping_reply(nonce, client_timestamp, received_at).encode(&mut ob);
 
-        if let Err(error) = packet.adjust_tail(-(headers.data_length as i32)) {
+        if let Err(error) = packet.adjust_tail(-(headers.data_length() as i32)) {
             tracing::debug!(%error, "unable to trim QCMP ping data");
             return false;
         }
 
-        if let Err(error) = packet.insert(headers.data_offset, buf) {
+        if let Err(error) = packet.insert(headers.data.start, buf) {
             tracing::debug!(%error, "unable to write QCMP pong data");
             return false;
         }
 
-        let mut new = UdpHeaders {
-            eth: headers.eth.swapped(),
-            ip: headers.ip.swapped(),
-            udp: headers.udp.swapped(),
-            data_offset: headers.data_offset,
-            data_length: buf.len(),
-        };
+        let mut new = UdpHeaders::new(
+            headers.eth.swapped(),
+            headers.ip.swapped(),
+            headers.udp.swapped(),
+            headers.data.start..headers.data.start + buf.len(),
+        );
         new.decrement_hop();
 
         if let Err(error) = modify_packet_headers(&headers, &mut new, packet) {
@@ -850,28 +844,28 @@ mod test {
         v6.reset(64, nt::IpProto::Udp);
         v6.source = [13; 16];
         v6.destination = [8; 16];
-        let mut headers = UdpHeaders {
-            eth: nt::EthHdr {
+        let mut headers = UdpHeaders::new(
+            nt::EthHdr {
                 source: nt::MacAddress([1; 6]),
                 destination: nt::MacAddress([2; 6]),
                 ether_type: nt::EtherType::Ipv6,
             },
-            ip: nt::IpHdr::V6(v6),
-            udp: UdpHdr {
+            nt::IpHdr::V6(v6),
+            UdpHdr {
                 source: 22.into(),
                 destination: 20021.into(),
                 length: NetworkU16(0),
                 check: 0,
             },
-            data_offset: nt::EthHdr::LEN + nt::Ipv6Hdr::LEN + nt::UdpHdr::LEN,
-            data_length: payload.len(),
-        };
+            nt::EthHdr::LEN + nt::Ipv6Hdr::LEN + nt::UdpHdr::LEN
+                ..nt::EthHdr::LEN + nt::Ipv6Hdr::LEN + nt::UdpHdr::LEN + payload.len(),
+        );
 
         let mut data = [0u8; 2048];
         let mut buffer = xdp::Packet::testing_new(&mut data);
-        buffer.adjust_tail(headers.data_offset as _).unwrap();
-        headers.set_packet_headers(&mut buffer, false).unwrap();
-        buffer.insert(headers.data_offset, &payload).unwrap();
+        buffer.adjust_tail(headers.data.start as _).unwrap();
+        headers.set_packet_headers(&mut buffer).unwrap();
+        buffer.insert(headers.data.start, &payload).unwrap();
         buffer.calc_udp_checksum().unwrap();
 
         let mut wrapper = PacketWrapper { buffer, headers };
@@ -885,7 +879,7 @@ mod test {
             wrapper.extend_head(HEAD);
             assert_eq!(&wrapper.as_slice()[..HEAD.len()], HEAD);
             assert_eq!(wrapper.as_slice()[HEAD.len()..], payload);
-            assert_eq!(wrapper.headers.data_length, payload.len() + HEAD.len());
+            assert_eq!(wrapper.headers.data_length(), payload.len() + HEAD.len());
             wrapper.remove_head(HEAD.len());
         }
 
@@ -896,7 +890,7 @@ mod test {
             wrapper.extend_tail(TAIL);
             assert_eq!(wrapper.as_slice()[..payload.len()], payload);
             assert_eq!(&wrapper.as_slice()[payload.len()..], TAIL);
-            assert_eq!(wrapper.headers.data_length, payload.len() + TAIL.len());
+            assert_eq!(wrapper.headers.data_length(), payload.len() + TAIL.len());
             wrapper.remove_tail(TAIL.len());
         }
 
