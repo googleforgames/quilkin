@@ -232,7 +232,7 @@ pub struct DeltaDiscoveryRes {
 /// Processes responses from management servers, applying resources to the proxy
 #[tracing::instrument(skip_all, fields(identifier))]
 pub fn handle_delta_discovery_responses<C: Configuration>(
-    _identifier: String,
+    identifier: String,
     stream: impl futures::Stream<Item = tonic::Result<DeltaDiscoveryResponse>> + 'static + Send,
     config: Arc<C>,
     local: Arc<LocalVersions>,
@@ -240,7 +240,7 @@ pub fn handle_delta_discovery_responses<C: Configuration>(
     mut notifier: Option<tokio::sync::mpsc::UnboundedSender<String>>,
 ) -> std::pin::Pin<Box<dyn futures::Stream<Item = tonic::Result<DeltaDiscoveryRequest>> + Send>> {
     Box::pin(async_stream::try_stream! {
-        let mut stream_metrics = None;
+        let _stream_metrics = crate::metrics::StreamConnectionMetrics::new(identifier.clone());
         tracing::trace!("awaiting delta response");
         for await response in stream
         {
@@ -252,14 +252,11 @@ pub fn handle_delta_discovery_responses<C: Configuration>(
                 }
             };
 
-            let control_plane_identifier = response.control_plane.as_ref().map(|cp| cp.identifier.as_str()).unwrap_or_default();
-            if stream_metrics.is_none() {
-                stream_metrics = Some(crate::metrics::StreamConnectionMetrics::new(control_plane_identifier.to_owned()));
-            }
-
             if response.type_url == "ignore-me" {
                 continue;
             }
+
+            let control_plane_identifier = response.control_plane.as_ref().map(|cp| cp.identifier.as_str()).unwrap_or_default();
 
             crate::metrics::delta_discovery_responses(control_plane_identifier, &response.type_url).inc();
             tracing::trace!(
@@ -322,7 +319,5 @@ pub fn handle_delta_discovery_responses<C: Configuration>(
                 ..Default::default()
             }
         }
-
-        drop(stream_metrics);
     })
 }
