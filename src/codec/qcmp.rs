@@ -17,6 +17,7 @@
 //! Logic for parsing and generating Quilkin Control Message Protocol (QCMP) messages.
 
 use crate::{
+    metrics,
     net::{
         DualStackEpollSocket,
         phoenix::{DistanceMeasure, Measurement},
@@ -205,19 +206,27 @@ pub fn spawn(
             let mut input_buf = [0u8; MAX_QCMP_PACKET_LEN];
             let socket = DualStackEpollSocket::new(port).unwrap();
             let mut output_buf = QcmpPacket::default();
+            metrics::qcmp::active(true);
 
             loop {
                 let result = tokio::select! {
                     result = socket.recv_from(&mut input_buf) => result,
-                    _ = shutdown_rx.changed() => return,
+                    _ = shutdown_rx.changed() => {
+                        metrics::qcmp::active(false);
+                        return
+                    }
                 };
-                match result {
+
+                match track_error(result, &crate::metrics::AsnInfo::EMPTY) {
                     Ok((size, source)) => {
                         let received_at = UtcTimestamp::now();
-                        let command = match Protocol::parse(&input_buf[..size]) {
+                        let ip_entry = crate::net::maxmind_db::MaxmindDb::lookup(source.ip()).map(crate::net::maxmind_db::MetricsIpNetEntry::from);
+                        let asn_info = crate::metrics::AsnInfo::from(ip_entry.as_ref());
+                        let command = match track_error(Protocol::parse(&input_buf[..size]), &asn_info) {
                             Ok(Some(command)) => command,
                             Ok(None) => {
                                 tracing::debug!("rejected non-qcmp packet");
+                                metrics::qcmp::packets_total_invalid(size, &asn_info);
                                 continue;
                             }
                             Err(error) => {
@@ -232,9 +241,12 @@ pub fn spawn(
                         } = command
                         else {
                             tracing::warn!(%source, "rejected unsupported QCMP packet");
+                            metrics::qcmp::packets_total_unsupported(size, &asn_info);
                             continue;
                         };
 
+                        metrics::qcmp::packets_total_valid(size, &asn_info);
+                        metrics::qcmp::ingress_latency(client_timestamp, received_at, &asn_info);
                         Protocol::ping_reply(nonce, client_timestamp, received_at)
                             .encode(&mut output_buf);
 
@@ -243,7 +255,7 @@ pub fn spawn(
                             "sending QCMP pong",
                         );
 
-                        match socket.send_to(&output_buf, source).await {
+                        match track_error(socket.send_to(&output_buf, source).await, &asn_info) {
                             Ok(len) => {
                                 if len != output_buf.len() {
                                     tracing::error!(%source, "failed to send entire QCMP pong response, expected {} but only sent {len}", output_buf.len());
@@ -265,6 +277,16 @@ pub fn spawn(
     );
 
     Ok(())
+}
+
+fn track_error<T, E: std::fmt::Display>(
+    result: Result<T, E>,
+    asn_info: &crate::metrics::AsnInfo<'_>,
+) -> Result<T, E> {
+    result.inspect_err(|error| {
+        let reason = error.to_string();
+        metrics::qcmp::errors_total(&reason, asn_info).inc();
+    })
 }
 
 /// The set of possible QCMP commands.
