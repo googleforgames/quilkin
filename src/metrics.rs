@@ -141,7 +141,7 @@ pub(crate) mod k8s {
         static METRIC: Lazy<IntCounterVec> = Lazy::new(|| {
             prometheus::register_int_counter_vec_with_registry! {
                 prometheus::opts! {
-                    "provider_k8s_events_total",
+                    "provider_k8s_gameservers_deletions_total",
                     "Total number of gameserver applied deletion events by `success` (either `true` or `false`) ",
                 },
                 &["kind"],
