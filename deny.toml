@@ -52,6 +52,7 @@ skip-tree = [
     { crate = "instant@0.1.13", reason = "several crates use this old version" },
     { crate = "thiserror@1.0.69", reason = "many crates use this old version" },
     { crate = "tower@0.4.13", reason = "several crates use this old version" },
+    { crate = "tonic@0.10.2", reason = "later versions seem to be broken, but this pulls in older versions of several crates, so ignore them for now" },
 ]
 
 #[bans.workspace-dependencies]
