@@ -159,9 +159,11 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
 
         let server = builder.add_service(server);
         tracing::info!("serving management server on port `{}`", listener.port());
+        metrics::server_active(true);
         Ok(server
             .serve_with_incoming(listener.into_stream()?)
-            .map_err(From::from))
+            .map_err(From::from)
+            .inspect_err(|_| metrics::server_active(false)))
     }
 
     pub fn relay_server(
@@ -200,6 +202,7 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
             is_relay = self.is_relay,
             "pushing update"
         );
+        metrics::server_resource_updates_total(resource_type);
         if self.tx.send(resource_type).is_err() {
             tracing::debug!("no client connections currently subscribed");
         }
