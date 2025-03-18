@@ -59,6 +59,8 @@ mod tests {
     /// for this test, we should only run Agones integration test in a serial manner, since they
     /// could easily collide with each other.
     async fn agones_token_router() {
+        quilkin::test::enable_log("quilkin=debug");
+
         run_test(true, true, true, 0).await;
         run_test(true, true, false, 1).await;
         run_test(true, false, true, 2).await;
