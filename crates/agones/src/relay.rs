@@ -363,12 +363,15 @@ mod tests {
         let mut agent_names = Vec::with_capacity(agent_count as _);
         for i in 0..agent_count {
             let agent_name = format!("quilkin-agones-agent-{id}-{i}");
+            let icao = format!("XXX{}", "ABCD".get(i as usize..(i + 1) as usize).unwrap());
 
             // agent deployment
             let args = [
                 "agent",
                 "--relay",
                 &format!("http://{relay_name}:7900"),
+                "--icao-code",
+                &icao,
                 "agones",
                 "--config-namespace",
                 client.namespace.as_str(),
