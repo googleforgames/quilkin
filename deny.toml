@@ -41,7 +41,6 @@ deny = [
 multiple-versions = "deny"
 skip = [
     { crate = "object@0.32.2", reason = "transitive dependency due to backtrace, backtrace is updated, but stable-eyre using a feature that doesn't exist any longer, and can't update, sigh" },
-    { crate = "hostname@0.3.1", reason = "hickory-resolver -> resolve-conf uses this old version, since resolve-conf hasn't been updated in 5 years I assume this will continue this way" },
     { crate = "hashbrown@0.14.5", reason = "many crates use this old version" },
 
 ]
@@ -52,10 +51,9 @@ skip-tree = [
     { crate = "instant@0.1.13", reason = "several crates use this old version" },
     { crate = "thiserror@1.0.69", reason = "many crates use this old version" },
     { crate = "tower@0.4.13", reason = "several crates use this old version" },
-    { crate = "tonic@0.10.2", reason = "later versions seem to be broken, but this pulls in older versions of several crates, so ignore them for now" },
 ]
 
-#[bans.workspace-dependencies]
+[bans.workspace-dependencies]
 
 # This section is considered when running `cargo deny check licenses`
 # More documentation for the licenses section can be found here:
