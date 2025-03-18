@@ -142,7 +142,13 @@ mod tests {
                 break;
             }
         }
-        assert_eq!(format!("NAME: {}\n", gs.name_unchecked()), response);
+
+        if format!("NAME: {}\n", gs.name_unchecked()) != response {
+            debug_pods(&client, format!("role={relay_proxy_name}")).await;
+            debug_pods(&client, "role=relay".into()).await;
+            debug_pods(&client, "role=agent".into()).await;
+            panic!("failed send packets to {}", gs.name_unchecked());
+        }
 
         // let's remove the token from the gameserver, which should remove access.
         let mut gs = gameservers.get(gs.name_unchecked().as_str()).await.unwrap();
