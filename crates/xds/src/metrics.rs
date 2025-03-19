@@ -34,6 +34,7 @@ pub fn set_registry(registry: &'static Registry) {
 
 /// Returns the [`Registry`] containing all the metrics registered in xDS.
 #[inline]
+#[track_caller]
 pub fn registry() -> &'static Registry {
     unsafe { REGISTRY }.expect("set_registry must be called")
 }
