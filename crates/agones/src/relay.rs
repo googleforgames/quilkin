@@ -59,6 +59,8 @@ mod tests {
     /// for this test, we should only run Agones integration test in a serial manner, since they
     /// could easily collide with each other.
     async fn agones_token_router() {
+        quilkin::test::enable_log("agones=debug");
+
         run_test(true, true, true, 0).await;
         run_test(true, true, false, 1).await;
         run_test(true, false, true, 2).await;
@@ -78,8 +80,8 @@ mod tests {
         let dp = DeleteParams::default();
 
         let config_map = create_token_router_config(&config_maps).await;
-        let (relay_name, agent_name) =
-            agones_agent_deployment(&client, deployments.clone(), relay, agent, id).await;
+        let (relay_name, agent_names) =
+            agones_agent_deployment(&client, deployments.clone(), relay, agent, 3, id).await;
 
         let relay_proxy_name = format!("quilkin-relay-proxy-{id}");
         let proxy_address = quilkin_proxy_deployment(
@@ -142,7 +144,13 @@ mod tests {
                 break;
             }
         }
-        assert_eq!(format!("NAME: {}\n", gs.name_unchecked()), response);
+
+        if format!("NAME: {}\n", gs.name_unchecked()) != response {
+            debug_pods(&client, format!("role={relay_proxy_name}")).await;
+            debug_pods(&client, "role=relay".into()).await;
+            debug_pods(&client, "role=agent".into()).await;
+            panic!("failed send packets to {}", gs.name_unchecked());
+        }
 
         // let's remove the token from the gameserver, which should remove access.
         let mut gs = gameservers.get(gs.name_unchecked().as_str()).await.unwrap();
@@ -229,9 +237,20 @@ mod tests {
             Ok(())
         }
 
+        async fn delete_agents(
+            dp: &Api<Deployment>,
+            agents: Vec<String>,
+        ) -> Result<(), kube::Error> {
+            for agent in agents {
+                delete_deployment(dp, &agent).await?;
+            }
+
+            Ok(())
+        }
+
         tokio::try_join!(
             delete_deployment(&deployments, &relay_proxy_name),
-            delete_deployment(&deployments, &agent_name),
+            delete_agents(&deployments, agent_names),
             delete_deployment(&deployments, &relay_name),
         )
         .expect("failed to delete deployment(s) within timeout");
@@ -243,8 +262,9 @@ mod tests {
         deployments: Api<Deployment>,
         relay: bool,
         agent: bool,
+        agent_count: u8,
         id: u8,
-    ) -> (String, String) {
+    ) -> (String, Vec<String>) {
         let service_accounts: Api<ServiceAccount> = client.namespaced_api();
         let cluster_roles: Api<ClusterRole> = Api::all(client.kubernetes.clone());
         let role_bindings: Api<RoleBinding> = client.namespaced_api();
@@ -340,61 +360,69 @@ mod tests {
         }
         result.unwrap().expect("Should have a relay deployment");
 
-        let agent_name = format!("quilkin-agones-agent-{id}");
+        let mut agent_names = Vec::with_capacity(agent_count as _);
+        for i in 0..agent_count {
+            let agent_name = format!("quilkin-agones-agent-{id}-{i}");
+            let icao = format!("XXX{}", "ABCD".get(i as usize..(i + 1) as usize).unwrap());
 
-        // agent deployment
-        let args = [
-            "agent",
-            "--relay",
-            &format!("http://{relay_name}:7900"),
-            "agones",
-            "--config-namespace",
-            client.namespace.as_str(),
-            "--gameservers-namespace",
-            client.namespace.as_str(),
-        ]
-        .map(String::from)
-        .to_vec();
-        let labels = BTreeMap::from([("role".to_string(), "agent".to_string())]);
-        let deployment = Deployment {
-            metadata: ObjectMeta {
-                name: Some(agent_name.clone()),
-                labels: Some(labels.clone()),
-                ..Default::default()
-            },
-            spec: Some(DeploymentSpec {
-                replicas: Some(1),
-                selector: LabelSelector {
-                    match_expressions: None,
-                    match_labels: Some(labels.clone()),
+            // agent deployment
+            let args = [
+                "agent",
+                "--relay",
+                &format!("http://{relay_name}:7900"),
+                "--icao-code",
+                &icao,
+                "agones",
+                "--config-namespace",
+                client.namespace.as_str(),
+                "--gameservers-namespace",
+                client.namespace.as_str(),
+            ]
+            .map(String::from)
+            .to_vec();
+            let labels = BTreeMap::from([("role".to_string(), "agent".to_string())]);
+            let deployment = Deployment {
+                metadata: ObjectMeta {
+                    name: Some(agent_name.clone()),
+                    labels: Some(labels.clone()),
+                    ..Default::default()
                 },
-                template: PodTemplateSpec {
-                    metadata: Some(ObjectMeta {
-                        labels: Some(labels.clone()),
-                        ..Default::default()
-                    }),
-                    spec: Some(PodSpec {
-                        containers: vec![quilkin_container(client, Some(args), None, agent)],
-                        service_account_name: Some(rbac_name),
-                        ..Default::default()
-                    }),
-                },
+                spec: Some(DeploymentSpec {
+                    replicas: Some(1),
+                    selector: LabelSelector {
+                        match_expressions: None,
+                        match_labels: Some(labels.clone()),
+                    },
+                    template: PodTemplateSpec {
+                        metadata: Some(ObjectMeta {
+                            labels: Some(labels.clone()),
+                            ..Default::default()
+                        }),
+                        spec: Some(PodSpec {
+                            containers: vec![quilkin_container(client, Some(args), None, agent)],
+                            service_account_name: Some(rbac_name.clone()),
+                            ..Default::default()
+                        }),
+                    },
+                    ..Default::default()
+                }),
                 ..Default::default()
-            }),
-            ..Default::default()
-        };
-        let agent_deployment = deployments.create(&pp, &deployment).await.unwrap();
-        let name = agent_deployment.name_unchecked();
-        let result = timeout(
-            SLOW,
-            await_condition(deployments.clone(), name.as_str(), is_deployment_ready()),
-        )
-        .await;
-        if result.is_err() {
-            debug_pods(client, "role=agent".into()).await;
-            panic!("Agent Deployment should be ready");
+            };
+            let agent_deployment = deployments.create(&pp, &deployment).await.unwrap();
+            let name = agent_deployment.name_unchecked();
+            let result = timeout(
+                SLOW,
+                await_condition(deployments.clone(), name.as_str(), is_deployment_ready()),
+            )
+            .await;
+            if result.is_err() {
+                debug_pods(client, "role=agent".into()).await;
+                panic!("Agent Deployment should be ready");
+            }
+            result.unwrap().expect("Should have an agent deployment");
+            agent_names.push(agent_name);
         }
-        result.unwrap().expect("Should have an agent deployment");
-        (relay_name, agent_name)
+
+        (relay_name, agent_names)
     }
 }
