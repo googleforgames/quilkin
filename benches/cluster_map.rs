@@ -46,6 +46,7 @@ mod serde {
                 unreachable!()
             };
             cm.insert(
+                None,
                 cluster.locality.map(From::from),
                 cluster
                     .endpoints
