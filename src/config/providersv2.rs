@@ -56,6 +56,16 @@ pub struct Providers {
     /// objects in the environment and allow them to be available for routing
     /// and metrics through Quilkin.
     #[arg(
+        long = "provider.k8s.leader-election",
+        env = "QUILKIN_PROVIDERS_K8S_LEADER_ELECTION",
+        default_value_t = false
+    )]
+    k8s_leader_election: bool,
+
+    #[arg(env = "HOSTNAME", default_value_t = uuid::Uuid::new_v4().to_string())]
+    k8s_leader_id: String,
+
+    #[arg(
         long = "provider.k8s.agones",
         env = "QUILKIN_PROVIDERS_K8S_AGONES",
         default_value_t = false
@@ -326,7 +336,7 @@ impl Providers {
         &self,
         health_check: Arc<AtomicBool>,
         locality: Option<crate::net::endpoint::Locality>,
-        config: FiltersAndClusters,
+        config: &super::Config,
     ) -> JoinHandle<crate::Result<()>> {
         let agones_namespaces = if !self.agones_namespace.is_empty() {
             tracing::warn!(
@@ -339,7 +349,14 @@ impl Providers {
 
         let agones_enabled = self.agones_enabled;
         let k8s_enabled = self.k8s_enabled;
+        let k8s_leader_election = self.k8s_leader_election;
+        let k8s_leader_id = self
+            .k8s_leader_id
+            .is_empty()
+            .then(|| uuid::Uuid::new_v4().to_string())
+            .unwrap_or_else(|| self.k8s_leader_id.clone());
         let k8s_namespace = self.k8s_namespace.clone();
+
         let selector = self
             .address_type
             .as_ref()
@@ -361,6 +378,7 @@ impl Providers {
                 let health_check = health_check.clone();
                 let agones_namespaces = agones_namespaces.clone();
                 let k8s_namespace: String = k8s_namespace.clone();
+                let k8s_leader_id: String = k8s_leader_id.clone();
                 let selector = selector.clone();
                 let locality = locality.clone();
                 let health_check = health_check.clone();
@@ -372,28 +390,42 @@ impl Providers {
                     )
                     .await??;
 
-                    let k8s_stream = if k8s_enabled {
-                        either::Left(Self::result_stream(
-                            health_check.clone(),
-                            crate::config::providers::k8s::update_filters_from_configmap(
-                                client.clone(),
-                                k8s_namespace.clone(),
-                                config.filters,
-                            ),
-                        ))
+                    let k8s_stream =
+                        if let Some(Some(fc)) = k8s_enabled.then(|| config.dyn_cfg.filters()) {
+                            either::Left(Self::result_stream(
+                                health_check.clone(),
+                                crate::config::providers::k8s::update_filters_from_configmap(
+                                    client.clone(),
+                                    k8s_namespace.clone(),
+                                    fc.clone(),
+                                ),
+                            ))
+                        } else {
+                            either::Right(std::future::pending())
+                        };
+
+                    let k8s_leader_election_task = if k8s_leader_election {
+                        let ll = config.dyn_cfg.init_leader_lock();
+                        either::Left(tokio::spawn(super::providers::k8s::update_leader_lock(
+                            client.clone(),
+                            k8s_namespace,
+                            k8s_leader_id,
+                            ll,
+                        )))
                     } else {
                         either::Right(std::future::pending())
                     };
 
                     let mut gs_streams = tokio::task::JoinSet::new();
-                    if agones_enabled {
+                    if let Some(Some(clusters)) = agones_enabled.then(|| config.dyn_cfg.clusters())
+                    {
                         for namespace in agones_namespaces {
                             gs_streams.spawn(Self::result_stream(
                                 health_check.clone(),
                                 crate::config::watch::agones::watch_gameservers(
                                     client.clone(),
                                     namespace.clone(),
-                                    config.clusters.clone(),
+                                    clusters.clone(),
                                     locality.clone(),
                                     selector.clone(),
                                 ),
@@ -405,6 +437,7 @@ impl Providers {
 
                     tokio::select! {
                         Some(result) = gs_streams.join_next() => result.map_err(From::from).and_then(|result| result),
+                        result = k8s_leader_election_task => result.map_err(eyre::Error::from).and_then(|result| result),
                         result = k8s_stream => result,
                     }
                 }
@@ -469,10 +502,7 @@ impl Providers {
         };
 
         if self.k8s_enabled || self.agones_enabled {
-            let Some(fc) = FiltersAndClusters::new(config) else {
-                return none();
-            };
-            self.spawn_k8s_provider(health_check, locality, fc)
+            self.spawn_k8s_provider(health_check, locality, config)
         } else if !self.xds_endpoints.is_empty() {
             self.spawn_xds_provider(config.clone(), health_check)
         } else if self.fs_enabled {

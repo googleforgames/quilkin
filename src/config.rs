@@ -20,12 +20,13 @@ use std::{
     net::{IpAddr, SocketAddr},
     sync::{
         Arc,
-        atomic::{AtomicU64, Ordering::Relaxed},
+        atomic::{AtomicBool, AtomicU64, Ordering::Relaxed},
     },
     time::Duration,
 };
 
 use base64_serde::base64_serde_type;
+use once_cell::sync::Lazy;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -52,6 +53,21 @@ pub mod watch;
 pub(crate) const BACKOFF_INITIAL_DELAY: Duration = Duration::from_millis(500);
 
 pub type ConfigMap = typemap_rev::TypeMap<dyn typemap_rev::CloneDebuggableStorage>;
+
+#[derive(Debug, Clone, Default)]
+#[repr(transparent)]
+pub(crate) struct LeaderLock(Arc<Lazy<Arc<AtomicBool>>>);
+
+impl LeaderLock {
+    pub(crate) fn load(&self) -> bool {
+        self.0.load(Relaxed)
+    }
+
+    pub(crate) fn store(&self, is_leader: bool) {
+        crate::metrics::leader_election(is_leader);
+        self.0.store(is_leader, Relaxed);
+    }
+}
 
 base64_serde_type!(pub Base64Standard, base64::engine::general_purpose::STANDARD);
 #[derive(Clone)]
@@ -171,6 +187,8 @@ impl<'de> Deserialize<'de> for Config {
                         qcmp_port: Slot::new(qcmp_port),
                     });
                 };
+
+                typemap.insert::<LeaderLock>(<_>::default());
 
                 Ok(Config {
                     dyn_cfg: DynamicConfig {
@@ -309,6 +327,7 @@ impl<'de> Deserialize<'de> for DynamicConfig {
                     });
                 };
 
+                typemap.insert::<LeaderLock>(<_>::default());
                 Ok(DynamicConfig {
                     version: version.unwrap_or_default(),
                     id: id.map_or_else(default_id, |id| Slot::new(Some(id))),
@@ -337,6 +356,10 @@ impl typemap_rev::TypeMapKey for Agent {
     type Value = Agent;
 }
 
+impl typemap_rev::TypeMapKey for LeaderLock {
+    type Value = LeaderLock;
+}
+
 impl DynamicConfig {
     pub fn filters(&self) -> Option<&Slot<FilterChain>> {
         self.typemap.get::<FilterChain>()
@@ -352,6 +375,16 @@ impl DynamicConfig {
 
     pub fn agent(&self) -> Option<&Agent> {
         self.typemap.get::<Agent>()
+    }
+
+    pub(crate) fn init_leader_lock(&self) -> LeaderLock {
+        self.typemap.get::<LeaderLock>().unwrap().clone()
+    }
+
+    pub(crate) fn leader_lock(&self) -> Option<&LeaderLock> {
+        self.typemap
+            .get::<LeaderLock>()
+            .filter(|ll| Lazy::get(&*ll.0).is_some())
     }
 }
 
@@ -381,6 +414,10 @@ impl PartialEq for DynamicConfig {
 impl quilkin_xds::config::Configuration for Config {
     fn identifier(&self) -> String {
         String::clone(&self.id())
+    }
+
+    fn is_leader(&self) -> Option<bool> {
+        self.dyn_cfg.leader_lock().map(|ll| ll.load())
     }
 
     fn allow_request_processing(&self, resource_type: &str) -> bool {
