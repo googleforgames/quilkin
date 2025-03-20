@@ -225,7 +225,12 @@ impl MdsClient {
         config: Arc<C>,
         is_healthy: Arc<AtomicBool>,
     ) -> Result<DeltaSubscription, Self> {
+        const LEADERSHIP_CHECK_INTERVAL: std::time::Duration = std::time::Duration::from_secs(1);
         let identifier = String::from(&*self.identifier);
+
+        while config.is_leader() == Some(false) {
+            tokio::time::sleep(LEADERSHIP_CHECK_INTERVAL).await;
+        }
 
         let (mut ds, mut stream) =
             match DeltaServerStream::connect(self.client.clone(), identifier.clone()).await {
@@ -245,6 +250,12 @@ impl MdsClient {
                 tracing::trace!("starting relay client delta stream task");
 
                 loop {
+                    if config.is_leader() == Some(false) {
+                        tracing::debug!("not leader, delaying task");
+                        tokio::time::sleep(LEADERSHIP_CHECK_INTERVAL).await;
+                        continue;
+                    }
+
                     {
                         let control_plane = super::server::ControlPlane::from_arc(
                             config.clone(),
@@ -260,7 +271,16 @@ impl MdsClient {
                         let mut stream = control_plane.delta_aggregated_resources(stream).await?;
                         is_healthy.store(true, Ordering::SeqCst);
 
-                        while let Some(result) = stream.next().await {
+                        loop {
+                            if config.is_leader() == Some(false) {
+                                tracing::warn!("lost leader lock mid-stream, disconnecting");
+                                break;
+                            }
+
+                            let Some(result) = stream.next().await else {
+                                break;
+                            };
+
                             let response = result?;
                             tracing::trace!("received delta discovery response");
                             ds.send_response(response).await?;

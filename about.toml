@@ -35,3 +35,6 @@ accepted = ["ISC", "OpenSSL"]
 
 [xxhash-rust]
 accepted = ["BSL-1.0"]
+
+[aws-lc-sys]
+accepted = ["OpenSSL"]
