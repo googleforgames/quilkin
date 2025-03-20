@@ -310,7 +310,7 @@ where
         locality: Option<Locality>,
         cluster: BTreeSet<Endpoint>,
     ) {
-        self.apply(remote_addr, locality, EndpointSet::new(cluster));
+        let _res = self.apply(remote_addr, locality, EndpointSet::new(cluster));
     }
 
     pub fn apply(
@@ -318,11 +318,12 @@ where
         remote_addr: Option<std::net::IpAddr>,
         locality: Option<Locality>,
         cluster: EndpointSet,
-    ) {
+    ) -> crate::Result<()> {
         if let Some(raddr) = self.localities.get(&locality) {
             if *raddr != remote_addr {
-                tracing::trace!("skipping cluster apply");
-                return;
+                eyre::bail!(
+                    "skipping cluster apply, '{locality:?}' is managed by '{raddr:?}', not '{remote_addr:?}'"
+                );
             }
         }
 
@@ -359,6 +360,8 @@ where
             self.num_endpoints.fetch_add(new_len, Relaxed);
             self.version.fetch_add(1, Relaxed);
         }
+
+        Ok(())
     }
 
     #[inline]

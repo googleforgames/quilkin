@@ -831,8 +831,7 @@ impl Config {
                         );
 
                         let locality = cluster.locality.map(crate::net::endpoint::Locality::from);
-
-                        guard.apply(remote_addr, locality, endpoints);
+                        guard.apply(remote_addr, locality, endpoints)?;
                     }
 
                     Ok(())
