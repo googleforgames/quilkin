@@ -295,7 +295,7 @@ impl Providers {
             "setting endpoints"
         );
         config.clusters.modify(|clusters| {
-            clusters.insert(None, endpoints);
+            clusters.insert(None, None, endpoints);
         });
 
         health_check.store(true, Ordering::SeqCst);

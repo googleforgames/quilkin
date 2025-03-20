@@ -7,7 +7,7 @@ pub fn make_config(
     endpoints: std::collections::BTreeSet<quilkin::net::Endpoint>,
 ) -> process::ConfigState {
     let cm = quilkin::net::ClusterMap::new();
-    cm.insert(None, endpoints);
+    cm.insert(None, None, endpoints);
 
     process::ConfigState {
         filters: quilkin::config::Slot::new(filters),

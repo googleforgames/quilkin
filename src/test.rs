@@ -443,6 +443,7 @@ impl TestConfig {
         let config = Self::default();
         config.clusters.insert(
             None,
+            None,
             [Endpoint::new((std::net::Ipv4Addr::LOCALHOST, 8080).into())].into(),
         );
         config

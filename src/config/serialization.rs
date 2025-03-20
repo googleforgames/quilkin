@@ -74,11 +74,11 @@ impl Config {
                     tracing::trace!(len = cmd.endpoints.len(), "replacing clusters");
                     clusters.modify(|clusters| {
                         for cluster in cmd.endpoints {
-                            clusters.insert(cluster.locality, cluster.endpoints);
+                            clusters.insert(None, cluster.locality, cluster.endpoints);
                         }
 
                         if let Some(locality) = locality.take() {
-                            clusters.update_unlocated_endpoints(locality);
+                            clusters.update_unlocated_endpoints(None, locality);
                         }
                     });
                     self.apply_metrics();
