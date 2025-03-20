@@ -404,7 +404,7 @@ where
 
                 if set.is_empty() {
                     let raddr = self.localities.get(entry.key());
-                    let raddr = raddr.map_or(None, |r| *r);
+                    let raddr = raddr.and_then(|r| *r);
                     self.remove_locality(raddr, entry.key());
                 }
 
@@ -434,7 +434,7 @@ where
 
                     if set.is_empty() {
                         let raddr = self.localities.get(entry.key());
-                        let raddr = raddr.map_or(None, |r| *r);
+                        let raddr = raddr.and_then(|r| *r);
                         self.remove_locality(raddr, entry.key());
                     }
                 }
