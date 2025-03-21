@@ -185,7 +185,7 @@ pub fn update_endpoints_from_gameservers(
                     tracing::debug!(endpoint=%serde_json::to_value(&endpoint).unwrap(), "Adding endpoint");
                     metrics::k8s::gameservers_total_valid();
                     clusters.write()
-                        .replace(locality.clone(), endpoint);
+                        .replace(None, locality.clone(), endpoint);
                 }
                 Event::Init => {},
                 Event::InitApply(result) => {
@@ -216,7 +216,7 @@ pub fn update_endpoints_from_gameservers(
                         "Restarting with endpoints"
                     );
 
-                    clusters.write().insert(locality.clone(), std::mem::take(&mut servers));
+                    clusters.write().insert(None, locality.clone(), std::mem::take(&mut servers));
                 }
                 Event::Delete(result) => {
                     let server = match result.0 {

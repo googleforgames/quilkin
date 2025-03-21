@@ -672,7 +672,7 @@ pub fn gen_cluster_map<const S: u64>(token_kind: TokenKind) -> GenCluster {
 
     for locality in LOCALITIES.choose_multiple(&mut rng, num_locals) {
         let locality = locality.parse().unwrap();
-        cm.insert(Some(locality), Default::default());
+        cm.insert(None, Some(locality), Default::default());
     }
 
     // Now actually insert the endpoints, now that the order of keys is established,
@@ -699,7 +699,7 @@ pub fn gen_cluster_map<const S: u64>(token_kind: TokenKind) -> GenCluster {
 
         let ep = gen_endpoints(&mut rng, &mut hasher, token_generator.as_mut());
         total_endpoints += ep.len();
-        cm.insert(key.clone(), ep.clone());
+        cm.insert(None, key.clone(), ep.clone());
         sets.insert(key, ep);
     }
 
