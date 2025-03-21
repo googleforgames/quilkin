@@ -81,7 +81,7 @@ mod tests {
 
         let config_map = create_token_router_config(&config_maps).await;
         let (relay_name, agent_names) =
-            agones_agent_deployment(&client, deployments.clone(), relay, agent, 3, id).await;
+            agones_agent_deployment(&client, deployments.clone(), relay, agent, 1, id).await;
 
         let relay_proxy_name = format!("quilkin-relay-proxy-{id}");
         let proxy_address = quilkin_proxy_deployment(

@@ -246,8 +246,6 @@ impl Service {
         config: &Arc<Config>,
         shutdown_rx: &crate::signal::ShutdownRx,
     ) -> crate::Result<tokio::task::JoinHandle<crate::Result<()>>> {
-        quilkin_xds::metrics::set_registry(crate::metrics::registry());
-
         let mut shutdown_rx = shutdown_rx.clone();
         let mds_task = self.publish_mds(config)?;
         let (phoenix_task, phoenix_finalizer) = self.publish_phoenix(config)?;
