@@ -436,7 +436,6 @@ impl Providers {
                     };
 
                     tokio::select! {
-                        result = gs_stream => result,
                         result = k8s_leader_election_task => result.map_err(eyre::Error::from).and_then(|result| result),
                         Some(result) = gs_streams.join_next() => result.map_err(From::from).and_then(|result| result),
                         result = k8s_stream => result,
