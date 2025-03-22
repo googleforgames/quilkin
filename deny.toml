@@ -31,11 +31,12 @@ ignore = [
 deny = [
     { crate = "openssl-sys", use-instead = "rustls" },
     { crate = "openssl", use-instead = "rustls" },
-    { crate = "cmake", use-instead = "cc" },
+    { crate = "cmake", use-instead = "cc", wrappers = ["aws-lc-sys"] },
     { crate = "chrono", use-instead = "time", wrappers = [
         "k8s-openapi",
         "kube-client",
         "kube-core",
+        "kube-leader-election",
     ] },
 ]
 multiple-versions = "deny"
@@ -46,9 +47,6 @@ skip = [
 ]
 skip-tree = [
     { crate = "regex-automata@0.1", reason = "matchers is using an old version, https://github.com/hawkw/matchers/pull/5, but it's also barely maintained..." },
-    # Much like trust-dns this pulls in a ton of outdated dependencies, but it's _slightly_ better
-    #{ crate = "hickory-resolver@0.24.1", reason = "Uses _many_ outdated crates" },
-    { crate = "instant@0.1.13", reason = "several crates use this old version" },
     { crate = "thiserror@1.0.69", reason = "many crates use this old version" },
     { crate = "tower@0.4.13", reason = "several crates use this old version" },
 ]
@@ -67,6 +65,7 @@ exceptions = [
     # This license should not really be used for code, but here we are
     { crate = "notify", allow = ["CC0-1.0"] },
     { crate = "webpki-roots", allow = ["MPL-2.0"] },
+    { crate = "aws-lc-sys", allow = ["OpenSSL"] },
 ]
 
 [[licenses.clarify]]

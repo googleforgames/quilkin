@@ -21,6 +21,7 @@ use std::{collections::BTreeSet, sync::Arc};
 use futures::Stream;
 use k8s_openapi::api::core::v1::ConfigMap;
 use kube::{core::DeserializeGuard, runtime::watcher::Event};
+use kube_leader_election::{LeaseLock, LeaseLockParams};
 
 use agones::GameServer;
 
@@ -45,6 +46,32 @@ fn track_event<T>(kind: &'static str, event: Event<T>) -> Event<T> {
     event
 }
 
+pub(crate) async fn update_leader_lock(
+    client: kube::Client,
+    namespace: impl AsRef<str>,
+    holder_id: impl Into<String>,
+    leader_lock: config::LeaderLock,
+) -> crate::Result<()> {
+    const LEASE_NAME: &str = "quilkin-mds-leader-lease";
+    let leadership = LeaseLock::new(
+        client,
+        namespace.as_ref(),
+        LeaseLockParams {
+            holder_id: holder_id.into(),
+            lease_name: LEASE_NAME.into(),
+            lease_ttl: std::time::Duration::from_millis(750),
+        },
+    );
+
+    loop {
+        match leadership.try_acquire_or_renew().await {
+            Ok(ll) => leader_lock.store(ll.acquired_lease),
+            Err(error) => tracing::warn!(%error),
+        }
+
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    }
+}
 pub fn update_filters_from_configmap(
     client: kube::Client,
     namespace: impl AsRef<str>,

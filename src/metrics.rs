@@ -57,6 +57,21 @@ pub(crate) const BUCKET_FACTOR: f64 = 2.0;
 /// care about granularity past 1 second.
 pub(crate) const BUCKET_COUNT: usize = 13;
 
+pub(crate) fn leader_election(is_leader: bool) {
+    static METRIC: Lazy<IntGauge> = Lazy::new(|| {
+        prometheus::register_int_gauge_with_registry! {
+            prometheus::opts! {
+                "provider_leader_election",
+                "Whether the current instance is considered the leader of the replicas.",
+            },
+            registry(),
+        }
+        .unwrap()
+    });
+
+    METRIC.set(is_leader as _);
+}
+
 pub(crate) mod k8s {
     use super::*;
 
