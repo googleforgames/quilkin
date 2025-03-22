@@ -15,7 +15,7 @@
  */
 
 use once_cell::sync::Lazy;
-use prometheus::{IntCounterVec, IntGaugeVec, Registry};
+use prometheus::{Histogram, IntCounterVec, IntGauge, IntGaugeVec, Registry};
 
 pub(crate) const NODE_LABEL: &str = "node";
 pub(crate) const CONTROL_PLANE_LABEL: &str = "control_plane";
@@ -39,7 +39,7 @@ pub fn registry() -> &'static Registry {
     unsafe { REGISTRY }.expect("set_registry must be called")
 }
 
-pub(crate) fn active_control_planes(control_plane: &str) -> prometheus::IntGauge {
+pub(crate) fn active_control_planes(control_plane: &str) -> IntGauge {
     static ACTIVE_CONTROL_PLANES: Lazy<IntGaugeVec> = Lazy::new(|| {
         prometheus::register_int_gauge_vec_with_registry! {
             prometheus::opts! {
@@ -53,6 +53,104 @@ pub(crate) fn active_control_planes(control_plane: &str) -> prometheus::IntGauge
     });
 
     ACTIVE_CONTROL_PLANES.with_label_values(&[control_plane])
+}
+
+pub(crate) fn client_active(active: bool) {
+    static METRIC: Lazy<IntGauge> = Lazy::new(|| {
+        prometheus::register_int_gauge_with_registry! {
+            prometheus::opts! {
+                "provider_grpc_active",
+                "Whether the gRPC configuration provider is active or not (either 1 or 0).",
+            },
+            registry(),
+        }
+        .unwrap()
+    });
+
+    METRIC.set(active as _);
+}
+
+pub(crate) fn client_connect_attempts_total(address: &impl std::fmt::Display) {
+    static METRIC: Lazy<IntCounterVec> = Lazy::new(|| {
+        prometheus::register_int_counter_vec_with_registry! {
+            prometheus::opts! {
+                "provider_grpc_connect_attempts_total",
+                "total number of attempts the gRPC provider has made to connect to `address`.",
+            },
+            &["address"],
+            registry(),
+        }
+        .unwrap()
+    });
+
+    METRIC.with_label_values(&[&address.to_string()]).inc();
+}
+
+pub(crate) fn client_errors_total(reason: &impl std::fmt::Display) {
+    static METRIC: Lazy<IntCounterVec> = Lazy::new(|| {
+        prometheus::register_int_counter_vec_with_registry! {
+            prometheus::opts! {
+                "provider_grpc_errors_total",
+                "total number of errors the gRPC provider has encountered",
+            },
+            &["reason"],
+            registry(),
+        }
+        .unwrap()
+    });
+
+    METRIC.with_label_values(&[&reason.to_string()]).inc();
+}
+
+pub fn client_connect_attempt_backoff_millis(delay: std::time::Duration) {
+    pub(crate) const BUCKET_START: f64 = 0.001;
+    pub(crate) const BUCKET_FACTOR: f64 = 2.0;
+    pub(crate) const BUCKET_COUNT: usize = 13;
+
+    static METRIC: Lazy<Histogram> = Lazy::new(|| {
+        prometheus::register_histogram_with_registry! {
+            prometheus::histogram_opts! {
+                "provider_grpc_connect_attempt_backoff_seconds",
+                "The backoff duration made when attempting reconnect to a gRPC provider",
+                prometheus::exponential_buckets(BUCKET_START, BUCKET_FACTOR, BUCKET_COUNT).unwrap(),
+            },
+            registry(),
+        }
+        .unwrap()
+    });
+
+    METRIC.observe(delay.as_secs_f64());
+}
+
+pub(crate) fn server_active(active: bool) {
+    static METRIC: Lazy<IntGauge> = Lazy::new(|| {
+        prometheus::register_int_gauge_with_registry! {
+            prometheus::opts! {
+                "service_grpc_active",
+                "Whether the gRPC service is active or not (either 1 or 0).",
+            },
+            registry(),
+        }
+        .unwrap()
+    });
+
+    METRIC.set(active as _);
+}
+
+pub(crate) fn server_resource_updates_total(resource: &str) {
+    static METRIC: Lazy<IntCounterVec> = Lazy::new(|| {
+        prometheus::register_int_counter_vec_with_registry! {
+            prometheus::opts! {
+                "service_grpc_resource_updates_total",
+                "total number of updates to a `resource` being sent to gRPC clients.",
+            },
+            &["address"],
+            registry(),
+        }
+        .unwrap()
+    });
+
+    METRIC.with_label_values(&[resource]).inc();
 }
 
 pub(crate) fn delta_discovery_requests(node: &str, type_url: &str) -> prometheus::IntCounter {

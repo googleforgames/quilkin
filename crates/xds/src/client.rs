@@ -21,7 +21,7 @@ use std::{
 };
 
 use eyre::ContextCompat;
-use futures::StreamExt;
+use futures::{StreamExt, TryFutureExt};
 use rand::Rng;
 use tonic::transport::{Endpoint, Error as TonicError, channel::Channel as TonicChannel};
 use tracing::Instrument;
@@ -38,6 +38,7 @@ use crate::{
         aggregated_discovery_service_client::AggregatedDiscoveryServiceClient,
     },
     generated::quilkin::relay::v1alpha1::aggregated_control_plane_discovery_service_client::AggregatedControlPlaneDiscoveryServiceClient,
+    metrics,
 };
 
 type AdsGrpcClient = AggregatedDiscoveryServiceClient<TonicChannel>;
@@ -110,7 +111,9 @@ impl ServiceClient for MdsGrpcClient {
         &mut self,
         stream: S,
     ) -> tonic::Result<tonic::Response<tonic::Streaming<Self::Response>>> {
-        self.stream_aggregated_resources(stream).await
+        self.stream_aggregated_resources(stream)
+            .inspect_err(|error| metrics::client_errors_total(&error))
+            .await
     }
 }
 
@@ -157,6 +160,8 @@ impl<C: ServiceClient> Client<C> {
                 rand::rng().random_range(0..BACKOFF_MAX_JITTER.as_millis() as _),
             );
 
+            metrics::client_connect_attempt_backoff_millis(delay);
+
             match error {
                 RpcSessionError::InvalidEndpoint(error) => {
                     tracing::error!(?error, "Error creating endpoint");
@@ -177,7 +182,7 @@ impl<C: ServiceClient> Client<C> {
         let mut addresses = management_servers.iter().cycle();
         let connect_to_server = tryhard::retry_fn(|| {
             let address = addresses.next();
-            async move {
+            let fut = async move {
                 match address {
                     None => Err(RpcSessionError::Receive(tonic::Status::internal(
                         "Failed initial connection",
@@ -198,16 +203,17 @@ impl<C: ServiceClient> Client<C> {
                             ));
                         }
 
+                        metrics::client_connect_attempts_total(endpoint.uri());
                         C::connect_to_endpoint(endpoint)
-                            .instrument(tracing::debug_span!(
-                                "AggregatedDiscoveryServiceClient::connect_to_endpoint"
-                            ))
+                            .instrument(tracing::debug_span!("C::connect_to_endpoint"))
                             .await
                             .map_err(RpcSessionError::InitialConnect)
                             .map(|client| (client, cendpoint))
                     }
                 }
-            }
+            };
+
+            fut.inspect_err(|error| metrics::client_errors_total(&error))
         })
         .with_config(retry_config);
 
@@ -259,11 +265,21 @@ impl MdsClient {
 
                         let mut stream = control_plane.delta_aggregated_resources(stream).await?;
                         is_healthy.store(true, Ordering::SeqCst);
+                        metrics::client_active(true);
 
                         while let Some(result) = stream.next().await {
-                            let response = result?;
+                            let response = match result {
+                                Ok(response) => response,
+                                Err(error) => {
+                                    metrics::client_errors_total(&error);
+                                    break;
+                                }
+                            };
                             tracing::trace!("received delta discovery response");
-                            ds.send_response(response).await?;
+                            if let Err(error) = ds.send_response(response).await {
+                                metrics::client_errors_total(&error);
+                                break;
+                            }
                         }
 
                         change_watcher.abort();
@@ -271,6 +287,7 @@ impl MdsClient {
                     }
 
                     is_healthy.store(false, Ordering::SeqCst);
+                    metrics::client_active(false);
 
                     //tracing::warn!("lost connection to relay server, retrying");
                     let new_client = MdsClient::connect_with_backoff(&self.management_servers)
