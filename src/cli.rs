@@ -244,6 +244,9 @@ impl Cli {
             shutdown_rx.clone(),
         );
 
+        // Just call this early so there isn't a potential race when spawning xDS
+        quilkin_xds::metrics::set_registry(crate::metrics::registry());
+
         let locality = self.locality.locality();
         self.providers
             .spawn_providers(&config, ready.clone(), locality.clone());

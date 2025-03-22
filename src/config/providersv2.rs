@@ -43,6 +43,7 @@ pub struct Providers {
     )]
     k8s_enabled: bool,
 
+    /// The namespace that quilkin and related configuration has been set in.
     #[arg(
         long = "provider.k8s.namespace",
         env = "QUILKIN_PROVIDERS_K8S_NAMESPACE",
@@ -51,6 +52,9 @@ pub struct Providers {
     )]
     k8s_namespace: String,
 
+    /// When enabled, Quilkin will watch for `agones.dev/v1/GameServer` CRD
+    /// objects in the environment and allow them to be available for routing
+    /// and metrics through Quilkin.
     #[arg(
         long = "provider.k8s.leader-election",
         env = "QUILKIN_PROVIDERS_K8S_LEADER_ELECTION",
@@ -71,10 +75,20 @@ pub struct Providers {
     #[arg(
         long = "provider.k8s.agones.namespace",
         env = "QUILKIN_PROVIDERS_K8S_AGONES_NAMESPACE",
-        default_value_t = From::from("default"),
+        default_value_t = String::default(),
         requires("agones_enabled"),
     )]
     agones_namespace: String,
+
+    /// The list of namespaces to watch for `GameServer` CRD events.
+    #[arg(
+        long = "provider.k8s.agones.namespaces",
+        env = "QUILKIN_PROVIDERS_K8S_AGONES_NAMESPACES",
+        default_values_t = [String::from("default")],
+        requires("agones_enabled"),
+        conflicts_with("agones_namespace"),
+    )]
+    agones_namespaces: Vec<String>,
 
     /// If specified, filters the available gameserver addresses to the one that
     /// matches the specified type
@@ -185,7 +199,12 @@ impl Providers {
     }
 
     pub fn agones_namespace(mut self, ns: impl Into<String>) -> Self {
-        self.agones_namespace = ns.into();
+        self.agones_namespaces = vec![ns.into()];
+        self
+    }
+
+    pub fn agones_namespaces(mut self, ns: impl Into<Vec<String>>) -> Self {
+        self.agones_namespaces = ns.into();
         self
     }
 
@@ -319,7 +338,15 @@ impl Providers {
         locality: Option<crate::net::endpoint::Locality>,
         config: &super::Config,
     ) -> JoinHandle<crate::Result<()>> {
-        let agones_namespace = self.agones_namespace.clone();
+        let agones_namespaces = if !self.agones_namespace.is_empty() {
+            tracing::warn!(
+                "`config.k8s.agones.namespace` is deprecated, use `config.k8s.agones.namespaces` instead"
+            );
+            vec![self.agones_namespace.clone()]
+        } else {
+            self.agones_namespaces.clone()
+        };
+
         let agones_enabled = self.agones_enabled;
         let k8s_enabled = self.k8s_enabled;
         let k8s_leader_election = self.k8s_leader_election;
@@ -341,7 +368,7 @@ impl Providers {
         let task = {
             let config = config.clone();
             let health_check = health_check.clone();
-            let agones_namespace: String = agones_namespace.clone();
+            let agones_namespaces = agones_namespaces.clone();
             let selector = selector.clone();
             let locality = locality.clone();
             let health_check = health_check.clone();
@@ -349,7 +376,7 @@ impl Providers {
             move || {
                 let config = config.clone();
                 let health_check = health_check.clone();
-                let agones_namespace: String = agones_namespace.clone();
+                let agones_namespaces = agones_namespaces.clone();
                 let k8s_namespace: String = k8s_namespace.clone();
                 let k8s_leader_id: String = k8s_leader_id.clone();
                 let selector = selector.clone();
@@ -389,26 +416,29 @@ impl Providers {
                         either::Right(std::future::pending())
                     };
 
-                    let gs_stream = if let Some(Some(clusters)) =
-                        agones_enabled.then(|| config.dyn_cfg.clusters())
-                    {
-                        either::Left(Self::result_stream(
-                            health_check.clone(),
-                            crate::config::watch::agones::watch_gameservers(
-                                client,
-                                agones_namespace.clone(),
-                                clusters.clone(),
-                                locality.clone(),
-                                selector.clone(),
-                            ),
-                        ))
+                    let mut gs_streams = tokio::task::JoinSet::new();
+                    if let Some(Some(clusters)) =
+                        agones_enabled.then(|| config.dyn_cfg.clusters()) {
+                        for namespace in agones_namespaces {
+                            gs_streams.spawn(Self::result_stream(
+                                health_check.clone(),
+                                crate::config::watch::agones::watch_gameservers(
+                                    client.clone(),
+                                    namespace.clone(),
+                                    clusters.clone(),
+                                    locality.clone(),
+                                    selector.clone(),
+                                ),
+                            ));
+                        }
                     } else {
-                        either::Right(std::future::pending())
+                        gs_streams.spawn(std::future::pending());
                     };
 
                     tokio::select! {
                         result = gs_stream => result,
                         result = k8s_leader_election_task => result.map_err(eyre::Error::from).and_then(|result| result),
+                        Some(result) = gs_streams.join_next() => result.map_err(From::from).and_then(|result| result),
                         result = k8s_stream => result,
                     }
                 }
