@@ -8,13 +8,6 @@
 "Proxy" is the primary Quilkin service, which acts as a non-transparent UDP
 proxy.
 
-To view all the options for the `proxy` subcommand, run:
-
-```shell
-$ quilkin proxy --help
-{{#include ../../../target/quilkin.proxy.commands}}
-```
-
 ## Endpoints
 
 An Endpoint represents an address that Quilkin forwards packets to that it has received from the
@@ -84,6 +77,48 @@ that Quilkin proxies traffic to.
 Sessions are established *after* the filter chain completes. The destination Endpoint of a packet is determined by
 the [filter chain][Filters], so a Session can only be created after filter chain completion. For example, if the
 filter chain drops all packets, then no session will ever be created.
+
+## Diagram
+
+```mermaid
+architecture-beta
+    group player(cloud)[Player]
+
+    service game(cloud)[Game] in player
+
+    game{group}:B --> T:ioj{group}
+
+    group udpstack(cloud)[Quilkin Stack]
+    group services(server)[Service Layer] in udpstack
+
+    service providers(cloud)[Providers] in udpstack
+    service config(disk)[Configuration] in udpstack
+
+    providers:L --> R:config
+    config:T --> B:fc{group}
+
+    group bizlayer(cloud)[Packet Processing] in services
+    service fc(server)[Filter Chain] in bizlayer
+    service prefilters(server)[preprocessing] in bizlayer
+    service postfilters(server)[postprocessing] in bizlayer
+
+    prefilters:R --> L:fc
+    fc:R --> L:postfilters
+
+    group iolayer(cloud)[UDP layer] in services
+    service xdp(server)[XDP] in iolayer
+    service iouring(server)[io uring] in iolayer
+    junction ioj in iolayer
+    xdp:R -- L:ioj
+    iouring:L -- R:ioj
+    ioj:B --> T:fc{group}
+
+    group gs(cloud)[Game Servers]
+    service gameserver(cloud)[Game Server] in gs
+
+    postfilters{group}:R --> L:gameserver
+```
+
 
 [Endpoint]: #endpoints
 [file-configuration]: ./proxy/configuration.md
