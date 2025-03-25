@@ -44,7 +44,7 @@ impl Manage {
         };
 
         if let Some(locality) = &self.locality {
-            clusters.modify(|map| map.update_unlocated_endpoints(locality.clone()));
+            clusters.modify(|map| map.update_unlocated_endpoints(None, locality.clone()));
         }
 
         let provider_task = match self.provider {

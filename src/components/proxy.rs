@@ -200,7 +200,7 @@ impl Proxy {
             };
 
             clusters.modify(|clusters| {
-                clusters.insert(None, endpoints);
+                clusters.insert(None, None, endpoints);
             });
         }
 

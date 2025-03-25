@@ -264,6 +264,7 @@ impl EndpointSet {
 /// Represents a full snapshot of all clusters.
 pub struct ClusterMap<S = gxhash::GxBuildHasher> {
     map: DashMap<Option<Locality>, EndpointSet, S>,
+    localities: DashMap<Option<Locality>, Option<std::net::IpAddr>>,
     token_map: DashMap<u64, Vec<EndpointAddress>>,
     num_endpoints: AtomicUsize,
     version: AtomicU64,
@@ -303,11 +304,31 @@ where
     }
 
     #[inline]
-    pub fn insert(&self, locality: Option<Locality>, cluster: BTreeSet<Endpoint>) {
-        self.apply(locality, EndpointSet::new(cluster));
+    pub fn insert(
+        &self,
+        remote_addr: Option<std::net::IpAddr>,
+        locality: Option<Locality>,
+        cluster: BTreeSet<Endpoint>,
+    ) {
+        let _res = self.apply(remote_addr, locality, EndpointSet::new(cluster));
     }
 
-    pub fn apply(&self, locality: Option<Locality>, cluster: EndpointSet) {
+    pub fn apply(
+        &self,
+        remote_addr: Option<std::net::IpAddr>,
+        locality: Option<Locality>,
+        cluster: EndpointSet,
+    ) -> crate::Result<()> {
+        if let Some(raddr) = self.localities.get(&locality) {
+            if *raddr != remote_addr {
+                eyre::bail!(
+                    "skipping cluster apply, '{locality:?}' is managed by '{raddr:?}', not '{remote_addr:?}'"
+                );
+            }
+        }
+
+        self.localities.insert(locality.clone(), remote_addr);
+
         let new_len = cluster.len();
         if let Some(mut current) = self.map.get_mut(&locality) {
             let current = current.value_mut();
@@ -339,6 +360,8 @@ where
             self.num_endpoints.fetch_add(new_len, Relaxed);
             self.version.fetch_add(1, Relaxed);
         }
+
+        Ok(())
     }
 
     #[inline]
@@ -369,7 +392,7 @@ where
 
     #[inline]
     pub fn insert_default(&self, endpoints: BTreeSet<Endpoint>) {
-        self.insert(None, endpoints);
+        self.insert(None, None, endpoints);
     }
 
     #[inline]
@@ -381,6 +404,13 @@ where
                 set.update();
                 self.num_endpoints.fetch_sub(1, Relaxed);
                 self.version.fetch_add(1, Relaxed);
+
+                if set.is_empty() {
+                    let raddr = self.localities.get(entry.key());
+                    let raddr = raddr.and_then(|r| *r);
+                    self.remove_locality(raddr, entry.key());
+                }
+
                 return true;
             }
         }
@@ -404,6 +434,12 @@ where
                     set.update();
                     self.num_endpoints.fetch_sub(1, Relaxed);
                     self.version.fetch_add(1, Relaxed);
+
+                    if set.is_empty() {
+                        let raddr = self.localities.get(entry.key());
+                        let raddr = raddr.and_then(|r| *r);
+                        self.remove_locality(raddr, entry.key());
+                    }
                 }
                 return removed;
             }
@@ -425,7 +461,19 @@ where
     }
 
     #[inline]
-    pub fn replace(&self, locality: Option<Locality>, endpoint: Endpoint) -> Option<Endpoint> {
+    pub fn replace(
+        &self,
+        remote_addr: Option<std::net::IpAddr>,
+        locality: Option<Locality>,
+        endpoint: Endpoint,
+    ) -> Option<Endpoint> {
+        if let Some(raddr) = self.localities.get(&locality) {
+            if *raddr != remote_addr {
+                tracing::trace!("not replacing locality endpoints");
+                return None;
+            }
+        }
+
         if let Some(mut set) = self.map.get_mut(&locality) {
             let replaced = set.endpoints.replace(endpoint);
             set.update();
@@ -437,7 +485,7 @@ where
 
             replaced
         } else {
-            self.insert(locality, [endpoint].into());
+            self.insert(remote_addr, locality, [endpoint].into());
             None
         }
     }
@@ -489,7 +537,21 @@ where
     }
 
     #[inline]
-    pub fn update_unlocated_endpoints(&self, locality: Locality) {
+    pub fn update_unlocated_endpoints(
+        &self,
+        remote_addr: Option<std::net::IpAddr>,
+        locality: Locality,
+    ) {
+        if let Some(raddr) = self.localities.get(&None) {
+            if *raddr != remote_addr {
+                tracing::trace!("not updating locality");
+                return;
+            }
+        }
+
+        self.localities.remove(&None);
+        self.localities.insert(Some(locality.clone()), remote_addr);
+
         if let Some((_, set)) = self.map.remove(&None) {
             self.version.fetch_add(1, Relaxed);
             if let Some(replaced) = self.map.insert(Some(locality), set) {
@@ -499,7 +561,19 @@ where
     }
 
     #[inline]
-    pub fn remove_locality(&self, locality: &Option<Locality>) -> Option<EndpointSet> {
+    pub fn remove_locality(
+        &self,
+        remote_addr: Option<std::net::IpAddr>,
+        locality: &Option<Locality>,
+    ) -> Option<EndpointSet> {
+        if let Some(raddr) = self.localities.get(locality) {
+            if *raddr != remote_addr {
+                tracing::trace!("skipping locality removal");
+                return None;
+            }
+        }
+
+        self.localities.remove(locality);
         let ret = self.map.remove(locality).map(|(_k, v)| v);
         if let Some(ret) = &ret {
             self.version.fetch_add(1, Relaxed);
@@ -551,6 +625,7 @@ where
     fn default() -> Self {
         Self {
             map: <DashMap<Option<Locality>, EndpointSet, S>>::default(),
+            localities: Default::default(),
             token_map: Default::default(),
             version: <_>::default(),
             num_endpoints: <_>::default(),
@@ -644,7 +719,17 @@ impl<'de> Deserialize<'de> for ClusterMap {
         D: serde::Deserializer<'de>,
     {
         let cmd = ClusterMapDeser::deserialize(deserializer)?;
-        Ok(Self::from(cmd))
+        let map = cmd
+            .endpoints
+            .into_iter()
+            .map(
+                |EndpointWithLocality {
+                     locality,
+                     endpoints,
+                 }| { (locality, EndpointSet::new(endpoints)) },
+            )
+            .collect::<DashMap<_, _, _>>();
+        Ok(Self::from(map))
     }
 }
 
@@ -663,26 +748,6 @@ impl Serialize for ClusterMap {
     }
 }
 
-impl<S> From<ClusterMapDeser> for ClusterMap<S>
-where
-    S: Default + std::hash::BuildHasher + Clone,
-{
-    fn from(cmd: ClusterMapDeser) -> Self {
-        let map = cmd
-            .endpoints
-            .into_iter()
-            .map(
-                |EndpointWithLocality {
-                     locality,
-                     endpoints,
-                 }| { (locality, EndpointSet::new(endpoints)) },
-            )
-            .collect::<DashMap<_, _, _>>();
-
-        Self::from(map)
-    }
-}
-
 impl<S> From<DashMap<Option<Locality>, EndpointSet, S>> for ClusterMap<S>
 where
     S: Default + std::hash::BuildHasher + Clone,
@@ -691,14 +756,18 @@ where
         let num_endpoints = AtomicUsize::new(map.iter().map(|kv| kv.value().len()).sum());
 
         let token_map = DashMap::<u64, Vec<EndpointAddress>>::default();
+        let localities = DashMap::default();
         for es in &map {
             for (token_hash, addrs) in &es.value().token_map {
                 token_map.insert(*token_hash, addrs.iter().cloned().collect());
             }
+
+            localities.insert(es.key().clone(), None);
         }
 
         Self {
             map,
+            localities,
             token_map,
             num_endpoints,
             version: AtomicU64::new(1),
@@ -719,7 +788,7 @@ impl From<&'_ Endpoint> for proto::Endpoint {
 
 #[cfg(test)]
 mod tests {
-    use std::net::Ipv4Addr;
+    use std::net::{Ipv4Addr, Ipv6Addr};
 
     use super::*;
 
@@ -731,8 +800,8 @@ mod tests {
         let mut endpoint = Endpoint::new((Ipv4Addr::LOCALHOST, 7777).into());
         let cluster1 = ClusterMap::new();
 
-        cluster1.insert(Some(nl1.clone()), [endpoint.clone()].into());
-        cluster1.insert(Some(de1.clone()), [endpoint.clone()].into());
+        cluster1.insert(None, Some(nl1.clone()), [endpoint.clone()].into());
+        cluster1.insert(None, Some(de1.clone()), [endpoint.clone()].into());
 
         assert_eq!(cluster1.get(&Some(nl1.clone())).unwrap().len(), 1);
         assert!(
@@ -751,7 +820,7 @@ mod tests {
 
         endpoint.address.port = 8080;
 
-        cluster1.insert(Some(de1.clone()), [endpoint.clone()].into());
+        cluster1.insert(None, Some(de1.clone()), [endpoint.clone()].into());
 
         assert_eq!(cluster1.get(&Some(nl1.clone())).unwrap().len(), 1);
         assert_eq!(cluster1.get(&Some(de1.clone())).unwrap().len(), 1);
@@ -762,9 +831,37 @@ mod tests {
                 .contains(&endpoint)
         );
 
-        cluster1.insert(Some(de1.clone()), <_>::default());
+        cluster1.insert(None, Some(de1.clone()), <_>::default());
 
         assert_eq!(cluster1.get(&Some(nl1.clone())).unwrap().len(), 1);
         assert!(cluster1.get(&Some(de1.clone())).unwrap().is_empty());
+    }
+
+    #[test]
+    fn reject_duplicate_localities() {
+        let nl1 = Locality::with_region("nl-1");
+
+        let nl01 = Ipv4Addr::new(1, 1, 1, 1);
+        let nl02 = Ipv6Addr::new(1, 1, 1, 1, 1, 1, 1, 1);
+
+        let expected: std::collections::BTreeSet<_> = [
+            Endpoint::new((Ipv4Addr::new(1, 2, 3, 4), 1234).into()),
+            Endpoint::new((Ipv4Addr::new(4, 3, 2, 1), 1234).into()),
+        ]
+        .into();
+
+        let cluster = ClusterMap::new();
+        cluster.insert(Some(nl01.into()), Some(nl1.clone()), expected.clone());
+
+        let not_expected: std::collections::BTreeSet<_> =
+            [Endpoint::new((Ipv4Addr::new(20, 20, 20, 20), 1234).into())].into();
+
+        cluster.insert(Some(nl02.into()), Some(nl1.clone()), not_expected.clone());
+        assert_eq!(cluster.get(&Some(nl1.clone())).unwrap().endpoints, expected);
+
+        cluster.remove_locality(Some(nl01.into()), &Some(nl1.clone()));
+
+        cluster.insert(Some(nl02.into()), Some(nl1.clone()), not_expected.clone());
+        assert_eq!(cluster.get(&Some(nl1)).unwrap().endpoints, not_expected);
     }
 }

@@ -794,7 +794,7 @@ impl Config {
                         } else {
                             Some(removed.parse()?)
                         };
-                        guard.remove_locality(&locality);
+                        guard.remove_locality(remote_addr, &locality);
                     }
 
                     for res in resources {
@@ -831,8 +831,7 @@ impl Config {
                         );
 
                         let locality = cluster.locality.map(crate::net::endpoint::Locality::from);
-
-                        guard.apply(locality, endpoints);
+                        guard.apply(remote_addr, locality, endpoints)?;
                     }
 
                     Ok(())
