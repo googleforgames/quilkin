@@ -198,6 +198,10 @@ impl ClientTracker {
 pub trait Configuration: Send + Sync + Sized + 'static {
     fn identifier(&self) -> String;
 
+    /// Returns whether the current instance is considered the leader of a set
+    /// of replicas, if leader election is enabled in a config provider.
+    fn is_leader(&self) -> Option<bool>;
+
     fn apply_delta(
         &self,
         resource_type: &str,
