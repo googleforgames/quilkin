@@ -468,6 +468,45 @@ impl Service {
         Finalizer,
         Arc<crate::components::proxy::SessionPool>,
     )> {
+        // If we're on linux, we're using io-uring, but we're probably running in a container
+        // and may not be allowed to call io-uring related syscalls due to seccomp
+        // profiles, so do a quick check here to validate that we can call io_uring_setup
+        // https://www.man7.org/linux/man-pages/man2/io_uring_setup.2.html
+        #[cfg(target_os = "linux")]
+        {
+            if let Err(err) = io_uring::IoUring::new(2) {
+                fn in_container() -> bool {
+                    let sched = match std::fs::read_to_string("/proc/1/sched") {
+                        Ok(s) => s,
+                        Err(error) => {
+                            tracing::warn!(
+                                %error,
+                                "unable to read /proc/1/sched to determine if quilkin is in a container"
+                            );
+                            return false;
+                        }
+                    };
+                    let Some(line) = sched.lines().next() else {
+                        tracing::warn!("/proc/1/sched was empty");
+                        return false;
+                    };
+                    let Some(proc) = line.split(' ').next() else {
+                        tracing::warn!("first line of /proc/1/sched was empty");
+                        return false;
+                    };
+                    proc != "init" && proc != "systemd"
+                }
+
+                if err.kind() == std::io::ErrorKind::PermissionDenied && in_container() {
+                    eyre::bail!(
+                        "failed to call `io_uring_setup` due to EPERM ({err}), quilkin seems to be running inside a container meaning this is likely due to the seccomp profile not allowing the syscall"
+                    );
+                } else {
+                    eyre::bail!("failed to call `io_uring_setup` due to {err}");
+                }
+            }
+        }
+
         let socket = crate::net::raw_socket_with_reuse(self.udp_port)?;
         let workers = self.udp_workers.get();
         let buffer_pool = Arc::new(crate::collections::BufferPool::new(workers, 2 * 1024));
