@@ -25,7 +25,7 @@ use crate::{
     collections::BufferPool,
     config::Config,
     filters::{FilterRegistry, prelude::*},
-    net::DualStackEpollSocket as DualStackLocalSocket,
+    net::DualStackEpollSocket as Socket,
     net::endpoint::metadata::Value,
     net::endpoint::{Endpoint, EndpointAddress},
     signal::{ShutdownKind, ShutdownRx, ShutdownTx},
@@ -69,6 +69,11 @@ impl From<AddressType> for SocketAddr {
     }
 }
 
+/// Returns a random available port
+pub fn available_port() -> u16 {
+    crate::net::SystemSocket::from_port(0).unwrap().port()
+}
+
 /// Returns a local address on a port that is not assigned to another test.
 /// If Random address tye is used, it might be v4, Might be v6. It's random.
 pub async fn available_addr(address_type: AddressType) -> SocketAddr {
@@ -79,17 +84,17 @@ pub async fn available_addr(address_type: AddressType) -> SocketAddr {
     addr
 }
 
-fn get_address(address_type: AddressType, socket: &DualStackLocalSocket) -> SocketAddr {
+fn get_address(address_type: AddressType, socket: &Socket) -> SocketAddr {
     let addr = match address_type {
         AddressType::Random => {
             // sometimes give ipv6, sometimes ipv4.
             match rand::random() {
-                true => socket.local_ipv6_addr().unwrap(),
-                false => socket.local_ipv4_addr().unwrap(),
+                true => socket.local_ipv6_addr(),
+                false => socket.local_ipv4_addr(),
             }
         }
-        AddressType::Ipv4 => socket.local_ipv4_addr().unwrap(),
-        AddressType::Ipv6 => socket.local_ipv6_addr().unwrap(),
+        AddressType::Ipv4 => socket.local_ipv4_addr(),
+        AddressType::Ipv6 => socket.local_ipv6_addr(),
     };
     tracing::debug!(addr = ?addr, "test_util::get_address");
     addr
@@ -150,7 +155,7 @@ pub struct TestHelper {
 /// Returned from [creating a socket](TestHelper::open_socket_and_recv_single_packet)
 pub struct OpenSocketRecvPacket {
     /// The opened socket
-    pub socket: Arc<DualStackLocalSocket>,
+    pub socket: Arc<Socket>,
     /// A channel on which the received packet will be forwarded.
     pub packet_rx: oneshot::Receiver<String>,
 }
@@ -188,7 +193,7 @@ impl TestHelper {
         let socket_recv = socket.clone();
         tokio::spawn(async move {
             let mut buf = vec![0; 1024];
-            let (size, _) = socket_recv.recv_from(&mut buf).await.unwrap();
+            let (size, _) = socket_recv.recv_from(&mut *buf).await.unwrap();
             packet_tx
                 .send(from_utf8(&buf[..size]).unwrap().to_string())
                 .unwrap();
@@ -200,7 +205,7 @@ impl TestHelper {
     /// returned channel.
     pub async fn open_socket_and_recv_multiple_packets(
         &mut self,
-    ) -> (mpsc::Receiver<String>, Arc<DualStackLocalSocket>) {
+    ) -> (mpsc::Receiver<String>, Arc<Socket>) {
         let socket = Arc::new(create_socket().await);
         let packet_rx = self.recv_multiple_packets(&socket).await;
         (packet_rx, socket)
@@ -209,18 +214,13 @@ impl TestHelper {
     // Same as above, but sometimes you just need an ipv4 socket
     pub async fn open_ipv4_socket_and_recv_multiple_packets(
         &mut self,
-    ) -> (mpsc::Receiver<String>, Arc<DualStackLocalSocket>) {
-        let socket = Arc::new(
-            DualStackLocalSocket::new_with_address((Ipv4Addr::LOCALHOST, 0).into()).unwrap(),
-        );
+    ) -> (mpsc::Receiver<String>, Arc<Socket>) {
+        let socket = Arc::new(Socket::polling_from_addr((Ipv4Addr::LOCALHOST, 0).into()).unwrap());
         let packet_rx = self.recv_multiple_packets(&socket).await;
         (packet_rx, socket)
     }
 
-    async fn recv_multiple_packets(
-        &mut self,
-        socket: &Arc<DualStackLocalSocket>,
-    ) -> mpsc::Receiver<String> {
+    async fn recv_multiple_packets(&mut self, socket: &Arc<Socket>) -> mpsc::Receiver<String> {
         let (packet_tx, packet_rx) = mpsc::channel::<String>(10);
         let mut shutdown_rx = self.get_shutdown_subscriber().await;
         let socket_recv = socket.clone();
@@ -228,8 +228,8 @@ impl TestHelper {
             let mut buf = vec![0; 1024];
             loop {
                 tokio::select! {
-                    received = socket_recv.recv_from(&mut buf) => {
-                        let (size, _) = received.unwrap();
+                    result = socket_recv.recv_from(&mut *buf) => {
+                        let (size, _) = result.unwrap();
                         let str = from_utf8(&buf[..size]).unwrap().to_string();
                         match packet_tx.send(str).await {
                             Ok(_) => {}
@@ -276,7 +276,7 @@ impl TestHelper {
             loop {
                 let mut buf = vec![0; 1024];
                 tokio::select! {
-                    recvd = socket.recv_from(&mut buf) => {
+                    recvd = socket.recv_from(&mut *buf) => {
                         let (size, sender) = recvd.unwrap();
                         let packet = &buf[..size];
                         tracing::trace!(%sender, %size, "echo server received and returning packet");
@@ -295,7 +295,7 @@ impl TestHelper {
     pub async fn run_server(
         &mut self,
         config: Arc<Config>,
-        server: Option<crate::components::proxy::Proxy>,
+        server: Option<crate::cli::Service>,
         with_admin: Option<Option<SocketAddr>>,
     ) -> u16 {
         let (shutdown_tx, shutdown_rx) =
@@ -308,37 +308,17 @@ impl TestHelper {
         }
 
         let server = server.unwrap_or_else(|| {
-            let qcmp = crate::net::raw_socket_with_reuse(0).unwrap();
-            let phoenix = crate::net::TcpListener::bind(None).unwrap();
-
-            crate::components::proxy::Proxy {
-                num_workers: std::num::NonZeroUsize::new(1).unwrap(),
-                socket: Some(crate::net::raw_socket_with_reuse(0).unwrap()),
-                qcmp,
-                phoenix,
-                ..Default::default()
-            }
+            crate::cli::Service::default()
+                .udp()
+                .udp_port(available_port())
+                .phoenix()
+                .phoenix_port(available_port())
+                .qcmp()
+                .qcmp_port(available_port())
         });
 
-        let (prox_tx, prox_rx) = tokio::sync::oneshot::channel();
-
-        let port = crate::net::socket_port(server.socket.as_ref().unwrap());
-
-        tokio::spawn(async move {
-            server
-                .run(
-                    crate::components::RunArgs {
-                        config,
-                        ready: Default::default(),
-                        shutdown_rx,
-                    },
-                    Some(prox_tx),
-                )
-                .await
-                .unwrap();
-        });
-
-        prox_rx.await.unwrap();
+        let port = server.get_udp_port();
+        server.spawn_services(&config, &shutdown_rx).unwrap();
         port
     }
 
@@ -416,8 +396,10 @@ pub fn map_addr_to_localhost(address: &mut SocketAddr) {
 }
 
 /// Opens a new socket bound to an ephemeral port
-pub async fn create_socket() -> DualStackLocalSocket {
-    DualStackLocalSocket::new(0).unwrap()
+pub async fn create_socket() -> Socket {
+    crate::net::io::Backend::Polling
+        .socket_from_port(0)
+        .unwrap()
 }
 
 fn test_proxy_id() -> String {
@@ -534,7 +516,7 @@ mod tests {
         let msg = "hello";
         endpoint
             .socket
-            .send_to(msg.as_bytes(), &echo_addr.to_socket_addr().unwrap())
+            .send_to(msg.as_bytes(), echo_addr.to_socket_addr().unwrap())
             .await
             .unwrap();
         assert_eq!(

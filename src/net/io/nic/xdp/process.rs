@@ -1,22 +1,3 @@
-use crate::{
-    components::proxy::{PipelineError, sessions::inner_metrics as session_metrics},
-    filters::{self, Filter as _},
-    metrics::{self, AsnInfo},
-    net::{
-        EndpointAddress,
-        maxmind_db::{self, IpNetEntry},
-    },
-    time::UtcTimestamp,
-};
-pub use quilkin_xdp::xdp;
-use quilkin_xdp::xdp::{
-    Umem,
-    packet::{
-        Packet, PacketError, csum,
-        net_types::{IpAddresses, NetworkU16, UdpHdr, UdpHeaders},
-    },
-    slab::{Slab, StackSlab},
-};
 use std::{
     collections::hash_map::Entry,
     net::{IpAddr, SocketAddr},
@@ -25,6 +6,27 @@ use std::{
         atomic::{AtomicU16, Ordering},
     },
     time::Instant,
+};
+
+use quilkin_xdp::xdp::{
+    Umem,
+    packet::{
+        Packet, PacketError, csum,
+        net_types::{IpAddresses, NetworkU16, UdpHdr, UdpHeaders},
+    },
+    slab::{Slab, StackSlab},
+};
+
+use crate::{
+    filters::{self, Filter as _},
+    metrics::{self, AsnInfo},
+    net::{
+        EndpointAddress,
+        error::PipelineError,
+        maxmind_db::{self, IpNetEntry},
+        sessions::inner_metrics as session_metrics,
+    },
+    time::UtcTimestamp,
 };
 
 /// Wrapper around the actual packet buffer and the UDP metadata it parsed to
@@ -833,8 +835,7 @@ fn process_qcmp_packet<const TXN: usize>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use quilkin_xdp::xdp::packet::Pod;
-    use xdp::packet::net_types as nt;
+    use quilkin_xdp::xdp::packet::{Pod, net_types as nt};
 
     #[test]
     fn xdp_buffer_manipulation() {
@@ -862,7 +863,7 @@ mod test {
         );
 
         let mut data = [0u8; 2048];
-        let mut buffer = xdp::Packet::testing_new(&mut data);
+        let mut buffer = quilkin_xdp::xdp::Packet::testing_new(&mut data);
         buffer.adjust_tail(headers.data.start as _).unwrap();
         headers.set_packet_headers(&mut buffer).unwrap();
         buffer.insert(headers.data.start, &payload).unwrap();

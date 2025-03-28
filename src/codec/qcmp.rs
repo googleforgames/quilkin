@@ -19,7 +19,7 @@
 use crate::{
     metrics,
     net::{
-        DualStackEpollSocket,
+        Socket,
         phoenix::{DistanceMeasure, Measurement},
     },
     time::{DurationNanos, UtcTimestamp},
@@ -133,7 +133,7 @@ impl<'buf> PacketParser<'buf> {
 /// between nodes.
 #[derive(Debug, Clone)]
 pub struct QcmpMeasurement {
-    socket: Arc<DualStackEpollSocket>,
+    socket: Arc<Socket>,
     #[cfg(test)]
     delay: Option<Duration>,
 }
@@ -141,7 +141,7 @@ pub struct QcmpMeasurement {
 impl QcmpMeasurement {
     pub fn new() -> crate::Result<Self> {
         Ok(Self {
-            socket: Arc::new(DualStackEpollSocket::new(0)?),
+            socket: Arc::new(Socket::polling_listen()?),
             #[cfg(test)]
             delay: None,
         })
@@ -150,7 +150,7 @@ impl QcmpMeasurement {
     #[cfg(test)]
     pub fn with_artificial_delay(delay: Duration) -> crate::Result<Self> {
         Ok(Self {
-            socket: Arc::new(DualStackEpollSocket::new(0)?),
+            socket: Arc::new(Socket::polling_listen()?),
             delay: Some(delay),
         })
     }
@@ -173,7 +173,7 @@ impl Measurement for QcmpMeasurement {
 
         let (size, _) = tokio::time::timeout(
             std::time::Duration::from_secs(5),
-            self.socket.recv_from(&mut recv),
+            self.socket.recv_from(&mut recv[..]),
         )
         .await??;
 
@@ -194,23 +194,19 @@ impl Measurement for QcmpMeasurement {
 }
 
 pub fn spawn(
-    socket: socket2::Socket,
+    socket: crate::net::Socket,
     mut shutdown_rx: crate::signal::ShutdownRx,
 ) -> crate::Result<()> {
     use tracing::{Instrument as _, instrument::WithSubscriber as _};
-
-    let port = crate::net::socket_port(&socket);
-
     tokio::task::spawn(
         async move {
             let mut input_buf = [0u8; MAX_QCMP_PACKET_LEN];
-            let socket = DualStackEpollSocket::new(port).unwrap();
             let mut output_buf = QcmpPacket::default();
             metrics::qcmp::active(true);
 
             loop {
                 let result = tokio::select! {
-                    result = socket.recv_from(&mut input_buf) => result,
+                    result = socket.recv_from(&mut input_buf[..]) => result,
                     _ = shutdown_rx.changed() => {
                         metrics::qcmp::active(false);
                         return
@@ -255,7 +251,7 @@ pub fn spawn(
                             "sending QCMP pong",
                         );
 
-                        match track_error(socket.send_to(&output_buf, source).await, &asn_info) {
+                        match track_error(socket.send_to(&*output_buf, source).await, &asn_info) {
                             Ok(len) => {
                                 if len != output_buf.len() {
                                     tracing::error!(%source, "failed to send entire QCMP pong response, expected {} but only sent {len}", output_buf.len());
@@ -562,8 +558,6 @@ pub enum Error {
 
 #[cfg(test)]
 mod tests {
-    use crate::net::raw_socket_with_reuse;
-
     use super::*;
 
     #[test]
@@ -697,8 +691,8 @@ mod tests {
     #[tokio::test]
     #[cfg_attr(target_os = "macos", ignore)]
     async fn qcmp_measurement() {
-        let socket = raw_socket_with_reuse(0).unwrap();
-        let addr = socket.local_addr().unwrap().as_socket().unwrap();
+        let socket = Socket::polling_listen().unwrap();
+        let addr = socket.local_addr();
 
         let (_tx, rx) = crate::signal::channel(Default::default());
         spawn(socket, rx).unwrap();

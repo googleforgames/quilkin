@@ -319,7 +319,7 @@ impl QuilkinLoop {
     }
 
     fn spinup_inner(port: u16, endpoint: SocketAddr) -> Self {
-        let (shutdown_tx, shutdown_rx) =
+        let (shutdown_tx, mut shutdown_rx) =
             quilkin::signal::channel(quilkin::signal::ShutdownKind::Benching);
 
         let thread = spawn("quilkin", move || {
@@ -331,21 +331,15 @@ impl QuilkinLoop {
                 );
             });
 
-            let proxy = quilkin::cli::Proxy {
-                port,
-                qcmp_port: runtime
-                    .block_on(quilkin::test::available_addr(
-                        quilkin::test::AddressType::Random,
-                    ))
-                    .port(),
-                ..<_>::default()
-            };
-
             runtime.block_on(async move {
-                proxy
-                    .run(config, Default::default(), None, shutdown_rx)
-                    .await
+                quilkin::cli::Service::default()
+                    .udp()
+                    .udp_port(port)
+                    .qcmp()
+                    .qcmp_port(quilkin::test::available_port())
+                    .spawn_services(&config, &shutdown_rx)
                     .unwrap();
+                let _ = shutdown_rx.changed().await;
             });
         });
 

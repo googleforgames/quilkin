@@ -14,25 +14,99 @@
  *  limitations under the License.
  */
 
-//! We have two cases in the proxy where io-uring is used that are _almost_ identical
-//! so this just has a shared implementation of utilities
-//!
-//! Note there is also the QCMP loop, but that one is simpler and is different
-//! enough that it doesn't make sense to share the same code
-
-use crate::{
-    collections::PoolBuffer,
-    components::proxy::{self, PipelineError},
-    metrics,
-    net::{PacketQueue, packet::queue::SendPacket},
-    time::UtcTimestamp,
-};
-use io_uring::{squeue::Entry, types::Fd};
-use socket2::SockAddr;
 use std::{
     os::fd::{AsRawFd, FromRawFd},
     sync::Arc,
 };
+
+use io_uring::{squeue::Entry, types::Fd};
+use socket2::SockAddr;
+
+use crate::{
+    collections::PoolBuffer,
+    metrics,
+    net::{
+        PipelineError,
+        io::Listener,
+        packet::{PacketQueue, SendPacket},
+        sessions::SessionPool,
+    },
+    time::UtcTimestamp,
+};
+use eyre::Context as _;
+
+pub fn is_available() -> bool {
+    let Err(err) = io_uring::IoUring::new(2) else {
+        return true;
+    };
+
+    if err.kind() == std::io::ErrorKind::PermissionDenied && in_container() {
+        tracing::error!(
+            "failed to call `io_uring_setup` due to EPERM ({err}), quilkin seems to be running inside a container meaning this is likely due to the seccomp profile not allowing the syscall"
+        );
+    } else {
+        tracing::error!("failed to call `io_uring_setup` due to {err}");
+    }
+
+    false
+}
+
+fn in_container() -> bool {
+    let sched = match std::fs::read_to_string("/proc/1/sched") {
+        Ok(s) => s,
+        Err(error) => {
+            tracing::warn!(
+                %error,
+                "unable to read /proc/1/sched to determine if quilkin is in a container"
+            );
+            return false;
+        }
+    };
+    let Some(line) = sched.lines().next() else {
+        tracing::warn!("/proc/1/sched was empty");
+        return false;
+    };
+    let Some(proc) = line.split(' ').next() else {
+        tracing::warn!("first line of /proc/1/sched was empty");
+        return false;
+    };
+    proc != "init" && proc != "systemd"
+}
+
+pub fn queue() -> std::io::Result<(crate::net::io::Notifier, crate::net::io::Receiver)> {
+    EventFd::new().map(|rx| {
+        (
+            crate::net::io::Notifier::Completion(crate::net::io::completion::Notifier(rx.writer())),
+            crate::net::io::Receiver::Completion(rx),
+        )
+    })
+}
+
+pub fn listen(
+    Listener {
+        worker_id,
+        port,
+        config,
+        sessions,
+        buffer_pool,
+    }: Listener,
+    pending_sends: crate::net::packet::PacketQueue,
+) -> eyre::Result<()> {
+    let io_loop = IoUringLoop::new(2000, crate::net::io::Socket::completion_from_port(port)?)?;
+    io_loop
+        .spawn(
+            format!("packet-router-{worker_id}"),
+            PacketProcessorCtx::Router {
+                config,
+                sessions,
+                worker_id,
+                destinations: Vec::with_capacity(1),
+            },
+            pending_sends,
+            buffer_pool,
+        )
+        .context("failed to spawn io-uring loop")
+}
 
 /// A simple wrapper around [eventfd](https://man7.org/linux/man-pages/man2/eventfd.2.html)
 ///
@@ -214,12 +288,12 @@ impl LoopPacket {
 pub enum PacketProcessorCtx {
     Router {
         config: Arc<crate::config::Config>,
-        sessions: Arc<proxy::SessionPool>,
+        sessions: Arc<SessionPool>,
         worker_id: usize,
         destinations: Vec<crate::net::EndpointAddress>,
     },
     SessionPool {
-        pool: Arc<proxy::SessionPool>,
+        pool: Arc<SessionPool>,
         port: u16,
     },
 }
@@ -243,7 +317,7 @@ fn process_packet(
             }
             *last_received_at = Some(received_at);
 
-            let ds_packet = proxy::packet_router::DownstreamPacket {
+            let ds_packet = crate::net::packet::DownstreamPacket {
                 contents: packet.buffer,
                 source: packet.source,
             };
@@ -457,15 +531,17 @@ impl IoUringLoop {
 
                 let mut loop_ctx = LoopCtx {
                     sq,
-                    socket_fd: socket.raw_fd(),
+                    socket_fd: io_uring::types::Fd(socket.as_raw_fd()),
                     backlog: Default::default(),
                     loop_packets,
                     tokens,
                 };
 
                 loop_ctx.enqueue_recv(buffer_pool.clone().alloc());
-                loop_ctx
-                    .push_with_token(pending_sends_event.io_uring_entry(), Token::PendingsSends);
+                loop_ctx.push_with_token(
+                    pending_sends_event.as_completion_mut().io_uring_entry(),
+                    Token::PendingsSends,
+                );
 
                 // Sync always needs to be called when entries have been pushed
                 // onto the submission queue for the loop to actually function (ie, similar to await on futures)
@@ -520,7 +596,7 @@ impl IoUringLoop {
                             Token::PendingsSends => {
                                 double_pending_sends = pending_sends.swap(double_pending_sends);
                                 loop_ctx.push_with_token(
-                                    pending_sends_event.io_uring_entry(),
+                                    pending_sends_event.as_completion_mut().io_uring_entry(),
                                     Token::PendingsSends,
                                 );
 

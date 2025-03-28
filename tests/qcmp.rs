@@ -27,13 +27,8 @@ use quilkin::{
 #[cfg_attr(target_os = "macos", ignore)]
 async fn proxy_ping() {
     let mut t = TestHelper::default();
-    let qcmp = quilkin::net::raw_socket_with_reuse(0).unwrap();
-    let qcmp_port = quilkin::net::socket_port(&qcmp);
-    let server_proxy = quilkin::components::proxy::Proxy {
-        qcmp,
-        to: vec![(Ipv4Addr::UNSPECIFIED, 0).into()],
-        ..<_>::default()
-    };
+    let qcmp_port = quilkin::test::available_port();
+    let server_proxy = quilkin::cli::Service::default().qcmp().qcmp_port(qcmp_port);
     let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
     t.run_server(server_config, Some(server_proxy), None).await;
     ping(qcmp_port).await;

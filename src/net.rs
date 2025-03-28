@@ -14,10 +14,7 @@
  * limitations under the License.
  */
 
-pub mod packet;
-
 /// On linux spawns a io-uring runtime + thread, everywhere else spawns a regular tokio task.
-#[cfg(not(target_os = "linux"))]
 macro_rules! uring_spawn {
     ($span:expr_2021, $future:expr_2021) => {{
         let (tx, rx) = std::sync::mpsc::channel::<()>();
@@ -39,14 +36,6 @@ macro_rules! uring_spawn {
     }};
 }
 
-/// On linux spawns a io-uring task, everywhere else spawns a regular tokio task.
-#[cfg(not(target_os = "linux"))]
-macro_rules! uring_inner_spawn {
-    ($future:expr_2021) => {
-        tokio::spawn($future);
-    };
-}
-
 /// Allows creation of spans only when `debug_assertions` are enabled, to avoid
 /// hitting the cap of 4096 threads that is unconfigurable in
 /// `tracing_subscriber` -> `sharded_slab` for span ids
@@ -64,247 +53,23 @@ macro_rules! uring_span {
 
 pub mod cluster;
 pub mod endpoint;
-pub(crate) mod maxmind_db;
+pub mod io;
+pub mod packet;
 pub mod phoenix;
+
+pub(crate) mod error;
+pub(crate) mod maxmind_db;
+pub(crate) mod sessions;
 
 pub use quilkin_xds as xds;
 pub use xds::net::TcpListener;
 
-use std::{
-    io,
-    net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
-};
-
-use socket2::{Protocol, Socket, Type};
-
-cfg_if::cfg_if! {
-    if #[cfg(target_os = "linux")] {
-        use std::net::UdpSocket;
-
-        pub(crate) mod io_uring;
-        pub mod xdp;
-    } else {
-        use tokio::net::UdpSocket;
-    }
-}
-
 pub use self::{
     cluster::ClusterMap,
     endpoint::{Endpoint, EndpointAddress},
+    error::PipelineError,
+    io::{Socket, Socket as DualStackLocalSocket, Socket as DualStackEpollSocket, SystemSocket},
 };
-
-pub use self::packet::{PacketQueue, PacketQueueSender, queue};
-
-fn socket_with_reuse_and_address(addr: SocketAddr) -> std::io::Result<UdpSocket> {
-    cfg_if::cfg_if! {
-        if #[cfg(target_os = "linux")] {
-            raw_socket_with_reuse_and_address(addr)
-                .map(From::from)
-        } else {
-            epoll_socket_with_reuse_and_address(addr)
-        }
-    }
-}
-
-fn epoll_socket_with_reuse(port: u16) -> std::io::Result<tokio::net::UdpSocket> {
-    raw_socket_with_reuse_and_address((Ipv6Addr::UNSPECIFIED, port).into())
-        .map(From::from)
-        .and_then(tokio::net::UdpSocket::from_std)
-}
-
-fn epoll_socket_with_reuse_and_address(addr: SocketAddr) -> std::io::Result<tokio::net::UdpSocket> {
-    raw_socket_with_reuse_and_address(addr)
-        .map(From::from)
-        .and_then(tokio::net::UdpSocket::from_std)
-}
-
-#[inline]
-pub fn raw_socket_with_reuse(port: u16) -> std::io::Result<Socket> {
-    raw_socket_with_reuse_and_address((Ipv6Addr::UNSPECIFIED, port).into())
-}
-
-pub fn raw_socket_with_reuse_and_address(addr: SocketAddr) -> std::io::Result<Socket> {
-    let domain = match addr {
-        SocketAddr::V4(_) => socket2::Domain::IPV4,
-        SocketAddr::V6(_) => socket2::Domain::IPV6,
-    };
-
-    let sock = Socket::new(domain, Type::DGRAM, Some(Protocol::UDP))?;
-    enable_reuse(&sock)?;
-    sock.set_nonblocking(true)?;
-    if domain == socket2::Domain::IPV6 {
-        // be explicit so we can have dual stack sockets.
-        sock.set_only_v6(false)?;
-    }
-    sock.bind(&addr.into())?;
-
-    Ok(sock)
-}
-
-#[inline]
-pub fn socket_port(socket: &socket2::Socket) -> u16 {
-    match socket.local_addr().unwrap().as_socket().unwrap() {
-        SocketAddr::V4(addr) => addr.port(),
-        SocketAddr::V6(addr) => addr.port(),
-    }
-}
-
-#[cfg(not(target_family = "windows"))]
-fn enable_reuse(sock: &Socket) -> io::Result<()> {
-    sock.set_reuse_port(true)?;
-    Ok(())
-}
-
-#[cfg(target_family = "windows")]
-fn enable_reuse(sock: &Socket) -> io::Result<()> {
-    sock.set_reuse_address(true)?;
-    Ok(())
-}
-
-/// An ipv6 socket that can accept and send data from either a local ipv4 address or ipv6 address
-/// with port reuse enabled and `only_v6` set to false.
-pub struct DualStackLocalSocket {
-    socket: UdpSocket,
-    local_addr: SocketAddr,
-}
-
-impl DualStackLocalSocket {
-    pub fn from_raw(socket: Socket) -> Self {
-        let socket: std::net::UdpSocket = socket.into();
-        let local_addr = socket.local_addr().unwrap();
-        cfg_if::cfg_if! {
-            if #[cfg(target_os = "linux")] {
-                let socket = socket;
-            } else {
-                // This is only for macOS and Windows (non-production platforms),
-                // and should never happen anyway, so unwrap here is fine.
-                let socket = UdpSocket::from_std(socket).unwrap();
-            }
-        }
-        Self { socket, local_addr }
-    }
-
-    pub fn new(port: u16) -> std::io::Result<Self> {
-        raw_socket_with_reuse(port).map(Self::from_raw)
-    }
-
-    pub fn bind_local(port: u16) -> std::io::Result<Self> {
-        let local_addr = (Ipv6Addr::LOCALHOST, port).into();
-        let socket = socket_with_reuse_and_address(local_addr)?;
-        Ok(Self { socket, local_addr })
-    }
-
-    pub fn local_ipv4_addr(&self) -> io::Result<SocketAddr> {
-        Ok(match self.local_addr {
-            SocketAddr::V4(_) => self.local_addr,
-            SocketAddr::V6(_) => (Ipv4Addr::UNSPECIFIED, self.local_addr.port()).into(),
-        })
-    }
-
-    pub fn local_ipv6_addr(&self) -> io::Result<SocketAddr> {
-        Ok(match self.local_addr {
-            SocketAddr::V4(v4addr) => SocketAddr::new(
-                IpAddr::V6(v4addr.ip().to_ipv6_mapped()),
-                self.local_addr.port(),
-            ),
-            SocketAddr::V6(_) => self.local_addr,
-        })
-    }
-
-    cfg_if::cfg_if! {
-        if #[cfg(not(target_os = "linux"))] {
-            pub async fn recv_from<B: std::ops::DerefMut<Target = [u8]>>(&self, mut buf: B) -> (io::Result<(usize, SocketAddr)>, B) {
-                let result = self.socket.recv_from(&mut buf).await;
-                (result, buf)
-            }
-
-            pub async fn send_to<B: std::ops::Deref<Target = [u8]>>(&self, buf: B, target: SocketAddr) -> (io::Result<usize>, B) {
-                let result = self.socket.send_to(&buf, target).await;
-                (result, buf)
-            }
-        } else {
-            #[inline]
-            pub fn raw_fd(&self) -> ::io_uring::types::Fd {
-                use std::os::fd::AsRawFd;
-                ::io_uring::types::Fd(self.socket.as_raw_fd())
-            }
-        }
-    }
-
-    pub fn make_refcnt(self) -> DualStackLocalSocketRc {
-        DualStackLocalSocketRc::new(self)
-    }
-}
-
-cfg_if::cfg_if! {
-    if #[cfg(target_os = "linux")] {
-        pub type DualStackLocalSocketRc = std::rc::Rc<DualStackLocalSocket>;
-    } else {
-        pub type DualStackLocalSocketRc = std::sync::Arc<DualStackLocalSocket>;
-    }
-}
-
-/// The same as [`DualStackSocket`] but uses epoll instead of uring.
-#[derive(Debug)]
-pub struct DualStackEpollSocket {
-    socket: tokio::net::UdpSocket,
-}
-
-impl DualStackEpollSocket {
-    pub fn new(port: u16) -> std::io::Result<Self> {
-        Ok(Self {
-            socket: epoll_socket_with_reuse(port)?,
-        })
-    }
-
-    pub fn bind_local(port: u16) -> std::io::Result<Self> {
-        Ok(Self {
-            socket: epoll_socket_with_reuse_and_address((Ipv6Addr::LOCALHOST, port).into())?,
-        })
-    }
-
-    /// Primarily used for testing of ipv4 vs ipv6 addresses.
-    pub(crate) fn new_with_address(addr: SocketAddr) -> std::io::Result<Self> {
-        Ok(Self {
-            socket: epoll_socket_with_reuse_and_address(addr)?,
-        })
-    }
-
-    pub async fn recv_from(&self, buf: &mut [u8]) -> io::Result<(usize, SocketAddr)> {
-        self.socket.recv_from(buf).await
-    }
-
-    pub fn local_addr(&self) -> io::Result<SocketAddr> {
-        self.socket.local_addr()
-    }
-
-    pub fn local_ipv4_addr(&self) -> io::Result<SocketAddr> {
-        let addr = self.socket.local_addr()?;
-        match addr {
-            SocketAddr::V4(_) => Ok(addr),
-            SocketAddr::V6(_) => Ok((Ipv4Addr::UNSPECIFIED, addr.port()).into()),
-        }
-    }
-
-    pub fn local_ipv6_addr(&self) -> io::Result<SocketAddr> {
-        let addr = self.socket.local_addr()?;
-        match addr {
-            SocketAddr::V4(v4addr) => Ok(SocketAddr::new(
-                IpAddr::V6(v4addr.ip().to_ipv6_mapped()),
-                addr.port(),
-            )),
-            SocketAddr::V6(_) => Ok(addr),
-        }
-    }
-
-    pub async fn send_to<A: tokio::net::ToSocketAddrs>(
-        &self,
-        buf: &[u8],
-        target: A,
-    ) -> io::Result<usize> {
-        self.socket.send_to(buf, target).await
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -321,26 +86,26 @@ mod tests {
     #[tokio::test]
     async fn dual_stack_socket_reusable() {
         let expected = available_addr(AddressType::Random).await;
-        let socket = super::DualStackEpollSocket::new(expected.port()).unwrap();
-        let addr = socket.local_ipv4_addr().unwrap();
+        let socket = super::Socket::polling_from_port(expected.port()).unwrap();
+        let addr = socket.local_ipv4_addr();
 
         match expected {
-            SocketAddr::V4(_) => assert_eq!(expected, socket.local_ipv4_addr().unwrap()),
-            SocketAddr::V6(_) => assert_eq!(expected, socket.local_ipv6_addr().unwrap()),
+            SocketAddr::V4(_) => assert_eq!(expected, socket.local_ipv4_addr()),
+            SocketAddr::V6(_) => assert_eq!(expected, socket.local_ipv6_addr()),
         }
 
-        assert_eq!(expected.port(), socket.local_ipv4_addr().unwrap().port());
-        assert_eq!(expected.port(), socket.local_ipv6_addr().unwrap().port());
+        assert_eq!(expected.port(), socket.local_ipv4_addr().port());
+        assert_eq!(expected.port(), socket.local_ipv6_addr().port());
 
         // should be able to do it a second time, since we are reusing the address.
-        let socket = super::DualStackEpollSocket::new(expected.port()).unwrap();
+        let socket = super::Socket::polling_from_port(expected.port()).unwrap();
 
         match expected {
-            SocketAddr::V4(_) => assert_eq!(expected, socket.local_ipv4_addr().unwrap()),
-            SocketAddr::V6(_) => assert_eq!(expected, socket.local_ipv6_addr().unwrap()),
+            SocketAddr::V4(_) => assert_eq!(expected, socket.local_ipv4_addr()),
+            SocketAddr::V6(_) => assert_eq!(expected, socket.local_ipv6_addr()),
         }
-        assert_eq!(addr.port(), socket.local_ipv4_addr().unwrap().port());
-        assert_eq!(addr.port(), socket.local_ipv6_addr().unwrap().port());
+        assert_eq!(addr.port(), socket.local_ipv4_addr().port());
+        assert_eq!(addr.port(), socket.local_ipv6_addr().port());
     }
 
     #[tokio::test]
@@ -355,7 +120,7 @@ mod tests {
         let msg = "hello";
         let addr = echo_addr.to_socket_addr().unwrap();
 
-        socket.send_to(msg.as_bytes(), &addr).await.unwrap();
+        socket.send_to(msg.as_bytes(), addr).await.unwrap();
         assert_eq!(
             msg,
             timeout(Duration::from_secs(5), rx.recv())
@@ -376,7 +141,7 @@ mod tests {
             AddressKind::Name(_) => unreachable!(),
         };
 
-        socket.send_to(msg.as_bytes(), &opp_addr).await.unwrap();
+        socket.send_to(msg.as_bytes(), opp_addr).await.unwrap();
         assert_eq!(
             msg,
             timeout(Duration::from_secs(5), rx.recv())
@@ -389,7 +154,7 @@ mod tests {
         // stack socket.
         let (mut rx, socket) = t.open_ipv4_socket_and_recv_multiple_packets().await;
         socket
-            .send_to(msg.as_bytes(), &ipv4_echo_addr)
+            .send_to(msg.as_bytes(), ipv4_echo_addr)
             .await
             .unwrap();
         assert_eq!(

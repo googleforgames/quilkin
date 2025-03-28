@@ -632,8 +632,6 @@ impl Node {
 
 #[cfg(test)]
 mod tests {
-    use crate::net::raw_socket_with_reuse;
-
     use super::*;
     use std::collections::HashMap;
     use std::collections::HashSet;
@@ -879,7 +877,7 @@ mod tests {
         );
 
         let (_tx, rx) = crate::signal::channel(Default::default());
-        let socket = raw_socket_with_reuse(qcmp_port).unwrap();
+        let socket = crate::net::Socket::polling_from_port(qcmp_port).unwrap();
         crate::codec::qcmp::spawn(socket, rx.clone()).unwrap();
         tokio::time::sleep(Duration::from_millis(150)).await;
 
