@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-pub mod packet;
-
 /// On linux spawns a io-uring runtime + thread, everywhere else spawns a regular tokio task.
 #[cfg(not(target_os = "linux"))]
 macro_rules! uring_spawn {
@@ -64,25 +62,24 @@ macro_rules! uring_span {
 
 pub mod cluster;
 pub mod endpoint;
-pub(crate) mod maxmind_db;
+pub mod io;
+pub mod packet;
 pub mod phoenix;
+
+pub(crate) mod error;
+pub(crate) mod maxmind_db;
+pub(crate) mod udp;
 
 pub use quilkin_xds as xds;
 pub use xds::net::TcpListener;
 
-use std::{
-    io,
-    net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
-};
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 
 use socket2::{Protocol, Socket, Type};
 
 cfg_if::cfg_if! {
     if #[cfg(target_os = "linux")] {
         use std::net::UdpSocket;
-
-        pub(crate) mod io_uring;
-        pub mod xdp;
     } else {
         use tokio::net::UdpSocket;
     }
@@ -150,13 +147,13 @@ pub fn socket_port(socket: &socket2::Socket) -> u16 {
 }
 
 #[cfg(not(target_family = "windows"))]
-fn enable_reuse(sock: &Socket) -> io::Result<()> {
+fn enable_reuse(sock: &Socket) -> std::io::Result<()> {
     sock.set_reuse_port(true)?;
     Ok(())
 }
 
 #[cfg(target_family = "windows")]
-fn enable_reuse(sock: &Socket) -> io::Result<()> {
+fn enable_reuse(sock: &Socket) -> std::io::Result<()> {
     sock.set_reuse_address(true)?;
     Ok(())
 }
@@ -194,14 +191,14 @@ impl DualStackLocalSocket {
         Ok(Self { socket, local_addr })
     }
 
-    pub fn local_ipv4_addr(&self) -> io::Result<SocketAddr> {
+    pub fn local_ipv4_addr(&self) -> std::io::Result<SocketAddr> {
         Ok(match self.local_addr {
             SocketAddr::V4(_) => self.local_addr,
             SocketAddr::V6(_) => (Ipv4Addr::UNSPECIFIED, self.local_addr.port()).into(),
         })
     }
 
-    pub fn local_ipv6_addr(&self) -> io::Result<SocketAddr> {
+    pub fn local_ipv6_addr(&self) -> std::io::Result<SocketAddr> {
         Ok(match self.local_addr {
             SocketAddr::V4(v4addr) => SocketAddr::new(
                 IpAddr::V6(v4addr.ip().to_ipv6_mapped()),
@@ -213,12 +210,12 @@ impl DualStackLocalSocket {
 
     cfg_if::cfg_if! {
         if #[cfg(not(target_os = "linux"))] {
-            pub async fn recv_from<B: std::ops::DerefMut<Target = [u8]>>(&self, mut buf: B) -> (io::Result<(usize, SocketAddr)>, B) {
+            pub async fn recv_from<B: std::ops::DerefMut<Target = [u8]>>(&self, mut buf: B) -> (std::io::Result<(usize, SocketAddr)>, B) {
                 let result = self.socket.recv_from(&mut buf).await;
                 (result, buf)
             }
 
-            pub async fn send_to<B: std::ops::Deref<Target = [u8]>>(&self, buf: B, target: SocketAddr) -> (io::Result<usize>, B) {
+            pub async fn send_to<B: std::ops::Deref<Target = [u8]>>(&self, buf: B, target: SocketAddr) -> (std::io::Result<usize>, B) {
                 let result = self.socket.send_to(&buf, target).await;
                 (result, buf)
             }
@@ -270,15 +267,15 @@ impl DualStackEpollSocket {
         })
     }
 
-    pub async fn recv_from(&self, buf: &mut [u8]) -> io::Result<(usize, SocketAddr)> {
+    pub async fn recv_from(&self, buf: &mut [u8]) -> std::io::Result<(usize, SocketAddr)> {
         self.socket.recv_from(buf).await
     }
 
-    pub fn local_addr(&self) -> io::Result<SocketAddr> {
+    pub fn local_addr(&self) -> std::io::Result<SocketAddr> {
         self.socket.local_addr()
     }
 
-    pub fn local_ipv4_addr(&self) -> io::Result<SocketAddr> {
+    pub fn local_ipv4_addr(&self) -> std::io::Result<SocketAddr> {
         let addr = self.socket.local_addr()?;
         match addr {
             SocketAddr::V4(_) => Ok(addr),
@@ -286,7 +283,7 @@ impl DualStackEpollSocket {
         }
     }
 
-    pub fn local_ipv6_addr(&self) -> io::Result<SocketAddr> {
+    pub fn local_ipv6_addr(&self) -> std::io::Result<SocketAddr> {
         let addr = self.socket.local_addr()?;
         match addr {
             SocketAddr::V4(v4addr) => Ok(SocketAddr::new(
@@ -301,7 +298,7 @@ impl DualStackEpollSocket {
         &self,
         buf: &[u8],
         target: A,
-    ) -> io::Result<usize> {
+    ) -> std::io::Result<usize> {
         self.socket.send_to(buf, target).await
     }
 }
