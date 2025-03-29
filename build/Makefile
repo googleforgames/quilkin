@@ -165,12 +165,7 @@ else
 endif
 	docker run --rm $(common_rust_args) \
 		--entrypoint=bash $(BUILD_IMAGE_TAG) -c './image/archive_dependencies.sh'
-	docker buildx build --platform=linux/amd64 --build-arg TARGETPLATFORM=linux/amd64 -t $(IMAGE_TAG_AMD64) -f $(project_path)/image/Dockerfile $(project_path) 
-	docker buildx build --platform=linux/arm64 --build-arg TARGETPLATFORM=linux/arm64 -t $(IMAGE_TAG_ARM64) -f $(project_path)/image/Dockerfile $(project_path) 
-	docker push $(IMAGE_TAG_AMD64)
-	docker push $(IMAGE_TAG_ARM64)
-	docker manifest create $(IMAGE_TAG) $(IMAGE_TAG_AMD64) $(IMAGE_TAG_ARM64)
-	docker manifest push $(IMAGE_TAG)
+	docker build -t $(IMAGE_TAG) -f $(project_path)/image/Dockerfile $(project_path)
 
 # Generates the HTML report of all open source licence dependencies
 build-licence-report: ensure-build-image
@@ -206,10 +201,10 @@ run-test-agones:
 
 # Convenience target to build and push quilkin images to a repository.
 # Use `REPOSITORY` arg to specify the repository to push to.
-# USe `SKIP_BUILD_IMAGE` if you want to skip building the image if it has been already built.
-# See `build-image` for more details.
 push:
-	docker push $(IMAGE_TAG)
+	docker buildx create --use --name multi-platform-builder --driver docker-container
+	docker buildx build --platform=linux/amd64,linux/arm64 -t $(IMAGE_TAG) \
+	-f $(project_path)/image/Dockerfile $(project_path) --push
 
 # Convenience target to build and push quilkin images into a minikube instance
 # Use `MINIKUBE_PROFILE` to specify the profile. Defaults to `quilkin`.
