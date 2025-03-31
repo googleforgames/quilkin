@@ -26,7 +26,7 @@ async fn health_server() {
     let mut t = TestHelper::default();
 
     // create server configuration
-    let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
+    let server_config = std::sync::Arc::new(quilkin::Config::default());
     server_config
         .dyn_cfg
         .clusters()
