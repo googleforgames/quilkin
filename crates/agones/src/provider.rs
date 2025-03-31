@@ -242,12 +242,17 @@ mod tests {
 
         // make sure the deployment and service are ready
         let name = deployment.name_unchecked();
-        timeout(
+        let result = timeout(
             Duration::from_secs(30),
             await_condition(deployments.clone(), name.as_str(), is_deployment_ready()),
         )
-        .await
-        .expect("xDS provider deployment should be ready")
-        .unwrap();
+        .await;
+
+        if let Ok(result) = result {
+            result.unwrap();
+        } else {
+            debug_pods(client, "role=xds".into()).await;
+            panic!("xDS provider deployment should be ready");
+        }
     }
 }

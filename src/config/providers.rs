@@ -14,102 +14,592 @@
  *  limitations under the License.
  */
 
-use std::sync::{
-    Arc,
-    atomic::{AtomicBool, Ordering},
-};
 pub mod k8s;
+
+use std::{
+    net::SocketAddr,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+};
+
+use crate::config;
+use futures::TryStreamExt;
 
 const RETRIES: u32 = 25;
 const BACKOFF_STEP: std::time::Duration = std::time::Duration::from_millis(250);
 const MAX_DELAY: std::time::Duration = std::time::Duration::from_secs(2);
 pub(crate) const NO_UPDATE_INTERVAL: std::time::Duration = std::time::Duration::from_secs(30);
 
-/// The available xDS source providers.
-#[derive(Clone, Debug, clap::Subcommand)]
-pub enum Providers {
+/// The available xDS source provider.
+#[derive(Clone, Debug, Default, clap::Args)]
+#[command(next_help_heading = "Provider Options")]
+pub struct Providers {
     /// Watches Agones' game server CRDs for `Allocated` game server endpoints,
     /// and for a `ConfigMap` that specifies the filter configuration.
-    Agones {
-        /// The namespace under which the configmap is stored.
-        #[clap(short, long, env = "QUILKIN_AGONES_CONFIG_NAMESPACE")]
-        config_namespace: Option<String>,
-        /// The namespace under which the game servers run.
-        #[clap(
-            short,
-            long,
-            env = "QUILKIN_AGONES_GAMESERVERS_NAMESPACE",
-            default_value = "default"
-        )]
-        gameservers_namespace: String,
-    },
+    #[arg(
+        long = "provider.k8s",
+        env = "QUILKIN_PROVIDERS_K8S",
+        default_value_t = false
+    )]
+    k8s_enabled: bool,
 
-    /// Watches for changes to the file located at `path`.
-    File {
-        /// The path to the source config.
-        #[clap(env = "QUILKIN_FS_PATH")]
-        path: std::path::PathBuf,
-    },
+    /// The namespace that quilkin and related configuration has been set in.
+    #[arg(
+        long = "provider.k8s.namespace",
+        env = "QUILKIN_PROVIDERS_K8S_NAMESPACE",
+        default_value_t = From::from("default"),
+        requires("k8s_enabled"),
+    )]
+    k8s_namespace: String,
+
+    /// When enabled, Quilkin will watch for `agones.dev/v1/GameServer` CRD
+    /// objects in the environment and allow them to be available for routing
+    /// and metrics through Quilkin.
+    #[arg(
+        long = "provider.k8s.leader-election",
+        env = "QUILKIN_PROVIDERS_K8S_LEADER_ELECTION",
+        default_value_t = false
+    )]
+    k8s_leader_election: bool,
+
+    #[arg(env = "HOSTNAME", default_value_t = uuid::Uuid::new_v4().to_string())]
+    k8s_leader_id: String,
+
+    #[arg(
+        long = "provider.k8s.agones",
+        env = "QUILKIN_PROVIDERS_K8S_AGONES",
+        default_value_t = false
+    )]
+    agones_enabled: bool,
+
+    #[arg(
+        long = "provider.k8s.agones.namespace",
+        env = "QUILKIN_PROVIDERS_K8S_AGONES_NAMESPACE",
+        default_value_t = String::default(),
+        requires("agones_enabled"),
+    )]
+    agones_namespace: String,
+
+    /// The list of namespaces to watch for `GameServer` CRD events.
+    #[arg(
+        long = "provider.k8s.agones.namespaces",
+        env = "QUILKIN_PROVIDERS_K8S_AGONES_NAMESPACES",
+        default_values_t = [String::from("default")],
+        requires("agones_enabled"),
+        conflicts_with("agones_namespace"),
+    )]
+    agones_namespaces: Vec<String>,
+
+    /// If specified, filters the available gameserver addresses to the one that
+    /// matches the specified type
+    #[arg(
+        long = "provider.k8s.agones.address_type",
+        env = "QUILKIN_PROVIDERS_K8S_AGONES_ADDRESS_TYPE",
+        requires("agones_enabled")
+    )]
+    pub address_type: Option<String>,
+    /// If specified, additionally filters the gameserver address by its ip kind
+    #[arg(
+        long = "provider.k8s.agones.ip_kind",
+        env = "QUILKIN_PROVIDERS_K8S_AGONES_IP_KIND",
+        requires("address_type"),
+        value_enum
+    )]
+    pub ip_kind: Option<crate::config::AddrKind>,
+
+    #[arg(
+        long = "provider.fs",
+        env = "QUILKIN_PROVIDERS_FS",
+        conflicts_with("k8s_enabled"),
+        default_value_t = false
+    )]
+    fs_enabled: bool,
+
+    #[arg(
+        long = "provider.fs.path",
+        env = "QUILKIN_PROVIDERS_FS_PATH",
+        requires("fs_enabled"),
+        default_value = "/etc/quilkin/config.yaml"
+    )]
+    fs_path: std::path::PathBuf,
+    /// One or more `quilkin relay` endpoints to push configuration changes to.
+    #[clap(
+        long = "provider.mds.endpoints",
+        env = "QUILKIN_PROVIDERS_MDS_ENDPOINTS"
+    )]
+    relay: Vec<tonic::transport::Endpoint>,
+    /// The remote URL or local file path to retrieve the Maxmind database.
+    #[clap(
+        long = "provider.mmdb.endpoints",
+        env = "QUILKIN_PROVIDERS_MMDB_ENDPOINTS"
+    )]
+    mmdb: Option<crate::net::maxmind_db::Source>,
+    /// One or more socket addresses to forward packets to.
+    #[clap(
+        long = "provider.static.endpoints",
+        env = "QUILKIN_PROVIDERS_STATIC_ENDPOINTS"
+    )]
+    endpoints: Vec<SocketAddr>,
+    /// Assigns dynamic tokens to each address in the `--to` argument
+    ///
+    /// Format is `<number of unique tokens>:<length of token suffix for each packet>`
+    #[clap(
+        long = "provider.static.endpoint_tokens",
+        env = "QUILKIN_PROVIDERS_STATIC_ENDPOINT_TOKENS",
+        requires("endpoints")
+    )]
+    endpoint_tokens: Option<String>,
+    /// One or more xDS service endpoints to listen for config changes.
+    #[clap(
+        long = "provider.xds.endpoints",
+        env = "QUILKIN_PROVIDERS_XDS_ENDPOINTS"
+    )]
+    xds_endpoints: Vec<tonic::transport::Endpoint>,
+}
+
+#[derive(Clone)]
+pub struct FiltersAndClusters {
+    pub filters: config::Slot<crate::filters::FilterChain>,
+    pub clusters: config::Watch<config::ClusterMap>,
+}
+
+impl FiltersAndClusters {
+    pub fn new(config: &crate::Config) -> Option<Self> {
+        Some(Self {
+            filters: config.dyn_cfg.filters()?.clone(),
+            clusters: config.dyn_cfg.clusters()?.clone(),
+        })
+    }
 }
 
 impl Providers {
-    #[tracing::instrument(level = "trace", skip_all)]
-    pub fn spawn(
-        self,
-        config: Arc<crate::Config>,
-        health_check: Arc<AtomicBool>,
-        locality: Option<crate::net::endpoint::Locality>,
-        address_selector: Option<crate::config::AddressSelector>,
-        is_agent: bool,
-    ) -> tokio::task::JoinHandle<crate::Result<()>> {
-        match self {
-            Self::Agones {
-                gameservers_namespace,
-                config_namespace,
-            } => tokio::spawn(async move {
-                let config_namespace = match (config_namespace, is_agent) {
-                    (Some(cns), false) => Some(cns),
-                    (None, true) => None,
-                    (None, false) => Some("default".into()),
-                    (Some(cns), true) => {
-                        tracing::warn!(
-                            "'{cns}' via --config-namespace, -c, or QUILKIN_AGONES_CONFIG_NAMESPACE is ignored for agents and should not be set"
-                        );
-                        None
-                    }
+    #[allow(clippy::type_complexity)]
+    const SUBS: &[(&str, &[(&str, Vec<String>)])] = &[
+        (
+            "9",
+            &[
+                (crate::xds::CLUSTER_TYPE, Vec::new()),
+                (crate::xds::DATACENTER_TYPE, Vec::new()),
+                (crate::xds::FILTER_CHAIN_TYPE, Vec::new()),
+            ],
+        ),
+        (
+            "",
+            &[
+                (crate::xds::CLUSTER_TYPE, Vec::new()),
+                (crate::xds::DATACENTER_TYPE, Vec::new()),
+                (crate::xds::LISTENER_TYPE, Vec::new()),
+            ],
+        ),
+    ];
+
+    pub fn agones(mut self) -> Self {
+        self.agones_enabled = true;
+        self
+    }
+
+    pub fn agones_namespace(mut self, ns: impl Into<String>) -> Self {
+        self.agones_namespaces = vec![ns.into()];
+        self
+    }
+
+    pub fn agones_namespaces(mut self, ns: impl Into<Vec<String>>) -> Self {
+        self.agones_namespaces = ns.into();
+        self
+    }
+
+    pub fn fs(mut self) -> Self {
+        self.fs_enabled = true;
+        self
+    }
+
+    pub fn fs_path(mut self, path: impl Into<std::path::PathBuf>) -> Self {
+        self.fs_path = path.into();
+        self
+    }
+
+    pub fn k8s(mut self) -> Self {
+        self.k8s_enabled = true;
+        self
+    }
+
+    pub fn k8s_namespace(mut self, ns: impl Into<String>) -> Self {
+        self.k8s_namespace = ns.into();
+        self
+    }
+
+    fn static_enabled(&self) -> bool {
+        !self.endpoints.is_empty()
+    }
+
+    pub fn grpc_push_endpoints(
+        mut self,
+        endpoints: impl Into<Vec<tonic::transport::Endpoint>>,
+    ) -> Self {
+        self.relay = endpoints.into();
+        self
+    }
+
+    pub fn spawn_static_provider(
+        &self,
+        config: FiltersAndClusters,
+        health_check: &AtomicBool,
+    ) -> crate::Result<impl Future<Output = crate::Result<()>> + 'static> {
+        let endpoint_tokens = self
+            .endpoint_tokens
+            .as_ref()
+            .map(|tt| {
+                let Some((count, length)) = tt.split_once(':') else {
+                    eyre::bail!("--to-tokens `{tt}` is invalid, it must have a `:` separator")
                 };
 
-                use eyre::ContextCompat as _;
+                let count = count.parse()?;
+                let length = length.parse()?;
 
-                let filters = config
-                    .dyn_cfg
-                    .filters()
-                    .context("agones requires filters")?;
-                let clusters = config
-                    .dyn_cfg
-                    .clusters()
-                    .context("agones requires clusters")?;
+                Ok(crate::components::proxy::ToTokens { count, length })
+            })
+            .transpose()?;
 
-                Self::task(health_check.clone(), {
-                    let health_check = health_check.clone();
+        let endpoints = if let Some(tt) = endpoint_tokens {
+            let (unique, overflow) = 256u64.overflowing_pow(tt.length as _);
+            if overflow {
+                panic!(
+                    "can't generate {} tokens of length {} maximum is {}",
+                    self.endpoints.len() * tt.count,
+                    tt.length,
+                    u64::MAX,
+                );
+            }
 
-                    move || {
-                        crate::config::watch::agones(
-                            gameservers_namespace.clone(),
-                            config_namespace.clone(),
-                            health_check.clone(),
-                            locality.clone(),
-                            filters.clone(),
-                            clusters.clone(),
-                            address_selector.clone(),
+            if unique < (self.endpoints.len() * tt.count) as u64 {
+                panic!(
+                    "we require {} unique tokens but only {unique} can be generated",
+                    self.endpoints.len() * tt.count,
+                );
+            }
+
+            {
+                use crate::filters::StaticFilter as _;
+                config.filters.store(Arc::new(
+                    crate::filters::FilterChain::try_create([
+                        crate::filters::Capture::as_filter_config(
+                            crate::filters::capture::Config {
+                                metadata_key: crate::filters::capture::CAPTURED_BYTES.into(),
+                                strategy: crate::filters::capture::Strategy::Suffix(
+                                    crate::filters::capture::Suffix {
+                                        size: tt.length as _,
+                                        remove: true,
+                                    },
+                                ),
+                            },
                         )
+                        .unwrap(),
+                        crate::filters::TokenRouter::as_filter_config(None).unwrap(),
+                    ])
+                    .unwrap(),
+                ));
+            }
+
+            let count = tt.count as u64;
+
+            self.endpoints
+                .iter()
+                .enumerate()
+                .map(|(ind, sa)| {
+                    let mut tokens = std::collections::BTreeSet::new();
+                    let start = ind as u64 * count;
+                    for i in start..(start + count) {
+                        tokens.insert(i.to_le_bytes()[..tt.length].to_vec());
                     }
+
+                    crate::net::endpoint::Endpoint::with_metadata(
+                        (*sa).into(),
+                        crate::net::endpoint::Metadata { tokens },
+                    )
                 })
-                .await
-            }),
-            Self::File { path } => tokio::spawn(Self::task(health_check.clone(), {
-                let path = path.clone();
+                .collect()
+        } else {
+            self.endpoints
+                .iter()
+                .cloned()
+                .map(crate::net::endpoint::Endpoint::from)
+                .collect()
+        };
+
+        tracing::info!(
+            provider = "static",
+            endpoints = serde_json::to_string(&endpoints).unwrap(),
+            "setting endpoints"
+        );
+        config.clusters.modify(|clusters| {
+            clusters.insert(None, None, endpoints);
+        });
+
+        health_check.store(true, Ordering::SeqCst);
+
+        Ok(std::future::pending())
+    }
+
+    pub fn spawn_k8s_provider(
+        &self,
+        health_check: Arc<AtomicBool>,
+        locality: Option<crate::net::endpoint::Locality>,
+        config: &super::Config,
+    ) -> impl Future<Output = crate::Result<()>> + 'static {
+        let agones_namespaces = if !self.agones_namespace.is_empty() {
+            tracing::warn!(
+                "`config.k8s.agones.namespace` is deprecated, use `config.k8s.agones.namespaces` instead"
+            );
+            vec![self.agones_namespace.clone()]
+        } else {
+            self.agones_namespaces.clone()
+        };
+
+        let agones_enabled = self.agones_enabled;
+        let k8s_enabled = self.k8s_enabled;
+        let k8s_leader_election = self.k8s_leader_election;
+        let k8s_leader_id = self
+            .k8s_leader_id
+            .is_empty()
+            .then(|| uuid::Uuid::new_v4().to_string())
+            .unwrap_or_else(|| self.k8s_leader_id.clone());
+        let k8s_namespace = self.k8s_namespace.clone();
+
+        let selector = self
+            .address_type
+            .as_ref()
+            .map(|at| config::AddressSelector {
+                name: at.clone(),
+                kind: self.ip_kind.unwrap_or(config::AddrKind::Any),
+            });
+
+        let task = {
+            let config = config.clone();
+            let health_check = health_check.clone();
+            let agones_namespaces = agones_namespaces.clone();
+            let selector = selector.clone();
+            let locality = locality.clone();
+            let health_check = health_check.clone();
+
+            move || {
+                let config = config.clone();
                 let health_check = health_check.clone();
+                let agones_namespaces = agones_namespaces.clone();
+                let k8s_namespace: String = k8s_namespace.clone();
+                let k8s_leader_id: String = k8s_leader_id.clone();
+                let selector = selector.clone();
+                let locality = locality.clone();
+                let health_check = health_check.clone();
+
+                async move {
+                    let client = tokio::time::timeout(
+                        std::time::Duration::from_secs(5),
+                        kube::Client::try_default(),
+                    )
+                    .await??;
+
+                    let k8s_stream =
+                        if let Some(Some(fc)) = k8s_enabled.then(|| config.dyn_cfg.filters()) {
+                            either::Left(Self::result_stream(
+                                health_check.clone(),
+                                k8s::update_filters_from_configmap(
+                                    client.clone(),
+                                    k8s_namespace.clone(),
+                                    fc.clone(),
+                                ),
+                            ))
+                        } else {
+                            either::Right(std::future::pending())
+                        };
+
+                    let k8s_leader_election_task = if k8s_leader_election {
+                        let ll = config.dyn_cfg.init_leader_lock();
+                        either::Left(tokio::spawn(k8s::update_leader_lock(
+                            client.clone(),
+                            k8s_namespace,
+                            k8s_leader_id,
+                            ll,
+                        )))
+                    } else {
+                        either::Right(std::future::pending())
+                    };
+
+                    let mut gs_streams = tokio::task::JoinSet::new();
+                    if let Some(Some(clusters)) = agones_enabled.then(|| config.dyn_cfg.clusters())
+                    {
+                        for namespace in agones_namespaces {
+                            gs_streams.spawn(Self::result_stream(
+                                health_check.clone(),
+                                crate::config::watch::agones::watch_gameservers(
+                                    client.clone(),
+                                    namespace.clone(),
+                                    clusters.clone(),
+                                    locality.clone(),
+                                    selector.clone(),
+                                ),
+                            ));
+                        }
+                    } else {
+                        gs_streams.spawn(std::future::pending());
+                    };
+
+                    health_check.store(true, Ordering::SeqCst);
+                    tokio::select! {
+                        Some(result) = gs_streams.join_next() => result.map_err(From::from).and_then(|result| result),
+                        result = k8s_leader_election_task => result.map_err(eyre::Error::from).and_then(|result| result),
+                        result = k8s_stream => result,
+                    }
+                }
+            }
+        };
+
+        Self::task(health_check.clone(), task)
+    }
+
+    async fn result_stream<T>(
+        health_check: Arc<AtomicBool>,
+        stream: impl futures::Stream<Item = crate::Result<T>>,
+    ) -> crate::Result<()> {
+        tokio::pin!(stream);
+        loop {
+            match stream.try_next().await {
+                Ok(Some(_)) => health_check.store(true, Ordering::SeqCst),
+                Ok(None) => break Err(eyre::eyre!("kubernetes watch stream terminated")),
+                Err(error) => break Err(error),
+            }
+        }
+    }
+
+    pub fn spawn_mds_provider(
+        &self,
+        config: Arc<config::Config>,
+        health_check: Arc<AtomicBool>,
+    ) -> impl Future<Output = crate::Result<()>> + 'static {
+        let config = config.clone();
+        let endpoints = self.relay.clone();
+        Self::task(health_check.clone(), move || {
+            let config = config.clone();
+            let endpoints = endpoints.clone();
+            let health_check = health_check.clone();
+            async move {
+                let _stream = crate::net::xds::client::MdsClient::connect(config.id(), endpoints)
+                    .await?
+                    .delta_stream(config.clone(), health_check.clone())
+                    .await
+                    .map_err(|_err| eyre::eyre!("failed to acquire delta stream"))?;
+
+                health_check.store(true, Ordering::SeqCst);
+
+                std::future::pending().await
+            }
+        })
+    }
+
+    pub fn spawn_xds_provider(
+        &self,
+        config: Arc<config::Config>,
+        health_check: Arc<AtomicBool>,
+    ) -> impl Future<Output = crate::Result<()>> + 'static {
+        let config = config.clone();
+        let endpoints = self.xds_endpoints.clone();
+        let tx = Option::<tokio::sync::mpsc::UnboundedSender<String>>::None;
+
+        Self::task(health_check.clone(), move || {
+            let config = config.clone();
+            let endpoints = endpoints.clone();
+            let health_check = health_check.clone();
+            let tx = tx.clone();
+            async move {
+                let client = crate::net::xds::AdsClient::connect(config.id(), endpoints).await?;
+
+                let _stream = client
+                    .delta_subscribe(config, health_check.clone(), tx, Self::SUBS)
+                    .await
+                    .map_err(|_err| eyre::eyre!("failed to acquire delta stream"))?;
+
+                health_check.store(true, Ordering::SeqCst);
+
+                std::future::pending().await
+            }
+        })
+    }
+
+    pub fn grpc_push_enabled(&self) -> bool {
+        !self.relay.is_empty()
+    }
+
+    pub fn grpc_pull_enabled(&self) -> bool {
+        !self.xds_endpoints.is_empty()
+    }
+
+    pub fn k8s_enabled(&self) -> bool {
+        self.k8s_enabled
+    }
+
+    pub fn agones_enabled(&self) -> bool {
+        self.agones_enabled
+    }
+
+    pub fn fs_enabled(&self) -> bool {
+        self.fs_enabled
+    }
+
+    pub fn any_provider_enabled(&self) -> bool {
+        self.grpc_push_enabled()
+            || self.grpc_pull_enabled()
+            || self.k8s_enabled()
+            || self.agones_enabled()
+            || self.fs_enabled()
+            || self.static_enabled()
+    }
+
+    pub fn spawn_providers(
+        self,
+        config: &Arc<config::Config>,
+        health_check: Arc<AtomicBool>,
+        locality: Option<crate::net::endpoint::Locality>,
+    ) -> tokio::task::JoinSet<crate::Result<()>> {
+        let mut providers = tokio::task::JoinSet::new();
+
+        if !self.any_provider_enabled() {
+            tracing::info!("no configuration providers specified");
+            return providers;
+        }
+
+        tracing::info!(providers=?[
+            self.grpc_push_enabled().then_some("xDS"),
+            self.grpc_pull_enabled().then_some("mDS"),
+            self.k8s_enabled().then_some("k8s"),
+            self.agones_enabled().then_some("agones"),
+            self.fs_enabled().then_some("fs"),
+            self.static_enabled().then_some("static"),
+        ].into_iter().flatten().collect::<Vec<&str>>(), "starting configuration providers");
+
+        if self.grpc_push_enabled() {
+            providers.spawn(self.spawn_mds_provider(config.clone(), health_check.clone()));
+        }
+
+        if self.k8s_enabled() || self.agones_enabled() {
+            providers.spawn(self.spawn_k8s_provider(
+                health_check.clone(),
+                locality.clone(),
+                config,
+            ));
+        }
+
+        if self.grpc_pull_enabled() {
+            providers.spawn(self.spawn_xds_provider(config.clone(), health_check.clone()));
+        }
+
+        if self.fs_enabled() {
+            let config = config.clone();
+
+            providers.spawn(Self::task(health_check.clone(), {
+                let path = self.fs_path.clone();
+                let health_check = health_check.clone();
+
                 move || {
                     crate::config::watch::fs(
                         config.clone(),
@@ -118,8 +608,21 @@ impl Providers {
                         locality.clone(),
                     )
                 }
-            })),
+            }));
         }
+
+        if let Some(fc) = self
+            .static_enabled()
+            .then(|| FiltersAndClusters::new(config))
+            .flatten()
+        {
+            health_check.store(true, Ordering::SeqCst);
+            providers.spawn(self.spawn_static_provider(fc, &health_check).unwrap());
+        }
+
+        assert!(!providers.is_empty(), "bug: no provider tasks running when {:?} was specified", providers);
+
+        providers
     }
 
     #[tracing::instrument(level = "trace", skip_all)]

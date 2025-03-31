@@ -1,23 +1,11 @@
-# Filesystem xDS Provider
+# Filesystem Provider
 
 The filesystem provider watches a configuration file on disk and sends updates to proxies whenever that file changes.
 
-To view all the options for the file provider subcommand, run:
-```shell
-$ quilkin manage agones --help
-{{#include ../../../../../target/quilkin.manage.file.commands}}
-```
-
 For example:
 ```sh
-quilkin manage file quilkin.yaml
+quilkin --provider.fs.path quilkin.yaml
 ```
-
-We run this on port 1800, in this example, in case you are running this locally, and the
-default port is taken up by an existing Quilkin proxy.
-
-After running this command, any proxy that connects to port 18000 will receive updates as configured in `config.yaml`
-file.
 
 You can find the configuration file schema in [Configuration File][configuration].
 

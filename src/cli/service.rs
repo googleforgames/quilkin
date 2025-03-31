@@ -145,6 +145,10 @@ impl Default for Service {
 }
 
 impl Service {
+    pub fn builder() -> Self {
+        Self::default()
+    }
+
     /// Enables the UDP service.
     pub fn udp(mut self) -> Self {
         self.udp_enabled = true;

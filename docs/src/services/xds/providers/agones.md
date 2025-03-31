@@ -1,17 +1,11 @@
-# Agones xDS Provider
+# Agones Provider
 
-The [Agones] xDS Provider is built to simplify Quilkin integration with Agones
+The [Agones] Provider is built to simplify Quilkin integration with Agones
 game server hosting on top of [Kubernetes](https://kubernetes.io).
 
 This provider watches for changes in Agones
 [`GameServer` resources](https://agones.dev/site/docs/getting-started/create-gameserver/) in a cluster, and
 utilises that information to provide [Endpoint][Endpoints] information to connected Quilkin proxies.
-
-To view all the options for the agones provider subcommand, run:
-```shell
-$ quilkin manage agones --help
-{{#include ../../../../../target/quilkin.manage.agones.commands}}
-```
 
 > Currently, the Agones provider can only discover resources within the cluster it is running in.
 
@@ -62,12 +56,11 @@ configured via the `--config-namespace` argument.
 
 ## Usage
 
-As an example, the following runs the server with subcommnad `manage agones` against a cluster (using default
-kubeconfig authentication) where Quilkin pods run in the `quilkin` namespace and `GameServer` pods run in the
-`gameservers` namespace:
+As an example, the following runs quilkin against a cluster (using default
+kubeconfig authentication) in the `default` namespace.
 
 ```sh
-quilkin manage agones --config-namespace quilkin --gameservers-namespace gameservers
+quilkin --provider.k8s.agones --provider.k8s.agones.namespace=default
 ```
 
 For a full referenmce of deploying this provider in a Kubernetes cluster, with appropriate [Deployments], [Services],

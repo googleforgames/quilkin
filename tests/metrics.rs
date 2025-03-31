@@ -33,7 +33,7 @@ async fn metrics_server() {
         .port();
 
     // create server configuration
-    let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
+    let server_config = std::sync::Arc::new(quilkin::Config::default());
     server_config
         .dyn_cfg
         .clusters()
@@ -48,7 +48,7 @@ async fn metrics_server() {
         .await;
 
     // create a local client
-    let client_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
+    let client_config = std::sync::Arc::new(quilkin::Config::default());
     client_config
         .dyn_cfg
         .clusters()

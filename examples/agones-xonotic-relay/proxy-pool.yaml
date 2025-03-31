@@ -43,7 +43,9 @@ spec:
       containers:
         - name: quilkin
           image: us-docker.pkg.dev/quilkin/release/quilkin:0.9.0
-          args: ["proxy", "--management-server", "http://quilkin-relay-agones:7800"]
+          args:
+            - --service.udp
+            - --provider.xds.endpoints=http://quilkin-relay-agones:7800
           env:
             - name: RUST_LOG
               value: info #,quilkin=trace

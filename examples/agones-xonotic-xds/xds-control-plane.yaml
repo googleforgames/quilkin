@@ -108,8 +108,8 @@ spec:
       containers:
         - name: quilkin
           args:
-            - manage
-            - agones
+            - --service.xds
+            - --provider.k8s.agones
           env:
             - name: RUST_LOG
               value: info
