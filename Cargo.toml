@@ -231,7 +231,7 @@ socket2 = { version = "0.5.7", features = ["all"] }
 tempfile = "3.14.0"
 thiserror = "2.0.3"
 tokio-stream = { version = "0.1.16", features = ["net", "sync"] }
-tokio = { version = "1.41.1", features = [
+tokio = { version = "1.44.2", features = [
     "rt-multi-thread",
     "fs",
     "signal",
