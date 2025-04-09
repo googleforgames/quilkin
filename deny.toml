@@ -24,6 +24,7 @@ all-features = true
 
 [advisories]
 unmaintained = 'workspace'
+yanked = 'deny'
 ignore = [
 ]
 
@@ -57,7 +58,6 @@ skip-tree = [
 # More documentation for the licenses section can be found here:
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
 [licenses]
-version = 2
 allow = ["Apache-2.0", "MIT", "ISC", "BSD-3-Clause", "Unicode-3.0"]
 exceptions = [
     { crate = "adler32", allow = ["Zlib"] },
@@ -67,8 +67,3 @@ exceptions = [
     { crate = "webpki-roots", allow = ["MPL-2.0"] },
     { crate = "aws-lc-sys", allow = ["OpenSSL"] },
 ]
-
-[[licenses.clarify]]
-name = "ring"
-expression = "MIT AND ISC AND OpenSSL"
-license-files = [{ path = "LICENSE", hash = 0xbd0eed23 }]
