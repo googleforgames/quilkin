@@ -20,7 +20,7 @@ use std::{fmt, hash::Hash};
 pub enum PipelineError {
     NoUpstreamEndpoints,
     Filter(crate::filters::FilterError),
-    Session(super::sessions::SessionError),
+    Session(super::udp::sessions::SessionError),
     Io(std::io::Error),
 }
 
@@ -70,8 +70,8 @@ impl From<std::io::Error> for PipelineError {
     }
 }
 
-impl From<super::sessions::SessionError> for PipelineError {
-    fn from(value: super::sessions::SessionError) -> Self {
+impl From<super::udp::sessions::SessionError> for PipelineError {
+    fn from(value: super::udp::sessions::SessionError) -> Self {
         Self::Session(value)
     }
 }

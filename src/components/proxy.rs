@@ -14,9 +14,7 @@
  *  limitations under the License.
  */
 
-pub(crate) mod error;
-pub mod packet_router;
-pub(crate) mod sessions;
+use crate::net::{error, udp::sessions};
 
 use super::RunArgs;
 pub use error::PipelineError;

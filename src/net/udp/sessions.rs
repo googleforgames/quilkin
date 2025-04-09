@@ -32,6 +32,7 @@ use crate::{
     metrics,
     net::{
         PacketQueueSender,
+        error::PipelineError,
         maxmind_db::{IpNetEntry, MetricsIpNetEntry},
         queue::SendPacket,
     },
@@ -56,7 +57,7 @@ cfg_if::cfg_if! {
 /// tracking metrics and other information about the session.
 pub trait SessionManager {
     type Packet: crate::filters::Packet;
-    fn send(&self, key: SessionKey, contents: &Self::Packet) -> Result<(), super::PipelineError>;
+    fn send(&self, key: SessionKey, contents: &Self::Packet) -> Result<(), PipelineError>;
 }
 
 #[derive(PartialEq, Eq, Hash)]
@@ -143,7 +144,7 @@ impl SessionPool {
     fn create_new_session_from_new_socket<'pool>(
         self: &'pool Arc<Self>,
         key: SessionKey,
-    ) -> Result<(Option<MetricsIpNetEntry>, PacketQueueSender), super::PipelineError> {
+    ) -> Result<(Option<MetricsIpNetEntry>, PacketQueueSender), PipelineError> {
         tracing::trace!(source=%key.source, dest=%key.dest, "creating new socket for session");
         let raw_socket = crate::net::raw_socket_with_reuse(0)?;
         let port = raw_socket
@@ -231,7 +232,7 @@ impl SessionPool {
     pub(crate) fn get<'pool>(
         self: &'pool Arc<Self>,
         key @ SessionKey { dest, .. }: SessionKey,
-    ) -> Result<(Option<MetricsIpNetEntry>, PacketQueueSender), super::PipelineError> {
+    ) -> Result<(Option<MetricsIpNetEntry>, PacketQueueSender), PipelineError> {
         tracing::trace!(source=%key.source, dest=%key.dest, "SessionPool::get");
         // If we already have a session for the key pairing, return that session.
         if let Some(entry) = self.session_map.get(&key) {
@@ -294,7 +295,7 @@ impl SessionPool {
         key: SessionKey,
         pending_sends: PacketQueueSender,
         socket_port: u16,
-    ) -> Result<(Option<MetricsIpNetEntry>, PacketQueueSender), super::PipelineError> {
+    ) -> Result<(Option<MetricsIpNetEntry>, PacketQueueSender), PipelineError> {
         tracing::trace!(source=%key.source, dest=%key.dest, "reusing socket for session");
         let asn_info = {
             let mut storage = self.storage.write();
@@ -378,7 +379,7 @@ impl SessionPool {
         self: &Arc<Self>,
         key: SessionKey,
         packet: FrozenPoolBuffer,
-    ) -> Result<(), super::PipelineError> {
+    ) -> Result<(), PipelineError> {
         self.send_inner(key, packet)?;
         Ok(())
     }
@@ -388,7 +389,7 @@ impl SessionPool {
         self: &Arc<Self>,
         key: SessionKey,
         packet: FrozenPoolBuffer,
-    ) -> Result<PacketQueueSender, super::PipelineError> {
+    ) -> Result<PacketQueueSender, PipelineError> {
         let (asn_info, sender) = self.get(key)?;
 
         sender.push(SendPacket {
@@ -459,7 +460,7 @@ impl SessionPool {
 impl SessionManager for Arc<SessionPool> {
     type Packet = FrozenPoolBuffer;
 
-    fn send(&self, key: SessionKey, contents: &Self::Packet) -> Result<(), super::PipelineError> {
+    fn send(&self, key: SessionKey, contents: &Self::Packet) -> Result<(), PipelineError> {
         SessionPool::send(self, key, contents.clone())
     }
 }
