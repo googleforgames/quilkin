@@ -162,9 +162,7 @@ fn gameserver_events(
         kube::runtime::reflector::store::Writer::<DeserializeGuard<GameServer>>::default();
     let mut config = kube::runtime::watcher::Config::default()
         // Default timeout is 5 minutes, far too slow for us to react.
-        .timeout(15)
-        // Use `Any` as we care about speed more than consistency.
-        .any_semantic();
+        .timeout(15);
 
     // Retreive unbounded results.
     config.page_size = None;
