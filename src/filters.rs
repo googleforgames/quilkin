@@ -50,6 +50,7 @@ pub mod prelude {
 #[doc(inline)]
 pub use self::{
     capture::Capture,
+    chain::FilterChain,
     concatenate::Concatenate,
     debug::Debug,
     drop::Drop,
@@ -68,10 +69,10 @@ pub use self::{
     write::WriteContext,
 };
 
-pub use crate::test::TestFilter;
-
-pub use self::chain::FilterChain;
-pub use crate::components::proxy::packet_router::{Packet, PacketMut};
+pub use crate::{
+    net::packet::{PacketData, PacketData as Packet, PacketDataMut, PacketDataMut as PacketMut},
+    test::TestFilter,
+};
 
 #[enum_dispatch::enum_dispatch(Filter)]
 pub enum FilterKind {

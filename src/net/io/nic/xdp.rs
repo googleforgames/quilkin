@@ -7,6 +7,53 @@ use quilkin_xdp::xdp::{
 use std::sync::Arc;
 pub mod process;
 
+pub fn listen(
+    config: &Arc<Config>,
+    force_xdp: bool,
+    udp_port: u16,
+    qcmp_port: u16,
+    xdp: XdpOptions,
+) {
+    use eyre::{Context as _, ContextCompat as _};
+
+    // TODO: remove this once it's been more stabilized
+    if !force_xdp {
+        return Ok(None);
+    }
+
+    let filters = config
+        .dyn_cfg
+        .filters()
+        .context("XDP requires a filter chain")?
+        .clone();
+    let clusters = config
+        .dyn_cfg
+        .clusters()
+        .context("XDP requires a cluster map")?
+        .clone();
+
+    let config = crate::net::xdp::process::ConfigState { filters, clusters };
+
+    tracing::info!(udp_port, qcmp_port, "setting up xdp module");
+    let workers = xdp::setup_xdp_io(xdp::XdpConfig {
+        nic: xdp
+            .network_interface
+            .as_deref()
+            .map_or(xdp::NicConfig::Default, xdp::NicConfig::Name),
+        external_port: udp_port,
+        qcmp_port,
+        maximum_packet_memory: xdp.maximum_memory,
+        require_zero_copy: xdp.force_zerocopy,
+        require_tx_checksum: xdp.force_tx_checksum_offload,
+    })
+    .context("failed to setup XDP")?;
+
+    let io_loop = xdp::spawn(workers, config).context("failed to spawn XDP I/O loop")?;
+    Ok(Some(Box::new(move |srx: &crate::signal::ShutdownRx| {
+        io_loop.shutdown(*srx.borrow() == crate::signal::ShutdownKind::Normal);
+    })))
+}
+
 pub enum NicConfig<'n> {
     /// Specifies a NIC by name, setup will fail if a NIC with that name doesn't exist
     Name(&'n str),
