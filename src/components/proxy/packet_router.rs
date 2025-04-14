@@ -116,6 +116,20 @@ impl<P: PacketMut> DownstreamPacket<P> {
                 "no filters loaded",
             )));
         };
+
+        match self.source.ip() {
+            std::net::IpAddr::V4(ipv4) => {
+                if ipv4.is_loopback() || ipv4.is_multicast() || ipv4.is_broadcast() {
+                    return Err(PipelineError::DisallowedSourceIP(self.source.ip()));
+                }
+            }
+            std::net::IpAddr::V6(ipv6) => {
+                if ipv6.is_loopback() || ipv6.is_multicast() {
+                    return Err(PipelineError::DisallowedSourceIP(self.source.ip()));
+                }
+            }
+        }
+
         let mut context = ReadContext::new(&cm, self.source.into(), self.contents, destinations);
         filters.read(&mut context).map_err(PipelineError::Filter)?;
 
@@ -177,4 +191,57 @@ pub fn spawn_receivers(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use quilkin_xds::locality::Locality;
+
+    use crate::collections::BufferPool;
+    use crate::net::Endpoint;
+    use crate::test::alloc_buffer;
+
+    use super::*;
+    use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+    use std::net::{SocketAddrV4, SocketAddrV6};
+
+    // Ensure we disallow certain source IP addresses to protect against UDP amplification attacks
+    #[tokio::test]
+    async fn disallowed_ips() {
+        let nl1 = Locality::with_region("nl-1");
+        let endpoint = Endpoint::new((Ipv4Addr::LOCALHOST, 7777).into());
+
+        let config = Arc::new(Config::default_agent().cluster(
+            None,
+            Some(nl1.clone()),
+            [endpoint.clone()].into(),
+        ));
+        let buffer_pool = Arc::new(BufferPool::new(1, 10));
+        let session_manager = SessionPool::new(config.clone(), vec![], buffer_pool.clone());
+
+        let packet_data: [u8; 4] = [1, 2, 3, 4];
+        for ip in [
+            IpAddr::V4(Ipv4Addr::LOCALHOST),
+            IpAddr::V4(Ipv4Addr::BROADCAST),
+            // multicast = 224.0.0.0/4
+            IpAddr::V4(Ipv4Addr::new(224, 0, 0, 0)),
+            IpAddr::V4(Ipv4Addr::new(239, 255, 255, 255)),
+            IpAddr::V6(Ipv6Addr::LOCALHOST),
+            // multicast = any address starting with 0xff
+            IpAddr::V6(Ipv6Addr::new(0xff00, 0, 0, 0, 0, 0, 0, 0)),
+        ] {
+            let packet = DownstreamPacket {
+                contents: alloc_buffer(packet_data),
+                source: match ip {
+                    IpAddr::V4(ipv4) => SocketAddr::V4(SocketAddrV4::new(ipv4, 0)),
+                    IpAddr::V6(ipv6) => SocketAddr::V6(SocketAddrV6::new(ipv6, 0, 0, 0)),
+                },
+            };
+
+            let mut endpoints = vec![endpoint.address.clone()];
+            let res = packet.process_inner(&config, &session_manager, &mut endpoints);
+
+            assert_eq!(res, Err(PipelineError::DisallowedSourceIP(ip)));
+        }
+    }
 }
