@@ -280,9 +280,10 @@ mod tests {
 
         // Setup the relay
         let args = [
-            "relay",
-            "agones",
-            "--config-namespace",
+            "--service.xds",
+            "--service.mds",
+            "--provider.k8s",
+            "--provider.k8s.namespace",
             client.namespace.as_str(),
         ]
         .map(String::from)
@@ -355,6 +356,8 @@ mod tests {
         .await;
         if result.is_err() {
             debug_pods(client, "role=relay".into()).await;
+            debug_pods(client, "role=agent".into()).await;
+            debug_pods(client, "role=proxy".into()).await;
 
             panic!("Relay Deployment should be ready");
         }
@@ -367,15 +370,15 @@ mod tests {
 
             // agent deployment
             let args = [
-                "agent",
-                "--relay",
+                "--provider.mds.endpoints",
                 &format!("http://{relay_name}:7900"),
-                "--icao-code",
+                "--locality.icao",
                 &icao,
-                "agones",
-                "--config-namespace",
+                "--provider.k8s",
+                "--provider.k8s.namespace",
                 client.namespace.as_str(),
-                "--gameservers-namespace",
+                "--provider.k8s.agones",
+                "--provider.k8s.agones.namespace",
                 client.namespace.as_str(),
             ]
             .map(String::from)

@@ -95,7 +95,7 @@ clusters:
         let mount_name = "config".to_string();
         template.containers.push(quilkin_container(
             &client,
-            Some(vec!["proxy".into()]),
+            Some(vec!["--service.udp".into(), "--provider.fs".into()]),
             Some(mount_name.clone()),
             true,
         ));
@@ -112,10 +112,12 @@ clusters:
         let gs = gameservers.create(&pp, &gs).await.unwrap();
         let name = gs.name_unchecked();
         let ready = await_condition(gameservers.clone(), name.as_str(), is_gameserver_ready());
-        timeout(Duration::from_secs(30), ready)
-            .await
-            .expect("GameServer should be ready")
-            .unwrap();
+
+        if timeout(Duration::from_secs(30), ready).await.is_err() {
+            crate::debug_pods(&client, "role=gameserver".into()).await;
+            panic!("GameServer should be ready");
+        }
+
         let gs = gameservers.get(name.as_str()).await.unwrap();
 
         let t = TestHelper::default();

@@ -15,8 +15,8 @@ minimal effort.
 
 ## 2. Install Quilkin Agones xDS Provider
 
-To install Quilkin as an Agones integrated xDS control plane, we can create a deployment of Quilkin running as
-`quilkin manage agones`, with the appropriate permissions.
+To install Quilkin as an Agones integrated xDS control plane, we can create a deployment of Quilkin running with
+`provider.k8s.agones`, with the appropriate permissions.
 
 Run the following:
 

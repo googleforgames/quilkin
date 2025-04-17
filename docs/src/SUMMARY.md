@@ -31,7 +31,6 @@
 ---
 
 - [Control Plane](./services/xds.md)
-    - [Metrics](./services/xds/metrics.md)
     - [Providers]()
         - [Agones](./services/xds/providers/agones.md)
         - [Filesystem](./services/xds/providers/filesystem.md)

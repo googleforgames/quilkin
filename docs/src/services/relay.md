@@ -46,21 +46,20 @@ clusters:
 To start the relay, run the `relay` command:
 
 ```
-quilkin relay 
+quilkin --service.mds
 ```
 
 To spawn the control plane and have the control plane send its configuration,
-we need to run the `manage` command with the `--relay` flag with the address
+we need to run quilkin with the `provider.mds.endpoints` flag with the address
 of the relay of the relay server we just spawned which is at port `7900` by
-default. We're also going to set `--admin-address` and `--port` flags to avoid
-port collision with the relay's admin and xds endpoints.
+default. We're also going to set `admin.address` to a different port to not
+conflict.
 
 ```
-quilkin --admin-address http://localhost:8001 \
-    manage \
-    --port 7801 \
-    --relay http://localhost:7900 \
-    file quilkin.yaml
+quilkin \
+    --admin.address http://localhost:8001 \
+    --provider.fs.path quilkin.yaml \
+    --provider.mds.endpoints http://localhost:7900 \
 ```
 
 Now if we run cURL on both the relay and the control plane we should see that
@@ -75,12 +74,11 @@ curl localhost:8000/config
 
 Since the relay service also exposes a aDS control plane endpoint, that
 represents the merged set of all sources, to connect this to the proxy all we
-have to do is use the same `--management-server` flag that we use to specify
-the location of control planes, then the proxies will be able to pull
-configuration from the relay.
+have to do is use `provider.xds.endpoints` to specify the location of control
+planes, then the proxies will be able to pull configuration from the relay.
 
 ```
-quilkin --admin-address http://localhost:8002 proxy --management-server http://127.0.0.1:7800
+quilkin --service.udp --admin.address http://localhost:8002 --provider.xds.endpoints http://127.0.0.1:7800
 ```
 
 We can also additionally add a second control plane source to the relay, which
@@ -96,11 +94,10 @@ clusters:
 ```
 
 ```
-quilkin --admin-address http://localhost:8003 \
-    manage \
-    --port 7802 \
-    --relay http://localhost:7900 \
-    file quilkin.yaml
+quilkin \
+    --admin.address http://localhost:8003 \
+    --provider.fs.path quilkin2.yaml \
+    --provider.mds.endpoints http://localhost:7900 \
 ```
 
 And that's it! We've just setup control planes to look for configuration changes
