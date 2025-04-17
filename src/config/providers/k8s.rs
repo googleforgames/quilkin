@@ -171,6 +171,42 @@ fn gameserver_events(
     kube::runtime::reflector(gs_writer, gameserver_stream)
 }
 
+fn validate_gameserver(
+    result: DeserializeGuard<GameServer>,
+    ads: Option<&crate::config::AddressSelector>,
+) -> Option<crate::net::endpoint::Endpoint> {
+    match result.0 {
+        Ok(server) => {
+            if server.is_allocated() {
+                if let Some(ep) = server.endpoint(ads) {
+                    tracing::trace!(endpoint=%ep.address, metadata=serde_json::to_string(&ep.metadata).unwrap(), "applying server");
+                    metrics::k8s::gameservers_total_valid();
+                    Some(ep)
+                } else {
+                    tracing::warn!(
+                        server = serde_json::to_string(&server).unwrap(),
+                        "skipping invalid server"
+                    );
+                    metrics::k8s::gameservers_total_invalid();
+                    None
+                }
+            } else {
+                tracing::debug!(
+                    server = serde_json::to_string(&server).unwrap(),
+                    "skipping unallocated server"
+                );
+                metrics::k8s::gameservers_total_unallocated();
+                None
+            }
+        }
+        Err(error) => {
+            tracing::debug!(error=%error.error, metadata=serde_json::to_string(&error.metadata).unwrap(), "couldn't decode gameserver event");
+            metrics::k8s::errors_total(GAMESERVER, &error);
+            None
+        }
+    }
+}
+
 pub fn update_endpoints_from_gameservers(
     client: kube::Client,
     namespace: impl AsRef<str>,
@@ -185,55 +221,30 @@ pub fn update_endpoints_from_gameservers(
             let ads = address_selector.as_ref();
             match track_event(GAMESERVER, event?) {
                 Event::Apply(result) => {
-                    let server = match result.0 {
-                        Ok(server) => server,
-                        Err(error) => {
-                            tracing::debug!(%error, "couldn't decode gameserver event");
-                            metrics::k8s::errors_total(GAMESERVER, &error);
-                            continue;
-                        }
-                    };
-
-                    tracing::debug!("received applied event from k8s");
-                    if !server.is_allocated() {
-                        yield Ok(());
-                        metrics::k8s::gameservers_total_unallocated();
-                        tracing::debug!("skipping unallocated server");
-                        continue;
-                    }
-
-                    let Some(endpoint) = server.endpoint(ads) else {
-                        metrics::k8s::gameservers_total_invalid();
-                        tracing::warn!(selector=?ads, "received invalid gameserver to apply from k8s");
+                    let span = tracing::trace_span!("k8s::gameservers::apply");
+                    let _enter = span.enter();
+                    let Some(endpoint) = validate_gameserver(result, ads) else {
                         continue;
                     };
                     tracing::debug!(endpoint=%serde_json::to_value(&endpoint).unwrap(), "Adding endpoint");
                     metrics::k8s::gameservers_total_valid();
-                    clusters.write()
-                        .replace(None, locality.clone(), endpoint);
+                    clusters.write().replace(None, locality.clone(), endpoint);
                 }
                 Event::Init => {},
                 Event::InitApply(result) => {
-                    let server = match result.0 {
-                        Ok(server) => server,
-                        Err(error) => {
-                            tracing::debug!(%error, "couldn't decode gameserver event");
-                            continue;
-                        }
+                    let span = tracing::trace_span!("k8s::gameservers::init_apply");
+                    let _enter = span.enter();
+                    let Some(endpoint) = validate_gameserver(result, ads) else {
+                        continue;
                     };
 
-                    if server.is_allocated() {
-                        if let Some(ep) = server.endpoint(ads) {
-                            metrics::k8s::gameservers_total_valid();
-                            servers.insert(ep);
-                        } else {
-                            metrics::k8s::gameservers_total_invalid();
-                        }
-                    } else {
-                        metrics::k8s::gameservers_total_unallocated();
-                    }
+                    tracing::trace!(%endpoint.address, endpoint.metadata=serde_json::to_string(&endpoint.metadata).unwrap(), "applying server");
+                    metrics::k8s::gameservers_total_valid();
+                    servers.insert(endpoint);
                 }
                 Event::InitDone => {
+                    let span = tracing::trace_span!("k8s::gameservers::init_done");
+                    let _enter = span.enter();
                     tracing::debug!("received restart event from k8s");
 
                     tracing::trace!(
@@ -244,19 +255,22 @@ pub fn update_endpoints_from_gameservers(
                     clusters.write().insert(None, locality.clone(), std::mem::take(&mut servers));
                 }
                 Event::Delete(result) => {
+                    let span = tracing::trace_span!("k8s::gameservers::delete");
+                    let _enter = span.enter();
                     let server = match result.0 {
                         Ok(server) => server,
                         Err(error) => {
                             metrics::k8s::errors_total(GAMESERVER, &error);
-                            tracing::debug!(%error, "couldn't decode gameserver event");
+                            tracing::debug!(%error, metadata=serde_json::to_string(&error.metadata).unwrap(), "couldn't decode gameserver event");
                             continue;
                         }
                     };
 
-                    tracing::debug!("received delete event from k8s");
                     let found = if let Some(endpoint) = server.endpoint(ads) {
+                        tracing::debug!(%endpoint.address, endpoint.metadata=serde_json::to_string(&endpoint.metadata).unwrap(), "deleting by endpoint");
                         clusters.write().remove_endpoint(&endpoint)
                     } else {
+                        tracing::debug!(server.metadata.name=%server.metadata.name.clone().unwrap_or_default(), "deleting by server name");
                         clusters.write().remove_endpoint_if(|endpoint| {
                             endpoint.metadata.unknown.get("name") == server.metadata.name.clone().map(From::from).as_ref()
                         })
@@ -266,8 +280,14 @@ pub fn update_endpoints_from_gameservers(
                     if !found {
                         tracing::debug!(
                             endpoint=%serde_json::to_value(server.endpoint(ads)).unwrap(),
-                            name=%serde_json::to_value(server.metadata.name).unwrap(),
+                            server.metadata.name=%serde_json::to_value(server.metadata.name).unwrap(),
                             "received unknown gameserver to delete from k8s"
+                        );
+                    } else {
+                        tracing::debug!(
+                            endpoint=%serde_json::to_value(server.endpoint(ads)).unwrap(),
+                            server.metadata.name=%serde_json::to_value(server.metadata.name).unwrap(),
+                            "deleted gameserver"
                         );
                     }
                 }
