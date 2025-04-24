@@ -268,31 +268,54 @@ impl MdsClient {
                             control_plane.config.on_changed(this)
                         });
 
-                        let mut stream = control_plane.delta_aggregated_resources(stream).await?;
-                        is_healthy.store(true, Ordering::SeqCst);
+                        match control_plane.delta_aggregated_resources(stream).await {
+                            Ok(mut stream) => {
+                                is_healthy.store(true, Ordering::SeqCst);
 
-                        loop {
-                            if config.is_leader() == Some(false) {
-                                tracing::warn!("lost leader lock mid-stream, disconnecting");
-                                break;
+                                loop {
+                                    if config.is_leader() == Some(false) {
+                                        tracing::warn!("lost leader lock mid-stream, disconnecting");
+                                        break;
+                                    }
+
+                                    const TIMEOUT_INTERVAL: Duration = Duration::from_secs(30);
+                                    match tokio::time::timeout(TIMEOUT_INTERVAL, stream.next()).await {
+                                        Ok(Some(Ok(response))) => match ds.send_response(response).await {
+                                            Ok(_) => {
+                                                tracing::trace!("ACK successfully sent");
+                                            }
+                                            Err(error) => {
+                                                tracing::warn!(%error, "error sending ACK");
+                                                break;
+                                            }
+                                        }
+                                        Ok(Some(Err(error))) => {
+                                            tracing::warn!(%error, "error receiving delta response");
+                                            break;
+                                        }
+                                        Ok(None) => {
+                                            tracing::debug!("delta stream terminated by client");
+                                            break;
+                                        }
+                                        Err(error) => {
+                                            tracing::trace!(duration=TIMEOUT_INTERVAL.as_secs_f64(), %error, "no requests received");
+                                            continue;
+                                        }
+                                    }
+                                }
+
+                                change_watcher.abort();
+                                let _unused = change_watcher.await;
+                            },
+                            Err(error) => {
+                                tracing::warn!(%error, error_debug=?error, "failed to acquire internal delta stream from config");
                             }
-
-                            let Some(result) = stream.next().await else {
-                                break;
-                            };
-
-                            let response = result?;
-                            tracing::trace!("received delta discovery response");
-                            ds.send_response(response).await?;
                         }
-
-                        change_watcher.abort();
-                        let _unused = change_watcher.await;
                     }
 
                     is_healthy.store(false, Ordering::SeqCst);
 
-                    //tracing::warn!("lost connection to relay server, retrying");
+                    tracing::debug!("lost connection to relay server, retrying");
                     let new_client = MdsClient::connect_with_backoff(&self.management_servers)
                         .await
                         .unwrap()
