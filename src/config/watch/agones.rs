@@ -66,6 +66,10 @@ pub async fn watch(
         let result = tokio::select! {
             result = configmap_reflector.try_next() => result,
             result = gameserver_reflector.try_next() => result,
+            _ = tokio::time::sleep(crate::config::providers::NO_UPDATE_INTERVAL) => {
+                tracing::trace!(duration_secs=crate::config::providers::NO_UPDATE_INTERVAL.as_secs_f64(), "no updates from gameservers or configmap");
+                Ok(Some(()))
+            }
         };
 
         match result

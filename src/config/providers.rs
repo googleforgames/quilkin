@@ -23,6 +23,7 @@ pub mod k8s;
 const RETRIES: u32 = 25;
 const BACKOFF_STEP: std::time::Duration = std::time::Duration::from_millis(250);
 const MAX_DELAY: std::time::Duration = std::time::Duration::from_secs(2);
+pub(crate) const NO_UPDATE_INTERVAL: std::time::Duration = std::time::Duration::from_secs(30);
 
 /// The available xDS source providers.
 #[derive(Clone, Debug, clap::Subcommand)]
