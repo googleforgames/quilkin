@@ -434,7 +434,7 @@ async fn multiple_servers() {
         endpoints(
             servers
                 .iter()
-                .map(|a| (a.clone(), &tok[..]))
+                .map(|a| (*a, &tok[..]))
                 .collect::<Vec<_>>()
                 .as_slice(),
         ),
