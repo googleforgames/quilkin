@@ -853,4 +853,33 @@ mod tests {
         cluster.insert(Some(nl02.into()), Some(nl1.clone()), not_expected.clone());
         assert_eq!(cluster.get(&Some(nl1)).unwrap().endpoints, not_expected);
     }
+
+    #[test]
+    fn remove_avoids_deadlocks() {
+        let endpoints: std::collections::BTreeSet<_> = [
+            Endpoint::new((Ipv4Addr::new(1, 2, 3, 4), 1234).into()),
+            Endpoint::new((Ipv6Addr::new(1, 2, 3, 4, 5, 6, 7, 8), 1234).into()),
+            Endpoint::new((Ipv4Addr::new(4, 3, 2, 1), 1234).into()),
+        ]
+        .into();
+
+        let cluster = ClusterMap::new();
+        {
+            cluster.insert(None, None, endpoints.clone());
+            for ep in &endpoints {
+                assert!(cluster.remove_endpoint(ep));
+            }
+
+            assert!(cluster.get(&None).is_none());
+        }
+
+        {
+            cluster.insert(None, None, endpoints.clone());
+            for _ in 0..endpoints.len() {
+                assert!(cluster.remove_endpoint_if(|_ep| true));
+            }
+
+            assert!(cluster.get(&None).is_none());
+        }
+    }
 }
