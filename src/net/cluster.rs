@@ -271,7 +271,6 @@ pub struct ClusterMap<S = gxhash::GxBuildHasher> {
 }
 
 type DashMapRef<'inner> = dashmap::mapref::one::Ref<'inner, Option<Locality>, EndpointSet>;
-type DashMapRefMut<'inner> = dashmap::mapref::one::RefMut<'inner, Option<Locality>, EndpointSet>;
 
 impl ClusterMap {
     pub fn new() -> Self {
@@ -374,20 +373,9 @@ where
         self.map.is_empty()
     }
 
+    #[inline]
     pub fn get(&self, key: &Option<Locality>) -> Option<DashMapRef<'_>> {
         self.map.get(key)
-    }
-
-    pub fn get_mut(&self, key: &Option<Locality>) -> Option<DashMapRefMut<'_>> {
-        self.map.get_mut(key)
-    }
-
-    pub fn get_default(&self) -> Option<DashMapRef<'_>> {
-        self.get(&None)
-    }
-
-    pub fn get_default_mut(&self) -> Option<DashMapRefMut<'_>> {
-        self.get_mut(&None)
     }
 
     #[inline]
