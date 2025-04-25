@@ -325,9 +325,9 @@ where
                     "skipping cluster apply, '{locality:?}' is managed by '{raddr:?}', not '{remote_addr:?}'"
                 );
             }
+        } else {
+            self.localities.insert(locality.clone(), remote_addr);
         }
-
-        self.localities.insert(locality.clone(), remote_addr);
 
         let new_len = cluster.len();
         if let Some(mut current) = self.map.get_mut(&locality) {
@@ -397,67 +397,61 @@ where
 
     #[inline]
     pub fn remove_endpoint(&self, needle: &Endpoint) -> bool {
-        for mut entry in self.map.iter_mut() {
-            let set = entry.value_mut();
+        let locality = 'l: {
+            for mut entry in self.map.iter_mut() {
+                let set = entry.value_mut();
 
-            if set.endpoints.remove(needle) {
-                set.update();
-                self.num_endpoints.fetch_sub(1, Relaxed);
-                self.version.fetch_add(1, Relaxed);
-
-                if set.is_empty() {
-                    let raddr = self.localities.get(entry.key());
-                    let raddr = raddr.and_then(|r| *r);
-                    self.remove_locality(raddr, entry.key());
-                }
-
-                return true;
-            }
-        }
-
-        false
-    }
-
-    #[inline]
-    pub fn remove_endpoint_if(&self, closure: impl Fn(&Endpoint) -> bool) -> bool {
-        for mut entry in self.map.iter_mut() {
-            let set = entry.value_mut();
-            if let Some(endpoint) = set
-                .endpoints
-                .iter()
-                .find(|endpoint| (closure)(endpoint))
-                .cloned()
-            {
-                // This will always be true, but....
-                let removed = set.endpoints.remove(&endpoint);
-                if removed {
+                if set.endpoints.remove(needle) {
                     set.update();
                     self.num_endpoints.fetch_sub(1, Relaxed);
                     self.version.fetch_add(1, Relaxed);
 
                     if set.is_empty() {
-                        let raddr = self.localities.get(entry.key());
-                        let raddr = raddr.and_then(|r| *r);
-                        self.remove_locality(raddr, entry.key());
+                        break 'l entry.key().clone();
                     }
-                }
-                return removed;
-            }
-        }
 
-        false
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        self.do_remove_locality(&locality);
+        true
+    }
+
+    #[inline]
+    pub fn remove_endpoint_if(&self, closure: impl Fn(&Endpoint) -> bool) -> bool {
+        let locality = 'l: {
+            for mut entry in self.map.iter_mut() {
+                let set = entry.value_mut();
+                if let Some(endpoint) = set
+                    .endpoints
+                    .iter()
+                    .find(|endpoint| (closure)(endpoint))
+                    .cloned()
+                {
+                    set.endpoints.remove(&endpoint);
+                    set.update();
+                    self.num_endpoints.fetch_sub(1, Relaxed);
+                    self.version.fetch_add(1, Relaxed);
+
+                    if set.is_empty() {
+                        break 'l entry.key().clone();
+                    }
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        self.do_remove_locality(&locality);
+        true
     }
 
     #[inline]
     pub fn iter(&self) -> dashmap::iter::Iter<'_, Option<Locality>, EndpointSet, S> {
         self.map.iter()
-    }
-
-    pub fn entry(
-        &self,
-        key: Option<Locality>,
-    ) -> dashmap::mapref::entry::Entry<'_, Option<Locality>, EndpointSet> {
-        self.map.entry(key)
     }
 
     #[inline]
@@ -561,26 +555,33 @@ where
     }
 
     #[inline]
-    pub fn remove_locality(
-        &self,
-        remote_addr: Option<std::net::IpAddr>,
-        locality: &Option<Locality>,
-    ) -> Option<EndpointSet> {
-        if let Some(raddr) = self.localities.get(locality) {
-            if *raddr != remote_addr {
-                tracing::trace!("skipping locality removal");
-                return None;
-            }
-        }
-
+    fn do_remove_locality(&self, locality: &Option<Locality>) -> Option<EndpointSet> {
         self.localities.remove(locality);
+
         let ret = self.map.remove(locality).map(|(_k, v)| v);
         if let Some(ret) = &ret {
             self.version.fetch_add(1, Relaxed);
             self.num_endpoints.fetch_sub(ret.len(), Relaxed);
         }
-
         ret
+    }
+
+    #[inline]
+    pub fn remove_locality(
+        &self,
+        remote_addr: Option<std::net::IpAddr>,
+        locality: &Option<Locality>,
+    ) -> Option<EndpointSet> {
+        {
+            if let Some(raddr) = self.localities.get(locality) {
+                if *raddr != remote_addr {
+                    tracing::trace!("skipping locality removal");
+                    return None;
+                }
+            }
+        }
+
+        self.do_remove_locality(locality)
     }
 
     pub fn addresses_for_token(&self, token: Token, addrs: &mut Vec<EndpointAddress>) {
