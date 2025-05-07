@@ -22,7 +22,7 @@ endpoint configuration to specify two endpoints with `token` metadata attached t
 {{#include ../../../../examples/proxy.yaml:17:100}}
 ```
 
-This is a great use of a static configuration file, as we only get a singular `--to` endpoint address via the
+This is a great use of a static configuration file, as we only get a singular `--provider.static.endpoints` endpoint address via the
 command line arguments.
 
 We can also configure [Filters](./filters.md) via the configuration file. See that section for documentation.

@@ -25,7 +25,7 @@ Next let's configure Quilkin in proxy mode, with a static configuration that poi
 UDP echo service we just started.
 
 ```shell
-quilkin proxy --to 127.0.0.1:8080
+quilkin --service.udp --provider.static.endpoints 127.0.0.1:8080
 ```
 
 This configuration will start Quilkin on the [default proxy port](../../services/proxy.md), and it will

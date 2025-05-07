@@ -140,7 +140,7 @@ pub struct Providers {
         env = "QUILKIN_PROVIDERS_STATIC_ENDPOINTS"
     )]
     endpoints: Vec<SocketAddr>,
-    /// Assigns dynamic tokens to each address in the `--to` argument
+    /// Assigns dynamic tokens to each address in the `provider.static.endpoints` argument
     ///
     /// Format is `<number of unique tokens>:<length of token suffix for each packet>`
     #[clap(
@@ -247,7 +247,7 @@ impl Providers {
             .as_ref()
             .map(|tt| {
                 let Some((count, length)) = tt.split_once(':') else {
-                    eyre::bail!("--to-tokens `{tt}` is invalid, it must have a `:` separator")
+                    eyre::bail!("provider.static.endpoint_tokens: `{tt}` is invalid, it must have a `:` separator")
                 };
 
                 let count: usize = count.parse()?;
