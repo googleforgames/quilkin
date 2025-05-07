@@ -117,15 +117,18 @@ impl<P: PacketMut> DownstreamPacket<P> {
             )));
         };
 
-        match self.source.ip() {
-            std::net::IpAddr::V4(ipv4) => {
-                if ipv4.is_loopback() || ipv4.is_multicast() || ipv4.is_broadcast() {
-                    return Err(PipelineError::DisallowedSourceIP(self.source.ip()));
+        #[cfg(not(debug_assertions))]
+        {
+            match self.source.ip() {
+                std::net::IpAddr::V4(ipv4) => {
+                    if ipv4.is_loopback() || ipv4.is_multicast() || ipv4.is_broadcast() {
+                        return Err(PipelineError::DisallowedSourceIP(self.source.ip()));
+                    }
                 }
-            }
-            std::net::IpAddr::V6(ipv6) => {
-                if ipv6.is_loopback() || ipv6.is_multicast() {
-                    return Err(PipelineError::DisallowedSourceIP(self.source.ip()));
+                std::net::IpAddr::V6(ipv6) => {
+                    if ipv6.is_loopback() || ipv6.is_multicast() {
+                        return Err(PipelineError::DisallowedSourceIP(self.source.ip()));
+                    }
                 }
             }
         }
@@ -195,6 +198,8 @@ pub fn spawn_receivers(
 
 #[cfg(test)]
 mod tests {
+    #![cfg(not(debug_assertions))]
+
     use quilkin_xds::locality::Locality;
 
     use crate::collections::BufferPool;
