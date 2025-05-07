@@ -198,6 +198,8 @@ pub fn spawn_receivers(
 
 #[cfg(test)]
 mod tests {
+    #![cfg(not(debug_assertions))]
+
     use quilkin_xds::locality::Locality;
 
     use crate::collections::BufferPool;
