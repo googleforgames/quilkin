@@ -83,6 +83,9 @@ impl Config {
                     });
                     self.apply_metrics();
                 }
+                // Updating the version doesn't make sense at runtime, but we don't
+                // want to to trace out
+                "version" => {}
                 field => {
                     tracing::debug!(field, "unable to replace invalid field");
                 }
