@@ -2795,6 +2795,7 @@ dependencies = [
  "insta",
  "once_cell",
  "quilkin",
+ "quilkin-xds",
  "rand 0.9.0",
  "serde_json",
  "socket2",

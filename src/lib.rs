@@ -18,7 +18,7 @@
 
 pub mod alloc;
 pub mod collections;
-pub(crate) mod metrics;
+pub mod metrics;
 pub mod signal;
 pub mod time;
 

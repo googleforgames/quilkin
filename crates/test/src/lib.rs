@@ -568,6 +568,8 @@ macro_rules! sandbox_config {
 
 impl SandboxConfig {
     pub fn new(name: impl Into<String>) -> Self {
+        quilkin_xds::metrics::set_registry(quilkin::metrics::registry());
+
         Self {
             name: name.into(),
             pails: Vec::new(),
