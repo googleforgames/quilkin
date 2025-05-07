@@ -1,4 +1,4 @@
-use quilkin::net::xdp::process;
+use quilkin::net::io::nic::xdp::process;
 use xdp::{Packet, packet::net_types::UdpHeaders};
 
 #[inline]

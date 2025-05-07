@@ -228,6 +228,11 @@ impl Providers {
         self
     }
 
+    pub fn xds_endpoints(mut self, ns: Vec<tonic::transport::Endpoint>) -> Self {
+        self.xds_endpoints = ns;
+        self
+    }
+
     fn static_enabled(&self) -> bool {
         !self.endpoints.is_empty()
     }

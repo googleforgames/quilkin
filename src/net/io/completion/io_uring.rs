@@ -158,7 +158,7 @@ impl EventFd {
 }
 
 #[derive(Clone)]
-pub(crate) struct EventFdWriter {
+pub struct EventFdWriter {
     fd: i32,
 }
 

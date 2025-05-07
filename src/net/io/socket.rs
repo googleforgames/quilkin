@@ -9,6 +9,10 @@ use super::{completion, poll};
 pub struct SystemSocket(socket2::Socket);
 
 impl SystemSocket {
+    pub fn new(socket: socket2::Socket) -> Self {
+        Self(socket)
+    }
+
     #[track_caller]
     pub fn listen() -> std::io::Result<Self> {
         Self::from_port(0)
@@ -168,6 +172,7 @@ impl Socket {
     }
 }
 
+#[cfg(unix)]
 impl std::os::fd::AsRawFd for Socket {
     fn as_raw_fd(&self) -> i32 {
         match &self.socket {

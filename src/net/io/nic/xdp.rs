@@ -7,10 +7,14 @@ use std::{
     sync::Arc,
 };
 
-use quilkin_xdp::xdp::{
-    self,
+use self::{packet::net_types::NetworkU16, slab::Slab};
+
+pub use quilkin_xdp::xdp::{
     nic::{NetdevCapabilities, NicIndex, NicName},
+    packet, slab,
 };
+
+use quilkin_xdp::xdp;
 
 pub fn is_available(xdp: &crate::cli::XdpOptions) -> bool {
     let config = XdpConfig {
@@ -487,7 +491,6 @@ pub fn spawn(workers: XdpWorkers, config: process::ConfigState) -> Result<XdpLoo
 }
 
 const BATCH_SIZE: usize = 64;
-use xdp::packet::net_types::NetworkU16;
 
 use crate::time::UtcTimestamp;
 
@@ -530,8 +533,6 @@ fn io_loop(
         local_ipv6,
         last_receive: UtcTimestamp::now(),
     };
-
-    use xdp::slab::Slab;
 
     let mut rx_slab = xdp::slab::StackSlab::<BATCH_SIZE>::new();
     let mut tx_slab = xdp::slab::StackSlab::<{ BATCH_SIZE << 2 }>::new();

@@ -121,7 +121,7 @@ impl SessionPool {
     /// Constructs a new session pool, it's created with an `Arc` as that's
     /// required for the pool to provide a reference to the children to be able
     /// to release their sockets back to the parent.
-    pub(crate) fn new(
+    pub fn new(
         config: Arc<Config>,
         downstream_sends: Vec<PacketQueueSender>,
         buffer_pool: Arc<BufferPool>,

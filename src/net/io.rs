@@ -19,9 +19,9 @@ use std::sync::Arc;
 use super::sessions::SessionPool;
 use crate::Config;
 
-pub(crate) mod completion;
-pub(crate) mod nic;
-pub(crate) mod poll;
+pub mod completion;
+pub mod nic;
+pub mod poll;
 pub(crate) mod socket;
 
 pub use socket::{Socket, SystemSocket};
@@ -51,7 +51,31 @@ pub fn listen(
     tracing::debug!("querying network capabilities");
     let backend = Backend::query(&xdp);
     tracing::info!(%backend, "network I/O interface chosen");
+    listen_to_backend(
+        config,
+        udp_port,
+        qcmp_port,
+        workers,
+        xdp,
+        shutdown_rx,
+        backend,
+    )
+}
 
+#[allow(clippy::type_complexity)]
+pub fn listen_to_backend(
+    config: &Arc<Config>,
+    udp_port: Option<u16>,
+    qcmp_port: Option<u16>,
+    workers: usize,
+    xdp: crate::cli::XdpOptions,
+    shutdown_rx: &crate::signal::ShutdownRx,
+    backend: Backend,
+) -> crate::Result<(
+    impl Future<Output = crate::Result<()>> + use<>,
+    Option<crate::cli::Finalizer>,
+    Option<Arc<crate::net::sessions::SessionPool>>,
+)> {
     match backend {
         Backend::NetworkInterface => {
             let finalizer = nic::listen(
@@ -128,7 +152,7 @@ pub struct Listener {
 /// The underlying I/O listener responsible for actually sending and receiving
 /// packets.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Backend {
+pub enum Backend {
     /// Polling based driven backend (e.g. `epoll`)
     Polling,
     /// Async "completion" based driven backend (e.g. `io-uring`)
@@ -182,13 +206,13 @@ impl std::fmt::Display for Backend {
 
 #[derive(Clone)]
 #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
-pub(crate) enum Notifier {
+pub enum Notifier {
     Completion(completion::Notifier),
     Polling(poll::Notifier),
 }
 
 impl Notifier {
-    pub(crate) fn notify(&self) {
+    pub fn notify(&self) {
         match self {
             Self::Completion(notify) => {
                 notify.notify();
@@ -201,7 +225,7 @@ impl Notifier {
 }
 
 #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
-pub(crate) enum Receiver {
+pub enum Receiver {
     Polling(poll::Receiver),
     Completion(completion::Receiver),
 }

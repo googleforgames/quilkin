@@ -1,11 +1,8 @@
 use std::sync::Arc;
 
-pub(crate) type PacketQueue = (PacketQueueSender, crate::net::io::Receiver);
+pub type PacketQueue = (PacketQueueSender, crate::net::io::Receiver);
 
-pub(crate) fn queue(
-    capacity: usize,
-    backend: crate::net::io::Backend,
-) -> std::io::Result<PacketQueue> {
+pub fn queue(capacity: usize, backend: crate::net::io::Backend) -> std::io::Result<PacketQueue> {
     let (notify, rx) = backend.queue()?;
 
     Ok((

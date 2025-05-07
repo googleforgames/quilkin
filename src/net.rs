@@ -59,7 +59,7 @@ pub mod phoenix;
 
 pub(crate) mod error;
 pub(crate) mod maxmind_db;
-pub(crate) mod sessions;
+pub mod sessions;
 
 pub use quilkin_xds as xds;
 pub use xds::net::TcpListener;

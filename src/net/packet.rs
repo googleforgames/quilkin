@@ -12,7 +12,7 @@ use super::{
     sessions::{SessionKey, SessionManager},
 };
 
-pub(crate) use queue::{PacketQueue, PacketQueueSender, SendPacket, queue};
+pub use queue::{PacketQueue, PacketQueueSender, SendPacket, queue};
 
 /// Representation of an immutable set of bytes pulled from the network, this trait
 /// provides an abstraction over however the packet was received (epoll, io-uring, xdp)
