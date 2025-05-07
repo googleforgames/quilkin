@@ -1,3 +1,7 @@
+// these tests rely on actual socket I/O, but since they are local only they trigger
+// the disallowed IP error
+#![cfg(debug_assertions)]
+
 use qt::*;
 use quilkin::{components::proxy, net, test::TestConfig};
 
