@@ -127,7 +127,8 @@ pub mod aggregated_control_plane_discovery_service_client {
             ));
             self.inner.streaming(req, path, codec).await
         }
-        /// Delta (Incremental) xDS implementation
+        /// Delta (Incremental) xDS implementation, used by agents and/or management
+        /// servers to update the relay with their configuration
         pub async fn delta_aggregated_resources(
             &mut self,
             request: impl tonic::IntoStreamingRequest<
@@ -155,6 +156,37 @@ pub mod aggregated_control_plane_discovery_service_client {
             req.extensions_mut().insert(GrpcMethod::new(
                 "quilkin.relay.v1alpha1.AggregatedControlPlaneDiscoveryService",
                 "DeltaAggregatedResources",
+            ));
+            self.inner.streaming(req, path, codec).await
+        }
+        /// Used by proxies to subscribe to changes from the relay
+        pub async fn subscribe_delta_resources(
+            &mut self,
+            request: impl tonic::IntoStreamingRequest<
+                Message = super::super::super::super::envoy::service::discovery::v3::DeltaDiscoveryRequest,
+            >,
+        ) -> std::result::Result<
+            tonic::Response<
+                tonic::codec::Streaming<
+                    super::super::super::super::envoy::service::discovery::v3::DeltaDiscoveryResponse,
+                >,
+            >,
+            tonic::Status,
+        >{
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::new(
+                    tonic::Code::Unknown,
+                    format!("Service was not ready: {}", e.into()),
+                )
+            })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/quilkin.relay.v1alpha1.AggregatedControlPlaneDiscoveryService/SubscribeDeltaResources",
+            );
+            let mut req = request.into_streaming_request();
+            req.extensions_mut().insert(GrpcMethod::new(
+                "quilkin.relay.v1alpha1.AggregatedControlPlaneDiscoveryService",
+                "SubscribeDeltaResources",
             ));
             self.inner.streaming(req, path, codec).await
         }
@@ -197,7 +229,8 @@ pub mod aggregated_control_plane_discovery_service_server {
             >
             + Send
             + 'static;
-        /// Delta (Incremental) xDS implementation
+        /// Delta (Incremental) xDS implementation, used by agents and/or management
+        /// servers to update the relay with their configuration
         async fn delta_aggregated_resources(
             &self,
             request: tonic::Request<
@@ -206,6 +239,24 @@ pub mod aggregated_control_plane_discovery_service_server {
                 >,
             >,
         ) -> std::result::Result<tonic::Response<Self::DeltaAggregatedResourcesStream>, tonic::Status>;
+        /// Server streaming response type for the SubscribeDeltaResources method.
+        type SubscribeDeltaResourcesStream: tonic::codegen::tokio_stream::Stream<
+                Item = std::result::Result<
+                    super::super::super::super::envoy::service::discovery::v3::DeltaDiscoveryResponse,
+                    tonic::Status,
+                >,
+            >
+            + Send
+            + 'static;
+        /// Used by proxies to subscribe to changes from the relay
+        async fn subscribe_delta_resources(
+            &self,
+            request: tonic::Request<
+                tonic::Streaming<
+                    super::super::super::super::envoy::service::discovery::v3::DeltaDiscoveryRequest,
+                >,
+            >,
+        ) -> std::result::Result<tonic::Response<Self::SubscribeDeltaResourcesStream>, tonic::Status>;
     }
     /// The Manager Discovery Service provides an RPC for a management
     /// service to upstream its configuration to a relay service.
@@ -399,6 +450,65 @@ pub mod aggregated_control_plane_discovery_service_server {
                     let fut = async move {
                         let inner = inner.0;
                         let method = DeltaAggregatedResourcesSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.streaming(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/quilkin.relay.v1alpha1.AggregatedControlPlaneDiscoveryService/SubscribeDeltaResources" =>
+                {
+                    #[allow(non_camel_case_types)]
+                    struct SubscribeDeltaResourcesSvc<T: AggregatedControlPlaneDiscoveryService>(
+                        pub Arc<T>,
+                    );
+                    impl<
+                        T: AggregatedControlPlaneDiscoveryService,
+                    > tonic::server::StreamingService<
+                        super::super::super::super::envoy::service::discovery::v3::DeltaDiscoveryRequest,
+                    > for SubscribeDeltaResourcesSvc<T> {
+                        type Response = super::super::super::super::envoy::service::discovery::v3::DeltaDiscoveryResponse;
+                        type ResponseStream = T::SubscribeDeltaResourcesStream;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::ResponseStream>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<
+                                tonic::Streaming<
+                                    super::super::super::super::envoy::service::discovery::v3::DeltaDiscoveryRequest,
+                                >,
+                            >,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as AggregatedControlPlaneDiscoveryService>::subscribe_delta_resources(
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = SubscribeDeltaResourcesSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(

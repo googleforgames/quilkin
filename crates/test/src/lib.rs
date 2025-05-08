@@ -379,11 +379,11 @@ impl Pail {
                     .dependencies
                     .iter()
                     .filter_map(|dname| {
-                        let Pail::Relay(RelayPail { mds_port, .. }) = &pails[dname] else {
+                        let Pail::Relay(RelayPail { xds_port, .. }) = &pails[dname] else {
                             return None;
                         };
                         Some(
-                            format!("http://localhost:{mds_port}")
+                            format!("http://localhost:{xds_port}")
                                 .parse()
                                 .expect("failed to parse endpoint"),
                         )

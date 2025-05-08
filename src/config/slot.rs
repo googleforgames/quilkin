@@ -25,8 +25,7 @@ use crate::filters::prelude::*;
 #[derive(Clone)]
 pub struct Slot<T> {
     inner: Arc<ArcSwapOption<T>>,
-    #[allow(clippy::type_complexity)]
-    watcher: Arc<ArcSwapOption<Box<dyn Fn(&T) + Send + Sync>>>,
+    watcher: tokio::sync::broadcast::Sender<()>,
 }
 
 impl<T> Slot<T> {
@@ -34,7 +33,7 @@ impl<T> Slot<T> {
     pub fn new(value: impl Into<Option<T>>) -> Self {
         Self {
             inner: Arc::new(ArcSwapOption::new(value.into().map(Arc::new))),
-            watcher: <_>::default(),
+            watcher: tokio::sync::broadcast::channel(1).0,
         }
     }
 
@@ -45,13 +44,9 @@ impl<T> Slot<T> {
 
     /// Adds a watcher to to the slot. The watcher will fire whenever slot's
     /// value changes.
-    pub fn watch(&self, watcher: impl Fn(&T) + Send + Sync + 'static) {
-        if self.watcher.load().is_some() {
-            panic!("watcher is already set for this slot");
-        }
-
+    pub fn watch(&self) -> tokio::sync::broadcast::Receiver<()> {
         tracing::trace!("Adding new watcher");
-        self.watcher.store(Some(Arc::new(Box::new(watcher))));
+        self.watcher.subscribe()
     }
 
     /// Returns whether any data is present in the slot.
@@ -68,9 +63,9 @@ impl<T: Default> Slot<T> {
 
     /// Triggers the `watcher` function, if present.
     fn call_watcher(&self) {
-        if let Some(watcher) = &*self.watcher.load() {
+        if self.watcher.receiver_count() > 0 {
             tracing::trace!("calling watcher");
-            (watcher)(&self.load());
+            let _ = self.watcher.send(());
         }
     }
 
@@ -133,7 +128,7 @@ impl<T: Default> Default for Slot<T> {
     fn default() -> Self {
         Self {
             inner: Arc::new(ArcSwapOption::new(Some(Default::default()))),
-            watcher: <_>::default(),
+            watcher: tokio::sync::broadcast::channel(1).0,
         }
     }
 }
@@ -219,11 +214,13 @@ mod tests {
 
         let slot = Slot::new(false);
 
-        slot.watch(|_| {
-            BOOLEAN.store(true, std::sync::atomic::Ordering::SeqCst);
-        });
+        let mut rx = slot.watch();
 
         slot.store(Arc::new(true));
+
+        if let Ok(()) = rx.try_recv() {
+            BOOLEAN.store(true, std::sync::atomic::Ordering::SeqCst);
+        }
 
         assert_eq!(
             BOOLEAN.load(std::sync::atomic::Ordering::SeqCst),
