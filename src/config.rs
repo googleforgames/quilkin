@@ -457,72 +457,64 @@ impl quilkin_xds::config::Configuration for Config {
         &self,
         control_plane: quilkin_xds::server::ControlPlane<Self>,
     ) -> impl std::future::Future<Output = ()> + Send + 'static {
-        if let Some(fc) = control_plane
-            .config
-            .dyn_cfg
-            .typemap
-            .get::<FilterChain>()
-            .filter(|_| control_plane.is_relay)
-        {
-            fc.watch({
-                let this = control_plane.clone();
-                move |_| {
-                    this.push_update(xds::FILTER_CHAIN_TYPE);
-                }
-            });
-        }
-
         tracing::trace!("waiting for changes");
 
         async move {
             let clusters = control_plane.config.dyn_cfg.clusters();
             let datacenters = control_plane.config.dyn_cfg.datacenters();
 
-            match (clusters, datacenters) {
-                (Some(clusters), Some(dc)) => {
-                    let mut cw = clusters.watch();
-                    let mut dcw = dc.watch();
-                    loop {
-                        tokio::select! {
-                            result = cw.changed() => {
-                                match result {
-                                    Ok(()) => control_plane.push_update(xds::CLUSTER_TYPE),
-                                    Err(error) => tracing::error!(%error, "error watching changes"),
-                                }
-                            }
-                            result = dcw.changed() => {
-                                match result {
-                                    Ok(()) => control_plane.push_update(xds::DATACENTER_TYPE),
-                                    Err(error) => tracing::error!(%error, "error watching changes"),
-                                }
-                            }
-                        }
-                    }
-                }
-                (Some(clusters), None) => {
-                    let mut cw = clusters.watch();
+            let filters = control_plane
+                .config
+                .dyn_cfg
+                .typemap
+                .get::<FilterChain>()
+                .and_then(|s| (control_plane.is_relay).then(|| s.watch()));
 
+            let indefinite = clusters.is_none() && datacenters.is_none() && filters.is_none();
+            let mut ls = tokio::task::JoinSet::new();
+
+            if let Some(clusters) = clusters {
+                let mut cw = clusters.watch();
+                let cp = control_plane.clone();
+                ls.spawn(async move {
                     loop {
                         match cw.changed().await {
-                            Ok(()) => control_plane.push_update(xds::CLUSTER_TYPE),
+                            Ok(()) => cp.push_update(xds::CLUSTER_TYPE),
                             Err(error) => tracing::error!(%error, "error watching changes"),
                         }
                     }
-                }
-                (None, Some(dc)) => {
-                    let mut dcw = dc.watch();
+                });
+            }
 
+            if let Some(datacenters) = datacenters {
+                let mut dcw = datacenters.watch();
+                let cp = control_plane.clone();
+                ls.spawn(async move {
                     loop {
                         match dcw.changed().await {
-                            Ok(()) => control_plane.push_update(xds::DATACENTER_TYPE),
+                            Ok(()) => cp.push_update(xds::DATACENTER_TYPE),
                             Err(error) => tracing::error!(%error, "error watching changes"),
                         }
                     }
-                }
-                (None, None) => loop {
-                    tokio::time::sleep(std::time::Duration::from_secs(u64::MAX)).await;
-                },
+                });
             }
+
+            if let Some(mut filters) = filters {
+                ls.spawn(async move {
+                    match filters.recv().await {
+                        Ok(()) => control_plane.push_update(xds::FILTER_CHAIN_TYPE),
+                        Err(error) => tracing::error!(%error, "error watching changes"),
+                    }
+                });
+            }
+
+            if indefinite {
+                ls.spawn(async {
+                    tokio::time::sleep(std::time::Duration::from_secs(u64::MAX)).await;
+                });
+            }
+
+            ls.join_all().await;
         }
     }
 }

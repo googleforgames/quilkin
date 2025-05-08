@@ -327,6 +327,7 @@ impl Pail {
                 let task = tokio::spawn(
                     relay::Relay {
                         xds_port,
+                        mds_port: 7900,
                         locality: None,
                         provider: Some(Providers::File { path }),
                     }
