@@ -204,7 +204,6 @@ abort_task!(ServerPail);
 
 pub struct RelayPail {
     pub xds_port: u16,
-    pub mds_port: u16,
     pub task: JoinHandle,
     pub provider_task: JoinSet,
     pub shutdown: ShutdownTx,
@@ -312,7 +311,6 @@ impl Pail {
             }
             PailConfig::Relay(rpc) => {
                 let xds_port = TcpListener::bind(None).unwrap().port();
-                let mds_port = TcpListener::bind(None).unwrap().port();
 
                 let path = td.join(spc.name);
                 let mut tc = rpc.config.unwrap_or_default();
@@ -339,7 +337,6 @@ impl Pail {
 
                 Self::Relay(RelayPail {
                     xds_port,
-                    mds_port,
                     task,
                     provider_task,
                     shutdown,
@@ -377,11 +374,11 @@ impl Pail {
                     .dependencies
                     .iter()
                     .filter_map(|dname| {
-                        let Pail::Relay(RelayPail { mds_port, .. }) = &pails[dname] else {
+                        let Pail::Relay(RelayPail { xds_port, .. }) = &pails[dname] else {
                             return None;
                         };
                         Some(
-                            format!("http://localhost:{mds_port}")
+                            format!("http://localhost:{xds_port}")
                                 .parse()
                                 .expect("failed to parse endpoint"),
                         )
