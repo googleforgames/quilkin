@@ -468,7 +468,7 @@ impl quilkin_xds::config::Configuration for Config {
                 .dyn_cfg
                 .typemap
                 .get::<FilterChain>()
-                .and_then(|s| (control_plane.is_relay).then(|| s.watch()));
+                .map(|s| s.watch());
 
             let indefinite = clusters.is_none() && datacenters.is_none() && filters.is_none();
             let mut ls = tokio::task::JoinSet::new();
