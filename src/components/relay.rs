@@ -77,10 +77,9 @@ impl Relay {
         };
 
         crate::cli::Service::default()
-            .xds()
             .xds_port(self.xds_port)
-            .mds()
             .mds_port(self.mds_port)
+            .grpc()
             .spawn_services(&config, &shutdown_rx)?;
 
         shutdown_rx.changed().await.map_err(From::from)
