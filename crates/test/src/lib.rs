@@ -203,6 +203,7 @@ abort_task!(ServerPail);
 
 pub struct RelayPail {
     pub xds_port: u16,
+    pub mds_port: u16,
     pub task: JoinHandle,
     pub shutdown: ShutdownTx,
     pub config_file: Option<ConfigFile>,
@@ -310,6 +311,7 @@ impl Pail {
                 use components::relay;
 
                 let xds_port = TcpListener::bind(None).unwrap().port();
+                let mds_port = TcpListener::bind(None).unwrap().port();
 
                 let path = td.join(spc.name);
                 let mut tc = rpc.config.unwrap_or_default();
@@ -327,7 +329,7 @@ impl Pail {
                 let task = tokio::spawn(
                     relay::Relay {
                         xds_port,
-                        mds_port: 7900,
+                        mds_port,
                         locality: None,
                         provider: Some(Providers::File { path }),
                     }
@@ -340,6 +342,7 @@ impl Pail {
 
                 Self::Relay(RelayPail {
                     xds_port,
+                    mds_port,
                     task,
                     shutdown,
                     config_file: Some(ConfigFile {
