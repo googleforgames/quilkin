@@ -731,7 +731,7 @@ impl<C: crate::config::Configuration> AggregatedControlPlaneDiscoveryService for
                     // The resource(s) have changed, inform the connected client, but only
                     // send the changed resources that the client doesn't already have
                     res = rx.recv() => {
-                        match dbg!(res) {
+                        match res {
                             Ok(rt) => {
                                 match responder(None, rt, &mut client_tracker) {
                                     Ok(Some(res)) => yield res,
