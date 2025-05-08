@@ -45,7 +45,6 @@ impl Ready {
 
 pub struct Relay {
     pub xds_port: u16,
-    pub mds_port: u16,
     pub locality: Option<crate::net::endpoint::Locality>,
     pub provider: Option<Providers>,
 }
@@ -79,8 +78,6 @@ impl Relay {
         crate::cli::Service::default()
             .xds()
             .xds_port(self.xds_port)
-            .mds()
-            .mds_port(self.mds_port)
             .spawn_services(&config, &shutdown_rx)?;
 
         shutdown_rx.changed().await.map_err(From::from)

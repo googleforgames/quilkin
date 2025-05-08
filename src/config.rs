@@ -462,7 +462,7 @@ impl quilkin_xds::config::Configuration for Config {
             .dyn_cfg
             .typemap
             .get::<FilterChain>()
-            .filter(|_| !control_plane.is_relay)
+            .filter(|_| control_plane.is_relay)
         {
             fc.watch({
                 let this = control_plane.clone();

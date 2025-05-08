@@ -22,17 +22,12 @@ use crate::{
 };
 pub use relay::Ready;
 
-pub const PORT: u16 = 7900;
-
 /// Runs Quilkin as a relay service that runs a Manager Discovery Service
 /// (mDS) for accepting cluster and configuration information from xDS
 /// management services, and exposing it as a single merged xDS service for
 /// proxy services.
 #[derive(clap::Args, Clone, Debug)]
 pub struct Relay {
-    /// Port for mDS service.
-    #[clap(short, long, env = "QUILKIN_MDS_PORT", default_value_t = PORT)]
-    pub mds_port: u16,
     /// Port for xDS management server service
     #[clap(short, long, env = super::PORT_ENV_VAR, default_value_t = super::manage::PORT)]
     pub xds_port: u16,
@@ -47,7 +42,6 @@ pub struct Relay {
 impl Default for Relay {
     fn default() -> Self {
         Self {
-            mds_port: PORT,
             xds_port: super::manage::PORT,
             idle_request_interval_secs: None,
             providers: None,
@@ -65,7 +59,6 @@ impl Relay {
     ) -> crate::Result<()> {
         relay::Relay {
             xds_port: self.xds_port,
-            mds_port: self.mds_port,
             locality,
             provider: self.providers,
         }

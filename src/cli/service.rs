@@ -169,18 +169,6 @@ impl Service {
         self
     }
 
-    /// Enables the mDS service.
-    pub fn mds(mut self) -> Self {
-        self.mds_enabled = true;
-        self
-    }
-
-    /// Sets the mDS service port.
-    pub fn mds_port(mut self, port: u16) -> Self {
-        self.mds_port = port;
-        self
-    }
-
     /// Enables the Phoenix service.
     pub fn phoenix(mut self) -> Self {
         self.phoenix_enabled = true;
@@ -247,7 +235,6 @@ impl Service {
         shutdown_rx: &crate::signal::ShutdownRx,
     ) -> crate::Result<tokio::task::JoinHandle<crate::Result<()>>> {
         let mut shutdown_rx = shutdown_rx.clone();
-        let mds_task = self.publish_mds(config)?;
         let (phoenix_task, phoenix_finalizer) = self.publish_phoenix(config)?;
         // We need to call this before qcmp since if we use XDP we handle QCMP
         // internally without a separate task
@@ -258,7 +245,6 @@ impl Service {
         Ok(tokio::spawn(async move {
             tokio::task::spawn(async move {
                 let (task, result) = tokio::select! {
-                    result = mds_task => ("mds", result),
                     result = phoenix_task => ("phoenix", result),
                     result = qcmp_task => ("qcmp", result),
                     result = udp_task => ("udp", result),
@@ -356,33 +342,6 @@ impl Service {
     }
 
     /// Spawns an xDS server if enabled, otherwise returns a future which never completes.
-    fn publish_mds(
-        &self,
-        config: &Arc<Config>,
-    ) -> crate::Result<impl Future<Output = crate::Result<()>> + use<>> {
-        if !self.mds_enabled {
-            return Ok(either::Left(std::future::pending()));
-        }
-
-        use futures::TryFutureExt as _;
-
-        tracing::info!(port=%self.mds_port, "starting mds service");
-        let listener = crate::net::TcpListener::bind(Some(self.mds_port))?;
-
-        Ok(either::Right(
-            tokio::spawn(
-                crate::net::xds::server::ControlPlane::from_arc(
-                    config.clone(),
-                    crate::components::admin::IDLE_REQUEST_INTERVAL,
-                )
-                .relay_server(listener, self.tls_identity()?)?,
-            )
-            .map_err(From::from)
-            .and_then(std::future::ready),
-        ))
-    }
-
-    /// Spawns an xDS server if enabled, otherwise returns a future which never completes.
     fn publish_xds(
         &self,
         config: &Arc<Config>,
@@ -401,7 +360,7 @@ impl Service {
                     config.clone(),
                     crate::components::admin::IDLE_REQUEST_INTERVAL,
                 )
-                .management_server(listener, self.tls_identity()?)?,
+                .relay_server(listener, self.tls_identity()?)?,
             )
             .map_err(From::from)
             .and_then(std::future::ready),
