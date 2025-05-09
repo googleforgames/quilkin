@@ -33,6 +33,9 @@ fn main() {
                 .install_default()
                 .unwrap();
 
+            let args: Vec<_> = std::env::args().collect();
+            tracing::debug!(?args, "cmd line arguments");
+
             match <quilkin::Cli as clap::Parser>::parse().drive().await {
                 Ok(()) => std::process::exit(0),
                 Err(error) => {
