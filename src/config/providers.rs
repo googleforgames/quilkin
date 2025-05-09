@@ -620,7 +620,11 @@ impl Providers {
             providers.spawn(self.spawn_static_provider(fc, &health_check).unwrap());
         }
 
-        assert!(!providers.is_empty(), "bug: no provider tasks running when {:?} was specified", providers);
+        assert!(
+            !providers.is_empty(),
+            "bug: no provider tasks running when {:?} was specified",
+            providers
+        );
 
         providers
     }

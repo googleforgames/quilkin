@@ -237,8 +237,9 @@ impl Cli {
         quilkin_xds::metrics::set_registry(crate::metrics::registry());
 
         let locality = self.locality.locality();
-        let mut provider_tasks = self.providers
-            .spawn_providers(&config, ready.clone(), locality.clone());
+        let mut provider_tasks =
+            self.providers
+                .spawn_providers(&config, ready.clone(), locality.clone());
 
         let service_task = self.service.spawn_services(&config, &shutdown_rx)?;
 
