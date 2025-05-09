@@ -18,10 +18,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use tokio::time::Duration;
 
-use quilkin::{
-    codec::qcmp::Protocol,
-    test::{AddressType, TestHelper},
-};
+use quilkin::{codec::qcmp::Protocol, test::TestHelper};
 
 #[tokio::test]
 #[cfg_attr(target_os = "macos", ignore)]
@@ -34,29 +31,8 @@ async fn proxy_ping() {
         to: vec![(Ipv4Addr::UNSPECIFIED, 0).into()],
         ..<_>::default()
     };
-    let server_config = std::sync::Arc::new(quilkin::Config::default_non_agent());
+    let server_config = std::sync::Arc::new(quilkin::Config::default());
     t.run_server(server_config, Some(server_proxy), None).await;
-    ping(qcmp_port).await;
-}
-
-#[tokio::test]
-#[cfg_attr(target_os = "macos", ignore)]
-async fn agent_ping() {
-    let qcmp_port = quilkin::test::available_addr(AddressType::Random)
-        .await
-        .port();
-    let agent = quilkin::cli::Agent {
-        qcmp_port,
-        ..<_>::default()
-    };
-    let server_config = std::sync::Arc::new(quilkin::Config::default_agent());
-    let (_tx, rx) = quilkin::signal::channel(quilkin::signal::ShutdownKind::Testing);
-    tokio::spawn(async move {
-        agent
-            .run(None, server_config, Default::default(), rx)
-            .await
-            .expect("Agent should run");
-    });
     ping(qcmp_port).await;
 }
 

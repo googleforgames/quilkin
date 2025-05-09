@@ -90,7 +90,7 @@ trace_test!(uring_receiver, {
 
     let (mut packet_rx, endpoint) = sb.server("server");
 
-    let config = std::sync::Arc::new(quilkin::Config::default_non_agent());
+    let config = std::sync::Arc::new(quilkin::Config::default());
     config
         .dyn_cfg
         .clusters()
@@ -137,7 +137,7 @@ trace_test!(
 
         let (mut packet_rx, endpoint) = sb.server("server");
 
-        let config = std::sync::Arc::new(quilkin::Config::default_non_agent());
+        let config = std::sync::Arc::new(quilkin::Config::default());
         config
             .dyn_cfg
             .clusters()

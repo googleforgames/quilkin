@@ -1,3 +1,5 @@
+#![allow(clippy::dbg_macro)]
+
 use qt::*;
 use quilkin::{
     filters::{self, *},
@@ -178,6 +180,41 @@ trace_test!(datacenter_discovery, {
         unreachable!()
     };
 
+    #[track_caller]
+    fn assert_config(
+        which: &str,
+        config: &quilkin::Config,
+        datacenter: &quilkin::config::Datacenter,
+        counter: u32,
+    ) -> bool {
+        let dcs = config.dyn_cfg.datacenters().unwrap().read();
+
+        for i in dcs.iter() {
+            dbg!(which, i.key(), i.value());
+        }
+
+        let ipv4_dc = dcs.get(&std::net::Ipv4Addr::LOCALHOST.into());
+        let ipv6_dc = dcs.get(&std::net::Ipv6Addr::LOCALHOST.into());
+
+        if counter > 0 {
+            match (ipv4_dc, ipv6_dc) {
+                (Some(dc), None) | (None, Some(dc)) => assert_eq!(&*dc, datacenter),
+                (Some(dc1), Some(dc2)) => {
+                    assert_eq!(&*dc1, datacenter);
+                    assert_eq!(&*dc2, datacenter);
+                }
+                (None, None) => panic!("No datacenter found"),
+            };
+            true
+        } else {
+            match (ipv4_dc, ipv6_dc) {
+                (Some(dc), None) | (None, Some(dc)) => &*dc == datacenter,
+                (Some(dc1), Some(dc2)) => &*dc1 == datacenter && &*dc2 == datacenter,
+                (None, None) => false,
+            }
+        }
+    }
+
     loop {
         let rt = sandbox.timeout(10000, proxy_delta_rx.recv()).await.unwrap();
 
@@ -185,25 +222,19 @@ trace_test!(datacenter_discovery, {
             break;
         }
     }
+    assert_config("relay", relay_config, &datacenter, 0);
 
-    #[track_caller]
-    fn assert_config(config: &quilkin::Config, datacenter: &quilkin::config::Datacenter) {
-        let dcs = config.dyn_cfg.datacenters().unwrap().read();
-        let ipv4_dc = dcs.get(&std::net::Ipv4Addr::LOCALHOST.into());
-        let ipv6_dc = dcs.get(&std::net::Ipv6Addr::LOCALHOST.into());
-
-        match (ipv4_dc, ipv6_dc) {
-            (Some(dc), None) | (None, Some(dc)) => assert_eq!(&*dc, datacenter),
-            (Some(dc1), Some(dc2)) => {
-                assert_eq!(&*dc1, datacenter);
-                assert_eq!(&*dc2, datacenter);
-            }
-            (None, None) => panic!("No datacenter found"),
-        };
+    if assert_config("proxy", proxy_config, &datacenter, 0) {
+        return;
     }
+    loop {
+        let rt = sandbox.timeout(10000, proxy_delta_rx.recv()).await.unwrap();
 
-    assert_config(relay_config, &datacenter);
-    assert_config(proxy_config, &datacenter);
+        if matches!(rt.as_ref(), quilkin::xds::DATACENTER_TYPE) {
+            break;
+        }
+    }
+    assert_config("proxy", proxy_config, &datacenter, 1);
 });
 
 trace_test!(filter_update, {

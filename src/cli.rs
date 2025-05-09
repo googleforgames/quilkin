@@ -19,39 +19,21 @@ use std::{path::PathBuf, sync::Arc};
 use clap::builder::TypedValueParser;
 use clap::crate_version;
 
-use crate::Config;
 use strum_macros::{Display, EnumString};
 
 pub use self::{
-    agent::Agent,
     generate_config_schema::GenerateConfigSchema,
-    manage::Manage,
-    proxy::Proxy,
     qcmp::Qcmp,
-    relay::Relay,
     service::{Finalizer, Service},
 };
 
-macro_rules! define_port {
-    ($port:expr_2021) => {
-        pub const PORT: u16 = $port;
-
-        pub fn default_port() -> u16 {
-            PORT
-        }
-    };
-}
-
-pub mod agent;
 pub mod generate_config_schema;
-pub mod manage;
-pub mod proxy;
 pub mod qcmp;
-pub mod relay;
 mod service;
 
+pub use service::XdpOptions;
+
 const ETC_CONFIG_PATH: &str = "/etc/quilkin/quilkin.yaml";
-const PORT_ENV_VAR: &str = "QUILKIN_PORT";
 
 #[derive(Debug, clap::Parser)]
 #[command(next_help_heading = "Administration Options")]
@@ -95,6 +77,14 @@ pub struct LocalityCli {
         env = "QUILKIN_LOCALITY_SUB_ZONE"
     )]
     pub sub_zone: Option<String>,
+    /// The airport ICAO code for the `region` of the instance. When provided
+    /// enables geomapping metrics of instances.
+    #[clap(
+        long = "locality.icao",
+        env = "QUILKIN_LOCALITY_ICAO",
+        default_value_t = crate::config::IcaoCode::default()
+    )]
+    pub icao_code: crate::config::IcaoCode,
 }
 
 impl LocalityCli {
@@ -136,7 +126,7 @@ pub struct Cli {
     #[command(flatten)]
     pub locality: LocalityCli,
     #[command(flatten)]
-    pub providers: crate::config::providersv2::Providers,
+    pub providers: crate::config::providers::Providers,
     #[command(flatten)]
     pub service: Service,
 }
@@ -186,13 +176,9 @@ impl LogFormats {
 /// The various Quilkin commands.
 #[derive(Clone, Debug, clap::Subcommand)]
 pub enum Commands {
-    Agent(Agent),
     GenerateConfigSchema(GenerateConfigSchema),
-    Manage(Manage),
     #[clap(subcommand)]
     Qcmp(Qcmp),
-    Proxy(Proxy),
-    Relay(Relay),
 }
 
 impl Cli {
@@ -220,8 +206,11 @@ impl Cli {
             _ => {}
         }
 
-        if !self.service.any_service_enabled() && self.command.is_none() {
-            eyre::bail!("no service specified, shutting down");
+        if !self.service.any_service_enabled()
+            && self.command.is_none()
+            && !self.providers.any_provider_enabled()
+        {
+            eyre::bail!("no service, provider, or command specified, shutting down");
         }
 
         tracing::debug!(cli = ?self, "config parameters");
@@ -248,49 +237,22 @@ impl Cli {
         quilkin_xds::metrics::set_registry(crate::metrics::registry());
 
         let locality = self.locality.locality();
-        self.providers
-            .spawn_providers(&config, ready.clone(), locality.clone());
+        let mut provider_tasks =
+            self.providers
+                .spawn_providers(&config, ready.clone(), locality.clone());
 
-        match self.command {
-            Some(Commands::Agent(agent)) => {
-                let old_ready = agent::Ready {
-                    provider_is_healthy: ready.clone(),
-                    relay_is_healthy: ready.clone(),
-                    ..<_>::default()
-                };
-                agent.run(locality, config, old_ready, shutdown_rx).await
-            }
+        let service_task =
+            self.service
+                .spawn_services(&config, &shutdown_rx, self.locality.icao_code)?;
 
-            Some(Commands::Proxy(runner)) => {
-                let old_ready = proxy::Ready {
-                    xds_is_healthy: parking_lot::RwLock::from(Some(ready.clone())).into(),
-                    ..<_>::default()
-                };
-                runner.run(config, old_ready, None, shutdown_rx).await
-            }
+        if provider_tasks.is_empty() {
+            ready.store(true, std::sync::atomic::Ordering::SeqCst);
+        }
 
-            Some(Commands::Manage(manager)) => {
-                let old_ready = agent::Ready {
-                    provider_is_healthy: ready.clone(),
-                    is_manage: true,
-                    ..<_>::default()
-                };
-                manager.run(locality, config, old_ready, shutdown_rx).await
-            }
-
-            Some(Commands::Relay(relay)) => {
-                let old_ready = relay::Ready {
-                    provider_is_healthy: ready.clone(),
-                    ..<_>::default()
-                };
-
-                relay.run(locality, config, old_ready, shutdown_rx).await
-            }
-            None => {
-                self.service.spawn_services(&config, &shutdown_rx)?;
-                shutdown_rx.changed().await.map_err(From::from)
-            }
-            Some(_) => unreachable!(),
+        tokio::select! {
+            result = shutdown_rx.changed() => result.map_err(From::from),
+            Some(result) = provider_tasks.join_next() => result?,
+            result = service_task => result?,
         }
     }
 
@@ -301,12 +263,7 @@ impl Cli {
 
         let file = loop {
             let Some(path) = paths.next() else {
-                let cfg = if matches!(self.command, Some(Commands::Agent(..))) {
-                    Config::default_agent()
-                } else {
-                    Config::default_non_agent()
-                };
-                return Ok(Arc::new(cfg));
+                return Ok(<_>::default());
             };
 
             match std::fs::File::open(path) {
@@ -322,10 +279,7 @@ impl Cli {
             }
         };
 
-        Ok(Arc::new(crate::Config::from_reader(
-            file,
-            matches!(self.command, Some(Commands::Agent(..))),
-        )?))
+        Ok(Arc::new(crate::Config::from_reader(file)?))
     }
 }
 

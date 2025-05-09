@@ -41,10 +41,7 @@ pub use quilkin_proto as generated;
 pub type Result<T, E = eyre::Error> = std::result::Result<T, E>;
 
 #[doc(inline)]
-pub use self::{
-    cli::{Cli, Proxy},
-    config::Config,
-};
+pub use self::{cli::Cli, config::Config};
 
 pub use quilkin_macros::include_proto;
 

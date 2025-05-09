@@ -1,6 +1,9 @@
 use std::{future::Future, sync::Arc};
 
-use crate::{components::proxy::SessionPool, config::Config};
+use crate::{
+    components::proxy::SessionPool,
+    config::{Config, IcaoCode},
+};
 
 #[derive(Debug, clap::Parser)]
 #[command(next_help_heading = "Service Options")]
@@ -145,6 +148,10 @@ impl Default for Service {
 }
 
 impl Service {
+    pub fn builder() -> Self {
+        Self::default()
+    }
+
     /// Enables the UDP service.
     pub fn udp(mut self) -> Self {
         self.udp_enabled = true;
@@ -245,8 +252,17 @@ impl Service {
         mut self,
         config: &Arc<Config>,
         shutdown_rx: &crate::signal::ShutdownRx,
+        icao_code: IcaoCode,
     ) -> crate::Result<tokio::task::JoinHandle<crate::Result<()>>> {
         let mut shutdown_rx = shutdown_rx.clone();
+
+        if self.qcmp_enabled {
+            if let Some(agent) = config.dyn_cfg.agent() {
+                agent.icao_code.store(Arc::new(icao_code));
+                agent.qcmp_port.store(Arc::new(self.qcmp_port));
+            }
+        }
+
         let mds_task = self.publish_mds(config)?;
         let (phoenix_task, phoenix_finalizer) = self.publish_phoenix(config)?;
         // We need to call this before qcmp since if we use XDP we handle QCMP

@@ -319,8 +319,9 @@ pub async fn quilkin_proxy_deployment(
     let mut container = quilkin_container(
         client,
         Some(vec![
-            "proxy".into(),
-            format!("--management-server={management_server}"),
+            "--service.udp".into(),
+            "--service.qcmp".into(),
+            format!("--provider.xds.endpoints={management_server}"),
         ]),
         None,
         current,
@@ -461,10 +462,12 @@ pub fn game_server() -> GameServer {
 
     resources.insert("cpu".into(), Quantity("30m".into()));
     resources.insert("memory".into(), Quantity("32Mi".into()));
+    let labels = BTreeMap::from([("role".to_string(), "gameserver".to_string())]);
 
     GameServer {
         metadata: ObjectMeta {
             generate_name: Some("gameserver-".into()),
+            labels: Some(labels.clone()),
             ..Default::default()
         },
         spec: GameServerSpec {

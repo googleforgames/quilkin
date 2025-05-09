@@ -181,11 +181,13 @@ mod tests {
 
         // Setup the xDS Agones provider server
         let args = [
-            "manage",
-            "agones",
-            "--config-namespace",
+            "--service.xds",
+            "--service.mds",
+            "--provider.k8s",
+            "--provider.k8s.namespace",
             client.namespace.as_str(),
-            "--gameservers-namespace",
+            "--provider.k8s.agones",
+            "--provider.k8s.agones.namespace",
             client.namespace.as_str(),
         ]
         .map(String::from)
@@ -242,12 +244,17 @@ mod tests {
 
         // make sure the deployment and service are ready
         let name = deployment.name_unchecked();
-        timeout(
+        let result = timeout(
             Duration::from_secs(30),
             await_condition(deployments.clone(), name.as_str(), is_deployment_ready()),
         )
-        .await
-        .expect("xDS provider deployment should be ready")
-        .unwrap();
+        .await;
+
+        if let Ok(result) = result {
+            result.unwrap();
+        } else {
+            debug_pods(client, "role=xds".into()).await;
+            panic!("xDS provider deployment should be ready");
+        }
     }
 }
