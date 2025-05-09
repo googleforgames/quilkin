@@ -16,7 +16,7 @@
 
 //! The reference implementation is used for non-Linux targets
 
-impl super::DownstreamReceiveWorkerConfig {
+impl crate::net::io::Listener {
     pub fn spawn(self, packet_queue: crate::net::PacketQueue) -> eyre::Result<()> {
         let Self {
             worker_id,
@@ -109,7 +109,7 @@ impl super::DownstreamReceiveWorkerConfig {
                         match result {
                             Ok((_size, mut source)) => {
                                 source.set_ip(source.ip().to_canonical());
-                                let packet = super::DownstreamPacket { contents: buffer, source };
+                                let packet = crate::net::packet::DownstreamPacket { contents: buffer, source };
 
                                 if let Some(last_received_at) = last_received_at {
                                     crate::metrics::packet_jitter(
