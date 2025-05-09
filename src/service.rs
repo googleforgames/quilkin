@@ -471,7 +471,7 @@ impl Service {
                     config.clone(),
                     crate::components::admin::IDLE_REQUEST_INTERVAL,
                 )
-                .relay_server(listener, self.tls_identity()?)?,
+                .management_server(listener, self.tls_identity()?)?,
             )
             .map_err(From::from)
             .and_then(std::future::ready),

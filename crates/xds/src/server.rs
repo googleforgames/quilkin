@@ -23,7 +23,9 @@ use tracing_futures::Instrument;
 use crate::{
     discovery::{
         DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
-        aggregated_discovery_service_server::AggregatedDiscoveryService,
+        aggregated_discovery_service_server::{
+            AggregatedDiscoveryService, AggregatedDiscoveryServiceServer,
+        },
     },
     generated::quilkin::relay::v1alpha1::aggregated_control_plane_discovery_service_server::{
         AggregatedControlPlaneDiscoveryService, AggregatedControlPlaneDiscoveryServiceServer,
@@ -132,6 +134,34 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
         tonic::transport::Server::builder()
             .http2_keepalive_interval(Some(crate::HTTP2_KEEPALIVE_INTERVAL))
             .http2_keepalive_timeout(Some(crate::HTTP2_KEEPALIVE_TIMEOUT))
+    }
+
+    pub fn management_server(
+        mut self,
+        listener: TcpListener,
+        tls: Option<TlsIdentity>,
+    ) -> eyre::Result<impl std::future::Future<Output = crate::Result<()>>> {
+        self.is_relay = false;
+        tokio::spawn({
+            let this = self.clone();
+            self.config.on_changed(this)
+        });
+
+        let server = AggregatedDiscoveryServiceServer::new(self)
+            .max_encoding_message_size(crate::config::max_grpc_message_size());
+        let builder = Self::server_builder();
+
+        let mut builder = if let Some(tls) = tls {
+            builder.tls_config(tonic::transport::ServerTlsConfig::new().identity(tls.identity))?
+        } else {
+            builder
+        };
+
+        let server = builder.add_service(server);
+        tracing::info!("serving management server on port `{}`", listener.port());
+        Ok(server
+            .serve_with_incoming(listener.into_stream()?)
+            .map_err(From::from))
     }
 
     pub fn relay_server(
@@ -427,6 +457,7 @@ impl<C: crate::config::Configuration> AggregatedDiscoveryService for ControlPlan
         &self,
         _request: tonic::Request<tonic::Streaming<DiscoveryRequest>>,
     ) -> Result<tonic::Response<Self::StreamAggregatedResourcesStream>, tonic::Status> {
+        panic!("wtf");
         Err(tonic::Status::unimplemented(
             "only delta streams are supported",
         ))
@@ -459,6 +490,7 @@ impl<C: crate::config::Configuration> AggregatedControlPlaneDiscoveryService for
         &self,
         _responses: tonic::Request<tonic::Streaming<DiscoveryResponse>>,
     ) -> Result<tonic::Response<Self::StreamAggregatedResourcesStream>, tonic::Status> {
+        panic!("wtf 2");
         Err(tonic::Status::unimplemented(
             "only delta streams are supported",
         ))
