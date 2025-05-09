@@ -68,15 +68,15 @@ pub struct Service {
     #[clap(
         long = "service.udp.poll",
         env = "QUILKIN_SERVICE_UDP_POLL",
-        conflicts_with("xdp_enabled"),
-        conflicts_with("udp_uring_enabled")
+        conflicts_with("force_xdp"),
+        conflicts_with("udp_completion_enabled")
     )]
     udp_poll_enabled: bool,
     /// Requires Quilkin to use a completion based I/O interface (e.g. io-uring).
     #[clap(
         long = "service.udp.completion",
         env = "QUILKIN_SERVICE_UDP_COMPLETION",
-        conflicts_with("xdp_enabled"),
+        conflicts_with("force_xdp"),
         conflicts_with("udp_poll_enabled")
     )]
     udp_completion_enabled: bool,
