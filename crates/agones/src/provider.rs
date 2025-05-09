@@ -181,11 +181,13 @@ mod tests {
 
         // Setup the xDS Agones provider server
         let args = [
-            "manage",
-            "agones",
-            "--config-namespace",
+            "--service.xds",
+            "--service.mds",
+            "--provider.k8s",
+            "--provider.k8s.namespace",
             client.namespace.as_str(),
-            "--gameservers-namespace",
+            "--provider.k8s.agones",
+            "--provider.k8s.agones.namespace",
             client.namespace.as_str(),
         ]
         .map(String::from)
