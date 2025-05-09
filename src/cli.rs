@@ -241,7 +241,9 @@ impl Cli {
             self.providers
                 .spawn_providers(&config, ready.clone(), locality.clone());
 
-        let service_task = self.service.spawn_services(&config, &shutdown_rx)?;
+        let service_task =
+            self.service
+                .spawn_services(&config, &shutdown_rx, self.locality.icao_code)?;
 
         if provider_tasks.is_empty() {
             ready.store(true, std::sync::atomic::Ordering::SeqCst);

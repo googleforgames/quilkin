@@ -18,6 +18,8 @@ pub(crate) mod error;
 pub mod packet_router;
 pub(crate) mod sessions;
 
+use crate::config::IcaoCode;
+
 use super::RunArgs;
 pub use error::PipelineError;
 pub use sessions::SessionPool;
@@ -304,7 +306,7 @@ impl Proxy {
             .phoenix()
             .phoenix_port(phoenix_port)
             .termination_timeout(self.termination_timeout)
-            .spawn_services(&config, &shutdown_rx)?;
+            .spawn_services(&config, &shutdown_rx, IcaoCode::default())?;
 
         tracing::info!("Quilkin is ready");
         if let Some(initialized) = initialized {

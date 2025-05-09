@@ -335,7 +335,7 @@ impl Pail {
                     .xds_port(xds_port)
                     .mds()
                     .mds_port(mds_port)
-                    .spawn_services(&config, &shutdown_rx)
+                    .spawn_services(&config, &shutdown_rx, quilkin::config::IcaoCode::default())
                     .unwrap();
 
                 Self::Relay(RelayPail {
@@ -408,7 +408,7 @@ impl Pail {
                 let task = quilkin::cli::Service::default()
                     .qcmp()
                     .qcmp_port(port)
-                    .spawn_services(&config, &shutdown_rx)
+                    .spawn_services(&config, &shutdown_rx, apc.icao_code)
                     .unwrap();
 
                 Self::Agent(AgentPail {

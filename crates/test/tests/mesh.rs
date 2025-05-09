@@ -187,8 +187,17 @@ trace_test!(datacenter_discovery, {
     }
 
     #[track_caller]
-    fn assert_config(config: &quilkin::Config, datacenter: &quilkin::config::Datacenter) {
+    fn assert_config(
+        which: &str,
+        config: &quilkin::Config,
+        datacenter: &quilkin::config::Datacenter,
+    ) {
         let dcs = config.dyn_cfg.datacenters().unwrap().read();
+
+        for i in dcs.iter() {
+            dbg!(which, i.key(), i.value());
+        }
+
         let ipv4_dc = dcs.get(&std::net::Ipv4Addr::LOCALHOST.into());
         let ipv6_dc = dcs.get(&std::net::Ipv6Addr::LOCALHOST.into());
 
@@ -202,8 +211,8 @@ trace_test!(datacenter_discovery, {
         };
     }
 
-    assert_config(relay_config, &datacenter);
-    assert_config(proxy_config, &datacenter);
+    assert_config("relay", relay_config, &datacenter);
+    assert_config("proxy", proxy_config, &datacenter);
 });
 
 trace_test!(filter_update, {

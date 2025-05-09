@@ -471,6 +471,27 @@ impl quilkin_xds::config::Configuration for Config {
             });
         }
 
+        if let Some(agent) = control_plane
+            .config
+            .dyn_cfg
+            .typemap
+            .get::<Agent>()
+            .filter(|_| !control_plane.is_relay)
+        {
+            agent.icao_code.watch({
+                let this = control_plane.clone();
+                move |_| {
+                    this.push_update(xds::DATACENTER_TYPE);
+                }
+            });
+            agent.qcmp_port.watch({
+                let this = control_plane.clone();
+                move |_| {
+                    this.push_update(xds::DATACENTER_TYPE);
+                }
+            });
+        }
+
         tracing::trace!("waiting for changes");
 
         async move {
@@ -602,7 +623,7 @@ impl Config {
                             xds::Resource::Datacenter(crate::net::cluster::proto::Datacenter {
                                 qcmp_port: qcmp_port as _,
                                 icao_code: name.clone(),
-                                ..Default::default()
+                                host: String::new(),
                             });
 
                         resources.push(XdsResource {
@@ -613,7 +634,9 @@ impl Config {
                             ttl: None,
                             cache_control: None,
                         });
-                    } else if let Some(datacenters) = self.dyn_cfg.datacenters() {
+                    }
+
+                    if let Some(datacenters) = self.dyn_cfg.datacenters() {
                         for entry in datacenters.read().iter() {
                             let host = entry.key().to_string();
                             let qcmp_port = entry.qcmp_port;
@@ -627,12 +650,12 @@ impl Config {
                                 crate::net::cluster::proto::Datacenter {
                                     qcmp_port: qcmp_port as _,
                                     icao_code: entry.icao_code.to_string(),
-                                    host: host.clone(),
+                                    host,
                                 },
                             );
 
                             resources.push(XdsResource {
-                                name: host,
+                                name: entry.icao_code.to_string(),
                                 version,
                                 resource: Some(resource.try_encode()?),
                                 aliases: Vec::new(),
@@ -789,22 +812,33 @@ impl Config {
                             }
                         };
 
-                        let parse_payload = || -> crate::Result<(std::net::IpAddr, Datacenter)> {
-                            use eyre::Context;
-                            let host: std::net::IpAddr = if let Some(ra) = remote_addr {
+                        let host = if dc.host.is_empty() {
+                            if let Some(ra) = remote_addr {
                                 ra
-                            }else {
-                                 dc.host.parse().context("unable to parse remote datacenter address")?
-                            };
+                            } else {
+                                continue;
+                            }
+                        } else {
+                            match dc.host.parse() {
+                                Ok(host) => host,
+                                Err(_err) => {
+                                    tracing::warn!("datacenter host not set, and there is not remote address");
+                                    continue;
+                                }
+                            }
+                        };
+
+                        let parse_payload = || -> crate::Result<Datacenter> {
+                            use eyre::Context;
                             let dc = Datacenter {
                                 qcmp_port: dc.qcmp_port.try_into().context("unable to parse datacenter QCMP port")?,
                                 icao_code: dc.icao_code.parse().context("unable to parse datacenter ICAO")?,
                             };
 
-                            Ok((host, dc))
+                            Ok(dc)
                         };
 
-                        let (host, datacenter) = parse_payload()?;
+                        let datacenter = parse_payload()?;
                         wg.insert(
                             host,
                             datacenter,

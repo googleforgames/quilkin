@@ -345,7 +345,7 @@ impl QuilkinLoop {
 
             runtime.block_on(async move {
                 proxy
-                    .spawn_services(&config, &shutdown_rx)
+                    .spawn_services(&config, &shutdown_rx, Default::default())
                     .unwrap()
                     .await
                     .unwrap()
