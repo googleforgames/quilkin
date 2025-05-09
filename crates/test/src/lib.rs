@@ -8,7 +8,7 @@ use quilkin::{
     test::TestConfig,
 };
 pub use serde_json::json;
-use std::{net::SocketAddr, num::NonZeroUsize, path::PathBuf, sync::Arc};
+use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 use tokio::sync::mpsc;
 
 pub mod xdp_util;
@@ -266,13 +266,10 @@ impl Pail {
         let pail = match spc.config {
             PailConfig::Server(sspc) => {
                 let (packet_tx, packet_rx) = mpsc::channel::<String>(10);
-                let socket = quilkin::net::DualStackEpollSocket::new(0)
-                    .expect("failed to create server socket");
+                let socket =
+                    quilkin::net::Socket::polling_listen().expect("failed to create server socket");
 
-                let port = socket
-                    .local_addr()
-                    .expect("failed to bind server socket")
-                    .port();
+                let port = socket.local_addr().port();
 
                 tracing::debug!(port, spc.name, "bound server socket");
 
@@ -285,7 +282,7 @@ impl Pail {
 
                     while num_packets > 0 {
                         let (size, _) = socket
-                            .recv_from(&mut buf)
+                            .recv_from(&mut *buf)
                             .await
                             .expect("failed to receive packet");
                         received += size;
@@ -393,10 +390,7 @@ impl Pail {
                 let (shutdown, shutdown_rx) =
                     quilkin::signal::channel(quilkin::signal::ShutdownKind::Testing);
 
-                let port = quilkin::net::socket_port(
-                    &quilkin::net::raw_socket_with_reuse(0).expect("failed to bind qcmp socket"),
-                );
-
+                let port = quilkin::test::available_port();
                 let config_path = path.clone();
                 let config = Arc::new(Config::default_agent());
                 config.dyn_cfg.id.store(Arc::new(spc.name.into()));
@@ -431,15 +425,6 @@ impl Pail {
                 })
             }
             PailConfig::Proxy(ppc) => {
-                let socket = quilkin::net::raw_socket_with_reuse(0).expect("failed to bind socket");
-                let qcmp =
-                    quilkin::net::raw_socket_with_reuse(0).expect("failed to bind qcmp socket");
-                let qcmp_port = quilkin::net::socket_port(&qcmp);
-                let phoenix = TcpListener::bind(None).expect("failed to bind phoenix socket");
-                let phoenix_port = phoenix.port();
-
-                let port = quilkin::net::socket_port(&socket);
-
                 let management_servers = spc
                     .dependencies
                     .iter()
@@ -499,31 +484,26 @@ impl Pail {
                 }
 
                 config.dyn_cfg.id.store(Arc::new(spc.name.into()));
-                let pconfig = config.clone();
+                let qcmp_port = quilkin::test::available_port();
+                let phoenix_port = quilkin::test::available_port();
+                let port = quilkin::test::available_port();
 
-                let (rttx, rtrx) = tokio::sync::mpsc::unbounded_channel();
+                let _provider_task = quilkin::config::providersv2::Providers::default()
+                    .xds_endpoints(management_servers)
+                    .spawn_providers(&config, <_>::default(), None);
 
-                let task = tokio::spawn(async move {
-                    components::proxy::Proxy {
-                        num_workers: NonZeroUsize::new(1).unwrap(),
-                        management_servers,
-                        socket: Some(socket),
-                        qcmp,
-                        phoenix,
-                        notifier: Some(rttx),
-                        ..Default::default()
-                    }
-                    .run(
-                        RunArgs {
-                            config: pconfig,
-                            ready: Default::default(),
-                            shutdown_rx,
-                        },
-                        Some(tx),
-                    )
-                    .await
-                });
+                let task = quilkin::cli::Service::default()
+                    .udp()
+                    .udp_port(port)
+                    .udp_poll()
+                    .qcmp()
+                    .qcmp_port(qcmp_port)
+                    .phoenix()
+                    .phoenix_port(phoenix_port)
+                    .spawn_services(&config, &shutdown_rx)
+                    .unwrap();
 
+                let _ = tx.send(());
                 rx = Some(orx);
 
                 Self::Proxy(ProxyPail {
@@ -533,7 +513,7 @@ impl Pail {
                     shutdown,
                     task,
                     config,
-                    delta_applies: Some(rtrx),
+                    delta_applies: None,
                 })
             }
         };
@@ -682,11 +662,11 @@ impl Sandbox {
 
     #[inline]
     pub fn socket(&self) -> (socket2::Socket, SocketAddr) {
-        let socket = quilkin::net::raw_socket_with_reuse(0).unwrap();
-        let port = quilkin::net::socket_port(&socket);
+        let socket = quilkin::net::io::SystemSocket::listen().unwrap();
+        let port = socket.port();
 
         (
-            socket,
+            socket.into_inner(),
             SocketAddr::from((std::net::Ipv6Addr::LOCALHOST, port)),
         )
     }
@@ -694,8 +674,8 @@ impl Sandbox {
     /// Creates an ephemeral socket that can be used to send messages to sandbox
     /// pails
     #[inline]
-    pub fn client(&self) -> quilkin::net::DualStackEpollSocket {
-        quilkin::net::DualStackEpollSocket::new(0).unwrap()
+    pub fn client(&self) -> quilkin::net::Socket {
+        quilkin::net::Socket::polling_listen().unwrap()
     }
 
     /// Sleeps for the specified number of milliseconds

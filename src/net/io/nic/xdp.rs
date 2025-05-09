@@ -1,11 +1,81 @@
 #![allow(dead_code)]
 
-use quilkin_xdp::xdp::{
-    self,
-    nic::{NicIndex, NicName},
-};
-use std::sync::Arc;
 pub mod process;
+
+use std::{
+    net::{Ipv4Addr, Ipv6Addr},
+    sync::Arc,
+};
+
+use self::{packet::net_types::NetworkU16, slab::Slab};
+
+pub use quilkin_xdp::xdp::{
+    nic::{NetdevCapabilities, NicIndex, NicName},
+    packet, slab,
+};
+
+use quilkin_xdp::xdp;
+
+pub fn is_available(xdp: &crate::cli::XdpOptions) -> bool {
+    let config = XdpConfig {
+        nic: xdp
+            .network_interface
+            .as_deref()
+            .map_or(NicConfig::Default, NicConfig::Name),
+        external_port: 0,
+        qcmp_port: 0,
+        maximum_packet_memory: xdp.maximum_memory,
+        require_zero_copy: xdp.force_zerocopy,
+        require_tx_checksum: xdp.force_tx_checksum_offload,
+    };
+
+    config.validate().is_ok()
+}
+
+pub fn listen(
+    config: &Arc<crate::config::Config>,
+    udp_port: u16,
+    qcmp_port: u16,
+    xdp: crate::cli::XdpOptions,
+) -> crate::Result<Option<crate::cli::Finalizer>> {
+    use eyre::{Context as _, ContextCompat as _};
+
+    // TODO: remove this once it's been more stabilized
+    if !xdp.force_xdp {
+        return Ok(None);
+    }
+
+    let filters = config
+        .dyn_cfg
+        .filters()
+        .context("XDP requires a filter chain")?
+        .clone();
+    let clusters = config
+        .dyn_cfg
+        .clusters()
+        .context("XDP requires a cluster map")?
+        .clone();
+
+    let config = process::ConfigState { filters, clusters };
+
+    tracing::info!(udp_port, qcmp_port, "setting up xdp module");
+    let xdp = XdpConfig {
+        nic: xdp
+            .network_interface
+            .as_deref()
+            .map_or(NicConfig::Default, NicConfig::Name),
+        external_port: udp_port,
+        qcmp_port,
+        maximum_packet_memory: xdp.maximum_memory,
+        require_zero_copy: xdp.force_zerocopy,
+        require_tx_checksum: xdp.force_tx_checksum_offload,
+    };
+
+    let io_loop = spawn(xdp.load()?, config).context("failed to spawn XDP I/O loop")?;
+    Ok(Some(Box::new(move |srx: &crate::signal::ShutdownRx| {
+        io_loop.shutdown(*srx.borrow() == crate::signal::ShutdownKind::Normal);
+    })))
+}
 
 pub enum NicConfig<'n> {
     /// Specifies a NIC by name, setup will fail if a NIC with that name doesn't exist
@@ -57,6 +127,197 @@ impl Default for XdpConfig<'_> {
             require_zero_copy: false,
             require_tx_checksum: false,
         }
+    }
+}
+
+impl XdpConfig<'_> {
+    fn nic_index(&self) -> Result<NicIndex, NicUnavailable> {
+        match self.nic {
+            NicConfig::Default => {
+                let mut chosen = None;
+
+                for iface in xdp::nic::InterfaceIter::new().map_err(NicUnavailable::Query)? {
+                    if let Some(chosen) = chosen {
+                        if iface != chosen {
+                            return Err(NicUnavailable::NoAvailableDefault);
+                        }
+                    } else {
+                        chosen = Some(iface);
+                    }
+                }
+
+                chosen.ok_or(NicUnavailable::NoAvailableDefault)
+            }
+            NicConfig::Name(name) => {
+                let cname = std::ffi::CString::new(name).unwrap();
+                xdp::nic::NicIndex::lookup_by_name(&cname)
+                    .map_err(NicUnavailable::Query)?
+                    .ok_or_else(|| NicUnavailable::UnknownName(name.to_owned()))
+            }
+            NicConfig::Index(index) => Ok(xdp::nic::NicIndex::new(index)),
+        }
+    }
+
+    fn validate_device_capabilities(
+        &self,
+        nic_index: NicIndex,
+        name: NicName,
+    ) -> Result<NetdevCapabilities, XdpSetupError> {
+        let device_caps = nic_index
+            .query_capabilities()
+            .map_err(|err| XdpSetupError::NicQuery(name, err))?;
+
+        tracing::debug!(?device_caps, nic = ?nic_index, "XDP features for device");
+
+        if self.require_zero_copy
+            && matches!(device_caps.zero_copy, xdp::nic::XdpZeroCopy::Unavailable)
+        {
+            tracing::error!(?device_caps, nic = ?nic_index, "XDP features for device");
+            return Err(XdpSetupError::ZeroCopyUnavailable(name));
+        }
+
+        if self.require_tx_checksum && !device_caps.tx_metadata.checksum() {
+            tracing::error!(?device_caps, nic = ?nic_index, "XDP features for device");
+            return Err(XdpSetupError::TxChecksumUnavailable(name));
+        }
+
+        Ok(device_caps)
+    }
+
+    fn addresses(
+        nic_index: NicIndex,
+        name: NicName,
+    ) -> Result<(Ipv4Addr, Ipv6Addr), XdpSetupError> {
+        nic_index
+            .addresses()
+            .and_then(|(ipv4, ipv6)| {
+                if ipv4.is_none() && ipv6.is_none() {
+                    Err(std::io::Error::new(
+                        std::io::ErrorKind::AddrNotAvailable,
+                        "neither an ipv4 nor ipv6 address could be determined for the device",
+                    ))
+                } else {
+                    Ok((
+                        ipv4.unwrap_or(std::net::Ipv4Addr::new(0, 0, 0, 0)),
+                        ipv6.unwrap_or(std::net::Ipv6Addr::from_bits(0)),
+                    ))
+                }
+            })
+            .map_err(|err| XdpSetupError::AddressQuery(name, err))
+    }
+
+    fn packet_count(
+        &self,
+        name: NicName,
+        device_caps: &NetdevCapabilities,
+    ) -> Result<u32, XdpSetupError> {
+        // Bit arbitrary, but set the floor at 128 packets per umem
+        const MINIMUM_UMEM_COUNT: u64 = 128;
+        // We don't support unaligned chunks, so this size can only be 2k or 4k,
+        // and we only need 2k since we only care about non-fragmented UDP packets
+        const PACKET_SIZE: u64 = 2 * 1024;
+
+        if let Some(max) = self.maximum_packet_memory {
+            let bytes_per_socket = max / device_caps.queue_count as u64;
+            let packet_count = (bytes_per_socket / PACKET_SIZE).next_power_of_two();
+            if MINIMUM_UMEM_COUNT > packet_count {
+                fn byte_units(b: u64) -> (f64, &'static str) {
+                    let mut units = b as f64;
+                    let mut unit = 0;
+                    const UNITS: &[&str] = &["B", "KiB", "MiB", "GiB"];
+
+                    while units > 1024.0 {
+                        units /= 1024.0;
+                        unit += 1;
+                    }
+
+                    (units, UNITS[unit])
+                }
+
+                let (max, xunit) = byte_units(max);
+                let (min, nunit) =
+                    byte_units(MINIMUM_UMEM_COUNT * PACKET_SIZE * device_caps.queue_count as u64);
+
+                return Err(XdpSetupError::MinimumMemoryRequirementsExceeded {
+                    max,
+                    xunit,
+                    min,
+                    nunit,
+                    nic: name,
+                    queue_count: device_caps.queue_count,
+                });
+            }
+
+            Ok(packet_count as u32)
+        } else {
+            Ok(2 * 1024)
+        }
+    }
+
+    fn validate(&self) -> Result<(), XdpSetupError> {
+        let nic_index = self.nic_index()?;
+        let name = nic_index
+            .name()
+            .map_err(|_err| NicUnavailable::UnknownIndex(nic_index.into()))?;
+
+        tracing::info!(nic = ?nic_index, "selected NIC");
+        self.validate_device_capabilities(nic_index, name)?;
+        Self::addresses(nic_index, name)?;
+        Ok(())
+    }
+
+    /// Attempts to setup XDP by querying NIC support and allocating ring buffers
+    /// based on user configuration, failing if requirements cannot be met
+    ///
+    /// This function currently only supports one mode of operation, which is that
+    /// a socket is bound to every available queue on the NIC, and when [`spawn`]
+    /// is invoked, each socket is processed in its own thread
+    ///
+    /// Binding to fewer queues is possible in the future but requires additional
+    /// work in the `xdp` crate
+    pub fn load(self) -> Result<XdpWorkers, XdpSetupError> {
+        let nic_index = self.nic_index()?;
+        let name = nic_index
+            .name()
+            .map_err(|_err| NicUnavailable::UnknownIndex(nic_index.into()))?;
+
+        tracing::info!(nic = ?nic_index, "selected NIC");
+        let device_caps = self.validate_device_capabilities(nic_index, name)?;
+        let (ipv4, ipv6) = Self::addresses(nic_index, name)?;
+        let packet_count = self.packet_count(name, &device_caps)?;
+
+        let mut ebpf_prog = quilkin_xdp::EbpfProgram::load(self.external_port, self.qcmp_port)?;
+
+        let umem_cfg = xdp::umem::UmemCfgBuilder {
+            frame_size: xdp::umem::FrameSize::TwoK,
+            // Provide enough headroom so that we can convert an ipv4 header to ipv6
+            // header without needing to copy any bytes. note this doesn't take into
+            // account if a filter adds or removes bytes from the beginning of the
+            // data payload
+            head_room: (xdp::packet::net_types::Ipv6Hdr::LEN - xdp::packet::net_types::Ipv4Hdr::LEN)
+                as u32,
+            frame_count: packet_count,
+            // TODO: This should be done in the type system so we can avoid logic
+            // that doesn't change during the course of operation, but for now just
+            // do it at runtime
+            tx_checksum: device_caps.tx_metadata.checksum(),
+            ..Default::default()
+        }
+        .build()?;
+
+        let ring_cfg = xdp::RingConfigBuilder::default().build()?;
+        let workers =
+            ebpf_prog.create_and_bind_sockets(nic_index, umem_cfg, &device_caps, ring_cfg)?;
+
+        Ok(XdpWorkers {
+            ebpf_prog,
+            workers,
+            nic: nic_index,
+            external_port: self.external_port.into(),
+            qcmp_port: self.qcmp_port.into(),
+            ipv4,
+            ipv6,
+        })
     }
 }
 
@@ -119,157 +380,6 @@ pub enum XdpSpawnError {
     Thread(#[source] std::io::Error),
     #[error("Failed to attach XDP program: {0}")]
     XdpAttach(#[from] quilkin_xdp::aya::programs::ProgramError),
-}
-
-/// Attempts to setup XDP by querying NIC support and allocating ring buffers
-/// based on user configuration, failing if requirements cannot be met
-///
-/// This function currently only supports one mode of operation, which is that
-/// a socket is bound to every available queue on the NIC, and when [`spawn`]
-/// is invoked, each socket is processed in its own thread
-///
-/// Binding to fewer queues is possible in the future but requires additional
-/// work in the `xdp` crate
-pub fn setup_xdp_io(config: XdpConfig<'_>) -> Result<XdpWorkers, XdpSetupError> {
-    let nic_index = match config.nic {
-        NicConfig::Default => {
-            let mut chosen = None;
-
-            for iface in xdp::nic::InterfaceIter::new().map_err(NicUnavailable::Query)? {
-                if let Some(chosen) = chosen {
-                    if iface != chosen {
-                        return Err(NicUnavailable::NoAvailableDefault.into());
-                    }
-                } else {
-                    chosen = Some(iface);
-                }
-            }
-
-            chosen.ok_or(NicUnavailable::NoAvailableDefault)?
-        }
-        NicConfig::Name(name) => {
-            let cname = std::ffi::CString::new(name).unwrap();
-            xdp::nic::NicIndex::lookup_by_name(&cname)
-                .map_err(NicUnavailable::Query)?
-                .ok_or_else(|| NicUnavailable::UnknownName(name.to_owned()))?
-        }
-        NicConfig::Index(index) => xdp::nic::NicIndex::new(index),
-    };
-
-    let name = nic_index
-        .name()
-        .map_err(|_err| NicUnavailable::UnknownIndex(nic_index.into()))?;
-
-    tracing::info!(nic = ?nic_index, "selected NIC");
-
-    let device_caps = nic_index
-        .query_capabilities()
-        .map_err(|err| XdpSetupError::NicQuery(name, err))?;
-
-    tracing::debug!(?device_caps, nic = ?nic_index, "XDP features for device");
-
-    if config.require_zero_copy
-        && matches!(device_caps.zero_copy, xdp::nic::XdpZeroCopy::Unavailable)
-    {
-        tracing::error!(?device_caps, nic = ?nic_index, "XDP features for device");
-        return Err(XdpSetupError::ZeroCopyUnavailable(name));
-    }
-
-    if config.require_tx_checksum && !device_caps.tx_metadata.checksum() {
-        tracing::error!(?device_caps, nic = ?nic_index, "XDP features for device");
-        return Err(XdpSetupError::TxChecksumUnavailable(name));
-    }
-
-    let (ipv4, ipv6) = nic_index
-        .addresses()
-        .and_then(|(ipv4, ipv6)| {
-            if ipv4.is_none() && ipv6.is_none() {
-                Err(std::io::Error::new(
-                    std::io::ErrorKind::AddrNotAvailable,
-                    "neither an ipv4 nor ipv6 address could be determined for the device",
-                ))
-            } else {
-                Ok((
-                    ipv4.unwrap_or(std::net::Ipv4Addr::new(0, 0, 0, 0)),
-                    ipv6.unwrap_or(std::net::Ipv6Addr::from_bits(0)),
-                ))
-            }
-        })
-        .map_err(|err| XdpSetupError::AddressQuery(name, err))?;
-
-    // Bit arbitrary, but set the floor at 128 packets per umem
-    const MINIMUM_UMEM_COUNT: u64 = 128;
-    // We don't support unaligned chunks, so this size can only be 2k or 4k,
-    // and we only need 2k since we only care about non-fragmented UDP packets
-    const PACKET_SIZE: u64 = 2 * 1024;
-
-    let packet_count = if let Some(max) = config.maximum_packet_memory {
-        let bytes_per_socket = max / device_caps.queue_count as u64;
-        let packet_count = (bytes_per_socket / PACKET_SIZE).next_power_of_two();
-        if MINIMUM_UMEM_COUNT > packet_count {
-            fn byte_units(b: u64) -> (f64, &'static str) {
-                let mut units = b as f64;
-                let mut unit = 0;
-                const UNITS: &[&str] = &["B", "KiB", "MiB", "GiB"];
-
-                while units > 1024.0 {
-                    units /= 1024.0;
-                    unit += 1;
-                }
-
-                (units, UNITS[unit])
-            }
-
-            let (max, xunit) = byte_units(max);
-            let (min, nunit) =
-                byte_units(MINIMUM_UMEM_COUNT * PACKET_SIZE * device_caps.queue_count as u64);
-
-            return Err(XdpSetupError::MinimumMemoryRequirementsExceeded {
-                max,
-                xunit,
-                min,
-                nunit,
-                nic: name,
-                queue_count: device_caps.queue_count,
-            });
-        }
-
-        packet_count as u32
-    } else {
-        2 * 1024
-    };
-
-    let mut ebpf_prog = quilkin_xdp::EbpfProgram::load(config.external_port, config.qcmp_port)?;
-
-    let umem_cfg = xdp::umem::UmemCfgBuilder {
-        frame_size: xdp::umem::FrameSize::TwoK,
-        // Provide enough headroom so that we can convert an ipv4 header to ipv6
-        // header without needing to copy any bytes. note this doesn't take into
-        // account if a filter adds or removes bytes from the beginning of the
-        // data payload
-        head_room: (xdp::packet::net_types::Ipv6Hdr::LEN - xdp::packet::net_types::Ipv4Hdr::LEN)
-            as u32,
-        frame_count: packet_count,
-        // TODO: This should be done in the type system so we can avoid logic
-        // that doesn't change during the course of operation, but for now just
-        // do it at runtime
-        tx_checksum: device_caps.tx_metadata.checksum(),
-        ..Default::default()
-    }
-    .build()?;
-
-    let ring_cfg = xdp::RingConfigBuilder::default().build()?;
-    let workers = ebpf_prog.create_and_bind_sockets(nic_index, umem_cfg, &device_caps, ring_cfg)?;
-
-    Ok(XdpWorkers {
-        ebpf_prog,
-        workers,
-        nic: nic_index,
-        external_port: config.external_port.into(),
-        qcmp_port: config.qcmp_port.into(),
-        ipv4,
-        ipv6,
-    })
 }
 
 pub struct XdpLoop {
@@ -381,7 +491,6 @@ pub fn spawn(workers: XdpWorkers, config: process::ConfigState) -> Result<XdpLoo
 }
 
 const BATCH_SIZE: usize = 64;
-use xdp::packet::net_types::NetworkU16;
 
 use crate::time::UtcTimestamp;
 
@@ -424,8 +533,6 @@ fn io_loop(
         local_ipv6,
         last_receive: UtcTimestamp::now(),
     };
-
-    use xdp::slab::Slab;
 
     let mut rx_slab = xdp::slab::StackSlab::<BATCH_SIZE>::new();
     let mut tx_slab = xdp::slab::StackSlab::<{ BATCH_SIZE << 2 }>::new();

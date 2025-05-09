@@ -14,28 +14,24 @@
  *  limitations under the License.
  */
 
-use crate::components::proxy;
 use std::sync::Arc;
+
+use crate::net::{PipelineError, SystemSocket, io::completion::io_uring, packet::PacketQueue};
 
 static SESSION_COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 
 impl super::SessionPool {
     pub(super) fn spawn_session(
         self: Arc<Self>,
-        raw_socket: socket2::Socket,
+        raw_socket: SystemSocket,
         port: u16,
-        pending_sends: crate::net::PacketQueue,
-    ) -> Result<(), proxy::PipelineError> {
-        use crate::net::io_uring;
-
+        pending_sends: PacketQueue,
+    ) -> Result<(), PipelineError> {
         let pool = self;
         let id = SESSION_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let _thread_span = uring_span!(tracing::debug_span!("session", id).or_current());
 
-        let io_loop = io_uring::IoUringLoop::new(
-            2000,
-            crate::net::DualStackLocalSocket::from_raw(raw_socket),
-        )?;
+        let io_loop = io_uring::IoUringLoop::new(2000, crate::net::Socket::completion(raw_socket))?;
         let buffer_pool = pool.buffer_pool.clone();
 
         io_loop.spawn(

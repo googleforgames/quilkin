@@ -112,7 +112,7 @@ trace_test!(relay_routing, {
         msg.extend_from_slice(&token.inner);
 
         tracing::info!(%token, "sending packet");
-        client.send_to(&msg, &proxy_address).await.unwrap();
+        client.send_to(&*msg, proxy_address).await.unwrap();
 
         assert_eq!(
             "hello",
@@ -124,7 +124,7 @@ trace_test!(relay_routing, {
         tracing::info!(%token, "sending bad packet");
         // send an invalid packet
         client
-            .send_to(b"hello\xFF\xFF\xFF", &proxy_address)
+            .send_to(&b"hello\xFF\xFF\xFF"[..], proxy_address)
             .await
             .unwrap();
 
@@ -308,7 +308,7 @@ trace_test!(filter_update, {
         msg.extend_from_slice(&token);
 
         tracing::info!(len = token.len(), "sending packet");
-        client.send_to(&msg, &proxy_address).await.unwrap();
+        client.send_to(&*msg, proxy_address).await.unwrap();
 
         tracing::info!(len = token.len(), "received packet");
         assert_eq!(
@@ -320,7 +320,7 @@ trace_test!(filter_update, {
         // send an invalid packet
         msg.truncate(5);
         msg.extend((0..token.len()).map(|_| b'b'));
-        client.send_to(&msg, &proxy_address).await.unwrap();
+        client.send_to(msg, proxy_address).await.unwrap();
 
         sandbox.expect_timeout(50, server_rx.recv()).await;
         tracing::info!(len = token.len(), "didn't receive bad packet");

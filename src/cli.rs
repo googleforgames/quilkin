@@ -26,10 +26,9 @@ pub use self::{
     agent::Agent,
     generate_config_schema::GenerateConfigSchema,
     manage::Manage,
-    proxy::Proxy,
     qcmp::Qcmp,
     relay::Relay,
-    service::{Finalizer, Service},
+    service::{Finalizer, Service, XdpOptions},
 };
 
 macro_rules! define_port {
@@ -45,7 +44,6 @@ macro_rules! define_port {
 pub mod agent;
 pub mod generate_config_schema;
 pub mod manage;
-pub mod proxy;
 pub mod qcmp;
 pub mod relay;
 mod service;
@@ -191,7 +189,6 @@ pub enum Commands {
     Manage(Manage),
     #[clap(subcommand)]
     Qcmp(Qcmp),
-    Proxy(Proxy),
     Relay(Relay),
 }
 
@@ -259,14 +256,6 @@ impl Cli {
                     ..<_>::default()
                 };
                 agent.run(locality, config, old_ready, shutdown_rx).await
-            }
-
-            Some(Commands::Proxy(runner)) => {
-                let old_ready = proxy::Ready {
-                    xds_is_healthy: parking_lot::RwLock::from(Some(ready.clone())).into(),
-                    ..<_>::default()
-                };
-                runner.run(config, old_ready, None, shutdown_rx).await
             }
 
             Some(Commands::Manage(manager)) => {

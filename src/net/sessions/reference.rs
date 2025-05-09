@@ -14,15 +14,15 @@
  *  limitations under the License.
  */
 
-use crate::{components::proxy, net::PacketQueue};
+use crate::net::{PipelineError, Socket, SystemSocket, packet::PacketQueue};
 
 impl super::SessionPool {
     pub(super) fn spawn_session(
         self: std::sync::Arc<Self>,
-        raw_socket: socket2::Socket,
+        raw_socket: SystemSocket,
         port: u16,
         pending_sends: PacketQueue,
-    ) -> Result<(), proxy::PipelineError> {
+    ) -> Result<(), PipelineError> {
         let pool = self;
 
         uring_spawn!(
@@ -30,14 +30,14 @@ impl super::SessionPool {
             async move {
                 let mut last_received_at = None;
 
-                let socket =
-                    std::sync::Arc::new(crate::net::DualStackLocalSocket::from_raw(raw_socket));
+                let socket = std::sync::Arc::new(Socket::polling(raw_socket));
                 let socket2 = socket.clone();
                 let (tx, mut rx) = tokio::sync::oneshot::channel();
 
-                uring_inner_spawn!(async move {
+                tokio::spawn(async move {
                     let (pending_sends, mut sends_rx) = pending_sends;
                     let mut sends_double_buffer = Vec::with_capacity(pending_sends.capacity());
+                    let sends_rx = sends_rx.as_polling_mut();
 
                     while sends_rx.changed().await.is_ok() {
                         if !*sends_rx.borrow() {
@@ -54,7 +54,7 @@ impl super::SessionPool {
                                 length = packet.data.len(),
                                 "sending packet upstream"
                             );
-                            let (result, _) = socket2.send_to(packet.data, destination).await;
+                            let result = socket2.send_to(packet.data, destination).await;
                             let asn_info = packet.asn_info.as_ref().into();
                             match result {
                                 Ok(size) => {
@@ -87,10 +87,9 @@ impl super::SessionPool {
                 });
 
                 loop {
-                    let buf = pool.buffer_pool.clone().alloc();
+                    let mut buf = pool.buffer_pool.clone().alloc();
                     tokio::select! {
-                        received = socket.recv_from(buf) => {
-                            let (result, buf) = received;
+                        result = socket.recv_from(&mut *buf) => {
                             match result {
                                 Err(error) => {
                                     tracing::trace!(%error, "error receiving packet");

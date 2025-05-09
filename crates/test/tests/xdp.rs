@@ -4,13 +4,10 @@
 use qt::xdp_util::{endpoints, make_config};
 use quilkin::{
     filters,
-    net::xdp::process::{
-        self,
-        xdp::{
-            self,
-            packet::net_types::{self as nt, UdpHeaders},
-            slab::Slab,
-        },
+    net::io::nic::xdp::{
+        packet::net_types::{self as nt, UdpHeaders},
+        process,
+        slab::Slab,
     },
     time::UtcTimestamp,
 };

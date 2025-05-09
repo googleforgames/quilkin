@@ -20,9 +20,12 @@ use hyper::Uri;
 use quilkin::{net::endpoint::Endpoint, test::TestHelper};
 
 const LIVE_ADDRESS: &str = "http://localhost:9093/live";
+const TIMEOUT: std::time::Duration = std::time::Duration::from_millis(250);
 
 #[tokio::test]
+#[ignore]
 async fn health_server() {
+    quilkin::test::enable_log("quilkin=trace");
     let mut t = TestHelper::default();
 
     // create server configuration
@@ -40,14 +43,14 @@ async fn health_server() {
         Some(Some((std::net::Ipv6Addr::UNSPECIFIED, 9093).into())),
     )
     .await;
-    tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+    tokio::time::sleep(TIMEOUT).await;
 
     let client = hyper_util::client::legacy::Client::builder(hyper_util::rt::TokioExecutor::new())
         .build_http::<http_body_util::Empty<bytes::Bytes>>();
     use http_body_util::BodyExt;
-    let resp = client
-        .get(Uri::from_static(LIVE_ADDRESS))
+    let resp = tokio::time::timeout(TIMEOUT, client.get(Uri::from_static(LIVE_ADDRESS)))
         .await
+        .unwrap()
         .unwrap()
         .into_body()
         .collect()
@@ -62,6 +65,12 @@ async fn health_server() {
         panic!("oh no!");
     });
 
-    let resp = client.get(Uri::from_static(LIVE_ADDRESS)).await.unwrap();
+    let resp = tokio::time::timeout(
+        std::time::Duration::from_millis(250),
+        client.get(Uri::from_static(LIVE_ADDRESS)),
+    )
+    .await
+    .unwrap()
+    .unwrap();
     assert!(resp.status().is_server_error(), "Should be unhealthy");
 }

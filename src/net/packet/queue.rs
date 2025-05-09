@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
-pub type PacketQueue = (PacketQueueSender, PacketQueueReceiver);
+pub type PacketQueue = (PacketQueueSender, crate::net::io::Receiver);
 
-pub fn queue(capacity: usize) -> std::io::Result<PacketQueue> {
-    let (notify, rx) = packet_queue()?;
+pub fn queue(capacity: usize, backend: crate::net::io::Backend) -> std::io::Result<PacketQueue> {
+    let (notify, rx) = backend.queue()?;
 
     Ok((
         PacketQueueSender {
@@ -21,7 +21,7 @@ pub fn queue(capacity: usize) -> std::io::Result<PacketQueue> {
 #[derive(Clone)]
 pub struct PacketQueueSender {
     packets: Arc<parking_lot::Mutex<Vec<SendPacket>>>,
-    notify: PacketQueueNotifier,
+    notify: crate::net::io::Notifier,
 }
 
 impl PacketQueueSender {
@@ -35,7 +35,7 @@ impl PacketQueueSender {
     #[inline]
     pub fn push(&self, packet: SendPacket) {
         self.packets.lock().push(packet);
-        push(&self.notify);
+        self.notify.notify();
     }
 
     /// Swaps the current queue with an empty one so we only lock for a pointer swap
@@ -53,33 +53,4 @@ pub struct SendPacket {
     pub data: crate::collections::FrozenPoolBuffer,
     /// The asn info for the sender, used for metrics
     pub asn_info: Option<crate::net::maxmind_db::MetricsIpNetEntry>,
-}
-
-cfg_if::cfg_if! {
-    if #[cfg(target_os = "linux")] {
-        pub type PacketQueueReceiver = crate::net::io_uring::EventFd;
-        type PacketQueueNotifier = crate::net::io_uring::EventFdWriter;
-
-        fn packet_queue() -> std::io::Result<(PacketQueueNotifier, PacketQueueReceiver)> {
-            let rx = crate::net::io_uring::EventFd::new()?;
-            Ok((rx.writer(), rx))
-        }
-
-        #[inline]
-        fn push(notify: &PacketQueueNotifier) {
-            notify.write(1);
-        }
-    } else {
-        pub type PacketQueueReceiver = tokio::sync::watch::Receiver<bool>;
-        type PacketQueueNotifier = tokio::sync::watch::Sender<bool>;
-
-        fn packet_queue() -> std::io::Result<(PacketQueueNotifier, PacketQueueReceiver)> {
-            Ok(tokio::sync::watch::channel(true))
-        }
-
-        #[inline]
-        fn push(notify: &PacketQueueNotifier) {
-            let _ = notify.send(true);
-        }
-    }
 }

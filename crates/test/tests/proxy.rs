@@ -3,7 +3,7 @@
 #![cfg(debug_assertions)]
 
 use qt::*;
-use quilkin::{components::proxy, net, test::TestConfig};
+use quilkin::test::TestConfig;
 
 trace_test!(server, {
     let mut sc = qt::sandbox_config!();
@@ -24,7 +24,7 @@ trace_test!(server, {
 
     let client = sb.client();
 
-    client.send_to(msg.as_bytes(), &addr).await.unwrap();
+    client.send_to(msg.as_bytes(), addr).await.unwrap();
     assert_eq!(
         msg,
         sb.timeout(100, server1_rx.recv())
@@ -53,7 +53,7 @@ trace_test!(client, {
 
     let msg = "hello";
     tracing::debug!(%local_addr, "sending packet");
-    client.send_to(msg.as_bytes(), &local_addr).await.unwrap();
+    client.send_to(msg.as_bytes(), local_addr).await.unwrap();
     assert_eq!(msg, sb.timeout(100, dest_rx.recv()).await.unwrap(),);
 });
 
@@ -75,7 +75,7 @@ trace_test!(with_filter, {
     let client = sb.client();
 
     let msg = "hello";
-    client.send_to(msg.as_bytes(), &local_addr).await.unwrap();
+    client.send_to(msg.as_bytes(), local_addr).await.unwrap();
 
     // search for the filter strings.
     let result = sb.timeout(100, rx.recv()).await.unwrap();
@@ -99,22 +99,25 @@ trace_test!(uring_receiver, {
 
     let socket = sb.client();
     let (ws, addr) = sb.socket();
+    let backend = quilkin::net::io::Backend::Polling;
+    let pending_sends = quilkin::net::packet::queue(1, backend).unwrap();
 
-    let pending_sends = net::queue(1).unwrap();
-
-    // we'll test a single DownstreamReceiveWorkerConfig
-    proxy::packet_router::DownstreamReceiveWorkerConfig {
-        worker_id: 1,
-        port: addr.port(),
-        config: config.clone(),
-        buffer_pool: quilkin::test::BUFFER_POOL.clone(),
-        sessions: proxy::SessionPool::new(
-            config,
-            vec![pending_sends.0.clone()],
-            BUFFER_POOL.clone(),
-        ),
-    }
-    .spawn(pending_sends)
+    // we'll test a single Listener
+    quilkin::net::io::completion::listen(
+        quilkin::net::io::Listener {
+            worker_id: 1,
+            port: addr.port(),
+            config: config.clone(),
+            buffer_pool: quilkin::test::BUFFER_POOL.clone(),
+            sessions: quilkin::net::sessions::SessionPool::new(
+                config,
+                vec![pending_sends.0.clone()],
+                BUFFER_POOL.clone(),
+                backend,
+            ),
+        },
+        pending_sends,
+    )
     .expect("failed to spawn task");
 
     // Drop the socket, otherwise it can
@@ -144,31 +147,37 @@ trace_test!(
             .unwrap()
             .modify(|clusters| clusters.insert_default([endpoint.into()].into()));
 
+        let backend = quilkin::net::io::Backend::Polling;
         let pending_sends: Vec<_> = [
-            net::queue(1).unwrap(),
-            net::queue(1).unwrap(),
-            net::queue(1).unwrap(),
+            quilkin::net::packet::queue(1, backend).unwrap(),
+            quilkin::net::packet::queue(1, backend).unwrap(),
+            quilkin::net::packet::queue(1, backend).unwrap(),
         ]
         .into_iter()
         .collect();
 
-        let sessions = proxy::SessionPool::new(
+        let sessions = quilkin::net::sessions::SessionPool::new(
             config.clone(),
             pending_sends.iter().map(|ps| ps.0.clone()).collect(),
             BUFFER_POOL.clone(),
+            backend,
         );
 
         const WORKER_COUNT: usize = 3;
 
         let (socket, addr) = sb.socket();
-        proxy::packet_router::spawn_receivers(
-            config,
-            socket,
-            pending_sends,
-            &sessions,
-            BUFFER_POOL.clone(),
-        )
-        .unwrap();
+        let port = quilkin::net::io::SystemSocket::new(socket).port();
+        for (worker_id, ws) in pending_sends.into_iter().enumerate() {
+            let worker = quilkin::net::io::Listener {
+                worker_id,
+                port,
+                config: config.clone(),
+                sessions: sessions.clone(),
+                buffer_pool: BUFFER_POOL.clone(),
+            };
+
+            quilkin::net::io::poll::listen(worker, ws).unwrap();
+        }
 
         let socket = std::sync::Arc::new(sb.client());
         let msg = "recv-from";

@@ -31,9 +31,9 @@ use crate::{
     filters::Filter,
     metrics,
     net::{
-        PacketQueueSender,
+        error::PipelineError,
         maxmind_db::{IpNetEntry, MetricsIpNetEntry},
-        queue::SendPacket,
+        packet::{PacketQueueSender, SendPacket},
     },
     time::UtcTimestamp,
 };
@@ -56,7 +56,7 @@ cfg_if::cfg_if! {
 /// tracking metrics and other information about the session.
 pub trait SessionManager {
     type Packet: crate::filters::Packet;
-    fn send(&self, key: SessionKey, contents: &Self::Packet) -> Result<(), super::PipelineError>;
+    fn send(&self, key: SessionKey, contents: &Self::Packet) -> Result<(), PipelineError>;
 }
 
 #[derive(PartialEq, Eq, Hash)]
@@ -105,6 +105,7 @@ pub struct SessionPool {
     config: Arc<Config>,
     downstream_sends: Vec<PacketQueueSender>,
     downstream_index: atomic::AtomicUsize,
+    backend: crate::net::io::Backend,
 }
 
 /// The wrapper struct responsible for holding all of the socket related mappings.
@@ -124,18 +125,20 @@ impl SessionPool {
         config: Arc<Config>,
         downstream_sends: Vec<PacketQueueSender>,
         buffer_pool: Arc<BufferPool>,
+        backend: crate::net::io::Backend,
     ) -> Arc<Self> {
         const SESSION_TIMEOUT_SECONDS: Duration = Duration::from_secs(60);
         const SESSION_EXPIRY_POLL_INTERVAL: Duration = Duration::from_secs(60);
 
         Arc::new(Self {
-            config,
-            ports_to_sockets: <_>::default(),
-            storage: <_>::default(),
-            session_map: SessionMap::new(SESSION_TIMEOUT_SECONDS, SESSION_EXPIRY_POLL_INTERVAL),
+            backend,
             buffer_pool,
-            downstream_sends,
+            config,
             downstream_index: atomic::AtomicUsize::new(0),
+            downstream_sends,
+            ports_to_sockets: <_>::default(),
+            session_map: SessionMap::new(SESSION_TIMEOUT_SECONDS, SESSION_EXPIRY_POLL_INTERVAL),
+            storage: <_>::default(),
         })
     }
 
@@ -143,16 +146,16 @@ impl SessionPool {
     fn create_new_session_from_new_socket<'pool>(
         self: &'pool Arc<Self>,
         key: SessionKey,
-    ) -> Result<(Option<MetricsIpNetEntry>, PacketQueueSender), super::PipelineError> {
+    ) -> Result<(Option<MetricsIpNetEntry>, PacketQueueSender), PipelineError> {
         tracing::trace!(source=%key.source, dest=%key.dest, "creating new socket for session");
-        let raw_socket = crate::net::raw_socket_with_reuse(0)?;
+        let raw_socket = crate::net::SystemSocket::listen()?;
         let port = raw_socket
             .local_addr()?
             .as_socket()
             .ok_or(SessionError::SocketAddressUnavailable)?
             .port();
 
-        let (pending_sends, srecv) = crate::net::queue(15)?;
+        let (pending_sends, srecv) = crate::net::packet::queue(15, self.backend)?;
         self.clone()
             .spawn_session(raw_socket, port, (pending_sends.clone(), srecv))?;
 
@@ -231,7 +234,7 @@ impl SessionPool {
     pub(crate) fn get<'pool>(
         self: &'pool Arc<Self>,
         key @ SessionKey { dest, .. }: SessionKey,
-    ) -> Result<(Option<MetricsIpNetEntry>, PacketQueueSender), super::PipelineError> {
+    ) -> Result<(Option<MetricsIpNetEntry>, PacketQueueSender), PipelineError> {
         tracing::trace!(source=%key.source, dest=%key.dest, "SessionPool::get");
         // If we already have a session for the key pairing, return that session.
         if let Some(entry) = self.session_map.get(&key) {
@@ -294,7 +297,7 @@ impl SessionPool {
         key: SessionKey,
         pending_sends: PacketQueueSender,
         socket_port: u16,
-    ) -> Result<(Option<MetricsIpNetEntry>, PacketQueueSender), super::PipelineError> {
+    ) -> Result<(Option<MetricsIpNetEntry>, PacketQueueSender), PipelineError> {
         tracing::trace!(source=%key.source, dest=%key.dest, "reusing socket for session");
         let asn_info = {
             let mut storage = self.storage.write();
@@ -378,7 +381,7 @@ impl SessionPool {
         self: &Arc<Self>,
         key: SessionKey,
         packet: FrozenPoolBuffer,
-    ) -> Result<(), super::PipelineError> {
+    ) -> Result<(), PipelineError> {
         self.send_inner(key, packet)?;
         Ok(())
     }
@@ -388,7 +391,7 @@ impl SessionPool {
         self: &Arc<Self>,
         key: SessionKey,
         packet: FrozenPoolBuffer,
-    ) -> Result<PacketQueueSender, super::PipelineError> {
+    ) -> Result<PacketQueueSender, PipelineError> {
         let (asn_info, sender) = self.get(key)?;
 
         sender.push(SendPacket {
@@ -459,7 +462,7 @@ impl SessionPool {
 impl SessionManager for Arc<SessionPool> {
     type Packet = FrozenPoolBuffer;
 
-    fn send(&self, key: SessionKey, contents: &Self::Packet) -> Result<(), super::PipelineError> {
+    fn send(&self, key: SessionKey, contents: &Self::Packet) -> Result<(), PipelineError> {
         SessionPool::send(self, key, contents.clone())
     }
 }
@@ -575,12 +578,14 @@ mod tests {
     use std::sync::Arc;
 
     async fn new_pool() -> (Arc<SessionPool>, PacketQueueSender) {
-        let (pending_sends, _srecv) = crate::net::queue(1).unwrap();
+        const BACKEND: crate::net::io::Backend = crate::net::io::Backend::Polling;
+        let (pending_sends, _srecv) = crate::net::packet::queue(1, BACKEND).unwrap();
         (
             SessionPool::new(
                 Arc::new(Config::default_agent()),
                 vec![pending_sends.clone()],
                 Arc::new(BufferPool::default()),
+                BACKEND,
             ),
             pending_sends,
         )

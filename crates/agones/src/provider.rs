@@ -90,7 +90,10 @@ mod tests {
         // let's allocate this specific game server
         let mut t = TestHelper::default();
         let (mut rx, socket) = t.open_socket_and_recv_multiple_packets().await;
-        socket.send_to(b"ALLOCATE", gs_address).await.unwrap();
+        socket
+            .send_to(&b"ALLOCATE"[..], gs_address.parse().unwrap())
+            .await
+            .unwrap();
 
         let response = timeout(SLOW, rx.recv())
             .await

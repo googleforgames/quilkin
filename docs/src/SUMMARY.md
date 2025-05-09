@@ -30,11 +30,14 @@
 
 ---
 
+- [Providers]()
+    - [Agones](./config/providers/agones.md)
+    - [Filesystem](./config/providers/filesystem.md)
+
+---
+
 - [Control Plane](./services/xds.md)
     - [Metrics](./services/xds/metrics.md)
-    - [Providers]()
-        - [Agones](./services/xds/providers/agones.md)
-        - [Filesystem](./services/xds/providers/filesystem.md)
     - [Protobuf Reference](./services/xds/proto/index.md)
 ---
 

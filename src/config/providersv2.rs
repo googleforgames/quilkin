@@ -140,7 +140,7 @@ pub struct Providers {
         env = "QUILKIN_PROVIDERS_STATIC_ENDPOINTS"
     )]
     endpoints: Vec<SocketAddr>,
-    /// Assigns dynamic tokens to each address in the `--to` argument
+    /// Assigns dynamic tokens to each address in the `provider.static.endpoints` argument
     ///
     /// Format is `<number of unique tokens>:<length of token suffix for each packet>`
     #[clap(
@@ -228,6 +228,11 @@ impl Providers {
         self
     }
 
+    pub fn xds_endpoints(mut self, ns: Vec<tonic::transport::Endpoint>) -> Self {
+        self.xds_endpoints = ns;
+        self
+    }
+
     fn static_enabled(&self) -> bool {
         !self.endpoints.is_empty()
     }
@@ -242,31 +247,31 @@ impl Providers {
             .as_ref()
             .map(|tt| {
                 let Some((count, length)) = tt.split_once(':') else {
-                    eyre::bail!("--to-tokens `{tt}` is invalid, it must have a `:` separator")
+                    eyre::bail!("provider.static.endpoint_tokens: `{tt}` is invalid, it must have a `:` separator")
                 };
 
-                let count = count.parse()?;
-                let length = length.parse()?;
+                let count: usize = count.parse()?;
+                let length: usize = length.parse()?;
 
-                Ok(crate::components::proxy::ToTokens { count, length })
+                Ok((count, length))
             })
             .transpose()?;
 
-        let endpoints = if let Some(tt) = endpoint_tokens {
-            let (unique, overflow) = 256u64.overflowing_pow(tt.length as _);
+        let endpoints = if let Some((count, length)) = endpoint_tokens {
+            let (unique, overflow) = 256u64.overflowing_pow(length as _);
             if overflow {
                 panic!(
                     "can't generate {} tokens of length {} maximum is {}",
-                    self.endpoints.len() * tt.count,
-                    tt.length,
+                    self.endpoints.len() * count,
+                    length,
                     u64::MAX,
                 );
             }
 
-            if unique < (self.endpoints.len() * tt.count) as u64 {
+            if unique < (self.endpoints.len() * count) as u64 {
                 panic!(
                     "we require {} unique tokens but only {unique} can be generated",
-                    self.endpoints.len() * tt.count,
+                    self.endpoints.len() * count,
                 );
             }
 
@@ -279,7 +284,7 @@ impl Providers {
                                 metadata_key: crate::filters::capture::CAPTURED_BYTES.into(),
                                 strategy: crate::filters::capture::Strategy::Suffix(
                                     crate::filters::capture::Suffix {
-                                        size: tt.length as _,
+                                        size: length as _,
                                         remove: true,
                                     },
                                 ),
@@ -292,7 +297,7 @@ impl Providers {
                 ));
             }
 
-            let count = tt.count as u64;
+            let count = count as u64;
 
             self.endpoints
                 .iter()
@@ -301,7 +306,7 @@ impl Providers {
                     let mut tokens = std::collections::BTreeSet::new();
                     let start = ind as u64 * count;
                     for i in start..(start + count) {
-                        tokens.insert(i.to_le_bytes()[..tt.length].to_vec());
+                        tokens.insert(i.to_le_bytes()[..length].to_vec());
                     }
 
                     crate::net::endpoint::Endpoint::with_metadata(
@@ -330,6 +335,24 @@ impl Providers {
         health_check.store(true, Ordering::SeqCst);
 
         Ok(tokio::spawn(std::future::pending()))
+    }
+
+    pub fn spawn_mmdb_provider(&self) -> JoinHandle<crate::Result<()>> {
+        let Some(source) = self.mmdb.clone() else {
+            return tokio::spawn(std::future::pending());
+        };
+
+        tokio::spawn(async move {
+            while let Err(error) = tryhard::retry_fn(|| crate::MaxmindDb::update(source.clone()))
+                .retries(10)
+                .exponential_backoff(crate::config::BACKOFF_INITIAL_DELAY)
+                .await
+            {
+                tracing::warn!(%error, "error updating maxmind database");
+            }
+
+            Ok(())
+        })
     }
 
     pub fn spawn_k8s_provider(
