@@ -178,20 +178,13 @@ trace_test!(datacenter_discovery, {
         unreachable!()
     };
 
-    loop {
-        let rt = sandbox.timeout(10000, proxy_delta_rx.recv()).await.unwrap();
-
-        if matches!(rt.as_ref(), quilkin::xds::DATACENTER_TYPE) {
-            break;
-        }
-    }
-
     #[track_caller]
     fn assert_config(
         which: &str,
         config: &quilkin::Config,
         datacenter: &quilkin::config::Datacenter,
-    ) {
+        counter: u32,
+    ) -> bool {
         let dcs = config.dyn_cfg.datacenters().unwrap().read();
 
         for i in dcs.iter() {
@@ -201,18 +194,45 @@ trace_test!(datacenter_discovery, {
         let ipv4_dc = dcs.get(&std::net::Ipv4Addr::LOCALHOST.into());
         let ipv6_dc = dcs.get(&std::net::Ipv6Addr::LOCALHOST.into());
 
-        match (ipv4_dc, ipv6_dc) {
-            (Some(dc), None) | (None, Some(dc)) => assert_eq!(&*dc, datacenter),
-            (Some(dc1), Some(dc2)) => {
-                assert_eq!(&*dc1, datacenter);
-                assert_eq!(&*dc2, datacenter);
+        if counter > 0 {
+            match (ipv4_dc, ipv6_dc) {
+                (Some(dc), None) | (None, Some(dc)) => assert_eq!(&*dc, datacenter),
+                (Some(dc1), Some(dc2)) => {
+                    assert_eq!(&*dc1, datacenter);
+                    assert_eq!(&*dc2, datacenter);
+                }
+                (None, None) => panic!("No datacenter found"),
+            };
+            true
+        } else {
+            match (ipv4_dc, ipv6_dc) {
+                (Some(dc), None) | (None, Some(dc)) => &*dc == datacenter,
+                (Some(dc1), Some(dc2)) => &*dc1 == datacenter && &*dc2 == datacenter,
+                (None, None) => false,
             }
-            (None, None) => panic!("No datacenter found"),
-        };
+        }
     }
 
-    assert_config("relay", relay_config, &datacenter);
-    assert_config("proxy", proxy_config, &datacenter);
+    loop {
+        let rt = sandbox.timeout(10000, proxy_delta_rx.recv()).await.unwrap();
+
+        if matches!(rt.as_ref(), quilkin::xds::DATACENTER_TYPE) {
+            break;
+        }
+    }
+    assert_config("relay", relay_config, &datacenter, 0);
+
+    if assert_config("proxy", proxy_config, &datacenter, 0) {
+        return;
+    }
+    loop {
+        let rt = sandbox.timeout(10000, proxy_delta_rx.recv()).await.unwrap();
+
+        if matches!(rt.as_ref(), quilkin::xds::DATACENTER_TYPE) {
+            break;
+        }
+    }
+    assert_config("proxy", proxy_config, &datacenter, 1);
 });
 
 trace_test!(filter_update, {
