@@ -20,19 +20,53 @@
 //! Note there is also the QCMP loop, but that one is simpler and is different
 //! enough that it doesn't make sense to share the same code
 
-use crate::{
-    collections::PoolBuffer,
-    components::proxy::{self, PipelineError},
-    metrics,
-    net::{PacketQueue, packet::queue::SendPacket},
-    time::UtcTimestamp,
-};
-use io_uring::{squeue::Entry, types::Fd};
-use socket2::SockAddr;
 use std::{
     os::fd::{AsRawFd, FromRawFd},
     sync::Arc,
 };
+
+use eyre::Context as _;
+use io_uring::{squeue::Entry, types::Fd};
+use socket2::SockAddr;
+
+use crate::{
+    collections::PoolBuffer,
+    metrics,
+    net::{PacketQueue, error::PipelineError, packet::queue::SendPacket, sessions::SessionPool},
+    time::UtcTimestamp,
+};
+
+static SESSION_COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+impl crate::net::io::Listener {
+    pub fn spawn(self, pending_sends: crate::net::PacketQueue) -> eyre::Result<()> {
+        let Self {
+            worker_id,
+            port,
+            config,
+            sessions,
+            buffer_pool,
+        } = self;
+
+        let socket =
+            crate::net::DualStackLocalSocket::new(port).context("failed to bind socket")?;
+
+        let io_loop = IoUringLoop::new(2000, socket)?;
+        io_loop
+            .spawn(
+                format!("packet-router-{worker_id}"),
+                PacketProcessorCtx::Router {
+                    config,
+                    sessions,
+                    worker_id,
+                    destinations: Vec::with_capacity(1),
+                },
+                pending_sends,
+                buffer_pool,
+            )
+            .context("failed to spawn io-uring loop")
+    }
+}
 
 /// A simple wrapper around [eventfd](https://man7.org/linux/man-pages/man2/eventfd.2.html)
 ///
@@ -214,12 +248,12 @@ impl LoopPacket {
 pub enum PacketProcessorCtx {
     Router {
         config: Arc<crate::config::Config>,
-        sessions: Arc<proxy::SessionPool>,
+        sessions: Arc<SessionPool>,
         worker_id: usize,
         destinations: Vec<crate::net::EndpointAddress>,
     },
     SessionPool {
-        pool: Arc<proxy::SessionPool>,
+        pool: Arc<SessionPool>,
         port: u16,
     },
 }
@@ -243,7 +277,7 @@ fn process_packet(
             }
             *last_received_at = Some(received_at);
 
-            let ds_packet = proxy::packet_router::DownstreamPacket {
+            let ds_packet = crate::net::packet::DownstreamPacket {
                 contents: packet.buffer,
                 source: packet.source,
             };
@@ -563,6 +597,30 @@ impl IoUringLoop {
             })?;
 
         Ok(())
+    }
+}
+
+impl SessionPool {
+    pub(crate) fn spawn_session(
+        self: Arc<Self>,
+        raw_socket: socket2::Socket,
+        port: u16,
+        pending_sends: crate::net::PacketQueue,
+    ) -> Result<(), PipelineError> {
+        let pool = self;
+        let id = SESSION_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let _thread_span = uring_span!(tracing::debug_span!("session", id).or_current());
+
+        let io_loop =
+            IoUringLoop::new(2000, crate::net::DualStackLocalSocket::from_raw(raw_socket))?;
+        let buffer_pool = pool.buffer_pool.clone();
+
+        io_loop.spawn(
+            format!("session-{id}"),
+            PacketProcessorCtx::SessionPool { pool, port },
+            pending_sends,
+            buffer_pool,
+        )
     }
 }
 

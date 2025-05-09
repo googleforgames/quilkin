@@ -14,64 +14,17 @@
  * limitations under the License.
  */
 
-pub mod packet;
-
-/// On linux spawns a io-uring runtime + thread, everywhere else spawns a regular tokio task.
-#[cfg(not(target_os = "linux"))]
-macro_rules! uring_spawn {
-    ($span:expr_2021, $future:expr_2021) => {{
-        let (tx, rx) = std::sync::mpsc::channel::<()>();
-        use tracing::Instrument as _;
-
-        use tracing::instrument::WithSubscriber as _;
-
-        let fut = async move {
-            let _ = tx.send(());
-            $future.await
-        };
-
-        if let Some(span) = $span {
-            tokio::spawn(fut.instrument(span).with_current_subscriber());
-        } else {
-            tokio::spawn(fut.with_current_subscriber());
-        }
-        rx
-    }};
-}
-
-/// On linux spawns a io-uring task, everywhere else spawns a regular tokio task.
-#[cfg(not(target_os = "linux"))]
-macro_rules! uring_inner_spawn {
-    ($future:expr_2021) => {
-        tokio::spawn($future);
-    };
-}
-
-/// Allows creation of spans only when `debug_assertions` are enabled, to avoid
-/// hitting the cap of 4096 threads that is unconfigurable in
-/// `tracing_subscriber` -> `sharded_slab` for span ids
-macro_rules! uring_span {
-    ($span:expr_2021) => {{
-        cfg_if::cfg_if! {
-            if #[cfg(debug_assertions)] {
-                Some($span)
-            } else {
-                Option::<tracing::Span>::None
-            }
-        }
-    }};
-}
-
 pub mod cluster;
 pub mod endpoint;
+pub mod error;
+pub mod io;
 pub(crate) mod maxmind_db;
+pub mod packet;
 pub mod phoenix;
-
-pub use quilkin_xds as xds;
-pub use xds::net::TcpListener;
+pub mod sessions;
 
 use std::{
-    io,
+    io::Result as IoResult,
     net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
 };
 
@@ -80,22 +33,24 @@ use socket2::{Protocol, Socket, Type};
 cfg_if::cfg_if! {
     if #[cfg(target_os = "linux")] {
         use std::net::UdpSocket;
-
-        pub(crate) mod io_uring;
-        pub mod xdp;
     } else {
         use tokio::net::UdpSocket;
     }
 }
 
-pub use self::{
-    cluster::ClusterMap,
-    endpoint::{Endpoint, EndpointAddress},
+pub use {
+    self::{
+        cluster::ClusterMap,
+        endpoint::{Endpoint, EndpointAddress},
+        error::PipelineError,
+        packet::{Packet, PacketMut, PacketQueue, PacketQueueSender, queue},
+        sessions::SessionPool,
+    },
+    quilkin_xds as xds,
+    xds::net::TcpListener,
 };
 
-pub use self::packet::{PacketQueue, PacketQueueSender, queue};
-
-fn socket_with_reuse_and_address(addr: SocketAddr) -> std::io::Result<UdpSocket> {
+fn socket_with_reuse_and_address(addr: SocketAddr) -> IoResult<UdpSocket> {
     cfg_if::cfg_if! {
         if #[cfg(target_os = "linux")] {
             raw_socket_with_reuse_and_address(addr)
@@ -106,24 +61,24 @@ fn socket_with_reuse_and_address(addr: SocketAddr) -> std::io::Result<UdpSocket>
     }
 }
 
-fn epoll_socket_with_reuse(port: u16) -> std::io::Result<tokio::net::UdpSocket> {
+fn epoll_socket_with_reuse(port: u16) -> IoResult<tokio::net::UdpSocket> {
     raw_socket_with_reuse_and_address((Ipv6Addr::UNSPECIFIED, port).into())
         .map(From::from)
         .and_then(tokio::net::UdpSocket::from_std)
 }
 
-fn epoll_socket_with_reuse_and_address(addr: SocketAddr) -> std::io::Result<tokio::net::UdpSocket> {
+fn epoll_socket_with_reuse_and_address(addr: SocketAddr) -> IoResult<tokio::net::UdpSocket> {
     raw_socket_with_reuse_and_address(addr)
         .map(From::from)
         .and_then(tokio::net::UdpSocket::from_std)
 }
 
 #[inline]
-pub fn raw_socket_with_reuse(port: u16) -> std::io::Result<Socket> {
+pub fn raw_socket_with_reuse(port: u16) -> IoResult<Socket> {
     raw_socket_with_reuse_and_address((Ipv6Addr::UNSPECIFIED, port).into())
 }
 
-pub fn raw_socket_with_reuse_and_address(addr: SocketAddr) -> std::io::Result<Socket> {
+pub fn raw_socket_with_reuse_and_address(addr: SocketAddr) -> IoResult<Socket> {
     let domain = match addr {
         SocketAddr::V4(_) => socket2::Domain::IPV4,
         SocketAddr::V6(_) => socket2::Domain::IPV6,
@@ -150,13 +105,13 @@ pub fn socket_port(socket: &socket2::Socket) -> u16 {
 }
 
 #[cfg(not(target_family = "windows"))]
-fn enable_reuse(sock: &Socket) -> io::Result<()> {
+fn enable_reuse(sock: &Socket) -> IoResult<()> {
     sock.set_reuse_port(true)?;
     Ok(())
 }
 
 #[cfg(target_family = "windows")]
-fn enable_reuse(sock: &Socket) -> io::Result<()> {
+fn enable_reuse(sock: &Socket) -> IoResult<()> {
     sock.set_reuse_address(true)?;
     Ok(())
 }
@@ -184,24 +139,24 @@ impl DualStackLocalSocket {
         Self { socket, local_addr }
     }
 
-    pub fn new(port: u16) -> std::io::Result<Self> {
+    pub fn new(port: u16) -> IoResult<Self> {
         raw_socket_with_reuse(port).map(Self::from_raw)
     }
 
-    pub fn bind_local(port: u16) -> std::io::Result<Self> {
+    pub fn bind_local(port: u16) -> IoResult<Self> {
         let local_addr = (Ipv6Addr::LOCALHOST, port).into();
         let socket = socket_with_reuse_and_address(local_addr)?;
         Ok(Self { socket, local_addr })
     }
 
-    pub fn local_ipv4_addr(&self) -> io::Result<SocketAddr> {
+    pub fn local_ipv4_addr(&self) -> IoResult<SocketAddr> {
         Ok(match self.local_addr {
             SocketAddr::V4(_) => self.local_addr,
             SocketAddr::V6(_) => (Ipv4Addr::UNSPECIFIED, self.local_addr.port()).into(),
         })
     }
 
-    pub fn local_ipv6_addr(&self) -> io::Result<SocketAddr> {
+    pub fn local_ipv6_addr(&self) -> IoResult<SocketAddr> {
         Ok(match self.local_addr {
             SocketAddr::V4(v4addr) => SocketAddr::new(
                 IpAddr::V6(v4addr.ip().to_ipv6_mapped()),
@@ -213,12 +168,12 @@ impl DualStackLocalSocket {
 
     cfg_if::cfg_if! {
         if #[cfg(not(target_os = "linux"))] {
-            pub async fn recv_from<B: std::ops::DerefMut<Target = [u8]>>(&self, mut buf: B) -> (io::Result<(usize, SocketAddr)>, B) {
+            pub async fn recv_from<B: std::ops::DerefMut<Target = [u8]>>(&self, mut buf: B) -> (IoResult<(usize, SocketAddr)>, B) {
                 let result = self.socket.recv_from(&mut buf).await;
                 (result, buf)
             }
 
-            pub async fn send_to<B: std::ops::Deref<Target = [u8]>>(&self, buf: B, target: SocketAddr) -> (io::Result<usize>, B) {
+            pub async fn send_to<B: std::ops::Deref<Target = [u8]>>(&self, buf: B, target: SocketAddr) -> (IoResult<usize>, B) {
                 let result = self.socket.send_to(&buf, target).await;
                 (result, buf)
             }
@@ -251,34 +206,34 @@ pub struct DualStackEpollSocket {
 }
 
 impl DualStackEpollSocket {
-    pub fn new(port: u16) -> std::io::Result<Self> {
+    pub fn new(port: u16) -> IoResult<Self> {
         Ok(Self {
             socket: epoll_socket_with_reuse(port)?,
         })
     }
 
-    pub fn bind_local(port: u16) -> std::io::Result<Self> {
+    pub fn bind_local(port: u16) -> IoResult<Self> {
         Ok(Self {
             socket: epoll_socket_with_reuse_and_address((Ipv6Addr::LOCALHOST, port).into())?,
         })
     }
 
     /// Primarily used for testing of ipv4 vs ipv6 addresses.
-    pub(crate) fn new_with_address(addr: SocketAddr) -> std::io::Result<Self> {
+    pub(crate) fn new_with_address(addr: SocketAddr) -> IoResult<Self> {
         Ok(Self {
             socket: epoll_socket_with_reuse_and_address(addr)?,
         })
     }
 
-    pub async fn recv_from(&self, buf: &mut [u8]) -> io::Result<(usize, SocketAddr)> {
+    pub async fn recv_from(&self, buf: &mut [u8]) -> IoResult<(usize, SocketAddr)> {
         self.socket.recv_from(buf).await
     }
 
-    pub fn local_addr(&self) -> io::Result<SocketAddr> {
+    pub fn local_addr(&self) -> IoResult<SocketAddr> {
         self.socket.local_addr()
     }
 
-    pub fn local_ipv4_addr(&self) -> io::Result<SocketAddr> {
+    pub fn local_ipv4_addr(&self) -> IoResult<SocketAddr> {
         let addr = self.socket.local_addr()?;
         match addr {
             SocketAddr::V4(_) => Ok(addr),
@@ -286,7 +241,7 @@ impl DualStackEpollSocket {
         }
     }
 
-    pub fn local_ipv6_addr(&self) -> io::Result<SocketAddr> {
+    pub fn local_ipv6_addr(&self) -> IoResult<SocketAddr> {
         let addr = self.socket.local_addr()?;
         match addr {
             SocketAddr::V4(v4addr) => Ok(SocketAddr::new(
@@ -301,7 +256,7 @@ impl DualStackEpollSocket {
         &self,
         buf: &[u8],
         target: A,
-    ) -> io::Result<usize> {
+    ) -> IoResult<usize> {
         self.socket.send_to(buf, target).await
     }
 }

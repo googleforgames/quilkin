@@ -537,13 +537,7 @@ impl Service {
 
         let sessions = SessionPool::new(config.clone(), session_sends, buffer_pool.clone());
 
-        crate::components::proxy::packet_router::spawn_receivers(
-            config,
-            socket,
-            worker_sends,
-            &sessions,
-            buffer_pool,
-        )?;
+        crate::net::packet::spawn_receivers(config, socket, worker_sends, &sessions, buffer_pool)?;
 
         Ok((
             std::future::pending(),
@@ -554,7 +548,7 @@ impl Service {
 
     #[cfg(target_os = "linux")]
     fn spawn_xdp(&self, config: Arc<Config>, force_xdp: bool) -> eyre::Result<Option<Finalizer>> {
-        use crate::net::xdp;
+        use crate::net::io::nic::xdp;
         use eyre::{Context as _, ContextCompat as _};
 
         // TODO: remove this once it's been more stabilized
@@ -573,7 +567,7 @@ impl Service {
             .context("XDP requires a cluster map")?
             .clone();
 
-        let config = crate::net::xdp::process::ConfigState { filters, clusters };
+        let config = crate::net::io::nic::xdp::process::ConfigState { filters, clusters };
 
         let udp_port = if self.udp_enabled { self.udp_port } else { 0 };
         let qcmp_port = if self.qcmp_enabled { self.qcmp_port } else { 0 };
