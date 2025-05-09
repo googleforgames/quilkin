@@ -495,6 +495,7 @@ impl Pail {
                 let task = quilkin::cli::Service::default()
                     .udp()
                     .udp_port(port)
+                    .udp_poll()
                     .qcmp()
                     .qcmp_port(qcmp_port)
                     .phoenix()

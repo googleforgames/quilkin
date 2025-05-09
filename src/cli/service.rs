@@ -1,6 +1,6 @@
 use std::{future::Future, sync::Arc};
 
-use crate::config::Config;
+use crate::{config::Config, net::io::Backend};
 
 #[derive(Debug, clap::Parser)]
 #[command(next_help_heading = "Service Options")]
@@ -64,6 +64,22 @@ pub struct Service {
         default_value_t = 7777
     )]
     udp_port: u16,
+    /// Requires Quilkin to use a polling based I/O interface (e.g. epoll).
+    #[clap(
+        long = "service.udp.poll",
+        env = "QUILKIN_SERVICE_UDP_POLL",
+        conflicts_with("xdp_enabled"),
+        conflicts_with("udp_uring_enabled")
+    )]
+    udp_poll_enabled: bool,
+    /// Requires Quilkin to use a completion based I/O interface (e.g. io-uring).
+    #[clap(
+        long = "service.udp.completion",
+        env = "QUILKIN_SERVICE_UDP_COMPLETION",
+        conflicts_with("xdp_enabled"),
+        conflicts_with("udp_poll_enabled")
+    )]
+    udp_completion_enabled: bool,
     #[clap(flatten)]
     pub xdp: XdpOptions,
     /// Amount of UDP workers to run.
@@ -130,6 +146,8 @@ impl Default for Service {
             qcmp_enabled: <_>::default(),
             qcmp_port: 7600,
             udp_enabled: <_>::default(),
+            udp_poll_enabled: <_>::default(),
+            udp_completion_enabled: <_>::default(),
             udp_port: 7777,
             udp_workers: std::num::NonZeroUsize::new(num_cpus::get()).unwrap(),
             xds_enabled: <_>::default(),
@@ -154,6 +172,16 @@ impl Service {
     /// Sets the UDP service port.
     pub fn udp_port(mut self, port: u16) -> Self {
         self.udp_port = port;
+        self
+    }
+
+    pub fn udp_poll(mut self) -> Self {
+        self.udp_poll_enabled = true;
+        self
+    }
+
+    pub fn udp_completion(mut self) -> Self {
+        self.udp_completion_enabled = true;
         self
     }
 
@@ -420,6 +448,17 @@ impl Service {
             return Ok((either::Left(std::future::pending()), None, None));
         }
 
+        let backend = if self.xdp.force_xdp {
+            Backend::NetworkInterface
+        } else if self.udp_completion_enabled {
+            Backend::Completion
+        } else if self.udp_poll_enabled {
+            Backend::Polling
+        } else {
+            tracing::debug!("querying network capabilities");
+            Backend::query(&self.xdp)
+        };
+
         let (fut, finaliser, sessions) = crate::net::io::listen(
             config,
             self.udp_enabled.then_some(self.udp_port),
@@ -427,6 +466,7 @@ impl Service {
             self.udp_workers.get(),
             self.xdp.clone(),
             shutdown_rx,
+            backend,
         )?;
 
         Ok((either::Right(fut), finaliser, sessions))

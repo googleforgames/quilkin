@@ -335,6 +335,7 @@ impl QuilkinLoop {
                 quilkin::cli::Service::default()
                     .udp()
                     .udp_port(port)
+                    .udp_poll()
                     .qcmp()
                     .qcmp_port(quilkin::test::available_port())
                     .spawn_services(&config, &shutdown_rx)

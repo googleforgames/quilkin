@@ -39,6 +39,7 @@ pub fn listen(
     workers: usize,
     xdp: crate::cli::XdpOptions,
     shutdown_rx: &crate::signal::ShutdownRx,
+    backend: Backend,
 ) -> crate::Result<(
     impl Future<Output = crate::Result<()>> + use<>,
     Option<crate::cli::Finalizer>,
@@ -48,34 +49,7 @@ pub fn listen(
         panic!("bug: `net::io::listen` requires either `udp` or `qcmp` to be set");
     }
 
-    tracing::debug!("querying network capabilities");
-    let backend = Backend::query(&xdp);
     tracing::info!(%backend, "network I/O interface chosen");
-    listen_to_backend(
-        config,
-        udp_port,
-        qcmp_port,
-        workers,
-        xdp,
-        shutdown_rx,
-        backend,
-    )
-}
-
-#[allow(clippy::type_complexity)]
-pub fn listen_to_backend(
-    config: &Arc<Config>,
-    udp_port: Option<u16>,
-    qcmp_port: Option<u16>,
-    workers: usize,
-    xdp: crate::cli::XdpOptions,
-    shutdown_rx: &crate::signal::ShutdownRx,
-    backend: Backend,
-) -> crate::Result<(
-    impl Future<Output = crate::Result<()>> + use<>,
-    Option<crate::cli::Finalizer>,
-    Option<Arc<crate::net::sessions::SessionPool>>,
-)> {
     match backend {
         Backend::NetworkInterface => {
             let finalizer = nic::listen(

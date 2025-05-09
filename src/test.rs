@@ -311,6 +311,7 @@ impl TestHelper {
             crate::cli::Service::default()
                 .udp()
                 .udp_port(available_port())
+                .udp_poll()
                 .phoenix()
                 .phoenix_port(available_port())
                 .qcmp()
