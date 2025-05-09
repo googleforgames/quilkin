@@ -790,30 +790,25 @@ impl Config {
                         };
 
                         let parse_payload = || -> crate::Result<(std::net::IpAddr, Datacenter)> {
+                            use eyre::Context;
                             let host: std::net::IpAddr = if let Some(ra) = remote_addr {
                                 ra
                             }else {
-                                 dc.host.parse()?
+                                 dc.host.parse().context("unable to parse remote datacenter address")?
                             };
                             let dc = Datacenter {
-                                qcmp_port: dc.qcmp_port.try_into()?,
-                                icao_code: dc.icao_code.parse()?,
+                                qcmp_port: dc.qcmp_port.try_into().context("unable to parse datacenter QCMP port")?,
+                                icao_code: dc.icao_code.parse().context("unable to parse datacenter ICAO")?,
                             };
 
                             Ok((host, dc))
                         };
 
-                        match parse_payload() {
-                            Ok((host, datacenter)) => {
-                                wg.insert(
-                                    host,
-                                    datacenter,
-                                );
-                            }
-                            Err(error) => {
-                                return Err(error.wrap_err("a datacenter resource could not be applied because the resource payload could not be parsed"));
-                            }
-                        }
+                        let (host, datacenter) = parse_payload()?;
+                        wg.insert(
+                            host,
+                            datacenter,
+                        );
                     }
 
                     Ok(())
