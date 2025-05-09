@@ -321,7 +321,7 @@ pub async fn quilkin_proxy_deployment(
         Some(vec![
             "--service.udp".into(),
             "--service.qcmp".into(),
-            format!("--providers.xds.endpoints={management_server}"),
+            format!("--provider.xds.endpoints={management_server}"),
         ]),
         None,
         current,
