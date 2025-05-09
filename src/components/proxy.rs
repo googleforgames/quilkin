@@ -14,21 +14,18 @@
  *  limitations under the License.
  */
 
-pub(crate) mod error;
-pub mod packet_router;
-pub(crate) mod sessions;
-
-use crate::config::IcaoCode;
-
-use super::RunArgs;
-pub use error::PipelineError;
-pub use sessions::SessionPool;
 use std::{
     net::SocketAddr,
     sync::{
         Arc,
         atomic::{AtomicBool, Ordering},
     },
+};
+
+pub use crate::{
+    components::RunArgs,
+    config::IcaoCode,
+    net::{error::PipelineError, sessions::SessionPool},
 };
 
 #[derive(Clone, Debug)]

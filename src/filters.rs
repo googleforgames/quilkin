@@ -71,7 +71,7 @@ pub use self::{
 pub use crate::test::TestFilter;
 
 pub use self::chain::FilterChain;
-pub use crate::components::proxy::packet_router::{Packet, PacketMut};
+pub use crate::net::{Packet, PacketMut};
 
 #[enum_dispatch::enum_dispatch(Filter)]
 pub enum FilterKind {

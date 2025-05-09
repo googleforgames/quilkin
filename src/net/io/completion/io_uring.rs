@@ -34,6 +34,40 @@ use std::{
     sync::Arc,
 };
 
+use eyre::Context as _;
+
+impl crate::net::Listener {
+    pub fn spawn(self, pending_sends: crate::net::PacketQueue) -> eyre::Result<()> {
+        use crate::net::io_uring;
+
+        let Self {
+            worker_id,
+            port,
+            config,
+            sessions,
+            buffer_pool,
+        } = self;
+
+        let socket =
+            crate::net::DualStackLocalSocket::new(port).context("failed to bind socket")?;
+
+        let io_loop = io_uring::IoUringLoop::new(2000, socket)?;
+        io_loop
+            .spawn(
+                format!("packet-router-{worker_id}"),
+                io_uring::PacketProcessorCtx::Router {
+                    config,
+                    sessions,
+                    worker_id,
+                    destinations: Vec::with_capacity(1),
+                },
+                pending_sends,
+                buffer_pool,
+            )
+            .context("failed to spawn io-uring loop")
+    }
+}
+
 /// A simple wrapper around [eventfd](https://man7.org/linux/man-pages/man2/eventfd.2.html)
 ///
 /// We use eventfd to signal to io uring loops from async tasks, it is essentially

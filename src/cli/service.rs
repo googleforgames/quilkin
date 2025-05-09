@@ -537,13 +537,7 @@ impl Service {
 
         let sessions = SessionPool::new(config.clone(), session_sends, buffer_pool.clone());
 
-        crate::components::proxy::packet_router::spawn_receivers(
-            config,
-            socket,
-            worker_sends,
-            &sessions,
-            buffer_pool,
-        )?;
+        crate::net::packet::spawn_receivers(config, socket, worker_sends, &sessions, buffer_pool)?;
 
         Ok((
             std::future::pending(),
