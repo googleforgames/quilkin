@@ -1,3 +1,5 @@
+#![allow(clippy::dbg_macro)]
+
 use qt::*;
 use quilkin::{
     filters::{self, *},
