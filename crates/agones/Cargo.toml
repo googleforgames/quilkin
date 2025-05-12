@@ -28,12 +28,12 @@ workspace = true
 
 [dependencies]
 base64.workspace = true
-either = "1.13"
+either = "1.15"
 futures.workspace = true
 k8s-openapi.workspace = true
 kube = { workspace = true, features = ["openssl-tls", "client", "derive", "runtime"] }
 quilkin = { path = "../../" }
-rustls = "0.23.25"
+rustls = "0.23.27"
 serial_test = "3.2.0"
 tokio.workspace = true
 tracing.workspace = true

@@ -98,7 +98,7 @@ mod tests {
         let source = Arc::new(crate::Config::default());
         let dest = Arc::new(crate::Config::default());
         let tmp_dir = tempfile::tempdir().unwrap();
-        let file_path = tmp_dir.into_path().join("config.yaml");
+        let file_path = tmp_dir.keep().join("config.yaml");
         tokio::fs::write(&file_path, serde_yaml::to_string(&source).unwrap())
             .await
             .unwrap();
