@@ -590,25 +590,6 @@ impl Config {
                         cache_control: None,
                     });
                 }
-                crate::xds::ResourceType::Listener => {
-                    let Some(filters) = self.dyn_cfg.filters() else {
-                        break 'append;
-                    };
-
-                    let resource = crate::xds::Resource::Listener(
-                        crate::net::cluster::proto::FilterChain::try_from(&*filters.load())?,
-                    );
-                    let any = resource.try_encode()?;
-
-                    resources.push(XdsResource {
-                        name: "listener".into(),
-                        version: "0".into(),
-                        resource: Some(any),
-                        aliases: Vec::new(),
-                        ttl: None,
-                        cache_control: None,
-                    });
-                }
                 ResourceType::Datacenter => {
                     if let Some(agent) = self.dyn_cfg.agent() {
                         let name = agent.icao_code.load().to_string();
@@ -753,7 +734,7 @@ impl Config {
         let resource_type = type_url.parse::<ResourceType>()?;
 
         match resource_type {
-            ResourceType::FilterChain | ResourceType::Listener => {
+            ResourceType::FilterChain => {
                 let Some(filters) = self.dyn_cfg.filters() else {
                     return Ok(());
                 };
@@ -773,7 +754,7 @@ impl Config {
                 };
 
                 let resource = match crate::xds::Resource::try_decode(resource)? {
-                    crate::xds::Resource::FilterChain(r) | crate::xds::Resource::Listener(r) => r,
+                    crate::xds::Resource::FilterChain(r) => r,
                     res => {
                         eyre::bail!(
                             "filter chain response contained a {} resource payload",
