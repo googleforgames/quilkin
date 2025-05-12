@@ -472,6 +472,28 @@ impl Providers {
         }
     }
 
+    fn spawn_mmdb_provider(&self) -> impl Future<Output = crate::Result<()>> + 'static {
+        self.mmdb.as_ref().map_or_else(
+            || either::Left(std::future::pending()),
+            |source| {
+                let source = source.clone();
+                either::Right(async move {
+                    while let Err(error) =
+                        tryhard::retry_fn(|| crate::MaxmindDb::update(source.clone()))
+                            .retries(10)
+                            .exponential_backoff(crate::config::BACKOFF_INITIAL_DELAY)
+                            .await
+                    {
+                        tracing::warn!(%error, "error updating maxmind database");
+                    }
+
+                    tracing::error!("terminating mmdb task");
+                    Ok(())
+                })
+            },
+        )
+    }
+
     pub fn spawn_mds_provider(
         &self,
         config: Arc<config::Config>,
@@ -546,12 +568,17 @@ impl Providers {
         self.fs_enabled
     }
 
+    pub fn mmdb_enabled(&self) -> bool {
+        self.mmdb.is_some()
+    }
+
     pub fn any_provider_enabled(&self) -> bool {
-        self.grpc_push_enabled()
-            || self.grpc_pull_enabled()
-            || self.k8s_enabled()
-            || self.agones_enabled()
+        self.agones_enabled()
             || self.fs_enabled()
+            || self.grpc_pull_enabled()
+            || self.grpc_push_enabled()
+            || self.k8s_enabled()
+            || self.mmdb_enabled()
             || self.static_enabled()
     }
 
@@ -569,13 +596,18 @@ impl Providers {
         }
 
         tracing::info!(providers=?[
-            self.grpc_push_enabled().then_some("xDS"),
-            self.grpc_pull_enabled().then_some("mDS"),
-            self.k8s_enabled().then_some("k8s"),
             self.agones_enabled().then_some("agones"),
             self.fs_enabled().then_some("fs"),
+            self.grpc_pull_enabled().then_some("mDS"),
+            self.grpc_push_enabled().then_some("xDS"),
+            self.k8s_enabled().then_some("k8s"),
+            self.mmdb_enabled().then_some("mmdb"),
             self.static_enabled().then_some("static"),
         ].into_iter().flatten().collect::<Vec<&str>>(), "starting configuration providers");
+
+        if self.mmdb_enabled() {
+            providers.spawn(self.spawn_mmdb_provider());
+        }
 
         if self.grpc_push_enabled() {
             providers.spawn(self.spawn_mds_provider(config.clone(), health_check.clone()));
