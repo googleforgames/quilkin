@@ -4,7 +4,7 @@
 use qt::xdp_util::{endpoints, make_config};
 use quilkin::{
     filters,
-    net::xdp::process::{
+    net::io::nic::xdp::process::{
         self,
         xdp::{
             self,

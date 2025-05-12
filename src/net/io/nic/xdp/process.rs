@@ -1,10 +1,11 @@
 use crate::{
-    components::proxy::{PipelineError, sessions::inner_metrics as session_metrics},
     filters::{self, Filter as _},
     metrics::{self, AsnInfo},
     net::{
         EndpointAddress,
+        error::PipelineError,
         maxmind_db::{self, IpNetEntry},
+        sessions::inner_metrics as session_metrics,
     },
     time::UtcTimestamp,
 };

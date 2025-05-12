@@ -3,7 +3,7 @@
 #![cfg(debug_assertions)]
 
 use qt::*;
-use quilkin::{components::proxy, net, test::TestConfig};
+use quilkin::{net, test::TestConfig};
 
 trace_test!(server, {
     let mut sc = qt::sandbox_config!();
@@ -103,12 +103,12 @@ trace_test!(uring_receiver, {
     let pending_sends = net::queue(1).unwrap();
 
     // we'll test a single DownstreamReceiveWorkerConfig
-    proxy::packet_router::DownstreamReceiveWorkerConfig {
+    quilkin::net::io::Listener {
         worker_id: 1,
         port: addr.port(),
         config: config.clone(),
         buffer_pool: quilkin::test::BUFFER_POOL.clone(),
-        sessions: proxy::SessionPool::new(
+        sessions: quilkin::net::sessions::SessionPool::new(
             config,
             vec![pending_sends.0.clone()],
             BUFFER_POOL.clone(),
@@ -152,7 +152,7 @@ trace_test!(
         .into_iter()
         .collect();
 
-        let sessions = proxy::SessionPool::new(
+        let sessions = net::SessionPool::new(
             config.clone(),
             pending_sends.iter().map(|ps| ps.0.clone()).collect(),
             BUFFER_POOL.clone(),
@@ -161,7 +161,7 @@ trace_test!(
         const WORKER_COUNT: usize = 3;
 
         let (socket, addr) = sb.socket();
-        proxy::packet_router::spawn_receivers(
+        net::packet::spawn_receivers(
             config,
             socket,
             pending_sends,
