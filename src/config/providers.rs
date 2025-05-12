@@ -190,7 +190,6 @@ impl Providers {
             &[
                 (crate::xds::CLUSTER_TYPE, Vec::new()),
                 (crate::xds::DATACENTER_TYPE, Vec::new()),
-                (crate::xds::LISTENER_TYPE, Vec::new()),
             ],
         ),
     ];

@@ -57,11 +57,11 @@ pub struct SendPacket {
 
 cfg_if::cfg_if! {
     if #[cfg(target_os = "linux")] {
-        pub type PacketQueueReceiver = crate::net::io_uring::EventFd;
-        type PacketQueueNotifier = crate::net::io_uring::EventFdWriter;
+        pub type PacketQueueReceiver = crate::net::io::completion::io_uring::EventFd;
+        type PacketQueueNotifier = crate::net::io::completion::io_uring::EventFdWriter;
 
         fn packet_queue() -> std::io::Result<(PacketQueueNotifier, PacketQueueReceiver)> {
-            let rx = crate::net::io_uring::EventFd::new()?;
+            let rx = crate::net::io::completion::io_uring::EventFd::new()?;
             Ok((rx.writer(), rx))
         }
 

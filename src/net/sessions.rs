@@ -44,14 +44,6 @@ pub(crate) mod inner_metrics;
 
 pub type SessionMap = crate::collections::ttl::TtlMap<SessionKey, Session>;
 
-cfg_if::cfg_if! {
-    if #[cfg(target_os = "linux")] {
-        mod io_uring;
-    } else {
-        mod reference;
-    }
-}
-
 /// Responsible for managing sending processed traffic to its destination and
 /// tracking metrics and other information about the session.
 pub trait SessionManager {
@@ -101,7 +93,7 @@ pub struct SessionPool {
     ports_to_sockets: RwLock<HashMap<u16, PacketQueueSender>>,
     storage: Arc<RwLock<SocketStorage>>,
     session_map: SessionMap,
-    buffer_pool: Arc<BufferPool>,
+    pub(super) buffer_pool: Arc<BufferPool>,
     config: Arc<Config>,
     downstream_sends: Vec<PacketQueueSender>,
     downstream_index: atomic::AtomicUsize,
