@@ -71,7 +71,7 @@ pub struct Proxy {
     pub qcmp: socket2::Socket,
     pub phoenix: crate::net::TcpListener,
     pub notifier: Option<tokio::sync::mpsc::UnboundedSender<String>>,
-    pub xdp: crate::cli::XdpOptions,
+    pub xdp: crate::service::XdpOptions,
     pub termination_timeout: Option<crate::cli::Timeout>,
 }
 
@@ -293,7 +293,7 @@ impl Proxy {
         )
         .port();
 
-        let svc_task = crate::cli::Service::default()
+        let svc_task = crate::Service::default()
             .udp()
             .udp_port(udp_port)
             .xdp(self.xdp)

@@ -31,12 +31,13 @@ pub mod codec;
 pub mod components;
 pub mod config;
 pub mod filters;
+pub mod service;
 pub mod xds;
 
 #[doc(hidden)]
 pub mod test;
 
-pub use quilkin_proto as generated;
+pub use {quilkin_proto as generated, service::Service};
 
 pub type Result<T, E = eyre::Error> = std::result::Result<T, E>;
 

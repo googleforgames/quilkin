@@ -331,7 +331,7 @@ impl QuilkinLoop {
                 );
             });
 
-            let proxy = quilkin::cli::Service::builder()
+            let proxy = quilkin::Service::builder()
                 .udp()
                 .udp_port(port)
                 .qcmp()

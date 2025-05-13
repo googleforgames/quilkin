@@ -21,17 +21,10 @@ use clap::crate_version;
 
 use strum_macros::{Display, EnumString};
 
-pub use self::{
-    generate_config_schema::GenerateConfigSchema,
-    qcmp::Qcmp,
-    service::{Finalizer, Service},
-};
+pub use self::{generate_config_schema::GenerateConfigSchema, qcmp::Qcmp};
 
 pub mod generate_config_schema;
 pub mod qcmp;
-mod service;
-
-pub use service::XdpOptions;
 
 const ETC_CONFIG_PATH: &str = "/etc/quilkin/quilkin.yaml";
 
@@ -128,7 +121,7 @@ pub struct Cli {
     #[command(flatten)]
     pub providers: crate::config::providers::Providers,
     #[command(flatten)]
-    pub service: Service,
+    pub service: crate::service::Service,
 }
 
 /// The various log format options
@@ -315,5 +308,13 @@ impl std::str::FromStr for Timeout {
         };
 
         Ok(Self(std::time::Duration::from_secs(seconds)))
+    }
+}
+
+impl std::ops::Deref for Timeout {
+    type Target = std::time::Duration;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
