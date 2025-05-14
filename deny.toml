@@ -44,6 +44,8 @@ multiple-versions = "deny"
 skip = [
     { crate = "object@0.32.2", reason = "transitive dependency due to backtrace, backtrace is updated, but stable-eyre using a feature that doesn't exist any longer, and can't update, sigh" },
     { crate = "hashbrown@0.14.5", reason = "many crates use this old version" },
+    { crate = "webpki-roots@0.26.11", reason = "webpki-roots depends on itself :-/" },
+    { crate = "k8s-openapi@0.24.0", reason = "kube-leader-election pulls in a newer version, but itself depends on kube, as we do, which uses an older version" },
 
 ]
 skip-tree = [
@@ -64,6 +66,6 @@ exceptions = [
     { crate = "foldhash", allow = ["Zlib"] },
     # This license should not really be used for code, but here we are
     { crate = "notify", allow = ["CC0-1.0"] },
-    { crate = "webpki-roots", allow = ["MPL-2.0"] },
+    { crate = "webpki-roots", allow = ["CDLA-Permissive-2.0"] },
     { crate = "aws-lc-sys", allow = ["OpenSSL"] },
 ]
