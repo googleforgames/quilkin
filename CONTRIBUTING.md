@@ -3,7 +3,7 @@ Thank you for your interest in contributing to Quilkin.
 
 The easiest way to get started if you want to contribute code is to look for [unassigned "help wanted" issues.]. If you have any questions along the way please ask for help on [GitHub Discussions].
 
-If you have a feature you'd like to request that doesn't have an existing, please feel free to create one with the ["Feature Request"] issue template.
+If you have a feature you'd like to request that doesn't have an existing issue, please feel free to create one with the ["Feature Request"] issue template.
 
 Participation in this project comes under the [Contributor Covenant Code of Conduct](code-of-conduct.md)
 
