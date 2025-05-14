@@ -50,7 +50,7 @@ use kube::{
 use tokio::{sync::OnceCell, time::timeout};
 use tracing::debug;
 
-use quilkin::config::providers::k8s::agones::{
+use quilkin::providers::k8s::agones::{
     Fleet, FleetSpec, GameServer, GameServerPort, GameServerSpec, GameServerState,
     GameServerTemplateSpec,
 };

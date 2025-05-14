@@ -14,10 +14,6 @@
  * limitations under the License.
  */
 
-pub mod agones;
-mod fs;
-
-pub use self::{agones::watch as agones, fs::watch as fs};
 use std::sync::Arc;
 
 use tokio::sync::watch;
