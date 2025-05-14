@@ -326,7 +326,7 @@ impl Pail {
 
                 let config = Arc::new(Config::default());
                 config.dyn_cfg.id.store(Arc::new(spc.name.into()));
-                let provider_task = quilkin::config::Providers::default()
+                let provider_task = quilkin::Providers::default()
                     .fs()
                     .fs_path(path)
                     .spawn_providers(&config, <_>::default(), None);
@@ -400,7 +400,7 @@ impl Pail {
                 let config = Arc::new(Config::default());
                 config.dyn_cfg.id.store(Arc::new(spc.name.into()));
                 let acfg = config.clone();
-                let provider_task = quilkin::config::Providers::default()
+                let provider_task = quilkin::Providers::default()
                     .fs()
                     .fs_path(path)
                     .grpc_push_endpoints(relay_servers)

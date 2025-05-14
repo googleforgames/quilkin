@@ -14,6 +14,7 @@
  *  limitations under the License.
  */
 
+pub mod fs;
 pub mod k8s;
 
 use std::{
@@ -162,7 +163,7 @@ pub struct Providers {
 #[derive(Clone)]
 pub struct FiltersAndClusters {
     pub filters: config::Slot<crate::filters::FilterChain>,
-    pub clusters: config::Watch<config::ClusterMap>,
+    pub clusters: config::Watch<crate::net::ClusterMap>,
 }
 
 impl FiltersAndClusters {
@@ -431,7 +432,7 @@ impl Providers {
                         for namespace in agones_namespaces {
                             gs_streams.spawn(Self::result_stream(
                                 health_check.clone(),
-                                crate::config::watch::agones::watch_gameservers(
+                                k8s::update_endpoints_from_gameservers(
                                     client.clone(),
                                     namespace.clone(),
                                     clusters.clone(),
@@ -632,7 +633,7 @@ impl Providers {
                 let health_check = health_check.clone();
 
                 move || {
-                    crate::config::watch::fs(
+                    fs::watch(
                         config.clone(),
                         health_check.clone(),
                         path.clone(),
