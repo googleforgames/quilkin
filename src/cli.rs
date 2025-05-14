@@ -116,13 +116,13 @@ pub struct Cli {
     pub log_format: LogFormats,
     /// The file prefix used for log files
     #[clap(
-        long = "log.file-prefix",
-        env = "QUILKIN_LOG_FILE_PREFIX",
+        long = "sys.log.file-prefix",
+        env = "QUILKIN_SYS_LOG_FILE_PREFIX",
         default_value = "quilkin.log"
     )]
     pub log_file_prefix: String,
     /// An optional log file directory path that quilkin should log to
-    #[clap(long = "log.directory", env = "QUILKIN_LOG_DIRECTORY")]
+    #[clap(long = "sys.log.dir", env = "QUILKIN_SYS_LOG_DIRECTORY")]
     pub log_directory: Option<PathBuf>,
     #[command(flatten)]
     pub admin: AdminCli,
