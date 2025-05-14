@@ -114,6 +114,16 @@ pub struct Cli {
      .map(|s| s.parse::<LogFormats>().unwrap()),
      )]
     pub log_format: LogFormats,
+    /// The file prefix used for log files
+    #[clap(
+        long = "sys.log.file-prefix",
+        env = "QUILKIN_SYS_LOG_FILE_PREFIX",
+        default_value = "quilkin.log"
+    )]
+    pub log_file_prefix: String,
+    /// An optional log file directory path that quilkin should log to
+    #[clap(long = "sys.log.dir", env = "QUILKIN_SYS_LOG_DIRECTORY")]
+    pub log_directory: Option<PathBuf>,
     #[command(flatten)]
     pub admin: AdminCli,
     #[command(flatten)]
@@ -141,14 +151,39 @@ pub enum LogFormats {
 impl LogFormats {
     /// Creates the tracing subscriber that pulls from the env for filters
     /// and outputs based on [Self].
-    fn init_tracing_subscriber(self) {
+    fn init_tracing_subscriber(
+        self,
+        quiet: bool,
+        file_writer: Option<tracing_appender::non_blocking::NonBlocking>,
+    ) {
+        use tracing_subscriber::fmt::writer::{BoxMakeWriter, MakeWriterExt};
+
         let env_filter = tracing_subscriber::EnvFilter::builder()
             .with_default_directive(tracing_subscriber::filter::LevelFilter::INFO.into())
             .from_env_lossy();
+
+        let mk_writer: BoxMakeWriter = match file_writer {
+            Some(file_writer) => {
+                if quiet {
+                    BoxMakeWriter::new(file_writer)
+                } else {
+                    BoxMakeWriter::new(std::io::stdout.and(file_writer))
+                }
+            }
+            None => {
+                if quiet {
+                    BoxMakeWriter::new(std::io::sink)
+                } else {
+                    BoxMakeWriter::new(std::io::stdout)
+                }
+            }
+        };
+
         let subscriber = tracing_subscriber::fmt()
             .with_file(true)
             .with_thread_ids(true)
-            .with_env_filter(env_filter);
+            .with_env_filter(env_filter)
+            .with_writer(mk_writer);
 
         match self {
             LogFormats::Auto => {
@@ -179,9 +214,24 @@ impl Cli {
     /// arguments.
     #[tracing::instrument(skip_all)]
     pub async fn drive(self) -> crate::Result<()> {
-        if !self.quiet {
-            self.log_format.init_tracing_subscriber();
-        }
+        // Configure rolling log file appender if directory has been specified.
+        // _log_file_guard should be kept in scope and will trigger the final flush to file when dropped
+        let (file_writer, _log_file_guard) = match &self.log_directory {
+            Some(log_directory) => {
+                let file_appender = tracing_appender::rolling::Builder::new()
+                    .rotation(tracing_appender::rolling::Rotation::HOURLY)
+                    .filename_prefix(&self.log_file_prefix)
+                    .max_log_files(5)
+                    .build(log_directory)
+                    .expect("failed to build rolling file appender");
+                let (file_writer, guard) = tracing_appender::non_blocking(file_appender);
+                (Some(file_writer), Some(guard))
+            }
+            None => (None, None),
+        };
+
+        self.log_format
+            .init_tracing_subscriber(self.quiet, file_writer);
 
         tracing::info!(
             version = crate_version!(),
