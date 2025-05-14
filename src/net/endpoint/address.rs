@@ -62,7 +62,7 @@ impl EndpointAddress {
     /// if present.
     pub fn to_socket_addr(&self) -> std::io::Result<SocketAddr> {
         static DNS: Lazy<TokioResolver> =
-            Lazy::new(|| TokioResolver::tokio_from_system_conf().unwrap());
+            Lazy::new(|| TokioResolver::builder_tokio().unwrap().build());
 
         let ip = match &self.host {
             AddressKind::Ip(ip) => *ip,
