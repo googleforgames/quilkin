@@ -117,7 +117,7 @@ pub struct Service {
     )]
     tls_key_path: Option<std::path::PathBuf>,
     #[clap(long = "termination-timeout")]
-    termination_timeout: Option<super::Timeout>,
+    termination_timeout: Option<crate::cli::Timeout>,
 }
 
 pub type Finalizer = Box<dyn FnOnce(&crate::signal::ShutdownRx) + Send>;
@@ -226,7 +226,7 @@ impl Service {
             || self.mds_enabled
     }
 
-    pub fn termination_timeout(mut self, timeout: Option<super::Timeout>) -> Self {
+    pub fn termination_timeout(mut self, timeout: Option<crate::cli::Timeout>) -> Self {
         self.termination_timeout = timeout;
         self
     }
@@ -302,7 +302,7 @@ impl Service {
                         sessions_check.tick().await;
                         let elapsed = start.elapsed();
                         if let Some(tt) = &self.termination_timeout {
-                            if elapsed > tt.0 {
+                            if elapsed > **tt {
                                 tracing::info!(
                                     ?elapsed,
                                     "termination timeout was reached before all sessions expired"

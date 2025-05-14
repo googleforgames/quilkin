@@ -45,7 +45,7 @@ pub fn spawn<M: Clone + Measurement + Sync + Send + 'static>(
     listener: crate::net::TcpListener,
     datacenters: config::Watch<config::DatacenterMap>,
     phoenix: Phoenix<M>,
-) -> crate::Result<crate::cli::Finalizer> {
+) -> crate::Result<crate::service::Finalizer> {
     use eyre::WrapErr as _;
     use hyper::{Response, StatusCode};
 
