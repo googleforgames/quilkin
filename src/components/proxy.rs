@@ -150,25 +150,22 @@ impl Proxy {
                             eyre::bail!("empty filters were not created")
                         };
 
-                        filters.store(Arc::new(
-                            crate::filters::FilterChain::try_create([
-                                crate::filters::Capture::as_filter_config(
-                                    crate::filters::capture::Config {
-                                        metadata_key: crate::filters::capture::CAPTURED_BYTES
-                                            .into(),
-                                        strategy: crate::filters::capture::Strategy::Suffix(
-                                            crate::filters::capture::Suffix {
-                                                size: tt.length as _,
-                                                remove: true,
-                                            },
-                                        ),
-                                    },
-                                )
-                                .unwrap(),
-                                crate::filters::TokenRouter::as_filter_config(None).unwrap(),
-                            ])
-                            .unwrap(),
-                        ));
+                        let fc = crate::filters::FilterChain::try_create([
+                            crate::filters::Capture::as_filter_config(
+                                crate::filters::capture::Config {
+                                    metadata_key: crate::filters::capture::CAPTURED_BYTES.into(),
+                                    strategy: crate::filters::capture::Strategy::Suffix(
+                                        crate::filters::capture::Suffix {
+                                            size: tt.length as _,
+                                            remove: true,
+                                        },
+                                    ),
+                                },
+                            )?,
+                            crate::filters::TokenRouter::as_filter_config(None)?,
+                        ])?;
+
+                        filters.store(fc);
                     }
 
                     let count = tt.count as u64;

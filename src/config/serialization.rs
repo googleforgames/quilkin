@@ -37,7 +37,7 @@ impl Config {
 
         Ok(Self {
             dyn_cfg: DynamicConfig {
-                id: cfg.id.map_or_else(default_id, Slot::from),
+                id: Arc::new(parking_lot::Mutex::new(cfg.id.unwrap_or_else(default_id))),
                 version: cfg.version.unwrap_or_default(),
                 typemap,
             },
@@ -53,11 +53,11 @@ impl Config {
             match k.as_str() {
                 "filters" => {
                     if let Some(filters) = self.dyn_cfg.filters() {
-                        filters.try_replace(serde_json::from_value(v)?);
+                        filters.store(serde_json::from_value(v)?);
                     }
                 }
                 "id" => {
-                    self.dyn_cfg.id.try_replace(serde_json::from_value(v)?);
+                    *self.dyn_cfg.id.lock() = serde_json::from_value(v)?;
                 }
                 "clusters" => {
                     let Some(clusters) = self.dyn_cfg.clusters() else {
@@ -80,6 +80,9 @@ impl Config {
                 // Updating the version doesn't make sense at runtime, but we don't
                 // want to to trace out
                 "version" => {}
+                "icao_code" => {
+                    self.dyn_cfg.icao_code.store(serde_json::from_value(v)?);
+                }
                 field => {
                     tracing::debug!(field, "unable to replace invalid field");
                 }
@@ -98,9 +101,9 @@ impl serde::Serialize for Config {
         let mut map = serializer.serialize_map(None)?;
 
         map.serialize_entry("version", &self.dyn_cfg.version)?;
-        map.serialize_entry("id", &self.dyn_cfg.id)?;
+        map.serialize_entry("id", self.dyn_cfg.id.lock().as_ref())?;
         if let Some(filters) = self.dyn_cfg.filters() {
-            map.serialize_entry("filters", filters)?;
+            map.serialize_entry("filters", &filters)?;
         }
         if let Some(clusters) = self.dyn_cfg.clusters() {
             map.serialize_entry("clusters", clusters)?;

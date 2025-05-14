@@ -27,7 +27,7 @@ use tokio::time::Instant;
 use crate::{
     Loggable,
     collections::{BufferPool, FrozenPoolBuffer, PoolBuffer},
-    config::Config,
+    config::filter::CachedProxyFilterChain,
     filters::Filter,
     metrics,
     net::{
@@ -94,9 +94,9 @@ pub struct SessionPool {
     storage: Arc<RwLock<SocketStorage>>,
     session_map: SessionMap,
     pub(super) buffer_pool: Arc<BufferPool>,
-    config: Arc<Config>,
     downstream_sends: Vec<PacketQueueSender>,
     downstream_index: atomic::AtomicUsize,
+    cached_filter_chain: CachedProxyFilterChain,
 }
 
 /// The wrapper struct responsible for holding all of the socket related mappings.
@@ -113,21 +113,21 @@ impl SessionPool {
     /// required for the pool to provide a reference to the children to be able
     /// to release their sockets back to the parent.
     pub fn new(
-        config: Arc<Config>,
         downstream_sends: Vec<PacketQueueSender>,
         buffer_pool: Arc<BufferPool>,
+        cached_filter_chain: CachedProxyFilterChain,
     ) -> Arc<Self> {
         const SESSION_TIMEOUT_SECONDS: Duration = Duration::from_secs(60);
         const SESSION_EXPIRY_POLL_INTERVAL: Duration = Duration::from_secs(60);
 
         Arc::new(Self {
-            config,
             ports_to_sockets: <_>::default(),
             storage: <_>::default(),
             session_map: SessionMap::new(SESSION_TIMEOUT_SECONDS, SESSION_EXPIRY_POLL_INTERVAL),
             buffer_pool,
             downstream_sends,
             downstream_index: atomic::AtomicUsize::new(0),
+            cached_filter_chain,
         })
     }
 
@@ -145,8 +145,12 @@ impl SessionPool {
             .port();
 
         let (pending_sends, srecv) = crate::net::queue(15)?;
-        self.clone()
-            .spawn_session(raw_socket, port, (pending_sends.clone(), srecv))?;
+        self.clone().spawn_session(
+            raw_socket,
+            port,
+            (pending_sends.clone(), srecv),
+            self.cached_filter_chain.clone(),
+        )?;
 
         self.ports_to_sockets
             .write()
@@ -160,6 +164,7 @@ impl SessionPool {
         mut recv_addr: SocketAddr,
         port: u16,
         last_received_at: &mut Option<UtcTimestamp>,
+        filters: &crate::filters::FilterChain,
     ) {
         let received_at = UtcTimestamp::now();
         recv_addr.set_ip(recv_addr.ip().to_canonical());
@@ -185,13 +190,7 @@ impl SessionPool {
 
         let result = {
             let _timer = metrics::processing_time(metrics::WRITE).start_timer();
-            Self::process_recv_packet(
-                self.config.clone(),
-                recv_addr,
-                downstream_addr,
-                asn_info,
-                packet,
-            )
+            Self::process_recv_packet(recv_addr, downstream_addr, asn_info, packet, filters)
         };
 
         match result {
@@ -332,23 +331,17 @@ impl SessionPool {
 
     /// Processes a packet that is received by this session.
     fn process_recv_packet(
-        config: Arc<crate::Config>,
         source: SocketAddr,
         dest: SocketAddr,
         asn_info: Option<MetricsIpNetEntry>,
         packet: PoolBuffer,
+        filters: &crate::filters::FilterChain,
     ) -> Result<SendPacket, (Option<MetricsIpNetEntry>, Error)> {
         tracing::trace!(%source, %dest, length = packet.len(), "received packet from upstream");
 
         let mut context = crate::filters::WriteContext::new(source.into(), dest.into(), packet);
-        let Some(filters) = config.dyn_cfg.filters() else {
-            return Err((
-                asn_info,
-                Error::Filter(crate::filters::FilterError::Custom("no filters loaded")),
-            ));
-        };
 
-        if let Err(err) = filters.load().write(&mut context) {
+        if let Err(err) = filters.write(&mut context) {
             return Err((asn_info, err.into()));
         }
 
@@ -568,11 +561,12 @@ mod tests {
 
     async fn new_pool() -> (Arc<SessionPool>, PacketQueueSender) {
         let (pending_sends, _srecv) = crate::net::queue(1).unwrap();
+        let fake = crate::config::filter::ProxyFilterChain::default();
         (
             SessionPool::new(
-                Arc::new(Config::default()),
                 vec![pending_sends.clone()],
                 Arc::new(BufferPool::default()),
+                fake.cached(),
             ),
             pending_sends,
         )

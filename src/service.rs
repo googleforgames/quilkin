@@ -226,7 +226,46 @@ impl Service {
             || self.mds_enabled
     }
 
-    pub fn termination_timeout(mut self, timeout: Option<crate::cli::Timeout>) -> Self {
+    pub fn build_config(&self) -> eyre::Result<Config> {
+        use crate::config::{self, insert_default};
+
+        let mut typemap = crate::config::default_typemap();
+
+        // If UDP (ie. we are a proxy) is enabled, we use a filter chain that is
+        // stored in an arcswap, this allows us to use a cached version of the
+        // filterchain that only does a full load if the value changes, which is
+        // normally extremely rare
+        //
+        // If we're not a proxy, we only need a filter chain if xds/mds is enabled,
+        // indicating this node _could_ be a source of filter changes that can
+        // be propagated to proxies
+        if self.udp_enabled {
+            if self.xds_enabled || self.mds_enabled {
+                insert_default::<config::filter::NotifyingProxyFilterChain>(&mut typemap);
+            } else {
+                insert_default::<config::filter::ProxyFilterChain>(&mut typemap);
+            }
+        } else if self.xds_enabled || self.mds_enabled {
+            insert_default::<config::filter::NotifyingFilterChain>(&mut typemap);
+        }
+
+        insert_default::<config::ClusterMap>(&mut typemap);
+        insert_default::<DatacenterMap>(&mut typemap);
+
+        if self.qcmp_enabled {
+            let pc = crate::codec::qcmp::port_channel();
+        }
+
+        Ok(Self {
+            dyn_cfg: DynamicConfig {
+                id: default_id(),
+                version: Version::default(),
+                typemap,
+            },
+        })
+    }
+
+    pub fn termination_timeout(mut self, timeout: Option<super::Timeout>) -> Self {
         self.termination_timeout = timeout;
         self
     }
@@ -365,6 +404,7 @@ impl Service {
         if self.qcmp_enabled {
             tracing::info!(port=%self.qcmp_port, "starting qcmp service");
             let qcmp = crate::net::raw_socket_with_reuse(self.qcmp_port)?;
+
             crate::codec::qcmp::spawn(qcmp, shutdown_rx.clone())?;
         }
 

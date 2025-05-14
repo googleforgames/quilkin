@@ -50,6 +50,7 @@ pub mod prelude {
 #[doc(inline)]
 pub use self::{
     capture::Capture,
+    chain::FilterChain,
     concatenate::Concatenate,
     debug::Debug,
     drop::Drop,
@@ -68,10 +69,12 @@ pub use self::{
     write::WriteContext,
 };
 
-pub use crate::test::TestFilter;
+pub use crate::{
+    net::{Packet, PacketMut},
+    test::TestFilter,
+};
 
-pub use self::chain::FilterChain;
-pub use crate::net::{Packet, PacketMut};
+use crate::config::filter::Filter as FilterConfig;
 
 #[enum_dispatch::enum_dispatch(Filter)]
 pub enum FilterKind {
@@ -150,8 +153,8 @@ where
 
     fn as_filter_config(
         config: impl Into<Option<Self::Configuration>>,
-    ) -> Result<crate::config::Filter, CreationError> {
-        Ok(crate::config::Filter {
+    ) -> Result<FilterConfig, CreationError> {
+        Ok(FilterConfig {
             name: Self::NAME.into(),
             label: None,
             config: config
@@ -165,8 +168,8 @@ where
     fn as_labeled_filter_config(
         config: impl Into<Option<Self::Configuration>>,
         label: String,
-    ) -> Result<crate::config::Filter, CreationError> {
-        Ok(crate::config::Filter {
+    ) -> Result<FilterConfig, CreationError> {
+        Ok(FilterConfig {
             name: Self::NAME.into(),
             label: Some(label),
             config: config

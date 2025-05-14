@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 
 use super::proto;
 use crate::{
-    config::Filter,
+    config::filter::Filter,
     filters::{ConvertProtoConfigError, StaticFilter},
 };
 
