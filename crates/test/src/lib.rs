@@ -330,7 +330,7 @@ impl Pail {
                     .fs()
                     .fs_path(path)
                     .spawn_providers(&config, <_>::default(), None);
-                let task = quilkin::cli::Service::default()
+                let task = quilkin::Service::default()
                     .xds()
                     .xds_port(xds_port)
                     .mds()
@@ -405,7 +405,7 @@ impl Pail {
                     .fs_path(path)
                     .grpc_push_endpoints(relay_servers)
                     .spawn_providers(&config, <_>::default(), None);
-                let task = quilkin::cli::Service::default()
+                let task = quilkin::Service::default()
                     .qcmp()
                     .qcmp_port(port)
                     .spawn_services(&config, &shutdown_rx, apc.icao_code)
