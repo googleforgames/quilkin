@@ -75,7 +75,7 @@ pub(crate) async fn update_leader_lock(
 pub fn update_filters_from_configmap(
     client: kube::Client,
     namespace: impl AsRef<str>,
-    filters: config::filter::ConfigFilterChain,
+    filters: config::filter::FilterChainConfig,
 ) -> impl Stream<Item = crate::Result<(), eyre::Error>> {
     async_stream::stream! {
         let mut cmap = None;

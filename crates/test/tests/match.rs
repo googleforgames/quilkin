@@ -23,7 +23,7 @@ use quilkin::filters::{self, StaticFilter, r#match as mf};
 async fn match_() {
     let server_addr = "10.1.1.100:9001".parse().unwrap();
 
-    let proc_state = xdp_util::default_xdp_state(xdp_util::make_config(
+    let (proc_state, cfg_state) = xdp_util::default_xdp_state(xdp_util::make_config(
         qt::filter_chain!([
             Capture => filters::capture::Config::with_strategy(filters::capture::Suffix {
                 size: 3,
@@ -71,7 +71,7 @@ async fn match_() {
         xdp_util::endpoints(&[(server_addr, &[])]),
     ));
 
-    let mut simple_loop = xdp_util::SimpleLoop::new(1, proc_state);
+    let mut simple_loop = xdp_util::SimpleLoop::new(1, proc_state, cfg_state);
 
     let client = "9.8.7.6".parse().unwrap();
 

@@ -95,11 +95,28 @@ mod tests {
 
     #[tokio::test]
     async fn basic() {
+        let _guard = {
+            use tracing_subscriber::{Layer as _, layer::SubscriberExt as _};
+            let layer = tracing_subscriber::fmt::layer()
+                .with_test_writer()
+                .with_filter(tracing_subscriber::filter::LevelFilter::from_level(
+                    tracing::Level::DEBUG,
+                ))
+                .with_filter(tracing_subscriber::EnvFilter::new(format!(
+                    "qt=trace,quilkin=trace,xds=trace"
+                )));
+            let sub = tracing_subscriber::Registry::default().with(layer);
+            let disp = tracing::dispatcher::Dispatch::new(sub);
+            tracing::dispatcher::set_default(&disp)
+        };
+
         let source = Arc::new(crate::Config::default());
         let dest = Arc::new(crate::Config::default());
+        assert_eq!(source, dest);
+
         let tmp_dir = tempfile::tempdir().unwrap();
         let file_path = tmp_dir.keep().join("config.yaml");
-        tokio::fs::write(&file_path, serde_yaml::to_string(&source).unwrap())
+        tokio::fs::write(&file_path, dbg!(serde_yaml::to_string(&source).unwrap()))
             .await
             .unwrap();
         let _handle = tokio::spawn(watch(dest.clone(), <_>::default(), file_path.clone(), None));
@@ -118,10 +135,15 @@ mod tests {
         });
 
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-        tokio::fs::write(&file_path, serde_yaml::to_string(&source).unwrap())
+        tokio::fs::write(&file_path, dbg!(serde_yaml::to_string(&source).unwrap()))
             .await
             .unwrap();
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+        let mut tx = dest.dyn_cfg.clusters().unwrap().watch();
+        tokio::time::timeout(std::time::Duration::from_millis(1000), tx.changed())
+            .await
+            .unwrap()
+            .unwrap();
 
         assert_eq!(source, dest);
     }

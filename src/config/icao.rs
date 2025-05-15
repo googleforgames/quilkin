@@ -79,6 +79,20 @@ impl<'de> serde::Deserialize<'de> for IcaoCode {
             {
                 v.parse().map_err(serde::de::Error::custom)
             }
+
+            fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                v.parse().map_err(serde::de::Error::custom)
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                v.parse().map_err(serde::de::Error::custom)
+            }
         }
 
         deserializer.deserialize_str(IcaoVisitor)
@@ -123,6 +137,13 @@ impl Default for NotifyingIcaoCode {
 }
 
 impl NotifyingIcaoCode {
+    pub fn new(icao: IcaoCode) -> Self {
+        Self {
+            icao: Arc::new(parking_lot::Mutex::new(icao)),
+            channel: tokio::sync::broadcast::channel(1).0,
+        }
+    }
+
     #[inline]
     pub fn store(&self, icao: IcaoCode) {
         {
@@ -135,5 +156,15 @@ impl NotifyingIcaoCode {
         }
 
         let _ = self.channel.send(());
+    }
+
+    #[inline]
+    pub fn load(&self) -> IcaoCode {
+        *self.icao.lock()
+    }
+
+    #[inline]
+    pub fn subscribe(&self) -> tokio::sync::broadcast::Receiver<()> {
+        self.channel.subscribe()
     }
 }

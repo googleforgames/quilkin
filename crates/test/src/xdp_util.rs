@@ -9,24 +9,29 @@ pub fn make_config(
     let cm = quilkin::net::ClusterMap::new();
     cm.insert(None, None, endpoints);
 
+    let fc = quilkin::config::filter::FilterChainConfig::new(filters);
     process::ConfigState {
-        filters: quilkin::config::Slot::new(filters),
+        filters: fc.cached(),
         clusters: quilkin::config::Watch::new(cm),
     }
 }
 
-pub fn default_xdp_state(config: process::ConfigState) -> process::State {
-    process::State {
-        external_port: 7777.into(),
-        qcmp_port: 0.into(),
-        config,
-        destinations: Vec::with_capacity(1),
-        addr_to_asn: Default::default(),
-        sessions: std::sync::Arc::new(Default::default()),
-        local_ipv4: std::net::Ipv4Addr::new(1, 1, 1, 1),
-        local_ipv6: std::net::Ipv6Addr::from_bits(u128::from_ne_bytes([1; 16])),
-        last_receive: quilkin::time::UtcTimestamp::now(),
-    }
+pub fn default_xdp_state(
+    cfg_state: process::ConfigState,
+) -> (process::State, process::ConfigState) {
+    (
+        process::State {
+            external_port: 7777.into(),
+            qcmp_port: 0.into(),
+            destinations: Vec::with_capacity(1),
+            addr_to_asn: Default::default(),
+            sessions: std::sync::Arc::new(Default::default()),
+            local_ipv4: std::net::Ipv4Addr::new(1, 1, 1, 1),
+            local_ipv6: std::net::Ipv6Addr::from_bits(u128::from_ne_bytes([1; 16])),
+            last_receive: quilkin::time::UtcTimestamp::now(),
+        },
+        cfg_state,
+    )
 }
 
 #[inline]
@@ -70,10 +75,11 @@ impl Drop for TestPacket {
 pub struct SimpleLoop {
     pub umem: xdp::Umem,
     pub state: process::State,
+    pub cfg: process::ConfigState,
 }
 
 impl SimpleLoop {
-    pub fn new(count: u32, state: process::State) -> Self {
+    pub fn new(count: u32, state: process::State, cfg: process::ConfigState) -> Self {
         let umem = xdp::Umem::map(
             xdp::umem::UmemCfgBuilder {
                 frame_size: xdp::umem::FrameSize::TwoK,
@@ -86,7 +92,7 @@ impl SimpleLoop {
         )
         .unwrap();
 
-        Self { umem, state }
+        Self { umem, state, cfg }
     }
 
     pub fn make_client_packet(
@@ -178,7 +184,13 @@ impl SimpleLoop {
 
         rx.push_front(packet.inner.take().unwrap());
 
-        process::process_packets(&mut rx, &mut self.umem, &mut tx, &mut self.state);
+        process::process_packets(
+            &mut rx,
+            &mut self.umem,
+            &mut tx,
+            &mut self.cfg,
+            &mut self.state,
+        );
 
         let packet = tx.pop_back()?;
         let udp_headers = UdpHeaders::parse_packet(&packet)
@@ -202,7 +214,13 @@ impl SimpleLoop {
 
         rx.push_front(packet.inner.take().unwrap());
 
-        process::process_packets(&mut rx, &mut self.umem, &mut tx, &mut self.state);
+        process::process_packets(
+            &mut rx,
+            &mut self.umem,
+            &mut tx,
+            &mut self.cfg,
+            &mut self.state,
+        );
 
         let mut send = [const { None }; N];
         let mut i = 0;

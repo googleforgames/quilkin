@@ -24,7 +24,7 @@ use quilkin::filters;
 async fn multiple_clients() {
     let server_addr = "10.1.1.100:9001".parse().unwrap();
 
-    let proc_state = xdp_util::default_xdp_state(xdp_util::make_config(
+    let (proc_state, cfg_state) = xdp_util::default_xdp_state(xdp_util::make_config(
         qt::filter_chain!([
             Capture => filters::capture::Config::with_strategy(filters::capture::Suffix {
                 size: 3,
@@ -35,7 +35,7 @@ async fn multiple_clients() {
         xdp_util::endpoints(&[(server_addr, &[b"abc"])]),
     ));
 
-    let mut simple_loop = xdp_util::SimpleLoop::new(1, proc_state);
+    let mut simple_loop = xdp_util::SimpleLoop::new(1, proc_state, cfg_state);
 
     let mut payload = [0u8; 7];
     payload[4..].copy_from_slice(b"abc");

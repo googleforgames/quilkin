@@ -1,9 +1,12 @@
+use eyre::ContextCompat;
 use std::{future::Future, sync::Arc};
 
 use crate::{
     components::proxy::SessionPool,
     config::{Config, IcaoCode},
 };
+
+const ETC_CONFIG_PATH: &str = "/etc/quilkin/quilkin.yaml";
 
 #[derive(Debug, clap::Parser)]
 #[command(next_help_heading = "Service Options")]
@@ -226,46 +229,70 @@ impl Service {
             || self.mds_enabled
     }
 
-    pub fn build_config(&self) -> eyre::Result<Config> {
+    pub fn build_config(&self, icao_code: IcaoCode) -> eyre::Result<Config> {
         use crate::config::{self, insert_default};
 
         let mut typemap = crate::config::default_typemap();
 
-        // If UDP (ie. we are a proxy) is enabled, we use a filter chain that is
-        // stored in an arcswap, this allows us to use a cached version of the
-        // filterchain that only does a full load if the value changes, which is
-        // normally extremely rare
-        //
-        // If we're not a proxy, we only need a filter chain if xds/mds is enabled,
-        // indicating this node _could_ be a source of filter changes that can
-        // be propagated to proxies
-        if self.udp_enabled {
-            if self.xds_enabled || self.mds_enabled {
-                insert_default::<config::filter::NotifyingProxyFilterChain>(&mut typemap);
-            } else {
-                insert_default::<config::filter::ProxyFilterChain>(&mut typemap);
-            }
-        } else if self.xds_enabled || self.mds_enabled {
-            insert_default::<config::filter::NotifyingFilterChain>(&mut typemap);
+        if self.udp_enabled || self.xds_enabled || self.mds_enabled {
+            insert_default::<crate::filters::FilterChain>(&mut typemap);
+            insert_default::<config::DatacenterMap>(&mut typemap);
         }
-
-        insert_default::<config::ClusterMap>(&mut typemap);
-        insert_default::<DatacenterMap>(&mut typemap);
 
         if self.qcmp_enabled {
-            let pc = crate::codec::qcmp::port_channel();
+            typemap.insert::<config::qcmp::QcmpPort>(config::qcmp::QcmpPort::new(self.qcmp_port));
         }
 
-        Ok(Self {
-            dyn_cfg: DynamicConfig {
-                id: default_id(),
-                version: Version::default(),
+        insert_default::<crate::net::ClusterMap>(&mut typemap);
+
+        Ok(Config {
+            dyn_cfg: config::DynamicConfig {
+                id: Arc::new(parking_lot::Mutex::new(config::default_id())),
+                version: config::Version::default(),
+                icao_code: config::NotifyingIcaoCode::new(icao_code),
                 typemap,
             },
         })
     }
 
-    pub fn termination_timeout(mut self, timeout: Option<super::Timeout>) -> Self {
+    /// Attempts to find and configure a `Config` from a file
+    ///
+    ///
+    pub fn read_config(
+        &self,
+        config_path: &std::path::Path,
+        icao_code: IcaoCode,
+        locality: Option<crate::net::endpoint::Locality>,
+    ) -> Result<Arc<Config>, eyre::Error> {
+        let paths = [config_path, std::path::Path::new(ETC_CONFIG_PATH)];
+        let mut paths = paths.iter();
+
+        let file = loop {
+            let Some(path) = paths.next() else {
+                return Ok(<_>::default());
+            };
+
+            match std::fs::File::open(path) {
+                Ok(file) => break file,
+                Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+                    tracing::debug!(path = %path.display(), "config path not found");
+                    continue;
+                }
+                Err(err) => {
+                    tracing::error!(path = %path.display(), error = ?err, "failed to read path");
+                    eyre::bail!(err);
+                }
+            }
+        };
+
+        let config = self.build_config(icao_code)?;
+        let json = serde_yaml::from_reader(file)?;
+        config.update_from_json(json, locality)?;
+
+        Ok(Arc::new(config))
+    }
+
+    pub fn termination_timeout(mut self, timeout: Option<crate::cli::Timeout>) -> Self {
         self.termination_timeout = timeout;
         self
     }
@@ -291,23 +318,15 @@ impl Service {
         mut self,
         config: &Arc<Config>,
         shutdown_rx: &crate::signal::ShutdownRx,
-        icao_code: IcaoCode,
     ) -> crate::Result<tokio::task::JoinHandle<crate::Result<()>>> {
         let mut shutdown_rx = shutdown_rx.clone();
-
-        if self.qcmp_enabled {
-            if let Some(agent) = config.dyn_cfg.agent() {
-                agent.icao_code.store(Arc::new(icao_code));
-                agent.qcmp_port.store(Arc::new(self.qcmp_port));
-            }
-        }
 
         let mds_task = self.publish_mds(config)?;
         let (phoenix_task, phoenix_finalizer) = self.publish_phoenix(config)?;
         // We need to call this before qcmp since if we use XDP we handle QCMP
         // internally without a separate task
         let (udp_task, finalizer, session_pool) = self.publish_udp(config)?;
-        let qcmp_task = self.publish_qcmp(&shutdown_rx)?;
+        let qcmp_task = self.publish_qcmp(config, &shutdown_rx)?;
         let xds_task = self.publish_xds(config)?;
 
         Ok(tokio::spawn(async move {
@@ -399,13 +418,19 @@ impl Service {
     /// Spawns an QCMP server if enabled, otherwise returns a future which never completes.
     fn publish_qcmp(
         &self,
+        config: &Config,
         shutdown_rx: &crate::signal::ShutdownRx,
     ) -> crate::Result<impl Future<Output = crate::Result<()>> + use<>> {
         if self.qcmp_enabled {
+            let qcmp_port = config
+                .dyn_cfg
+                .qcmp_port()
+                .context("QCMP was enabled, but QCMP port was not inserted into typemap")?;
+
             tracing::info!(port=%self.qcmp_port, "starting qcmp service");
             let qcmp = crate::net::raw_socket_with_reuse(self.qcmp_port)?;
 
-            crate::codec::qcmp::spawn(qcmp, shutdown_rx.clone())?;
+            crate::codec::qcmp::spawn(qcmp, qcmp_port.subscribe(), shutdown_rx.clone())?;
         }
 
         Ok(std::future::pending())
@@ -575,7 +600,11 @@ impl Service {
             worker_sends.push(queue);
         }
 
-        let sessions = SessionPool::new(config.clone(), session_sends, buffer_pool.clone());
+        let cached_filters = config
+            .dyn_cfg
+            .cached_filter_chain()
+            .context("a cached FilterChain should have been configured")?;
+        let sessions = SessionPool::new(session_sends, buffer_pool.clone(), cached_filters);
 
         crate::net::packet::spawn_receivers(config, socket, worker_sends, &sessions, buffer_pool)?;
 
@@ -598,9 +627,8 @@ impl Service {
 
         let filters = config
             .dyn_cfg
-            .filters()
-            .context("XDP requires a filter chain")?
-            .clone();
+            .cached_filter_chain()
+            .context("XDP requires a filter chain")?;
         let clusters = config
             .dyn_cfg
             .clusters()

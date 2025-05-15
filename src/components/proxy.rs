@@ -299,7 +299,7 @@ impl Proxy {
             .phoenix()
             .phoenix_port(phoenix_port)
             .termination_timeout(self.termination_timeout)
-            .spawn_services(&config, &shutdown_rx, IcaoCode::default())?;
+            .spawn_services(&config, &shutdown_rx)?;
 
         tracing::info!("Quilkin is ready");
         if let Some(initialized) = initialized {

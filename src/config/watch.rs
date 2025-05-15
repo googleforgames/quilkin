@@ -18,7 +18,7 @@ use std::sync::Arc;
 
 use tokio::sync::watch;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Watch<T> {
     value: Arc<T>,
     watchers: Arc<watch::Sender<Arc<T>>>,
@@ -124,6 +124,12 @@ impl<T: schemars::JsonSchema> schemars::JsonSchema for Watch<T> {
 
     fn is_referenceable() -> bool {
         <T>::is_referenceable()
+    }
+}
+
+impl<T: fmt::Debug> fmt::Debug for Watch<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.value)
     }
 }
 

@@ -162,7 +162,7 @@ pub struct Providers {
 
 #[derive(Clone)]
 pub struct FiltersAndClusters {
-    pub filters: crate::config::filter::ConfigFilterChain,
+    pub filters: crate::config::filter::FilterChainConfig,
     pub clusters: config::Watch<crate::net::ClusterMap>,
 }
 

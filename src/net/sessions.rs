@@ -27,7 +27,7 @@ use tokio::time::Instant;
 use crate::{
     Loggable,
     collections::{BufferPool, FrozenPoolBuffer, PoolBuffer},
-    config::filter::CachedProxyFilterChain,
+    config::filter::CachedFilterChain,
     filters::Filter,
     metrics,
     net::{
@@ -96,7 +96,7 @@ pub struct SessionPool {
     pub(super) buffer_pool: Arc<BufferPool>,
     downstream_sends: Vec<PacketQueueSender>,
     downstream_index: atomic::AtomicUsize,
-    cached_filter_chain: CachedProxyFilterChain,
+    cached_filter_chain: CachedFilterChain,
 }
 
 /// The wrapper struct responsible for holding all of the socket related mappings.
@@ -115,7 +115,7 @@ impl SessionPool {
     pub fn new(
         downstream_sends: Vec<PacketQueueSender>,
         buffer_pool: Arc<BufferPool>,
-        cached_filter_chain: CachedProxyFilterChain,
+        cached_filter_chain: CachedFilterChain,
     ) -> Arc<Self> {
         const SESSION_TIMEOUT_SECONDS: Duration = Duration::from_secs(60);
         const SESSION_EXPIRY_POLL_INTERVAL: Duration = Duration::from_secs(60);
@@ -561,7 +561,7 @@ mod tests {
 
     async fn new_pool() -> (Arc<SessionPool>, PacketQueueSender) {
         let (pending_sends, _srecv) = crate::net::queue(1).unwrap();
-        let fake = crate::config::filter::ProxyFilterChain::default();
+        let fake = crate::config::filter::FilterChainConfig::default();
         (
             SessionPool::new(
                 vec![pending_sends.clone()],

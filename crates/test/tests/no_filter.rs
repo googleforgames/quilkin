@@ -24,12 +24,12 @@ async fn echo() {
     let server_one = "10.1.1.100:9001".parse().unwrap();
     let server_two = "[::f390]:9001".parse().unwrap();
 
-    let proc_state = xdp_util::default_xdp_state(xdp_util::make_config(
+    let (proc_state, cfg_state) = xdp_util::default_xdp_state(xdp_util::make_config(
         filters::FilterChain::testing([]),
         xdp_util::endpoints(&[(server_one, &[]), (server_two, &[])]),
     ));
 
-    let mut simple_loop = xdp_util::SimpleLoop::new(3, proc_state);
+    let mut simple_loop = xdp_util::SimpleLoop::new(3, proc_state, cfg_state);
 
     let client = simple_loop
         .make_client_packet("1.2.3.4".parse().unwrap(), 23, b"multi-no-filter")

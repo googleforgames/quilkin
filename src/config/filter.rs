@@ -1,112 +1,19 @@
 use crate::filters::{CreationError, FilterChain, FilterInstance};
 use std::sync::Arc;
 
-/// The `ProxyFilterChain` is used when the UDP service is enabled.
-///
-/// For the UDP service, we don't need notification capabilities when modifying
-/// the filter chain, rather each loop just reads the cached value, unless the
-/// filter has been changed, an extremely rare occurance, and reloads the value
-#[derive(Clone, Debug)]
-pub struct ProxyFilterChain {
-    chain: Arc<arc_swap::ArcSwap<FilterChain>>,
-}
-
-pub type CachedProxyFilterChain =
-    arc_swap::Cache<Arc<arc_swap::ArcSwap<FilterChain>>, Arc<FilterChain>>;
-
-impl ProxyFilterChain {
-    /// Cached the filter chain, only reloading it if the filter changes
-    #[inline]
-    pub fn cached(&self) -> CachedProxyFilterChain {
-        arc_swap::Cache::new(self.chain.clone())
-    }
-
-    #[inline]
-    pub fn store(&self, new_chain: FilterChain) {
-        self.chain.store(Arc::new(new_chain));
-    }
-}
-
-impl Default for ProxyFilterChain {
-    fn default() -> Self {
-        Self {
-            chain: Default::default(),
-        }
-    }
-}
-
-impl PartialEq for ProxyFilterChain {
-    fn eq(&self, other: &Self) -> bool {
-        &*self.chain.load() == &*other.chain.load()
-    }
-}
-
-impl typemap_rev::TypeMapKey for ProxyFilterChain {
-    type Value = ProxyFilterChain;
-}
-
-/// The `NotifyingFilterChain` broadcasts when a new `FilterChain` is stored
-#[derive(Clone, Debug)]
-pub struct NotifyingFilterChain {
-    chain: Arc<parking_lot::Mutex<FilterChain>>,
-    channel: tokio::sync::broadcast::Sender<()>,
-}
-
-impl NotifyingFilterChain {
-    pub fn new() -> Self {
-        Self {
-            chain: Default::default(),
-            channel: tokio::sync::broadcast::channel(1).0,
-        }
-    }
-
-    #[inline]
-    pub fn store(&self, new_chain: FilterChain) {
-        {
-            let mut cur = self.chain.lock();
-            if *cur == new_chain {
-                return;
-            }
-
-            *cur = new_chain;
-        }
-
-        tracing::debug!("sending new FilterChain notification");
-        let _ = self.channel.send(());
-    }
-
-    #[inline]
-    pub fn read(&self) -> parking_lot::MutexGuard<'_, FilterChain> {
-        self.chain.lock()
-    }
-}
-
-impl Default for NotifyingFilterChain {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl PartialEq for NotifyingFilterChain {
-    fn eq(&self, other: &Self) -> bool {
-        &*self.chain.lock() == &*other.chain.lock()
-    }
-}
-
-impl typemap_rev::TypeMapKey for NotifyingFilterChain {
-    type Value = NotifyingFilterChain;
-}
+pub type FilterChangedSubscriber = tokio::sync::broadcast::Receiver<()>;
+pub type CachedFilterChain = arc_swap::Cache<Arc<arc_swap::ArcSwap<FilterChain>>, Arc<FilterChain>>;
 
 #[derive(Clone, Debug)]
-pub struct NotifyingProxyFilterChain {
+pub struct FilterChainConfig {
     chain: Arc<arc_swap::ArcSwap<FilterChain>>,
     channel: tokio::sync::broadcast::Sender<()>,
 }
 
-impl NotifyingProxyFilterChain {
-    pub fn new() -> Self {
+impl FilterChainConfig {
+    pub fn new(chain: FilterChain) -> Self {
         Self {
-            chain: Default::default(),
+            chain: Arc::new(arc_swap::ArcSwap::new(Arc::new(chain))),
             channel: tokio::sync::broadcast::channel(1).0,
         }
     }
@@ -125,86 +32,50 @@ impl NotifyingProxyFilterChain {
         let _ = self.channel.send(());
     }
 
+    #[inline]
+    pub fn load(&self) -> arc_swap::Guard<Arc<FilterChain>> {
+        self.chain.load()
+    }
+
+    #[inline]
+    pub fn subscribe(&self) -> FilterChangedSubscriber {
+        self.channel.subscribe()
+    }
+
     /// Cached the filter chain, only reloading it if the filter changes
     #[inline]
-    pub fn cached(&self) -> CachedProxyFilterChain {
+    pub fn cached(&self) -> CachedFilterChain {
         arc_swap::Cache::new(self.chain.clone())
     }
-
-    // #[inline]
-    // pub fn read(&self) -> arc_swap::Guard<Arc<FilterChain>> {
-    //     self.chain.load()
-    // }
 }
 
-impl Default for NotifyingProxyFilterChain {
+impl Default for FilterChainConfig {
     fn default() -> Self {
-        Self::new()
+        Self::new(Default::default())
     }
 }
 
-impl PartialEq for NotifyingProxyFilterChain {
+impl PartialEq for FilterChainConfig {
     fn eq(&self, other: &Self) -> bool {
-        &*self.chain.load() == &*other.chain.load()
+        *self.chain.load() == *other.chain.load()
     }
 }
 
-impl typemap_rev::TypeMapKey for NotifyingProxyFilterChain {
-    type Value = NotifyingProxyFilterChain;
-}
-
-#[derive(Clone, PartialEq)]
-pub enum ConfigFilterChain {
-    Proxy(ProxyFilterChain),
-    Notifying(NotifyingFilterChain),
-    NotifyingProxy(NotifyingProxyFilterChain),
-}
-
-impl ConfigFilterChain {
-    #[inline]
-    pub fn store(&self, new_chain: FilterChain) {
-        match self {
-            Self::Proxy(p) => p.store(new_chain),
-            Self::Notifying(n) => n.store(new_chain),
-            Self::NotifyingProxy(n) => n.store(new_chain),
-        }
-    }
-}
-
-impl serde::Serialize for ConfigFilterChain {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        match self {
-            Self::Proxy(p) => p.chain.load().serialize(serializer),
-            Self::Notifying(n) => n.chain.lock().serialize(serializer),
-            Self::NotifyingProxy(n) => n.chain.load().serialize(serializer),
-        }
-    }
+impl typemap_rev::TypeMapKey for FilterChain {
+    type Value = FilterChainConfig;
 }
 
 impl super::DynamicConfig {
-    pub fn filters(&self) -> Option<ConfigFilterChain> {
-        if let Some(pfc) = self.typemap.get::<ProxyFilterChain>() {
-            Some(ConfigFilterChain::Proxy(pfc.clone()))
-        } else if let Some(nfc) = self.typemap.get::<NotifyingFilterChain>() {
-            Some(ConfigFilterChain::Notifying(nfc.clone()))
-        } else if let Some(nfc) = self.typemap.get::<NotifyingProxyFilterChain>() {
-            Some(ConfigFilterChain::NotifyingProxy(nfc.clone()))
-        } else {
-            None
-        }
+    pub fn filters(&self) -> Option<&FilterChainConfig> {
+        self.typemap.get::<FilterChain>()
     }
 
-    pub fn cached_proxy_filter_chain(&self) -> Option<CachedProxyFilterChain> {
-        if let Some(pfc) = self.typemap.get::<ProxyFilterChain>() {
-            Some(pfc.cached())
-        } else if let Some(npfc) = self.typemap.get::<NotifyingProxyFilterChain>() {
-            Some(npfc.cached())
-        } else {
-            None
-        }
+    pub fn cached_filter_chain(&self) -> Option<CachedFilterChain> {
+        self.typemap.get::<FilterChain>().map(|fc| fc.cached())
+    }
+
+    pub fn subscribe_filter_changes(&self) -> Option<FilterChangedSubscriber> {
+        self.typemap.get::<FilterChain>().map(|fc| fc.subscribe())
     }
 }
 

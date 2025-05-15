@@ -66,7 +66,7 @@ pub(crate) struct DownstreamPacket<'stack, P> {
     pub(crate) filters: &'stack crate::filters::FilterChain,
 }
 
-impl<'stack, P: PacketMut> DownstreamPacket<'stack, P> {
+impl<P: PacketMut> DownstreamPacket<'_, P> {
     #[inline]
     pub(crate) fn process<S: SessionManager<Packet = P::FrozenPacket>>(
         self,
@@ -166,7 +166,7 @@ pub fn spawn_receivers(
 ) -> crate::Result<()> {
     let port = crate::net::socket_port(&socket);
 
-    let Some(pfc) = config.dyn_cfg.cached_proxy_filter_chain() else {
+    let Some(pfc) = config.dyn_cfg.cached_filter_chain() else {
         eyre::bail!("the ProxyFilterChain state was not configured");
     };
 

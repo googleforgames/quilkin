@@ -395,7 +395,7 @@ fn io_loop(
     worker: quilkin_xdp::XdpWorker,
     external_port: NetworkU16,
     qcmp_port: NetworkU16,
-    config: process::ConfigState,
+    mut config: process::ConfigState,
     sessions: Arc<process::SessionState>,
     local_ipv4: std::net::Ipv4Addr,
     local_ipv6: std::net::Ipv6Addr,
@@ -416,7 +416,6 @@ fn io_loop(
     let mut state = process::State {
         external_port,
         qcmp_port,
-        config,
         destinations: Vec::with_capacity(1),
         addr_to_asn: Default::default(),
         sessions,
@@ -459,7 +458,13 @@ fn io_loop(
 
             // Process each of the packets that we received, potentially queuing
             // packets to be sent
-            process::process_packets(&mut rx_slab, &mut umem, &mut tx_slab, &mut state);
+            process::process_packets(
+                &mut rx_slab,
+                &mut umem,
+                &mut tx_slab,
+                &mut config,
+                &mut state,
+            );
 
             let before = tx_slab.len();
             let enqueued_sends = match tx.send(&mut tx_slab, true) {

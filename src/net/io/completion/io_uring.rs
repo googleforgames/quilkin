@@ -31,7 +31,7 @@ use socket2::SockAddr;
 
 use crate::{
     collections::PoolBuffer,
-    config::filter::CachedProxyFilterChain,
+    config::filter::CachedFilterChain,
     metrics,
     net::{PacketQueue, error::PipelineError, packet::queue::SendPacket, sessions::SessionPool},
     time::UtcTimestamp,
@@ -43,7 +43,7 @@ impl crate::net::io::Listener {
     pub fn spawn_io_loop(
         self,
         pending_sends: crate::net::PacketQueue,
-        filter_chain: CachedProxyFilterChain,
+        filter_chain: CachedFilterChain,
     ) -> eyre::Result<()> {
         let Self {
             worker_id,
@@ -466,7 +466,7 @@ impl IoUringLoop {
         mut ctx: PacketProcessorCtx,
         pending_sends: PacketQueue,
         buffer_pool: Arc<crate::collections::BufferPool>,
-        mut filter_chain: CachedProxyFilterChain,
+        mut filter_chain: CachedFilterChain,
     ) -> Result<(), PipelineError> {
         let dispatcher = tracing::dispatcher::get_default(|d| d.clone());
 
@@ -617,7 +617,7 @@ impl SessionPool {
         raw_socket: socket2::Socket,
         port: u16,
         pending_sends: crate::net::PacketQueue,
-        filter_chain: CachedProxyFilterChain,
+        filter_chain: CachedFilterChain,
     ) -> Result<(), PipelineError> {
         let pool = self;
         let id = SESSION_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
