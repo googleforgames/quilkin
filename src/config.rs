@@ -39,13 +39,10 @@ use crate::{
     xds::{self, ResourceType},
 };
 
-pub use self::{
-    config_type::ConfigType, error::ValidationError, providers::Providers, slot::Slot, watch::Watch,
-};
+pub use self::{config_type::ConfigType, error::ValidationError, slot::Slot, watch::Watch};
 
 mod config_type;
 mod error;
-pub mod providers;
 mod serialization;
 mod slot;
 pub mod watch;

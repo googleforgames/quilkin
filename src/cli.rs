@@ -129,7 +129,7 @@ pub struct Cli {
     #[command(flatten)]
     pub locality: LocalityCli,
     #[command(flatten)]
-    pub providers: crate::config::providers::Providers,
+    pub providers: crate::Providers,
     #[command(flatten)]
     pub service: crate::service::Service,
 }

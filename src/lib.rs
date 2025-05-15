@@ -16,28 +16,28 @@
 
 #![deny(unused_must_use)]
 
-pub mod alloc;
-pub mod collections;
-pub mod metrics;
-pub mod signal;
-pub mod time;
-
 // Above other modules for thr `uring_spawn` macro.
 #[macro_use]
 pub mod net;
 
+pub mod alloc;
 pub mod cli;
 pub mod codec;
+pub mod collections;
 pub mod components;
 pub mod config;
 pub mod filters;
+pub mod metrics;
+pub mod providers;
 pub mod service;
+pub mod signal;
+pub mod time;
 pub mod xds;
 
 #[doc(hidden)]
 pub mod test;
 
-pub use {quilkin_proto as generated, service::Service};
+pub use {providers::Providers, quilkin_proto as generated, service::Service};
 
 pub type Result<T, E = eyre::Error> = std::result::Result<T, E>;
 
