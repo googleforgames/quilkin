@@ -1,4 +1,4 @@
-use std::{future::Future, sync::Arc};
+use std::{future::Future, sync::Arc, time::Duration};
 
 use crate::{
     components::proxy::SessionPool,
@@ -316,6 +316,8 @@ impl Service {
                             break;
                         }
                     }
+                    tracing::info!("sleeping...");
+                    tokio::time::sleep(Duration::from_secs(5)).await;
                 }
 
                 if let Some(pfin) = phoenix_finalizer {
@@ -323,6 +325,8 @@ impl Service {
                 }
             }
 
+            tracing::info!("returning...");
+            tokio::time::sleep(Duration::from_secs(5)).await;
             Ok(())
         }))
     }
@@ -365,7 +369,16 @@ impl Service {
         if self.qcmp_enabled {
             tracing::info!(port=%self.qcmp_port, "starting qcmp service");
             let qcmp = crate::net::raw_socket_with_reuse(self.qcmp_port)?;
-            crate::codec::qcmp::spawn(qcmp, shutdown_rx.clone())?;
+            match crate::codec::qcmp::spawn(qcmp, shutdown_rx.clone()) {
+                Ok(ok) => {
+                    tracing::debug!(ok=?ok, "OK");
+                    return Ok(std::future::pending());
+                }
+                Err(error) => {
+                    tracing::debug!(error=?error, "ERROR");
+                    return Err(error);
+                }
+            }
         }
 
         Ok(std::future::pending())
@@ -541,7 +554,9 @@ impl Service {
 
         Ok((
             std::future::pending(),
-            Box::from(move |_shutdown_rx: &crate::signal::ShutdownRx| {}),
+            Box::from(move |_shutdown_rx: &crate::signal::ShutdownRx| {
+                tracing::debug!("in router finalizer");
+            }),
             sessions,
         ))
     }

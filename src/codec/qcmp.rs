@@ -212,6 +212,7 @@ pub fn spawn(
                 let result = tokio::select! {
                     result = socket.recv_from(&mut input_buf) => result,
                     _ = shutdown_rx.changed() => {
+                        tracing::debug!("qcmp service caught shutdown");
                         metrics::qcmp::active(false);
                         return
                     }

@@ -67,6 +67,13 @@ mod tests {
         //run_test(false, true, true, 3).await;
     }
 
+    #[tokio::test]
+    #[serial]
+    async fn agones_blabla() {
+        quilkin::test::enable_log("agones=debug");
+        run_proxy_shutdown_test(1).await;
+    }
+
     async fn run_test(proxy: bool, relay: bool, agent: bool, id: u8) {
         println!("running agones_token_router {id}");
 
@@ -250,6 +257,270 @@ mod tests {
 
         tokio::try_join!(
             delete_deployment(&deployments, &relay_proxy_name),
+            delete_agents(&deployments, agent_names),
+            delete_deployment(&deployments, &relay_name),
+        )
+        .expect("failed to delete deployment(s) within timeout");
+    }
+
+    async fn run_proxy_shutdown_test(id: u8) {
+        println!("running agones_shutdown_test {id}");
+
+        async fn delete_deployment(dp: &Api<Deployment>, name: &str) -> Result<(), kube::Error> {
+            async fn inner(dp: &Api<Deployment>, name: &str) -> Result<(), kube::Error> {
+                if let Either::Left(d) = dp.delete(name, &DeleteParams::default()).await? {
+                    await_condition(
+                        dp.clone(),
+                        name,
+                        kube::runtime::conditions::is_deleted(&d.uid().unwrap()),
+                    )
+                    .await
+                    .map_err(|err| kube::Error::Service(Box::new(err)))?;
+                }
+
+                Ok(())
+            }
+
+            timeout(SLOW, inner(dp, name)).await.map_err(|_err| {
+                kube::Error::Api(kube::error::ErrorResponse {
+                    message: format!("failed to delete deployment {name} within {SLOW:?}"),
+                    status: String::new(),
+                    reason: String::new(),
+                    code: 408,
+                })
+            })??;
+            println!("deployment {name} deleted");
+            Ok(())
+        }
+        // async fn restart_deployment(dp: &Api<Deployment>, name: &str) -> Result<(), kube::Error> {
+        //     async fn inner(dp: &Api<Deployment>, name: &str) -> Result<(), kube::Error> {
+        //         let d = dp.restart(name).await?;
+        //         await_condition(
+        //             dp.clone(),
+        //             name,
+        //             kube::runtime::conditions::is_deleted(&d.uid().unwrap()),
+        //         )
+        //         .await
+        //         .map_err(|err| kube::Error::Service(Box::new(err)))?;
+        //
+        //         Ok(())
+        //     }
+        //
+        //     timeout(SLOW, inner(dp, name)).await.map_err(|_err| {
+        //         kube::Error::Api(kube::error::ErrorResponse {
+        //             message: format!("failed to delete deployment {name} within {SLOW:?}"),
+        //             status: String::new(),
+        //             reason: String::new(),
+        //             code: 408,
+        //         })
+        //     })??;
+        //     println!("deployment {name} deleted");
+        //     Ok(())
+        // }
+
+        async fn delete_agents(
+            dp: &Api<Deployment>,
+            agents: Vec<String>,
+        ) -> Result<(), kube::Error> {
+            for agent in agents {
+                delete_deployment(dp, &agent).await?;
+            }
+
+            Ok(())
+        }
+
+        let (relay, proxy, agent) = (true, true, true);
+        let client = Client::new().await;
+        let config_maps: Api<ConfigMap> = client.namespaced_api();
+        let deployments: Api<Deployment> = client.namespaced_api();
+        let fleets: Api<Fleet> = client.namespaced_api();
+        let gameservers: Api<GameServer> = client.namespaced_api();
+
+        let pp = PostParams::default();
+        let dp = DeleteParams::default();
+
+        let config_map = create_token_router_config(&config_maps).await;
+        let (relay_name, agent_names) =
+            agones_agent_deployment(&client, deployments.clone(), relay, agent, 1, id).await;
+
+        let relay_proxy1_name = format!("quilkin-relay-proxy1-{id}");
+        let proxy1_address = quilkin_proxy_deployment(
+            &client,
+            deployments.clone(),
+            relay_proxy1_name.clone(),
+            7005,
+            format!("http://{relay_name}:7800"),
+            proxy,
+        )
+        .await;
+        let relay_proxy2_name = format!("quilkin-relay-proxy2-{id}");
+        let proxy2_address = quilkin_proxy_deployment(
+            &client,
+            deployments.clone(),
+            relay_proxy2_name.clone(),
+            7006,
+            format!("http://{relay_name}:7800"),
+            proxy,
+        )
+        .await;
+
+        let token = "789";
+        let gs = create_tokenised_gameserver(fleets, gameservers.clone(), token).await;
+        let gs_address = crate::gameserver_address(&gs);
+
+        let mut t = TestHelper::default();
+        let (mut rx, socket) = t.open_socket_and_recv_multiple_packets().await;
+        socket.send_to(b"ALLOCATE", gs_address).await.unwrap();
+
+        let response = timeout(Duration::from_secs(30), rx.recv())
+            .await
+            .expect("should receive packet from GameServer")
+            .unwrap();
+        assert_eq!("ACK: ALLOCATE\n", response);
+
+        // Proxy Deployment should be ready, since there is now an endpoint
+        if timeout(
+            SLOW,
+            await_condition(
+                deployments.clone(),
+                &relay_proxy1_name,
+                is_deployment_ready(),
+            ),
+        )
+        .await
+        .is_err()
+        {
+            debug_pods(&client, format!("role={relay_proxy1_name}")).await;
+            debug_pods(&client, "role=relay".into()).await;
+            debug_pods(&client, "role=agent".into()).await;
+            panic!("Quilkin proxy deployment should be ready");
+        }
+
+        // keep trying to send the packet to the proxy until it works, since distributed systems are eventually consistent.
+        let mut response: String = "not-found".into();
+        for i in 0..30 {
+            println!("Connection Attempt: {i}");
+
+            // returns the name of the GameServer. This proves we are routing the allocated
+            // GameServer with the correct token attached.
+            socket
+                .send_to(format!("GAMESERVER{token}").as_bytes(), proxy1_address)
+                .await
+                .unwrap();
+
+            let result = timeout(Duration::from_secs(1), rx.recv()).await;
+            if let Ok(Some(value)) = result {
+                response = value;
+                break;
+            }
+        }
+
+        if format!("NAME: {}\n", gs.name_unchecked()) != response {
+            debug_pods(&client, format!("role={relay_proxy1_name}")).await;
+            debug_pods(&client, "role=relay".into()).await;
+            debug_pods(&client, "role=agent".into()).await;
+            panic!("failed send packets to {}", gs.name_unchecked());
+        }
+
+        // // let's remove the token from the gameserver, which should remove access.
+        // let mut gs = gameservers.get(gs.name_unchecked().as_str()).await.unwrap();
+        // let name = gs.name_unchecked();
+        // gs.metadata
+        //     .annotations
+        //     .as_mut()
+        //     .map(|annotations| annotations.remove(TOKEN_KEY).unwrap());
+        // gameservers.replace(name.as_str(), &pp, &gs).await.unwrap();
+
+        // let cloned_socket = socket.clone();
+        tokio::spawn(async move {
+            println!("AOIHFIAHDF");
+            loop {
+                socket
+                    .send_to(format!("GAMESERVER{token}").as_bytes(), proxy1_address)
+                    .await
+                    .unwrap();
+
+                let result = timeout(Duration::from_secs(1), rx.recv()).await;
+                match result {
+                    Ok(Some(value)) => {
+                        println!("got some value: {:?}", value);
+                    }
+                    Ok(_) => {
+                        println!("got None value");
+                    }
+                    Err(error) => {
+                        println!("{:?}", error);
+                    }
+                }
+                tokio::time::sleep(Duration::from_secs(1)).await;
+            }
+        });
+        tokio::time::sleep(Duration::from_secs(30)).await;
+
+        // try restarting the deployment, triggering pod cycling
+        // let _ = &deployments.restart(&relay_proxy1_name).await.unwrap();
+        delete_deployment(&deployments, &relay_proxy1_name)
+            .await
+            .unwrap();
+        println!("deployment was shut down");
+        tokio::time::sleep(Duration::from_secs(100)).await;
+        // delete_deployment(&deployments, &relay_proxy_name).await.unwrap();
+
+        // probably continuing to send packets should still work if the proxy is keeping the
+        // session alive...
+
+        // now we should send a packet, and not get a response.
+        // let mut failed = false;
+        // for i in 0..30 {
+        //     println!("Disconnection Attempt: {i}");
+        //     socket
+        //         .send_to(format!("GAMESERVER{token}").as_bytes(), proxy1_address)
+        //         .await
+        //         .unwrap();
+        //
+        //     let result = timeout(Duration::from_secs(1), rx.recv()).await;
+        //     if result.is_err() {
+        //         failed = true;
+        //         break;
+        //     }
+        // }
+        // if !failed {
+        //     debug_pods(&client, format!("role={relay_proxy1_name}")).await;
+        //     debug_pods(&client, "role=relay".into()).await;
+        //     debug_pods(&client, "role=agent".into()).await;
+        // }
+        // assert!(failed, "Packet should have failed");
+
+        println!("deleting resources...");
+        use either::Either;
+        let cm_name = config_map.name_unchecked();
+        // cleanup
+        match config_maps
+            .delete(&cm_name, &dp)
+            .await
+            .expect("failed to delete config map")
+        {
+            Either::Left(_) => {
+                timeout(
+                    SLOW,
+                    await_condition(
+                        deployments.clone(),
+                        &relay_proxy1_name,
+                        kube::runtime::conditions::is_deleted(&cm_name),
+                    ),
+                )
+                .await
+                .expect("failed to delete config map within timeout")
+                .expect("failed to delete config map");
+                println!("...config map deleted");
+            }
+            Either::Right(_) => {
+                println!("config map deleted");
+            }
+        }
+
+        tokio::try_join!(
+            delete_deployment(&deployments, &relay_proxy2_name),
             delete_agents(&deployments, agent_names),
             delete_deployment(&deployments, &relay_name),
         )

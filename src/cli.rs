@@ -263,6 +263,7 @@ impl Cli {
         let ready = Arc::<std::sync::atomic::AtomicBool>::default();
         let (shutdown_tx, mut shutdown_rx) = crate::signal::spawn_handler();
         if self.admin.enabled {
+            tracing::debug!("spawning admin tasks");
             crate::components::admin::server(
                 config.clone(),
                 ready.clone(),
@@ -271,6 +272,7 @@ impl Cli {
             );
         }
 
+        tracing::debug!("spawning heap stats tasks");
         crate::alloc::spawn_heap_stats_updates(
             std::time::Duration::from_secs(10),
             shutdown_rx.clone(),
@@ -279,23 +281,38 @@ impl Cli {
         // Just call this early so there isn't a potential race when spawning xDS
         quilkin_xds::metrics::set_registry(crate::metrics::registry());
 
+        tracing::debug!("spawning provider tasks");
         let locality = self.locality.locality();
         let mut provider_tasks =
             self.providers
                 .spawn_providers(&config, ready.clone(), locality.clone());
 
+        tracing::debug!("spawning service tasks");
         let service_task =
             self.service
                 .spawn_services(&config, &shutdown_rx, self.locality.icao_code)?;
 
+        tracing::debug!("setting ready");
         if provider_tasks.is_empty() {
             ready.store(true, std::sync::atomic::Ordering::SeqCst);
         }
 
+        tracing::debug!("waiting for something to stop");
         tokio::select! {
-            result = shutdown_rx.changed() => result.map_err(From::from),
-            Some(result) = provider_tasks.join_next() => result?,
-            result = service_task => result?,
+            // result = shutdown_rx.changed() => {
+            //     tracing::debug!("received shutdown stop in main drive()");
+            //     result.map_err(From::from)
+            // },
+            Some(result) = provider_tasks.join_next() => {
+                tracing::debug!(result=?result, "provider_tasks");
+                tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+                result?
+            },
+            result = service_task => {
+                tracing::debug!(result=?result, "service_task");
+                tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+                result?
+            },
         }
     }
 

@@ -376,7 +376,8 @@ pub async fn quilkin_proxy_deployment(
     .await;
     assert!(result.is_err());
 
-    // get the address to send data to
+    tokio::time::sleep(Duration::from_secs(3)).await;
+
     let pods = client.namespaced_api::<Pod>();
     let list = pods
         .list(&ListParams {
@@ -387,27 +388,15 @@ pub async fn quilkin_proxy_deployment(
         .unwrap();
     assert_eq!(1, list.items.len());
 
-    let nodes: Api<Node> = Api::all(client.kubernetes.clone());
-    let name = list.items[0]
-        .spec
-        .as_ref()
-        .unwrap()
-        .node_name
-        .as_ref()
-        .unwrap();
-    let node = nodes.get(name.as_str()).await.unwrap();
-    let external_ip = node
+    let host_ip = &list.items[0]
         .status
+        .as_ref()
         .unwrap()
-        .addresses
-        .unwrap()
-        .iter()
-        .find(|addr| addr.type_ == "ExternalIP")
-        .unwrap()
-        .address
-        .clone();
+        .host_ip
+        .clone()
+        .unwrap();
 
-    SocketAddr::new(external_ip.parse().unwrap(), host_port)
+    SocketAddr::new(host_ip.parse().unwrap(), host_port)
 }
 
 /// Create a Fleet, and pick on it's [`GameServer`]s and add the token to it.
@@ -598,7 +587,7 @@ pub fn quilkin_container(
         args,
         env: Some(vec![EnvVar {
             name: "RUST_LOG".to_string(),
-            value: Some("quilkin=trace".into()),
+            value: Some("quilkin=debug".into()),
             value_from: None,
         }]),
         liveness_probe: Some(Probe {
