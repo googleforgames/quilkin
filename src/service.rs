@@ -89,6 +89,13 @@ pub struct Service {
         default_value_t = 7800
     )]
     xds_port: u16,
+    /// Whether to serve xDS and/or mDS requests.
+    #[arg(
+        long = "service.grpc",
+        env = "QUILKIN_SERVICE_GRPC",
+        default_value_t = false
+    )]
+    grpc_enabled: bool,
     /// A PEM encoded certificate, if supplied, applies to the mds and xds service(s)
     #[clap(
         long = "service.tls.cert",
@@ -140,6 +147,7 @@ impl Default for Service {
             udp_workers: std::num::NonZeroUsize::new(num_cpus::get()).unwrap(),
             xds_enabled: <_>::default(),
             xds_port: 7800,
+            grpc_enabled: false,
             xdp: <_>::default(),
             tls_cert: None,
             tls_key: None,
@@ -215,6 +223,13 @@ impl Service {
         self
     }
 
+    pub fn grpc(mut self) -> Self {
+        self.mds_enabled = true;
+        self.xds_enabled = true;
+        self.grpc_enabled = true;
+        self
+    }
+
     pub fn xdp(mut self, xdp_opts: XdpOptions) -> Self {
         self.xdp = xdp_opts;
         self
@@ -227,6 +242,7 @@ impl Service {
             || self.phoenix_enabled
             || self.xds_enabled
             || self.mds_enabled
+            || self.grpc_enabled
     }
 
     pub fn build_config(&self, icao_code: IcaoCode) -> eyre::Result<Config> {
@@ -332,11 +348,11 @@ impl Service {
         Ok(tokio::spawn(async move {
             tokio::task::spawn(async move {
                 let (task, result) = tokio::select! {
-                    result = mds_task => ("mds", result),
                     result = phoenix_task => ("phoenix", result),
                     result = qcmp_task => ("qcmp", result),
                     result = udp_task => ("udp", result),
                     result = xds_task => ("xds", result),
+                    result = mds_task => ("mds", result),
                 };
 
                 if let Err(error) = result {
@@ -437,11 +453,37 @@ impl Service {
     }
 
     /// Spawns an xDS server if enabled, otherwise returns a future which never completes.
+    fn publish_xds(
+        &self,
+        config: &Arc<Config>,
+    ) -> crate::Result<impl Future<Output = crate::Result<()>> + use<>> {
+        if !self.xds_enabled && !self.grpc_enabled {
+            return Ok(either::Left(std::future::pending()));
+        }
+
+        use futures::TryFutureExt as _;
+
+        let listener = crate::net::TcpListener::bind(Some(self.xds_port))?;
+
+        Ok(either::Right(
+            tokio::spawn(
+                crate::net::xds::server::ControlPlane::from_arc(
+                    config.clone(),
+                    crate::components::admin::IDLE_REQUEST_INTERVAL,
+                )
+                .management_server(listener, self.tls_identity()?)?,
+            )
+            .map_err(From::from)
+            .and_then(std::future::ready),
+        ))
+    }
+
+    /// Spawns an xDS server if enabled, otherwise returns a future which never completes.
     fn publish_mds(
         &self,
         config: &Arc<Config>,
     ) -> crate::Result<impl Future<Output = crate::Result<()>> + use<>> {
-        if !self.mds_enabled {
+        if !self.mds_enabled && !self.grpc_enabled {
             return Ok(either::Left(std::future::pending()));
         }
 
@@ -457,32 +499,6 @@ impl Service {
                     crate::components::admin::IDLE_REQUEST_INTERVAL,
                 )
                 .relay_server(listener, self.tls_identity()?)?,
-            )
-            .map_err(From::from)
-            .and_then(std::future::ready),
-        ))
-    }
-
-    /// Spawns an xDS server if enabled, otherwise returns a future which never completes.
-    fn publish_xds(
-        &self,
-        config: &Arc<Config>,
-    ) -> crate::Result<impl Future<Output = crate::Result<()>> + use<>> {
-        if !self.xds_enabled {
-            return Ok(either::Left(std::future::pending()));
-        }
-
-        use futures::TryFutureExt as _;
-
-        let listener = crate::net::TcpListener::bind(Some(self.xds_port))?;
-
-        Ok(either::Right(
-            tokio::spawn(
-                crate::net::xds::server::ControlPlane::from_arc(
-                    config.clone(),
-                    crate::components::admin::IDLE_REQUEST_INTERVAL,
-                )
-                .management_server(listener, self.tls_identity()?)?,
             )
             .map_err(From::from)
             .and_then(std::future::ready),
