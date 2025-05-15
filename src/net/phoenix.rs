@@ -73,7 +73,7 @@ pub fn spawn<M: Clone + Measurement + Sync + Send + 'static>(
                 let datacenters = datacenters.clone();
 
                 async move {
-                    let json = crate::config::Slot::new(serde_json::Map::default());
+                    let json = Arc::new(arc_swap::ArcSwap::new(Arc::new(serde_json::Map::default())));
 
                     tokio::spawn({
                         let phoenix = phoenix.clone();
@@ -880,7 +880,8 @@ mod tests {
 
         let (_tx, rx) = crate::signal::channel(Default::default());
         let socket = raw_socket_with_reuse(qcmp_port).unwrap();
-        crate::codec::qcmp::spawn(socket, rx.clone()).unwrap();
+        let pc = crate::codec::qcmp::port_channel();
+        crate::codec::qcmp::spawn(socket, pc.subscribe(), rx.clone()).unwrap();
         tokio::time::sleep(Duration::from_millis(150)).await;
 
         let measurement =

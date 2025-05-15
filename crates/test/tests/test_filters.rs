@@ -23,14 +23,14 @@ use quilkin::filters;
 async fn test_filter() {
     let server_addr = "[fefe::0490]:9001".parse().unwrap();
 
-    let proc_state = xdp_util::default_xdp_state(xdp_util::make_config(
+    let (proc_state, cfg_state) = xdp_util::default_xdp_state(xdp_util::make_config(
         qt::filter_chain!([
             TestFilter => None,
         ]),
         xdp_util::endpoints(&[(server_addr, &[])]),
     ));
 
-    let mut simple_loop = xdp_util::SimpleLoop::new(1, proc_state);
+    let mut simple_loop = xdp_util::SimpleLoop::new(1, proc_state, cfg_state);
 
     let client_addr = "109.108.107.106".parse().unwrap();
 
@@ -53,7 +53,7 @@ async fn test_filter() {
 async fn debug_filter() {
     let server_addr = "[fefe::0490]:9001".parse().unwrap();
 
-    let proc_state = xdp_util::default_xdp_state(xdp_util::make_config(
+    let (proc_state, cfg_state) = xdp_util::default_xdp_state(xdp_util::make_config(
         qt::filter_chain!([
             Debug => Some(filters::debug::Config {
                 id: Some("client".to_owned()),
@@ -62,7 +62,7 @@ async fn debug_filter() {
         xdp_util::endpoints(&[(server_addr, &[])]),
     ));
 
-    let mut simple_loop = xdp_util::SimpleLoop::new(1, proc_state);
+    let mut simple_loop = xdp_util::SimpleLoop::new(1, proc_state, cfg_state);
 
     let packet = simple_loop
         .echo("12.13.14.15".parse().unwrap(), 2222, b"packet data")

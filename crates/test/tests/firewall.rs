@@ -33,7 +33,7 @@ struct Config {
 fn exec(test: &'static str, config: Config) {
     use filters::firewall as fw;
 
-    let proc_state = xdp_util::default_xdp_state(xdp_util::make_config(
+    let (proc_state, cfg_state) = xdp_util::default_xdp_state(xdp_util::make_config(
         qt::filter_chain!([
             Firewall => fw::Config {
                 on_read: vec![fw::Rule {
@@ -57,7 +57,7 @@ fn exec(test: &'static str, config: Config) {
 
     const PAYLOAD: &[u8] = b"hello firewall";
 
-    let mut simple_loop = xdp_util::SimpleLoop::new(1, proc_state);
+    let mut simple_loop = xdp_util::SimpleLoop::new(1, proc_state, cfg_state);
     let packet = simple_loop
         .make_client_packet(config.read.ip, config.read.port, PAYLOAD)
         .unwrap();

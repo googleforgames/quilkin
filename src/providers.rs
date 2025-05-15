@@ -162,7 +162,7 @@ pub struct Providers {
 
 #[derive(Clone)]
 pub struct FiltersAndClusters {
-    pub filters: config::Slot<crate::filters::FilterChain>,
+    pub filters: crate::config::filter::FilterChainConfig,
     pub clusters: config::Watch<crate::net::ClusterMap>,
 }
 
@@ -282,24 +282,19 @@ impl Providers {
 
             {
                 use crate::filters::StaticFilter as _;
-                config.filters.store(Arc::new(
-                    crate::filters::FilterChain::try_create([
-                        crate::filters::Capture::as_filter_config(
-                            crate::filters::capture::Config {
-                                metadata_key: crate::filters::capture::CAPTURED_BYTES.into(),
-                                strategy: crate::filters::capture::Strategy::Suffix(
-                                    crate::filters::capture::Suffix {
-                                        size: tt.length as _,
-                                        remove: true,
-                                    },
-                                ),
+                let filter_chain = crate::filters::FilterChain::try_create([
+                    crate::filters::Capture::as_filter_config(crate::filters::capture::Config {
+                        metadata_key: crate::filters::capture::CAPTURED_BYTES.into(),
+                        strategy: crate::filters::capture::Strategy::Suffix(
+                            crate::filters::capture::Suffix {
+                                size: tt.length as _,
+                                remove: true,
                             },
-                        )
-                        .unwrap(),
-                        crate::filters::TokenRouter::as_filter_config(None).unwrap(),
-                    ])
-                    .unwrap(),
-                ));
+                        ),
+                    })?,
+                    crate::filters::TokenRouter::as_filter_config(None)?,
+                ])?;
+                config.filters.store(filter_chain);
             }
 
             let count = tt.count as u64;

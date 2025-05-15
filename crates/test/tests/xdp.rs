@@ -28,7 +28,7 @@ async fn simple_forwarding() {
     const PROXY: SocketAddrV4 = SocketAddrV4::new(Ipv4Addr::new(2, 2, 2, 2), 7777);
     const CLIENT: SocketAddrV4 = SocketAddrV4::new(Ipv4Addr::new(5, 5, 5, 5), 8888);
 
-    let config = make_config(
+    let mut cfg_state = make_config(
         qt::filter_chain!([
             Capture => filters::capture::Config::with_strategy(filters::capture::Suffix {
                 size: 1,
@@ -42,7 +42,6 @@ async fn simple_forwarding() {
     let mut state = process::State {
         external_port: PROXY.port().into(),
         qcmp_port: 0.into(),
-        config,
         destinations: Vec::with_capacity(1),
         addr_to_asn: Default::default(),
         sessions: Arc::new(Default::default()),
@@ -76,7 +75,13 @@ async fn simple_forwarding() {
     let mut rx_slab = LittleSlab::new();
     rx_slab.push_front(client_packet);
     let mut tx_slab = LittleSlab::new();
-    process::process_packets(&mut rx_slab, &mut umem, &mut tx_slab, &mut state);
+    process::process_packets(
+        &mut rx_slab,
+        &mut umem,
+        &mut tx_slab,
+        &mut cfg_state,
+        &mut state,
+    );
 
     assert!(rx_slab.is_empty());
     let server_packet = tx_slab.pop_back().unwrap();
@@ -105,7 +110,7 @@ async fn changes_ip_version() {
         SocketAddrV6::new(Ipv6Addr::new(2, 2, 2, 2, 2, 2, 2, 2), 7777, 0, 0);
     const CLIENT: SocketAddrV4 = SocketAddrV4::new(Ipv4Addr::new(5, 5, 5, 5), 8888);
 
-    let config = make_config(
+    let mut cfg_state = make_config(
         qt::filter_chain!([
             Capture => filters::capture::Config::with_strategy(filters::capture::Suffix {
                 size: 1,
@@ -119,7 +124,6 @@ async fn changes_ip_version() {
     let mut state = process::State {
         external_port: PROXY4.port().into(),
         qcmp_port: 0.into(),
-        config,
         destinations: Vec::with_capacity(1),
         addr_to_asn: Default::default(),
         sessions: Arc::new(Default::default()),
@@ -155,7 +159,13 @@ async fn changes_ip_version() {
             .unwrap();
 
         rx_slab.push_front(client_packet);
-        process::process_packets(&mut rx_slab, &mut umem, &mut tx_slab, &mut state);
+        process::process_packets(
+            &mut rx_slab,
+            &mut umem,
+            &mut tx_slab,
+            &mut cfg_state,
+            &mut state,
+        );
 
         assert!(rx_slab.is_empty());
         let server_packet = tx_slab.pop_back().unwrap();
@@ -188,7 +198,13 @@ async fn changes_ip_version() {
         .unwrap();
 
     rx_slab.push_front(server_packet);
-    process::process_packets(&mut rx_slab, &mut umem, &mut tx_slab, &mut state);
+    process::process_packets(
+        &mut rx_slab,
+        &mut umem,
+        &mut tx_slab,
+        &mut cfg_state,
+        &mut state,
+    );
 
     assert!(rx_slab.is_empty());
     let client_packet = tx_slab.pop_back().unwrap();
@@ -231,7 +247,7 @@ async fn packet_manipulation() {
 
     // Test suffix removal
     {
-        let config = make_config(
+        let mut cfg_state = make_config(
             qt::filter_chain!([
                 Capture => filters::capture::Config::with_strategy(filters::capture::Suffix {
                     size: 1,
@@ -245,7 +261,6 @@ async fn packet_manipulation() {
         let mut state = process::State {
             external_port: PROXY.port().into(),
             qcmp_port: 0.into(),
-            config,
             destinations: Vec::with_capacity(1),
             addr_to_asn: Default::default(),
             sessions: Arc::new(Default::default()),
@@ -267,7 +282,13 @@ async fn packet_manipulation() {
                 .unwrap();
 
             rx_slab.push_front(client_packet);
-            process::process_packets(&mut rx_slab, &mut umem, &mut tx_slab, &mut state);
+            process::process_packets(
+                &mut rx_slab,
+                &mut umem,
+                &mut tx_slab,
+                &mut cfg_state,
+                &mut state,
+            );
 
             assert!(rx_slab.is_empty());
             let server_packet = tx_slab.pop_back().unwrap();
@@ -282,7 +303,7 @@ async fn packet_manipulation() {
 
     // Test prefix removal
     {
-        let config = make_config(
+        let mut cfg_state = make_config(
             qt::filter_chain!([
                 Capture => filters::capture::Config::with_strategy(filters::capture::Prefix {
                     size: 1,
@@ -296,7 +317,6 @@ async fn packet_manipulation() {
         let mut state = process::State {
             external_port: PROXY.port().into(),
             qcmp_port: 0.into(),
-            config,
             destinations: Vec::with_capacity(1),
             addr_to_asn: Default::default(),
             sessions: Arc::new(Default::default()),
@@ -318,7 +338,13 @@ async fn packet_manipulation() {
                 .unwrap();
 
             rx_slab.push_front(client_packet);
-            process::process_packets(&mut rx_slab, &mut umem, &mut tx_slab, &mut state);
+            process::process_packets(
+                &mut rx_slab,
+                &mut umem,
+                &mut tx_slab,
+                &mut cfg_state,
+                &mut state,
+            );
 
             assert!(rx_slab.is_empty());
             let server_packet = tx_slab.pop_back().unwrap();
@@ -335,7 +361,7 @@ async fn packet_manipulation() {
     {
         let concat_data = [0xff; 11];
         let data = [0xf1u8; 20];
-        let config = make_config(
+        let mut cfg_state = make_config(
             qt::filter_chain!([
                 Capture => filters::capture::Config::with_strategy(filters::capture::Suffix {
                     size: 18,
@@ -354,7 +380,6 @@ async fn packet_manipulation() {
         let mut state = process::State {
             external_port: PROXY.port().into(),
             qcmp_port: 0.into(),
-            config,
             destinations: Vec::with_capacity(1),
             addr_to_asn: Default::default(),
             sessions: Arc::new(Default::default()),
@@ -372,7 +397,13 @@ async fn packet_manipulation() {
             .unwrap();
 
         rx_slab.push_front(client_packet);
-        process::process_packets(&mut rx_slab, &mut umem, &mut tx_slab, &mut state);
+        process::process_packets(
+            &mut rx_slab,
+            &mut umem,
+            &mut tx_slab,
+            &mut cfg_state,
+            &mut state,
+        );
 
         let server_packet = tx_slab.pop_back().unwrap();
 
@@ -390,7 +421,13 @@ async fn packet_manipulation() {
             .unwrap();
 
         rx_slab.push_front(server_packet);
-        process::process_packets(&mut rx_slab, &mut umem, &mut tx_slab, &mut state);
+        process::process_packets(
+            &mut rx_slab,
+            &mut umem,
+            &mut tx_slab,
+            &mut cfg_state,
+            &mut state,
+        );
         let server_packet = tx_slab.pop_back().unwrap();
 
         let udp = UdpHeaders::parse_packet(&server_packet).unwrap().unwrap();
@@ -423,7 +460,7 @@ async fn multiple_servers() {
     let tok = [0xf1u8];
     let tok = [&tok[..]];
 
-    let config = make_config(
+    let mut cfg_state = make_config(
         qt::filter_chain!([
             Capture => filters::capture::Config::with_strategy(filters::capture::Prefix {
                 size: 1,
@@ -443,7 +480,6 @@ async fn multiple_servers() {
     let mut state = process::State {
         external_port: PROXY.port().into(),
         qcmp_port: 0.into(),
-        config,
         destinations: Vec::with_capacity(1),
         addr_to_asn: Default::default(),
         sessions: Arc::new(Default::default()),
@@ -476,7 +512,13 @@ async fn multiple_servers() {
         .unwrap();
 
     rx_slab.push_front(client_packet);
-    process::process_packets(&mut rx_slab, &mut umem, &mut tx_slab, &mut state);
+    process::process_packets(
+        &mut rx_slab,
+        &mut umem,
+        &mut tx_slab,
+        &mut cfg_state,
+        &mut state,
+    );
 
     while let Some(sp) = tx_slab.pop_back() {
         let udp = UdpHeaders::parse_packet(&sp).unwrap().unwrap();
@@ -495,7 +537,7 @@ async fn many_sessions() {
     const SERVER: SocketAddrV4 = SocketAddrV4::new(Ipv4Addr::new(1, 1, 1, 1), 1111);
     const PROXY: SocketAddrV4 = SocketAddrV4::new(Ipv4Addr::new(2, 2, 2, 2), 7777);
 
-    let config = make_config(
+    let mut cfg_state = make_config(
         qt::filter_chain!([
             Capture => filters::capture::Config::with_strategy(filters::capture::Suffix {
                 size: 1,
@@ -509,7 +551,6 @@ async fn many_sessions() {
     let mut state = process::State {
         external_port: PROXY.port().into(),
         qcmp_port: 0.into(),
-        config,
         destinations: Vec::with_capacity(1),
         addr_to_asn: Default::default(),
         sessions: Arc::new(Default::default()),
@@ -558,14 +599,26 @@ async fn many_sessions() {
             .unwrap();
 
         rx_slab.push_front(client_packet);
-        process::process_packets(&mut rx_slab, &mut umem, &mut tx_slab, &mut state);
+        process::process_packets(
+            &mut rx_slab,
+            &mut umem,
+            &mut tx_slab,
+            &mut cfg_state,
+            &mut state,
+        );
 
         let mut server_packet = tx_slab.pop_back().unwrap();
 
         swap(&mut server_packet);
 
         rx_slab.push_front(server_packet);
-        process::process_packets(&mut rx_slab, &mut umem, &mut tx_slab, &mut state);
+        process::process_packets(
+            &mut rx_slab,
+            &mut umem,
+            &mut tx_slab,
+            &mut cfg_state,
+            &mut state,
+        );
 
         let client_packet = tx_slab.pop_back().unwrap();
 
@@ -598,7 +651,7 @@ async fn frees_dropped_packets() {
     const CLIENT: SocketAddrV6 =
         SocketAddrV6::new(Ipv6Addr::new(1, 2, 3, 4, 5, 6, 7, 8), 9999, 0, 0);
 
-    let config = make_config(
+    let mut cfg_state = make_config(
         qt::filter_chain!([
             Capture => filters::capture::Config::with_strategy(filters::capture::Suffix {
                 size: 1,
@@ -612,7 +665,6 @@ async fn frees_dropped_packets() {
     let mut state = process::State {
         external_port: PROXY4.port().into(),
         qcmp_port: 0.into(),
-        config,
         destinations: Vec::with_capacity(1),
         addr_to_asn: Default::default(),
         sessions: Arc::new(Default::default()),
@@ -656,7 +708,13 @@ async fn frees_dropped_packets() {
             .unwrap();
 
         rx_slab.push_front(client_packet);
-        process::process_packets(&mut rx_slab, &mut umem, &mut tx_slab, &mut state);
+        process::process_packets(
+            &mut rx_slab,
+            &mut umem,
+            &mut tx_slab,
+            &mut cfg_state,
+            &mut state,
+        );
 
         assert!(tx_slab.is_empty());
     }
@@ -673,7 +731,13 @@ async fn frees_dropped_packets() {
             .unwrap();
 
         rx_slab.push_front(client_packet);
-        process::process_packets(&mut rx_slab, &mut umem, &mut tx_slab, &mut state);
+        process::process_packets(
+            &mut rx_slab,
+            &mut umem,
+            &mut tx_slab,
+            &mut cfg_state,
+            &mut state,
+        );
 
         let server_packet = tx_slab.pop_back().unwrap();
         umem.free_packet(server_packet);
@@ -690,7 +754,13 @@ async fn frees_dropped_packets() {
             .unwrap();
 
         rx_slab.push_front(server_packet);
-        process::process_packets(&mut rx_slab, &mut umem, &mut tx_slab, &mut state);
+        process::process_packets(
+            &mut rx_slab,
+            &mut umem,
+            &mut tx_slab,
+            &mut cfg_state,
+            &mut state,
+        );
 
         assert!(tx_slab.is_empty());
         unsafe { umem.alloc().expect("umem should have available memory") };
@@ -705,10 +775,11 @@ async fn qcmp() {
     const PROXY: SocketAddrV4 = SocketAddrV4::new(Ipv4Addr::new(2, 2, 2, 2), 2020);
     const CLIENT: SocketAddrV4 = SocketAddrV4::new(Ipv4Addr::new(1, 2, 3, 4), 9999);
 
+    let mut cfg_state = make_config(filters::FilterChain::default(), endpoints(&[]));
+
     let mut state = process::State {
         external_port: 7777.into(),
         qcmp_port: PROXY.port().into(),
-        config: make_config(filters::FilterChain::default(), endpoints(&[])),
         destinations: Vec::with_capacity(1),
         addr_to_asn: Default::default(),
         sessions: Arc::new(Default::default()),
@@ -762,7 +833,13 @@ async fn qcmp() {
             .unwrap();
 
         rx_slab.push_front(ping_packet);
-        process::process_packets(&mut rx_slab, &mut umem, &mut tx_slab, &mut state);
+        process::process_packets(
+            &mut rx_slab,
+            &mut umem,
+            &mut tx_slab,
+            &mut cfg_state,
+            &mut state,
+        );
 
         let pong_packet = tx_slab.pop_back().unwrap();
         let udp = UdpHeaders::parse_packet(&pong_packet).unwrap().unwrap();
@@ -804,7 +881,13 @@ async fn qcmp() {
             .unwrap();
 
         rx_slab.push_front(bad_packet);
-        process::process_packets(&mut rx_slab, &mut umem, &mut tx_slab, &mut state);
+        process::process_packets(
+            &mut rx_slab,
+            &mut umem,
+            &mut tx_slab,
+            &mut cfg_state,
+            &mut state,
+        );
 
         assert!(tx_slab.is_empty());
         unsafe { umem.alloc().expect("umem should have available memory") };

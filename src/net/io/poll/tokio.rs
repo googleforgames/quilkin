@@ -45,7 +45,11 @@ macro_rules! uring_inner_spawn {
 }
 
 impl crate::net::io::Listener {
-    pub fn spawn(self, packet_queue: crate::net::PacketQueue) -> eyre::Result<()> {
+    pub fn spawn_io_loop(
+        self,
+        packet_queue: crate::net::PacketQueue,
+        mut fc: crate::config::filter::CachedFilterChain,
+    ) -> eyre::Result<()> {
         let Self {
             worker_id,
             port,
@@ -137,7 +141,8 @@ impl crate::net::io::Listener {
                         match result {
                             Ok((_size, mut source)) => {
                                 source.set_ip(source.ip().to_canonical());
-                                let packet = crate::net::packet::DownstreamPacket { contents: buffer, source };
+                                let filters = fc.load();
+                                let packet = crate::net::packet::DownstreamPacket { contents: buffer, source, filters };
 
                                 if let Some(last_received_at) = last_received_at {
                                     crate::metrics::packet_jitter(
@@ -182,6 +187,7 @@ impl crate::net::sessions::SessionPool {
         raw_socket: socket2::Socket,
         port: u16,
         pending_sends: crate::net::PacketQueue,
+        mut filters: crate::config::filter::CachedFilterChain,
     ) -> Result<(), crate::net::error::PipelineError> {
         let pool = self;
 
@@ -256,7 +262,10 @@ impl crate::net::sessions::SessionPool {
                                     tracing::trace!(%error, "error receiving packet");
                                     crate::metrics::errors_total(crate::metrics::WRITE, &error.to_string(), &crate::metrics::EMPTY).inc();
                                 },
-                                Ok((_size, recv_addr)) => pool.process_received_upstream_packet(buf, recv_addr, port, &mut last_received_at),
+                                Ok((_size, recv_addr)) => {
+                                    let filters = filters.load();
+                                    pool.process_received_upstream_packet(buf, recv_addr, port, &mut last_received_at, filters)
+                                },
                             }
                         }
                         _ = &mut rx => {

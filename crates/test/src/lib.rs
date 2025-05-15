@@ -324,19 +324,18 @@ impl Pail {
                 let (shutdown, shutdown_rx) =
                     quilkin::signal::channel(quilkin::signal::ShutdownKind::Testing);
 
-                let config = Arc::new(Config::default());
-                config.dyn_cfg.id.store(Arc::new(spc.name.into()));
+                let svc = quilkin::Service::default()
+                    .xds()
+                    .xds_port(xds_port)
+                    .mds()
+                    .mds_port(mds_port);
+                let config = Arc::new(svc.build_config(Default::default()).unwrap());
+                *config.dyn_cfg.id.lock() = spc.name.into();
                 let provider_task = quilkin::Providers::default()
                     .fs()
                     .fs_path(path)
                     .spawn_providers(&config, <_>::default(), None);
-                let task = quilkin::Service::default()
-                    .xds()
-                    .xds_port(xds_port)
-                    .mds()
-                    .mds_port(mds_port)
-                    .spawn_services(&config, &shutdown_rx, quilkin::config::IcaoCode::default())
-                    .unwrap();
+                let task = svc.spawn_services(&config, &shutdown_rx).unwrap();
 
                 Self::Relay(RelayPail {
                     xds_port,
@@ -397,19 +396,19 @@ impl Pail {
                 );
 
                 let config_path = path.clone();
-                let config = Arc::new(Config::default());
-                config.dyn_cfg.id.store(Arc::new(spc.name.into()));
+                let svc = quilkin::Service::default().qcmp().qcmp_port(port);
+                let config = Arc::new(
+                    svc.build_config(apc.icao_code)
+                        .expect("failed to build agent config"),
+                );
+                *config.dyn_cfg.id.lock() = spc.name.into();
                 let acfg = config.clone();
                 let provider_task = quilkin::Providers::default()
                     .fs()
                     .fs_path(path)
                     .grpc_push_endpoints(relay_servers)
                     .spawn_providers(&config, <_>::default(), None);
-                let task = quilkin::Service::default()
-                    .qcmp()
-                    .qcmp_port(port)
-                    .spawn_services(&config, &shutdown_rx, apc.icao_code)
-                    .unwrap();
+                let task = svc.spawn_services(&config, &shutdown_rx).unwrap();
 
                 Self::Agent(AgentPail {
                     qcmp_port: port,
@@ -453,7 +452,16 @@ impl Pail {
 
                 let (tx, orx) = tokio::sync::oneshot::channel();
 
-                let config = Arc::new(Config::default());
+                let svc = quilkin::Service::default()
+                    .udp()
+                    .udp_port(port)
+                    .qcmp()
+                    .qcmp_port(qcmp_port)
+                    .phoenix()
+                    .phoenix_port(phoenix_port)
+                    .termination_timeout(None);
+
+                let config = Arc::new(svc.build_config(Default::default()).unwrap());
 
                 if let Some(cfg) = ppc.config {
                     if !cfg.clusters.is_empty() {
@@ -461,11 +469,7 @@ impl Pail {
                     }
 
                     if !cfg.filters.is_empty() {
-                        config
-                            .dyn_cfg
-                            .filters()
-                            .unwrap()
-                            .store(Arc::new(cfg.filters));
+                        config.dyn_cfg.filters().unwrap().store(cfg.filters);
                     }
                 }
 
@@ -491,7 +495,7 @@ impl Pail {
                         .modify(|clusters| clusters.insert_default(endpoints));
                 }
 
-                config.dyn_cfg.id.store(Arc::new(spc.name.into()));
+                *config.dyn_cfg.id.lock() = spc.name.into();
                 let pconfig = config.clone();
 
                 let (rttx, rtrx) = tokio::sync::mpsc::unbounded_channel();

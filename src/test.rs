@@ -455,7 +455,7 @@ impl TestConfig {
 
         Self {
             filters: crate::filters::FilterChain::try_create(std::iter::once(
-                crate::config::Filter {
+                crate::config::filter::Filter {
                     name: "TestFilter".into(),
                     label: None,
                     config: None,

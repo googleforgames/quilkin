@@ -97,6 +97,8 @@ mod tests {
     async fn basic() {
         let source = Arc::new(crate::Config::default());
         let dest = Arc::new(crate::Config::default());
+        assert_eq!(source, dest);
+
         let tmp_dir = tempfile::tempdir().unwrap();
         let file_path = tmp_dir.keep().join("config.yaml");
         tokio::fs::write(&file_path, serde_yaml::to_string(&source).unwrap())
@@ -121,7 +123,12 @@ mod tests {
         tokio::fs::write(&file_path, serde_yaml::to_string(&source).unwrap())
             .await
             .unwrap();
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+        let mut tx = dest.dyn_cfg.clusters().unwrap().watch();
+        tokio::time::timeout(std::time::Duration::from_millis(1000), tx.changed())
+            .await
+            .unwrap()
+            .unwrap();
 
         assert_eq!(source, dest);
     }

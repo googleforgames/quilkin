@@ -18,10 +18,9 @@
 
 use std::{
     collections::BTreeSet,
-    net::{IpAddr, SocketAddr},
     sync::{
         Arc,
-        atomic::{AtomicBool, AtomicU64, Ordering::Relaxed},
+        atomic::{AtomicBool, Ordering::Relaxed},
     },
     time::Duration,
 };
@@ -33,18 +32,27 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    filters::{FilterChain, prelude::*},
+    filters::FilterChain,
     generated::envoy::service::discovery::v3::Resource as XdsResource,
     net::cluster::{self, ClusterMap},
     xds::{self, ResourceType},
 };
 
-pub use self::{config_type::ConfigType, error::ValidationError, slot::Slot, watch::Watch};
+pub use self::{
+    config_type::ConfigType,
+    datacenter::{Datacenter, DatacenterMap},
+    error::ValidationError,
+    icao::{IcaoCode, NotifyingIcaoCode},
+    watch::Watch,
+};
 
 mod config_type;
+mod datacenter;
 mod error;
+pub mod filter;
+mod icao;
+pub mod qcmp;
 mod serialization;
-mod slot;
 pub mod watch;
 
 pub(crate) const BACKOFF_INITIAL_DELAY: Duration = Duration::from_millis(500);
@@ -74,271 +82,19 @@ pub struct Config {
 }
 
 #[cfg(test)]
-impl<'de> Deserialize<'de> for Config {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        struct Visitor;
-
-        impl<'de> serde::de::Visitor<'de> for Visitor {
-            type Value = Config;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("Quilkin config")
-            }
-
-            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
-            where
-                A: serde::de::MapAccess<'de>,
-            {
-                use serde::de::Error;
-
-                let mut id = Option::<String>::None;
-                let mut icao_code = None;
-                let mut qcmp_port = None;
-                let mut datacenters = None;
-                let mut version = None;
-                let mut typemap = default_typemap();
-
-                macro_rules! tm_insert {
-                    ($key:expr_2021, $field:expr_2021, $kind:ty) => {{
-                        if $key == $field {
-                            if typemap.contains_key::<$kind>() {
-                                return Err(serde::de::Error::duplicate_field($field));
-                            }
-
-                            let value =
-                                map.next_value::<<$kind as typemap_rev::TypeMapKey>::Value>()?;
-                            typemap.insert::<$kind>(value);
-                            continue;
-                        }
-                    }};
-                }
-
-                while let Some(key) = map.next_key::<std::borrow::Cow<'de, str>>()? {
-                    match key.as_ref() {
-                        "id" => id = Some(map.next_value()?),
-                        "datacenters" => {
-                            if icao_code.is_some() || qcmp_port.is_some() {
-                                return Err(Error::custom(
-                                    "agent specific fields have already been deserialized",
-                                ));
-                            } else if datacenters.is_some() {
-                                return Err(Error::duplicate_field("datacenters"));
-                            }
-
-                            datacenters = Some(map.next_value()?);
-                        }
-                        "icao_code" => {
-                            if datacenters.is_some() {
-                                return Err(Error::custom(
-                                    "non-agent `datacenters` field has already been deserialized",
-                                ));
-                            } else if icao_code.is_some() {
-                                return Err(Error::duplicate_field("icao_code"));
-                            }
-
-                            icao_code = Some(map.next_value()?);
-                        }
-                        "qcmp_port" => {
-                            if datacenters.is_some() {
-                                return Err(Error::custom(
-                                    "non-agent `datacenters` field has already been deserialized",
-                                ));
-                            } else if qcmp_port.is_some() {
-                                return Err(Error::duplicate_field("qcmp_port"));
-                            }
-
-                            qcmp_port = Some(map.next_value()?);
-                        }
-                        "version" => {
-                            version = Some(map.next_value()?);
-                        }
-                        unknown => {
-                            tm_insert!(key, "filters", FilterChain);
-                            tm_insert!(key, "clusters", ClusterMap);
-
-                            return Err(Error::unknown_field(
-                                unknown,
-                                &[
-                                    "id",
-                                    "filters",
-                                    "clusters",
-                                    "datacenters",
-                                    "icao_code",
-                                    "qcmp_port",
-                                ],
-                            ));
-                        }
-                    }
-                }
-
-                if let Some(datacenters) = datacenters {
-                    typemap.insert::<DatacenterMap>(datacenters);
-                } else if icao_code.is_none() && qcmp_port.is_none() {
-                    typemap.insert::<DatacenterMap>(Default::default());
-                } else {
-                    typemap.insert::<Agent>(Agent {
-                        icao_code: Slot::new(icao_code),
-                        qcmp_port: Slot::new(qcmp_port),
-                    });
-                };
-
-                typemap.insert::<LeaderLock>(<_>::default());
-
-                Ok(Config {
-                    dyn_cfg: DynamicConfig {
-                        version: version.unwrap_or_default(),
-                        id: id.map_or_else(default_id, Slot::new),
-                        typemap,
-                    },
-                })
-            }
-        }
-
-        deserializer.deserialize_map(Visitor)
-    }
-}
-
-#[cfg(test)]
 impl PartialEq for Config {
     fn eq(&self, other: &Self) -> bool {
         self.dyn_cfg == other.dyn_cfg
     }
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct Agent {
-    pub icao_code: Slot<IcaoCode>,
-    pub qcmp_port: Slot<u16>,
-}
-
 /// Configuration for a component
 #[derive(Clone)]
-#[cfg_attr(test, derive(Debug))]
 pub struct DynamicConfig {
-    pub id: Slot<String>,
+    pub id: Arc<parking_lot::Mutex<String>>,
     pub version: Version,
-    typemap: ConfigMap,
-}
-
-#[cfg(test)]
-impl<'de> Deserialize<'de> for DynamicConfig {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        struct DynVisitor;
-
-        impl<'de> serde::de::Visitor<'de> for DynVisitor {
-            type Value = DynamicConfig;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("Quilkin dynamic config")
-            }
-
-            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
-            where
-                A: serde::de::MapAccess<'de>,
-            {
-                use serde::de::Error;
-
-                let mut version = None;
-                let mut id = None;
-                let mut icao_code = None;
-                let mut qcmp_port = None;
-                let mut datacenters = None;
-                let mut typemap = default_typemap();
-
-                macro_rules! tm_insert {
-                    ($key:expr_2021, $field:expr_2021, $kind:ty) => {{
-                        if $key == $field {
-                            if typemap.contains_key::<$kind>() {
-                                return Err(serde::de::Error::duplicate_field($field));
-                            }
-
-                            let value =
-                                map.next_value::<<$kind as typemap_rev::TypeMapKey>::Value>()?;
-                            typemap.insert::<$kind>(value);
-                            continue;
-                        }
-                    }};
-                }
-
-                while let Some(key) = map.next_key::<std::borrow::Cow<'de, str>>()? {
-                    let key = key.as_ref();
-                    match key {
-                        "id" => id = Some(map.next_value()?),
-                        "version" => version = Some(map.next_value()?),
-                        "datacenters" => {
-                            if icao_code.is_some() || qcmp_port.is_some() {
-                                return Err(Error::custom(
-                                    "agent specific fields have already been deserialized",
-                                ));
-                            } else if datacenters.is_some() {
-                                return Err(Error::duplicate_field("datacenters"));
-                            }
-
-                            datacenters = Some(map.next_value()?);
-                        }
-                        "icao_code" => {
-                            if datacenters.is_some() {
-                                return Err(Error::custom(
-                                    "non-agent `datacenters` field has already been deserialized",
-                                ));
-                            } else if icao_code.is_some() {
-                                return Err(Error::duplicate_field("icao_code"));
-                            }
-
-                            icao_code = Some(map.next_value()?);
-                        }
-                        "qcmp_port" => {
-                            if datacenters.is_some() {
-                                return Err(Error::custom(
-                                    "non-agent `datacenters` field has already been deserialized",
-                                ));
-                            } else if qcmp_port.is_some() {
-                                return Err(Error::duplicate_field("qcmp_port"));
-                            }
-
-                            qcmp_port = Some(map.next_value()?);
-                        }
-                        other => {
-                            tm_insert!(key, "filters", FilterChain);
-                            tm_insert!(key, "clusters", ClusterMap);
-
-                            return Err(Error::unknown_field(other, &["id"]));
-                        }
-                    }
-                }
-
-                if let Some(datacenters) = datacenters {
-                    typemap.insert::<DatacenterMap>(datacenters);
-                } else if icao_code.is_none() && qcmp_port.is_none() {
-                    typemap.insert::<DatacenterMap>(Default::default());
-                } else {
-                    typemap.insert::<Agent>(Agent {
-                        icao_code: Slot::new(icao_code),
-                        qcmp_port: Slot::new(qcmp_port),
-                    });
-                };
-
-                typemap.insert::<LeaderLock>(<_>::default());
-                Ok(DynamicConfig {
-                    version: version.unwrap_or_default(),
-                    id: id.map_or_else(default_id, |id| Slot::new(Some(id))),
-                    typemap,
-                })
-            }
-        }
-
-        deserializer.deserialize_map(DynVisitor)
-    }
-}
-
-impl typemap_rev::TypeMapKey for FilterChain {
-    type Value = Slot<FilterChain>;
+    pub icao_code: icao::NotifyingIcaoCode,
+    pub typemap: ConfigMap,
 }
 
 impl typemap_rev::TypeMapKey for ClusterMap {
@@ -349,29 +105,17 @@ impl typemap_rev::TypeMapKey for DatacenterMap {
     type Value = Watch<DatacenterMap>;
 }
 
-impl typemap_rev::TypeMapKey for Agent {
-    type Value = Agent;
-}
-
 impl typemap_rev::TypeMapKey for LeaderLock {
     type Value = LeaderLock;
 }
 
 impl DynamicConfig {
-    pub fn filters(&self) -> Option<&Slot<FilterChain>> {
-        self.typemap.get::<FilterChain>()
-    }
-
     pub fn clusters(&self) -> Option<&Watch<ClusterMap>> {
         self.typemap.get::<ClusterMap>()
     }
 
     pub fn datacenters(&self) -> Option<&Watch<DatacenterMap>> {
         self.typemap.get::<DatacenterMap>()
-    }
-
-    pub fn agent(&self) -> Option<&Agent> {
-        self.typemap.get::<Agent>()
     }
 
     pub(crate) fn init_leader_lock(&self) -> LeaderLock {
@@ -386,25 +130,53 @@ impl DynamicConfig {
 }
 
 #[cfg(test)]
-impl PartialEq for DynamicConfig {
-    fn eq(&self, other: &Self) -> bool {
-        if self.id != other.id || self.version != other.version {
-            return false;
-        }
+mod test_impls {
+    use super::*;
 
-        fn compare<T>(a: &ConfigMap, b: &ConfigMap) -> bool
-        where
-            T: typemap_rev::TypeMapKey,
-            T::Value: PartialEq + Clone + std::fmt::Debug,
-        {
-            let Some((a, b)) = a.get::<T>().zip(b.get::<T>()) else {
+    impl PartialEq for DynamicConfig {
+        fn eq(&self, other: &Self) -> bool {
+            if self.id.lock().as_str() != other.id.lock().as_str() || self.version != other.version
+            {
                 return false;
-            };
-            a == b
-        }
+            }
 
-        compare::<FilterChain>(&self.typemap, &other.typemap)
-            && compare::<ClusterMap>(&self.typemap, &other.typemap)
+            fn compare<T>(a: &ConfigMap, b: &ConfigMap) -> bool
+            where
+                T: typemap_rev::TypeMapKey,
+                T::Value: PartialEq + Clone + std::fmt::Debug,
+            {
+                let Some((a, b)) = a.get::<T>().zip(b.get::<T>()) else {
+                    return false;
+                };
+                a == b
+            }
+
+            compare::<FilterChain>(&self.typemap, &other.typemap)
+                && compare::<qcmp::QcmpPort>(&self.typemap, &other.typemap)
+                && compare::<ClusterMap>(&self.typemap, &other.typemap)
+                && compare::<DatacenterMap>(&self.typemap, &other.typemap)
+        }
+    }
+
+    use std::fmt;
+
+    // typemap uses a HashMap<> for storage, which means that two typemaps won't
+    // be ordered the same, resulting in messy diffs
+    impl fmt::Debug for DynamicConfig {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            let mut ds = f.debug_struct("DynamicConfig");
+            ds.field("id", &self.id.lock());
+            ds.field("version", &self.version);
+            ds.field("icao_code", &self.icao_code.load());
+
+            let tm = self.typemap.clone();
+            ds.field(
+                "typemap",
+                &tm.into_iter().collect::<std::collections::BTreeMap<_, _>>(),
+            );
+
+            ds.finish()
+        }
     }
 }
 
@@ -453,93 +225,95 @@ impl quilkin_xds::config::Configuration for Config {
         &self,
         control_plane: quilkin_xds::server::ControlPlane<Self>,
     ) -> impl std::future::Future<Output = ()> + Send + 'static {
-        if let Some(fc) = control_plane
-            .config
-            .dyn_cfg
-            .typemap
-            .get::<FilterChain>()
-            .filter(|_| !control_plane.is_relay)
-        {
-            fc.watch({
-                let this = control_plane.clone();
-                move |_| {
-                    this.push_update(xds::FILTER_CHAIN_TYPE);
-                }
-            });
-        }
-
-        if let Some(agent) = control_plane
-            .config
-            .dyn_cfg
-            .typemap
-            .get::<Agent>()
-            .filter(|_| !control_plane.is_relay)
-        {
-            agent.icao_code.watch({
-                let this = control_plane.clone();
-                move |_| {
-                    this.push_update(xds::DATACENTER_TYPE);
-                }
-            });
-            agent.qcmp_port.watch({
-                let this = control_plane.clone();
-                move |_| {
-                    this.push_update(xds::DATACENTER_TYPE);
-                }
-            });
-        }
-
         tracing::trace!("waiting for changes");
 
         async move {
             let clusters = control_plane.config.dyn_cfg.clusters();
             let datacenters = control_plane.config.dyn_cfg.datacenters();
+            let filters = control_plane.config.dyn_cfg.subscribe_filter_changes();
+            let qcmp_port = control_plane.config.dyn_cfg.qcmp_port();
 
-            match (clusters, datacenters) {
-                (Some(clusters), Some(dc)) => {
-                    let mut cw = clusters.watch();
-                    let mut dcw = dc.watch();
-                    loop {
-                        tokio::select! {
-                            result = cw.changed() => {
-                                match result {
-                                    Ok(()) => control_plane.push_update(xds::CLUSTER_TYPE),
-                                    Err(error) => tracing::error!(%error, "error watching changes"),
-                                }
-                            }
-                            result = dcw.changed() => {
-                                match result {
-                                    Ok(()) => control_plane.push_update(xds::DATACENTER_TYPE),
-                                    Err(error) => tracing::error!(%error, "error watching changes"),
-                                }
-                            }
-                        }
-                    }
-                }
-                (Some(clusters), None) => {
-                    let mut cw = clusters.watch();
+            let indefinite = clusters.is_none()
+                && datacenters.is_none()
+                && filters.is_none()
+                && qcmp_port.is_none();
+            let mut ls = tokio::task::JoinSet::new();
 
+            if let Some(clusters) = clusters {
+                let mut cw = clusters.watch();
+                let cp = control_plane.clone();
+
+                ls.spawn(async move {
                     loop {
                         match cw.changed().await {
-                            Ok(()) => control_plane.push_update(xds::CLUSTER_TYPE),
-                            Err(error) => tracing::error!(%error, "error watching changes"),
+                            Ok(()) => cp.push_update(xds::CLUSTER_TYPE),
+                            Err(error) => tracing::error!(%error, "error watching cluster changes"),
                         }
                     }
-                }
-                (None, Some(dc)) => {
-                    let mut dcw = dc.watch();
+                });
+            }
 
+            if let Some(datacenters) = datacenters {
+                let mut dcw = datacenters.watch();
+                let cp = control_plane.clone();
+
+                ls.spawn(async move {
                     loop {
                         match dcw.changed().await {
-                            Ok(()) => control_plane.push_update(xds::DATACENTER_TYPE),
-                            Err(error) => tracing::error!(%error, "error watching changes"),
+                            Ok(()) => cp.push_update(xds::DATACENTER_TYPE),
+                            Err(error) => {
+                                tracing::error!(%error, "error watching datacenter changes");
+                            }
                         }
                     }
-                }
-                (None, None) => loop {
-                    tokio::time::sleep(std::time::Duration::from_secs(u64::MAX)).await;
-                },
+                });
             }
+
+            if let Some(mut filters) = filters {
+                let cp = control_plane.clone();
+
+                ls.spawn(async move {
+                    loop {
+                        match filters.recv().await {
+                            Ok(()) => cp.push_update(xds::FILTER_CHAIN_TYPE),
+                            Err(error) => {
+                                tracing::error!(%error, "error watching FilterChain changes");
+                            }
+                        }
+                    }
+                });
+            }
+
+            if let Some(qcmp) = qcmp_port {
+                let mut icao_rx = control_plane.config.dyn_cfg.icao_code.subscribe();
+                let mut qcmp_rx = qcmp.subscribe();
+                let cp = control_plane;
+
+                ls.spawn(async move { loop {
+                    tokio::select! {
+                        i = icao_rx.recv() => {
+                            match i {
+                                Ok(()) => cp.push_update(xds::DATACENTER_TYPE),
+                                Err(error) => tracing::error!(%error, "error watching ICAO changes"),
+                            }
+                        }
+                        q = qcmp_rx.recv() => {
+                            match q {
+                                Ok(_) => cp.push_update(xds::DATACENTER_TYPE),
+                                Err(error) => tracing::error!(%error, "error watching QCMP port changes"),
+                            }
+                        }
+                    }
+                } });
+            }
+
+            if indefinite {
+                ls.spawn(async {
+                    tokio::time::sleep(std::time::Duration::from_secs(u64::MAX)).await;
+                });
+            }
+
+            ls.join_all().await;
         }
     }
 }
@@ -567,7 +341,7 @@ impl Config {
                     };
 
                     let resource = xds::Resource::FilterChain(
-                        crate::net::cluster::proto::FilterChain::try_from(&*filters.load())?,
+                        crate::net::cluster::proto::FilterChain::try_from(filters.load().as_ref())?,
                     );
                     let any = resource.try_encode()?;
                     let version = gxhash::gxhash64(&any.value, 0xdeadbeef);
@@ -588,14 +362,10 @@ impl Config {
                     });
                 }
                 ResourceType::Datacenter => {
-                    if let Some(agent) = self.dyn_cfg.agent() {
-                        let name = agent.icao_code.load().to_string();
-                        let qcmp_port = *agent.qcmp_port.load();
+                    if let Some(qport) = self.dyn_cfg.qcmp_port() {
+                        let name = self.dyn_cfg.icao_code.load().to_string();
+                        let qcmp_port = qport.load();
                         let port_s = qcmp_port.to_string();
-
-                        if client_state.version_matches(&name, &port_s) {
-                            break 'append;
-                        }
 
                         let resource =
                             xds::Resource::Datacenter(crate::net::cluster::proto::Datacenter {
@@ -763,7 +533,7 @@ impl Config {
                 let fc =
                     crate::filters::FilterChain::try_create_fallible(resource.filters.into_iter())?;
 
-                filters.store(Arc::new(fc));
+                filters.store(fc);
             }
             ResourceType::Datacenter => {
                 let Some(datacenters) = self.dyn_cfg.datacenters() else {
@@ -914,7 +684,7 @@ impl Config {
 
     #[inline]
     pub fn id(&self) -> String {
-        String::clone(&self.dyn_cfg.id.load())
+        self.dyn_cfg.id.lock().clone()
     }
 }
 
@@ -924,248 +694,16 @@ impl Default for Config {
         insert_default::<FilterChain>(&mut typemap);
         insert_default::<ClusterMap>(&mut typemap);
         insert_default::<DatacenterMap>(&mut typemap);
-        insert_default::<Agent>(&mut typemap);
+        insert_default::<qcmp::QcmpPort>(&mut typemap);
 
         Self {
             dyn_cfg: DynamicConfig {
-                id: default_id(),
+                id: Arc::new(parking_lot::Mutex::new(default_id())),
+                icao_code: Default::default(),
                 version: Version::default(),
                 typemap,
             },
         }
-    }
-}
-
-#[derive(Default, Debug, Deserialize, Serialize)]
-pub struct DatacenterMap {
-    map: dashmap::DashMap<IpAddr, Datacenter>,
-    #[serde(skip)]
-    removed: parking_lot::Mutex<Vec<SocketAddr>>,
-    version: AtomicU64,
-}
-
-impl DatacenterMap {
-    #[inline]
-    pub fn insert(&self, ip: IpAddr, datacenter: Datacenter) -> Option<Datacenter> {
-        let old = self.map.insert(ip, datacenter);
-        self.version.fetch_add(1, Relaxed);
-        old
-    }
-
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.map.len()
-    }
-
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.map.is_empty()
-    }
-
-    #[inline]
-    pub fn version(&self) -> u64 {
-        self.version.load(Relaxed)
-    }
-
-    #[inline]
-    pub fn get(&self, key: &IpAddr) -> Option<dashmap::mapref::one::Ref<'_, IpAddr, Datacenter>> {
-        self.map.get(key)
-    }
-
-    #[inline]
-    pub fn iter(&self) -> dashmap::iter::Iter<'_, IpAddr, Datacenter> {
-        self.map.iter()
-    }
-
-    #[inline]
-    pub fn remove(&self, ip: IpAddr) {
-        let mut lock = self.removed.lock();
-        let mut version = 0;
-
-        let Some((_k, v)) = self.map.remove(&ip) else {
-            return;
-        };
-
-        lock.push((ip, v.qcmp_port).into());
-        version += 1;
-
-        self.version.fetch_add(version, Relaxed);
-    }
-
-    #[inline]
-    pub fn removed(&self) -> Vec<SocketAddr> {
-        std::mem::take(&mut self.removed.lock())
-    }
-}
-
-impl Clone for DatacenterMap {
-    fn clone(&self) -> Self {
-        let map = self.map.clone();
-        Self {
-            map,
-            version: <_>::default(),
-            removed: Default::default(),
-        }
-    }
-}
-
-impl crate::config::watch::Watchable for DatacenterMap {
-    #[inline]
-    fn mark(&self) -> crate::config::watch::Marker {
-        crate::config::watch::Marker::Version(self.version())
-    }
-
-    #[inline]
-    #[allow(irrefutable_let_patterns)]
-    fn has_changed(&self, marker: crate::config::watch::Marker) -> bool {
-        let crate::config::watch::Marker::Version(marked) = marker else {
-            return false;
-        };
-        self.version() != marked
-    }
-}
-
-impl schemars::JsonSchema for DatacenterMap {
-    fn schema_name() -> String {
-        <std::collections::HashMap<IpAddr, Datacenter>>::schema_name()
-    }
-    fn json_schema(r#gen: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
-        <std::collections::HashMap<IpAddr, Datacenter>>::json_schema(r#gen)
-    }
-
-    fn is_referenceable() -> bool {
-        <std::collections::HashMap<IpAddr, Datacenter>>::is_referenceable()
-    }
-}
-
-impl PartialEq for DatacenterMap {
-    fn eq(&self, rhs: &Self) -> bool {
-        if self.map.len() != rhs.map.len() {
-            return false;
-        }
-
-        for a in self.iter() {
-            match rhs.get(a.key()).filter(|b| *a.value() == **b) {
-                Some(_) => {}
-                None => return false,
-            }
-        }
-
-        true
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, JsonSchema, Serialize, Deserialize)]
-pub struct Datacenter {
-    pub qcmp_port: u16,
-    pub icao_code: IcaoCode,
-}
-
-#[derive(Copy, Clone, Hash, Eq, PartialEq)]
-pub struct IcaoCode([u8; 4]);
-
-impl AsRef<str> for IcaoCode {
-    fn as_ref(&self) -> &str {
-        // SAFETY: We don't allow this to be constructed with an invalid utf-8 string
-        unsafe { std::str::from_utf8_unchecked(&self.0) }
-    }
-}
-
-impl Default for IcaoCode {
-    fn default() -> Self {
-        Self([b'X', b'X', b'X', b'X'])
-    }
-}
-
-impl std::str::FromStr for IcaoCode {
-    type Err = eyre::Error;
-
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
-        const VALID_RANGE: std::ops::RangeInclusive<char> = 'A'..='Z';
-        let mut arr = [0; 4];
-        let mut i = 0;
-
-        for c in input.chars() {
-            eyre::ensure!(i < 4, "ICAO code is too long");
-            eyre::ensure!(
-                VALID_RANGE.contains(&c),
-                "ICAO code contained invalid character '{c}'"
-            );
-            arr[i] = c as u8;
-            i += 1;
-        }
-
-        eyre::ensure!(i == 4, "ICAO code was not long enough");
-        Ok(Self(arr))
-    }
-}
-
-use std::fmt;
-
-impl fmt::Display for IcaoCode {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_ref())
-    }
-}
-
-impl fmt::Debug for IcaoCode {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_ref())
-    }
-}
-
-impl Serialize for IcaoCode {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_str(self.as_ref())
-    }
-}
-
-impl<'de> Deserialize<'de> for IcaoCode {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        struct IcaoVisitor;
-
-        impl<'de> serde::de::Visitor<'de> for IcaoVisitor {
-            type Value = IcaoCode;
-            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                f.write_str("a 4-character, uppercase, alphabetical ASCII ICAO code")
-            }
-
-            fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                v.parse().map_err(serde::de::Error::custom)
-            }
-        }
-
-        deserializer.deserialize_str(IcaoVisitor)
-    }
-}
-
-impl schemars::JsonSchema for IcaoCode {
-    fn schema_name() -> String {
-        "IcaoCode".into()
-    }
-
-    fn is_referenceable() -> bool {
-        false
-    }
-
-    fn json_schema(r#gen: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
-        let mut schema = r#gen.subschema_for::<String>();
-        if let schemars::schema::Schema::Object(schema_object) = &mut schema {
-            if schema_object.has_type(schemars::schema::InstanceType::String) {
-                let validation = schema_object.string();
-                validation.pattern = Some(r"^[A-Z]{4}$".to_string());
-            }
-        }
-        schema
     }
 }
 
@@ -1181,20 +719,18 @@ impl Default for Version {
     }
 }
 
-pub(crate) fn default_id() -> Slot<String> {
-    Slot::from(
-        std::env::var("QUILKIN_SERVICE_ID")
-            .or_else(|_| {
-                cfg_if::cfg_if! {
-                    if #[cfg(target_os = "linux")] {
-                        sys_info::hostname()
-                    } else {
-                        eyre::bail!("no sys_info support")
-                    }
+pub(crate) fn default_id() -> String {
+    std::env::var("QUILKIN_SERVICE_ID")
+        .or_else(|_| {
+            cfg_if::cfg_if! {
+                if #[cfg(target_os = "linux")] {
+                    sys_info::hostname()
+                } else {
+                    eyre::bail!("no sys_info support")
                 }
-            })
-            .unwrap_or_else(|_| Uuid::new_v4().as_hyphenated().to_string()),
-    )
+            }
+        })
+        .unwrap_or_else(|_| Uuid::new_v4().as_hyphenated().to_string())
 }
 
 pub(crate) fn default_typemap() -> ConfigMap {
@@ -1207,105 +743,6 @@ where
     T::Value: Default + Clone + std::fmt::Debug,
 {
     tm.insert::<T>(T::Value::default());
-}
-
-/// Filter is the configuration for a single filter
-#[derive(Clone, Debug, Deserialize, Eq, Serialize, PartialEq, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct Filter {
-    pub name: String,
-    pub label: Option<String>,
-    pub config: Option<serde_json::Value>,
-}
-
-use crate::generated::envoy::config::listener::v3 as listener;
-
-impl TryFrom<listener::Filter> for Filter {
-    type Error = CreationError;
-
-    fn try_from(filter: listener::Filter) -> Result<Self, Self::Error> {
-        use listener::filter::ConfigType;
-
-        let config = if let Some(config_type) = filter.config_type {
-            let config = match config_type {
-                ConfigType::TypedConfig(any) => any,
-                ConfigType::ConfigDiscovery(_) => {
-                    return Err(CreationError::FieldInvalid {
-                        field: "config_type".into(),
-                        reason: "ConfigDiscovery is currently unsupported".into(),
-                    });
-                }
-            };
-            Some(
-                crate::filters::FilterRegistry::get_factory(&filter.name)
-                    .ok_or_else(|| CreationError::NotFound(filter.name.clone()))?
-                    .encode_config_to_json(config)?,
-            )
-        } else {
-            None
-        };
-
-        Ok(Self {
-            name: filter.name,
-            // TODO: keep the label across xDS
-            label: None,
-            config,
-        })
-    }
-}
-
-impl TryFrom<crate::net::cluster::proto::Filter> for Filter {
-    type Error = CreationError;
-
-    fn try_from(value: crate::net::cluster::proto::Filter) -> Result<Self, Self::Error> {
-        let config = if let Some(cfg) = value.config {
-            Some(
-                serde_json::from_str(&cfg)
-                    .map_err(|err| CreationError::DeserializeFailed(err.to_string()))?,
-            )
-        } else {
-            None
-        };
-
-        Ok(Self {
-            name: value.name,
-            label: value.label,
-            config,
-        })
-    }
-}
-
-impl TryFrom<Filter> for listener::Filter {
-    type Error = CreationError;
-
-    fn try_from(filter: Filter) -> Result<Self, Self::Error> {
-        use listener::filter::ConfigType;
-
-        let config = if let Some(config) = filter.config {
-            Some(
-                crate::filters::FilterRegistry::get_factory(&filter.name)
-                    .ok_or_else(|| CreationError::NotFound(filter.name.clone()))?
-                    .encode_config_to_protobuf(config)?,
-            )
-        } else {
-            None
-        };
-
-        Ok(Self {
-            name: filter.name,
-            config_type: config.map(ConfigType::TypedConfig),
-        })
-    }
-}
-
-impl From<(String, FilterInstance)> for Filter {
-    fn from((name, instance): (String, FilterInstance)) -> Self {
-        Self {
-            name,
-            label: instance.label().map(String::from),
-            config: Some(serde_json::Value::clone(instance.config())),
-        }
-    }
 }
 
 #[derive(Clone, Debug)]

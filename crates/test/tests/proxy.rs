@@ -109,12 +109,12 @@ trace_test!(uring_receiver, {
         config: config.clone(),
         buffer_pool: quilkin::test::BUFFER_POOL.clone(),
         sessions: quilkin::net::sessions::SessionPool::new(
-            config,
             vec![pending_sends.0.clone()],
             BUFFER_POOL.clone(),
+            config.dyn_cfg.cached_filter_chain().unwrap(),
         ),
     }
-    .spawn(pending_sends)
+    .spawn_io_loop(pending_sends, config.dyn_cfg.cached_filter_chain().unwrap())
     .expect("failed to spawn task");
 
     // Drop the socket, otherwise it can
@@ -153,9 +153,9 @@ trace_test!(
         .collect();
 
         let sessions = net::SessionPool::new(
-            config.clone(),
             pending_sends.iter().map(|ps| ps.0.clone()).collect(),
             BUFFER_POOL.clone(),
+            config.dyn_cfg.cached_filter_chain().unwrap(),
         );
 
         const WORKER_COUNT: usize = 3;

@@ -16,7 +16,7 @@
 
 pub mod agones;
 
-use std::{collections::BTreeSet, sync::Arc};
+use std::collections::BTreeSet;
 
 use futures::Stream;
 use k8s_openapi::api::core::v1::ConfigMap;
@@ -75,7 +75,7 @@ pub(crate) async fn update_leader_lock(
 pub fn update_filters_from_configmap(
     client: kube::Client,
     namespace: impl AsRef<str>,
-    filters: config::Slot<crate::filters::FilterChain>,
+    filters: config::filter::FilterChainConfig,
 ) -> impl Stream<Item = crate::Result<(), eyre::Error>> {
     async_stream::stream! {
         let mut cmap = None;
@@ -111,7 +111,7 @@ pub fn update_filters_from_configmap(
                 }
                 Event::Delete(_) => {
                     metrics::k8s::filters(false);
-                    filters.remove();
+                    filters.store(Default::default());
                     yield Ok(());
                     continue;
                 }
@@ -128,7 +128,7 @@ pub fn update_filters_from_configmap(
                     .transpose()?
             {
                 metrics::k8s::filters(true);
-                filters.store(Arc::new(de_filters));
+                filters.store(de_filters);
             }
 
             yield Ok(());

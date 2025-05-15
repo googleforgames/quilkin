@@ -60,12 +60,13 @@ pub trait PacketMut: Sized + Packet {
 }
 
 /// Packet received from local port
-pub(crate) struct DownstreamPacket<P> {
+pub(crate) struct DownstreamPacket<'stack, P> {
     pub(crate) contents: P,
     pub(crate) source: SocketAddr,
+    pub(crate) filters: &'stack crate::filters::FilterChain,
 }
 
-impl<P: PacketMut> DownstreamPacket<P> {
+impl<P: PacketMut> DownstreamPacket<'_, P> {
     #[inline]
     pub(crate) fn process<S: SessionManager<Packet = P::FrozenPacket>>(
         self,
@@ -109,13 +110,6 @@ impl<P: PacketMut> DownstreamPacket<P> {
             return Err(PipelineError::NoUpstreamEndpoints);
         };
 
-        let cm = clusters.clone_value();
-        let Some(filters) = config.dyn_cfg.filters() else {
-            return Err(PipelineError::Filter(crate::filters::FilterError::Custom(
-                "no filters loaded",
-            )));
-        };
-
         #[cfg(not(debug_assertions))]
         {
             match self.source.ip() {
@@ -132,8 +126,11 @@ impl<P: PacketMut> DownstreamPacket<P> {
             }
         }
 
+        let cm = clusters.clone_value();
         let mut context = ReadContext::new(&cm, self.source.into(), self.contents, destinations);
-        filters.read(&mut context).map_err(PipelineError::Filter)?;
+        self.filters
+            .read(&mut context)
+            .map_err(PipelineError::Filter)?;
 
         let ReadContext { contents, .. } = context;
 
@@ -169,6 +166,10 @@ pub fn spawn_receivers(
 ) -> crate::Result<()> {
     let port = crate::net::socket_port(&socket);
 
+    let Some(pfc) = config.dyn_cfg.cached_filter_chain() else {
+        eyre::bail!("the ProxyFilterChain state was not configured");
+    };
+
     for (worker_id, ws) in worker_sends.into_iter().enumerate() {
         let worker = crate::net::io::Listener {
             worker_id,
@@ -178,7 +179,7 @@ pub fn spawn_receivers(
             buffer_pool: buffer_pool.clone(),
         };
 
-        worker.spawn(ws)?;
+        worker.spawn_io_loop(ws, pfc.clone())?;
     }
 
     Ok(())

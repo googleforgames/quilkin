@@ -17,7 +17,7 @@
 use prometheus::{Histogram, exponential_buckets};
 
 use crate::{
-    config::Filter as FilterConfig,
+    config::filter::Filter as FilterConfig,
     filters::{FilterRegistry, prelude::*},
     metrics::{CollectorExt, histogram_opts},
 };
@@ -106,17 +106,15 @@ impl FilterChain {
         self.filters.is_empty()
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = crate::config::Filter> + '_ {
-        self.filters
-            .iter()
-            .map(|(name, instance)| crate::config::Filter {
-                name: name.clone(),
-                label: instance.label().map(String::from),
-                config: match instance.config() {
-                    serde_json::Value::Null => None,
-                    value => Some(value.clone()),
-                },
-            })
+    pub fn iter(&self) -> impl Iterator<Item = FilterConfig> + '_ {
+        self.filters.iter().map(|(name, instance)| FilterConfig {
+            name: name.clone(),
+            label: instance.label().map(String::from),
+            config: match instance.config() {
+                serde_json::Value::Null => None,
+                value => Some(value.clone()),
+            },
+        })
     }
 
     /// Validates the filter configurations in the provided config and constructs
@@ -253,7 +251,7 @@ impl serde::Serialize for FilterChain {
         let filters = self
             .filters
             .iter()
-            .map(|(name, instance)| crate::config::Filter {
+            .map(|(name, instance)| FilterConfig {
                 name: name.clone(),
                 label: instance.label().map(String::from),
                 config: Some(serde_json::Value::clone(instance.config())),
@@ -335,7 +333,6 @@ impl Filter for FilterChain {
 #[cfg(test)]
 mod tests {
     use crate::{
-        config,
         filters::Debug,
         net::endpoint::Endpoint,
         test::{TestConfig, TestFilter, alloc_buffer},
@@ -348,7 +345,7 @@ mod tests {
         let provider = Debug::factory();
 
         // everything is fine
-        let filter_configs = [config::Filter {
+        let filter_configs = [FilterConfig {
             name: provider.name().into(),
             label: None,
             config: Some(serde_json::Map::default().into()),
@@ -358,7 +355,7 @@ mod tests {
         assert_eq!(1, chain.filters.len());
 
         // uh oh, something went wrong
-        let filter_configs = [config::Filter {
+        let filter_configs = [FilterConfig {
             name: "this is so wrong".into(),
             label: None,
             config: Default::default(),
@@ -490,7 +487,7 @@ mod tests {
 
         let configs = filter_chain.iter().collect::<Vec<_>>();
         assert_eq!(
-            vec![crate::config::Filter {
+            vec![FilterConfig {
                 name: "TestFilter".into(),
                 label: None,
                 config: None,

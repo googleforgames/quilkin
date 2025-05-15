@@ -3,47 +3,6 @@ use serde::ser::SerializeMap;
 use super::*;
 
 impl Config {
-    /// Attempts to deserialize `input` as a YAML object representing `Self`.
-    pub fn from_reader<R: std::io::Read>(input: R) -> Result<Self, eyre::Error> {
-        #[derive(Deserialize)]
-        #[serde(deny_unknown_fields)]
-        struct AllConfig {
-            id: Option<String>,
-            version: Option<Version>,
-            filters: Option<crate::filters::FilterChain>,
-            clusters: Option<ClusterMap>,
-            datacenters: Option<DatacenterMap>,
-            icao_code: Option<IcaoCode>,
-            qcmp_port: Option<u16>,
-        }
-
-        let cfg: AllConfig = serde_yaml::from_reader(input)?;
-
-        let mut typemap = default_typemap();
-        if let Some(filters) = cfg.filters {
-            typemap.insert::<FilterChain>(Slot::new(filters));
-        }
-        if let Some(clusters) = cfg.clusters {
-            typemap.insert::<ClusterMap>(Watch::new(clusters));
-        }
-        if let Some(datacenters) = cfg.datacenters {
-            typemap.insert::<DatacenterMap>(Watch::new(datacenters));
-        } else {
-            typemap.insert::<Agent>(Agent {
-                icao_code: Slot::new(cfg.icao_code),
-                qcmp_port: Slot::new(cfg.qcmp_port),
-            });
-        }
-
-        Ok(Self {
-            dyn_cfg: DynamicConfig {
-                id: cfg.id.map_or_else(default_id, Slot::from),
-                version: cfg.version.unwrap_or_default(),
-                typemap,
-            },
-        })
-    }
-
     pub fn update_from_json(
         &self,
         map: serde_json::Map<String, serde_json::Value>,
@@ -53,14 +12,14 @@ impl Config {
             match k.as_str() {
                 "filters" => {
                     if let Some(filters) = self.dyn_cfg.filters() {
-                        filters.try_replace(serde_json::from_value(v)?);
+                        filters.store(serde_json::from_value(v)?);
+                    } else {
+                        tracing::trace!("ignoring FilterChain as it was not in the typemap");
                     }
-                }
-                "id" => {
-                    self.dyn_cfg.id.try_replace(serde_json::from_value(v)?);
                 }
                 "clusters" => {
                     let Some(clusters) = self.dyn_cfg.clusters() else {
+                        tracing::trace!("ignoring ClusterMap as it was not in the typemap");
                         continue;
                     };
 
@@ -77,11 +36,28 @@ impl Config {
                     });
                     self.apply_metrics();
                 }
-                // Updating the version doesn't make sense at runtime, but we don't
-                // want to to trace out
-                "version" => {}
+                "version" | "datacenters" => {
+                    // Updating the version doesn't make sense at runtime, and we don't
+                    // want to error out
+
+                    // datacenters are only a resource applied from remotes, not
+                    // local config files
+                }
+                "id" => {
+                    *self.dyn_cfg.id.lock() = serde_json::from_value(v)?;
+                }
+                "icao_code" => {
+                    self.dyn_cfg.icao_code.store(serde_json::from_value(v)?);
+                }
+                "qcmp_port" => {
+                    if let Some(qp) = self.dyn_cfg.qcmp_port() {
+                        qp.store(serde_json::from_value(v)?);
+                    } else {
+                        tracing::trace!("ignoring QcmpPort as it was not in the typemap");
+                    }
+                }
                 field => {
-                    tracing::debug!(field, "unable to replace invalid field");
+                    eyre::bail!("unknown field '{field}'");
                 }
             }
         }
@@ -98,19 +74,19 @@ impl serde::Serialize for Config {
         let mut map = serializer.serialize_map(None)?;
 
         map.serialize_entry("version", &self.dyn_cfg.version)?;
-        map.serialize_entry("id", &self.dyn_cfg.id)?;
+        map.serialize_entry("id", self.dyn_cfg.id.lock().as_str())?;
+        map.serialize_entry("icao_code", &self.dyn_cfg.icao_code.load())?;
+        if let Some(qcmp) = self.dyn_cfg.qcmp_port() {
+            map.serialize_entry("qcmp_port", &qcmp.load())?;
+        }
         if let Some(filters) = self.dyn_cfg.filters() {
-            map.serialize_entry("filters", filters)?;
+            map.serialize_entry("filters", &*filters.load())?;
         }
         if let Some(clusters) = self.dyn_cfg.clusters() {
             map.serialize_entry("clusters", clusters)?;
         }
         if let Some(datacenters) = self.dyn_cfg.datacenters() {
             map.serialize_entry("datacenters", datacenters)?;
-        }
-        if let Some(agent) = self.dyn_cfg.agent() {
-            map.serialize_entry("icao_code", &agent.icao_code)?;
-            map.serialize_entry("qcmp_port", &agent.qcmp_port)?;
         }
 
         map.end()
@@ -153,26 +129,40 @@ mod tests {
 
     #[test]
     fn parse_default_values() {
-        let config: Config = serde_json::from_value(json!({
-            "version": "v1alpha1",
-             "clusters":[]
-        }))
-        .unwrap();
+        let config = Config::default();
+        let before = config.id();
+        assert!(!before.is_empty());
+        config
+            .update_from_json(
+                serde_json::from_value(json!({
+                    "version": "v1alpha1",
+                     "clusters":[]
+                }))
+                .unwrap(),
+                None,
+            )
+            .unwrap();
 
-        assert!(!config.id().is_empty());
+        assert_eq!(before, config.id());
     }
 
     #[test]
     fn parse_client() {
-        let config: Config = serde_json::from_value(json!({
-            "version": "v1alpha1",
-            "clusters": [{
-                "endpoints": [{
-                    "address": "127.0.0.1:25999"
-                }],
-            }]
-        }))
-        .unwrap();
+        let config = Config::default();
+        config
+            .update_from_json(
+                serde_json::from_value(json!({
+                    "version": "v1alpha1",
+                    "clusters": [{
+                        "endpoints": [{
+                            "address": "127.0.0.1:25999"
+                        }],
+                    }]
+                }))
+                .unwrap(),
+                None,
+            )
+            .unwrap();
 
         let value = config.dyn_cfg.clusters().unwrap().read();
         assert_eq!(
@@ -185,15 +175,21 @@ mod tests {
 
     #[test]
     fn parse_ipv6_endpoint() {
-        let config: Config = serde_json::from_value(json!({
-            "version": "v1alpha1",
-            "clusters":[{
-                "endpoints": [{
-                    "address": "[2345:0425:2CA1:0000:0000:0567:5673:24b5]:25999"
-                }],
-            }]
-        }))
-        .unwrap();
+        let config = Config::default();
+        config
+            .update_from_json(
+                serde_json::from_value(json!({
+                    "version": "v1alpha1",
+                    "clusters":[{
+                        "endpoints": [{
+                            "address": "[2345:0425:2CA1:0000:0000:0567:5673:24b5]:25999"
+                        }],
+                    }]
+                }))
+                .unwrap(),
+                None,
+            )
+            .unwrap();
 
         let value = config.dyn_cfg.clusters().unwrap().read();
         assert_eq!(
@@ -215,30 +211,36 @@ mod tests {
 
     #[test]
     fn parse_server() {
-        let config: Config = serde_json::from_value(json!({
-            "version": "v1alpha1",
-            "clusters": [{
-                "endpoints": [
-                    {
-                        "address" : "127.0.0.1:26000",
-                        "metadata": {
-                            "quilkin.dev": {
-                                "tokens": ["MXg3aWp5Ng==", "OGdqM3YyaQ=="],
+        let config = Config::default();
+        config
+            .update_from_json(
+                serde_json::from_value(json!({
+                    "version": "v1alpha1",
+                    "clusters": [{
+                        "endpoints": [
+                            {
+                                "address" : "127.0.0.1:26000",
+                                "metadata": {
+                                    "quilkin.dev": {
+                                        "tokens": ["MXg3aWp5Ng==", "OGdqM3YyaQ=="],
+                                    }
+                                }
+                            },
+                            {
+                                "address" : "[2345:0425:2CA1:0000:0000:0567:5673:24b5]:25999",
+                                "metadata": {
+                                    "quilkin.dev": {
+                                        "tokens": ["bmt1eTcweA=="],
+                                    }
+                                }
                             }
-                        }
-                    },
-                    {
-                        "address" : "[2345:0425:2CA1:0000:0000:0567:5673:24b5]:25999",
-                        "metadata": {
-                            "quilkin.dev": {
-                                "tokens": ["bmt1eTcweA=="],
-                            }
-                        }
-                    }
-                ],
-            }]
-        }))
-        .unwrap();
+                        ],
+                    }]
+                }))
+                .unwrap(),
+                None,
+            )
+            .unwrap();
 
         let value = config.dyn_cfg.clusters().unwrap().read();
         assert_eq!(
@@ -321,8 +323,10 @@ dynamic:
 ",
         ];
 
-        for config in configs {
-            let result = Config::from_reader(config.as_bytes());
+        let config = Config::default();
+        for cstr in configs {
+            let json = serde_yaml::from_str(cstr).unwrap();
+            let result = config.update_from_json(json, None);
             let error = result.unwrap_err();
             println!("here: {}", error);
             assert!(format!("{error:?}").contains("unknown field"));

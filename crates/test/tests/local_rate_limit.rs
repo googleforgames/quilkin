@@ -23,7 +23,7 @@ use quilkin::filters;
 async fn local_rate_limit_filter() {
     let server_addr = "10.1.1.100:9001".parse().unwrap();
 
-    let proc_state = xdp_util::default_xdp_state(xdp_util::make_config(
+    let (proc_state, cfg_state) = xdp_util::default_xdp_state(xdp_util::make_config(
         qt::filter_chain!([
             LocalRateLimit => filters::local_rate_limit::Config {
                max_packets: 2,
@@ -33,7 +33,7 @@ async fn local_rate_limit_filter() {
         xdp_util::endpoints(&[(server_addr, &[])]),
     ));
 
-    let mut simple_loop = xdp_util::SimpleLoop::new(1, proc_state);
+    let mut simple_loop = xdp_util::SimpleLoop::new(1, proc_state, cfg_state);
 
     for (i, &rated) in [false, false, true, true].iter().enumerate() {
         let packet = simple_loop

@@ -193,18 +193,24 @@ impl Measurement for QcmpMeasurement {
     }
 }
 
+#[inline]
+pub fn port_channel() -> tokio::sync::broadcast::Sender<u16> {
+    tokio::sync::broadcast::channel(1).0
+}
+
 pub fn spawn(
     socket: socket2::Socket,
+    mut port_rx: tokio::sync::broadcast::Receiver<u16>,
     mut shutdown_rx: crate::signal::ShutdownRx,
 ) -> crate::Result<()> {
     use tracing::{Instrument as _, instrument::WithSubscriber as _};
 
-    let port = crate::net::socket_port(&socket);
+    let mut port = crate::net::socket_port(&socket);
 
     tokio::task::spawn(
         async move {
             let mut input_buf = [0u8; MAX_QCMP_PACKET_LEN];
-            let socket = DualStackEpollSocket::new(port).unwrap();
+            let mut socket = DualStackEpollSocket::new(port).unwrap();
             let mut output_buf = QcmpPacket::default();
             metrics::qcmp::active(true);
 
@@ -213,7 +219,36 @@ pub fn spawn(
                     result = socket.recv_from(&mut input_buf) => result,
                     _ = shutdown_rx.changed() => {
                         metrics::qcmp::active(false);
-                        return
+                        return;
+                    }
+                    new_port = port_rx.recv() => {
+                        match new_port {
+                            Ok(new_port) => {
+                                // Attempt to bind the new port
+                                match DualStackEpollSocket::new(new_port) {
+                                    Ok(new_socket) => {
+                                        tracing::debug!(old_port = port, new_port, "bound QCMP server to new port");
+                                        port = new_port;
+                                        socket = new_socket;
+                                    }
+                                    Err(error) => {
+                                        tracing::error!(%error, old_port = port, new_port, "failed to bind QCMP to new port, continuing to use old port to respond to QCMP pings");
+                                        metrics::qcmp::errors_total("failed to change port", &crate::metrics::AsnInfo::EMPTY).inc();
+                                    }
+                                }
+                            }
+                            Err(error) => {
+                                match error {
+                                    tokio::sync::broadcast::error::RecvError::Closed => {
+                                    }
+                                    tokio::sync::broadcast::error::RecvError::Lagged(missed) => {
+                                        tracing::error!(missed, "the port changed many times and we missed changes");
+                                    }
+                                }
+                            }
+                        }
+
+                        continue;
                     }
                 };
 
@@ -701,7 +736,8 @@ mod tests {
         let addr = socket.local_addr().unwrap().as_socket().unwrap();
 
         let (_tx, rx) = crate::signal::channel(Default::default());
-        spawn(socket, rx).unwrap();
+        let pc = super::port_channel();
+        spawn(socket, pc.subscribe(), rx).unwrap();
 
         let delay = Duration::from_millis(50);
         let node = QcmpMeasurement::with_artificial_delay(delay).unwrap();

@@ -28,7 +28,7 @@ async fn load_balancer_round_robin() {
         ("[::f3f3]:1900".parse().unwrap(), 0),
     ];
 
-    let proc_state = xdp_util::default_xdp_state(xdp_util::make_config(
+    let (proc_state, cfg_state) = xdp_util::default_xdp_state(xdp_util::make_config(
         qt::filter_chain!([
             LoadBalancer => filters::load_balancer::Config {
                 policy: filters::load_balancer::Policy::RoundRobin,
@@ -40,7 +40,7 @@ async fn load_balancer_round_robin() {
             .collect(),
     ));
 
-    let mut simple_loop = xdp_util::SimpleLoop::new(1, proc_state);
+    let mut simple_loop = xdp_util::SimpleLoop::new(1, proc_state, cfg_state);
 
     const SENDS: u32 = 32;
 

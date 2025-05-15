@@ -114,7 +114,7 @@ use crate::config;
 
 #[derive(Clone)]
 pub struct ConfigState {
-    pub filters: config::Slot<crate::filters::FilterChain>,
+    pub filters: config::filter::CachedFilterChain,
     pub clusters: config::Watch<crate::net::ClusterMap>,
 }
 
@@ -123,7 +123,6 @@ pub struct State {
     /// or servers (upstream)
     pub external_port: NetworkU16,
     pub qcmp_port: NetworkU16,
-    pub config: ConfigState,
     pub destinations: Vec<EndpointAddress>,
     pub addr_to_asn: std::collections::HashMap<IpAddr, Option<(IpNetEntry, maxmind_db::Asn)>>,
     pub sessions: Arc<SessionState>,
@@ -449,10 +448,11 @@ pub fn process_packets<const RXN: usize, const TXN: usize>(
     rx_slab: &mut StackSlab<RXN>,
     umem: &mut Umem,
     tx_slab: &mut StackSlab<TXN>,
+    config_state: &mut ConfigState,
     state: &mut State,
 ) {
-    let filters = state.config.filters.load();
-    let cm = state.config.clusters.clone_value();
+    let filters = config_state.filters.load();
+    let cm = config_state.clusters.clone_value();
 
     let now = UtcTimestamp::now();
     let jitter = (now - state.last_receive).nanos();
@@ -492,9 +492,9 @@ pub fn process_packets<const RXN: usize, const TXN: usize>(
             let _timer = metrics::processing_time(direction).start_timer();
 
             if is_client {
-                process_client_packet(packet, umem, &filters, &cm, state, tx_slab)
+                process_client_packet(packet, umem, filters, &cm, state, tx_slab)
             } else {
-                process_server_packet(packet, umem, &filters, state, tx_slab, jitter)
+                process_server_packet(packet, umem, filters, state, tx_slab, jitter)
             }
         };
 

@@ -24,7 +24,7 @@ use quilkin::filters;
 async fn token_router() {
     let server_addr = "10.1.1.100:9001".parse().unwrap();
 
-    let proc_state = xdp_util::default_xdp_state(xdp_util::make_config(
+    let (proc_state, cfg_state) = xdp_util::default_xdp_state(xdp_util::make_config(
         qt::filter_chain!([
             Capture => filters::capture::Config::with_strategy(filters::capture::Regex {
                 pattern: ".{3}$".try_into().unwrap(),
@@ -34,7 +34,7 @@ async fn token_router() {
         xdp_util::endpoints(&[(server_addr, &[b"abc"])]),
     ));
 
-    let mut simple_loop = xdp_util::SimpleLoop::new(1, proc_state);
+    let mut simple_loop = xdp_util::SimpleLoop::new(1, proc_state, cfg_state);
 
     // A valid packet with the abc trailing token
     {

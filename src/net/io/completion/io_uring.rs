@@ -31,6 +31,7 @@ use socket2::SockAddr;
 
 use crate::{
     collections::PoolBuffer,
+    config::filter::CachedFilterChain,
     metrics,
     net::{PacketQueue, error::PipelineError, packet::queue::SendPacket, sessions::SessionPool},
     time::UtcTimestamp,
@@ -39,7 +40,11 @@ use crate::{
 static SESSION_COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 
 impl crate::net::io::Listener {
-    pub fn spawn(self, pending_sends: crate::net::PacketQueue) -> eyre::Result<()> {
+    pub fn spawn_io_loop(
+        self,
+        pending_sends: crate::net::PacketQueue,
+        filter_chain: CachedFilterChain,
+    ) -> eyre::Result<()> {
         let Self {
             worker_id,
             port,
@@ -53,7 +58,7 @@ impl crate::net::io::Listener {
 
         let io_loop = IoUringLoop::new(2000, socket)?;
         io_loop
-            .spawn(
+            .spawn_io_loop(
                 format!("packet-router-{worker_id}"),
                 PacketProcessorCtx::Router {
                     config,
@@ -63,6 +68,7 @@ impl crate::net::io::Listener {
                 },
                 pending_sends,
                 buffer_pool,
+                filter_chain,
             )
             .context("failed to spawn io-uring loop")
     }
@@ -260,6 +266,7 @@ pub enum PacketProcessorCtx {
 
 fn process_packet(
     ctx: &mut PacketProcessorCtx,
+    filters: &crate::filters::FilterChain,
     packet: RecvPacket,
     last_received_at: &mut Option<UtcTimestamp>,
 ) {
@@ -280,6 +287,7 @@ fn process_packet(
             let ds_packet = crate::net::packet::DownstreamPacket {
                 contents: packet.buffer,
                 source: packet.source,
+                filters,
             };
 
             ds_packet.process(*worker_id, config, sessions, destinations);
@@ -292,6 +300,7 @@ fn process_packet(
                 packet.source,
                 *port,
                 &mut last_received_at,
+                filters,
             );
         }
     }
@@ -451,12 +460,13 @@ impl IoUringLoop {
         })
     }
 
-    pub fn spawn(
+    pub fn spawn_io_loop(
         self,
         thread_name: String,
         mut ctx: PacketProcessorCtx,
         pending_sends: PacketQueue,
         buffer_pool: Arc<crate::collections::BufferPool>,
+        mut filter_chain: CachedFilterChain,
     ) -> Result<(), PipelineError> {
         let dispatcher = tracing::dispatcher::get_default(|d| d.clone());
 
@@ -547,7 +557,8 @@ impl IoUringLoop {
                                 }
 
                                 let packet = packet.finalize_recv(ret as usize);
-                                process_packet(&mut ctx, packet, &mut last_received_at);
+                                let filters = filter_chain.load();
+                                process_packet(&mut ctx, filters, packet, &mut last_received_at);
 
                                 loop_ctx.enqueue_recv(buffer_pool.clone().alloc());
                             }
@@ -606,6 +617,7 @@ impl SessionPool {
         raw_socket: socket2::Socket,
         port: u16,
         pending_sends: crate::net::PacketQueue,
+        filter_chain: CachedFilterChain,
     ) -> Result<(), PipelineError> {
         let pool = self;
         let id = SESSION_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -615,11 +627,12 @@ impl SessionPool {
             IoUringLoop::new(2000, crate::net::DualStackLocalSocket::from_raw(raw_socket))?;
         let buffer_pool = pool.buffer_pool.clone();
 
-        io_loop.spawn(
+        io_loop.spawn_io_loop(
             format!("session-{id}"),
             PacketProcessorCtx::SessionPool { pool, port },
             pending_sends,
             buffer_pool,
+            filter_chain,
         )
     }
 }

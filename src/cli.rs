@@ -26,8 +26,6 @@ pub use self::{generate_config_schema::GenerateConfigSchema, qcmp::Qcmp};
 pub mod generate_config_schema;
 pub mod qcmp;
 
-const ETC_CONFIG_PATH: &str = "/etc/quilkin/quilkin.yaml";
-
 #[derive(Debug, clap::Parser)]
 #[command(next_help_heading = "Administration Options")]
 pub struct AdminCli {
@@ -258,7 +256,10 @@ impl Cli {
 
         tracing::debug!(cli = ?self, "config parameters");
 
-        let config = self.read_config()?;
+        let locality = self.locality.locality();
+        let config =
+            self.service
+                .read_config(&self.config, self.locality.icao_code, locality.clone())?;
 
         let ready = Arc::<std::sync::atomic::AtomicBool>::default();
         let (shutdown_tx, mut shutdown_rx) = crate::signal::spawn_handler();
@@ -279,14 +280,11 @@ impl Cli {
         // Just call this early so there isn't a potential race when spawning xDS
         quilkin_xds::metrics::set_registry(crate::metrics::registry());
 
-        let locality = self.locality.locality();
         let mut provider_tasks =
             self.providers
                 .spawn_providers(&config, ready.clone(), locality.clone());
 
-        let service_task =
-            self.service
-                .spawn_services(&config, &shutdown_rx, self.locality.icao_code)?;
+        let service_task = self.service.spawn_services(&config, &shutdown_rx)?;
 
         if provider_tasks.is_empty() {
             ready.store(true, std::sync::atomic::Ordering::SeqCst);
@@ -297,32 +295,6 @@ impl Cli {
             Some(result) = provider_tasks.join_next() => result?,
             result = service_task => result?,
         }
-    }
-
-    /// Searches for the configuration file, and panics if not found.
-    fn read_config(&self) -> Result<Arc<crate::Config>, eyre::Error> {
-        let paths = [&self.config, std::path::Path::new(ETC_CONFIG_PATH)];
-        let mut paths = paths.iter();
-
-        let file = loop {
-            let Some(path) = paths.next() else {
-                return Ok(<_>::default());
-            };
-
-            match std::fs::File::open(path) {
-                Ok(file) => break file,
-                Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
-                    tracing::debug!(path = %path.display(), "config path not found");
-                    continue;
-                }
-                Err(err) => {
-                    tracing::error!(path = %path.display(), error = ?err, "failed to read path");
-                    eyre::bail!(err);
-                }
-            }
-        };
-
-        Ok(Arc::new(crate::Config::from_reader(file)?))
     }
 }
 
