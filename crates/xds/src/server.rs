@@ -457,7 +457,6 @@ impl<C: crate::config::Configuration> AggregatedDiscoveryService for ControlPlan
         &self,
         _request: tonic::Request<tonic::Streaming<DiscoveryRequest>>,
     ) -> Result<tonic::Response<Self::StreamAggregatedResourcesStream>, tonic::Status> {
-        panic!("wtf");
         Err(tonic::Status::unimplemented(
             "only delta streams are supported",
         ))
@@ -490,7 +489,6 @@ impl<C: crate::config::Configuration> AggregatedControlPlaneDiscoveryService for
         &self,
         _responses: tonic::Request<tonic::Streaming<DiscoveryResponse>>,
     ) -> Result<tonic::Response<Self::StreamAggregatedResourcesStream>, tonic::Status> {
-        panic!("wtf 2");
         Err(tonic::Status::unimplemented(
             "only delta streams are supported",
         ))
