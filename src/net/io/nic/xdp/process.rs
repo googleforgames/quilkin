@@ -556,7 +556,9 @@ fn process_client_packet<const TXN: usize>(
     state: &mut State,
     tx_slab: &mut StackSlab<TXN>,
 ) -> Result<Option<Packet>, (PipelineError, Packet)> {
-    let source_addr = packet.headers.source_address();
+    let mut source_addr = packet.headers.source_address();
+    source_addr.set_ip(source_addr.ip().to_canonical());
+
     let mut ctx =
         filters::ReadContext::new(cm, source_addr.into(), packet, &mut state.destinations);
 
