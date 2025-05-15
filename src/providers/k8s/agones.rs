@@ -41,7 +41,7 @@ pub async fn watch(
     config_namespace: Option<String>,
     health_check: Arc<AtomicBool>,
     locality: Option<Locality>,
-    filters: crate::config::Slot<crate::filters::FilterChain>,
+    filters: crate::config::filter::FilterChainConfig,
     clusters: crate::config::Watch<crate::net::ClusterMap>,
     address_selector: Option<crate::config::AddressSelector>,
 ) -> crate::Result<()> {

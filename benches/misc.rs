@@ -156,7 +156,7 @@ struct Listener {
 impl GenResource for Listener {
     fn generate(&mut self, _slim: bool) -> prost_types::Any {
         use quilkin::filters::{self, StaticFilter};
-        let filters = [quilkin::config::Filter {
+        let filters = [quilkin::config::filter::Filter {
             name: filters::capture::Capture::NAME.into(),
             label: None,
             config: Some(

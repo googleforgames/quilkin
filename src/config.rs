@@ -43,7 +43,6 @@ pub use self::{
     datacenter::{Datacenter, DatacenterMap},
     error::ValidationError,
     icao::{IcaoCode, NotifyingIcaoCode},
-    providers::Providers,
     watch::Watch,
 };
 
@@ -52,7 +51,6 @@ mod datacenter;
 mod error;
 pub mod filter;
 mod icao;
-pub mod providers;
 pub mod qcmp;
 mod serialization;
 pub mod watch;
@@ -301,10 +299,7 @@ impl quilkin_xds::config::Configuration for Config {
                         }
                         q = qcmp_rx.recv() => {
                             match q {
-                                Ok(port) => {
-                                    dbg!(port);
-                                     cp.push_update(xds::DATACENTER_TYPE);
-                                }
+                                Ok(_) => cp.push_update(xds::DATACENTER_TYPE),
                                 Err(error) => tracing::error!(%error, "error watching QCMP port changes"),
                             }
                         }
@@ -368,8 +363,8 @@ impl Config {
                 }
                 ResourceType::Datacenter => {
                     if let Some(qport) = self.dyn_cfg.qcmp_port() {
-                        let name = dbg!(self.dyn_cfg.icao_code.load().to_string());
-                        let qcmp_port = dbg!(qport.load());
+                        let name = self.dyn_cfg.icao_code.load().to_string();
+                        let qcmp_port = qport.load();
                         let port_s = qcmp_port.to_string();
 
                         let resource =

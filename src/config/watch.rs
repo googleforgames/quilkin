@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use std::sync::Arc;
+use std::{fmt, sync::Arc};
 
 use tokio::sync::watch;
 

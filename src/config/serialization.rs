@@ -36,11 +36,10 @@ impl Config {
                     });
                     self.apply_metrics();
                 }
-                "version" => {
+                "version" | "datacenters" => {
                     // Updating the version doesn't make sense at runtime, and we don't
                     // want to error out
-                }
-                "datacenters" => {
+
                     // datacenters are only a resource applied from remotes, not
                     // local config files
                 }
