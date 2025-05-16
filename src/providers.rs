@@ -482,8 +482,9 @@ impl Providers {
                         tracing::warn!(%error, "error updating maxmind database");
                     }
 
-                    tracing::error!("terminating mmdb task");
-                    Ok(())
+                    // TODO: Keep task running for now, should be replaced with
+                    // checking for updates to the mmdb source.
+                    std::future::pending().await
                 })
             },
         )
