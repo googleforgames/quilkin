@@ -262,12 +262,12 @@ impl Cli {
                 .read_config(&self.config, self.locality.icao_code, locality.clone())?;
 
         let ready = Arc::<std::sync::atomic::AtomicBool>::default();
-        let (shutdown_tx, mut shutdown_rx) = crate::signal::spawn_handler();
+        let (shutdown_tx, shutdown_rx) = crate::signal::spawn_handler();
         if self.admin.enabled {
             crate::components::admin::server(
                 config.clone(),
                 ready.clone(),
-                shutdown_tx,
+                shutdown_tx.clone(),
                 self.admin.address,
             );
         }
@@ -284,16 +284,26 @@ impl Cli {
             self.providers
                 .spawn_providers(&config, ready.clone(), locality.clone());
 
-        let service_task = self.service.spawn_services(&config, &shutdown_rx)?;
+        let mut service_task = self.service.spawn_services(&config, &shutdown_rx)?;
 
         if provider_tasks.is_empty() {
             ready.store(true, std::sync::atomic::Ordering::SeqCst);
         }
 
-        tokio::select! {
-            result = shutdown_rx.changed() => result.map_err(From::from),
-            Some(result) = provider_tasks.join_next() => result?,
-            result = service_task => result?,
+        loop {
+            tokio::select! {
+                Some(result) = provider_tasks.join_next() => {
+                    tracing::error!(task_result=?result, "provider task completed unexpectedly, shutting down.");
+                    // Trigger shutdown so we can drain the active sessions in the service_task
+                    if let Err(error) = shutdown_tx.send(crate::signal::ShutdownKind::Normal) {
+                        tracing::error!(error=?error, "failed to trigger shutdown");
+                        return Err(error.into());
+                    }
+                },
+                result = &mut service_task => {
+                    return result?;
+                },
+            }
         }
     }
 }
