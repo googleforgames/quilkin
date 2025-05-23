@@ -22,6 +22,7 @@ fixedstr.workspace = true
 forwarded-header-value = "0.1.1"
 futures.workspace = true
 h2 = "0.4"
+hickory-resolver.workspace = true
 once_cell.workspace = true
 prometheus.workspace = true
 parking_lot.workspace = true
