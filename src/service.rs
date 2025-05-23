@@ -128,6 +128,8 @@ pub struct Service {
     tls_key_path: Option<std::path::PathBuf>,
     #[clap(long = "termination-timeout")]
     termination_timeout: Option<crate::cli::Timeout>,
+    #[clap(skip)]
+    phoenix_rx: Option<crate::config::crdt::datacenter_map::PhoenixReceiver>,
 }
 
 pub type Finalizer = Box<dyn FnOnce(&crate::signal::ShutdownRx) + Send>;
@@ -140,6 +142,7 @@ impl Default for Service {
             mds_port: 7900,
             phoenix_enabled: <_>::default(),
             phoenix_port: 7600,
+            phoenix_rx: None,
             qcmp_enabled: <_>::default(),
             qcmp_port: 7600,
             udp_enabled: <_>::default(),
@@ -245,14 +248,26 @@ impl Service {
             || self.grpc_enabled
     }
 
-    pub fn build_config(&self, icao_code: IcaoCode) -> eyre::Result<Config> {
-        use crate::config::{self, insert_default};
+    pub fn build_config(&mut self, icao_code: IcaoCode) -> eyre::Result<Config> {
+        use crate::config::{self, crdt, insert_default};
 
         let mut typemap = crate::config::default_typemap();
 
         if self.udp_enabled || self.xds_enabled || self.mds_enabled {
             insert_default::<crate::filters::FilterChain>(&mut typemap);
-            insert_default::<config::DatacenterMap>(&mut typemap);
+        }
+
+        if self.xds_enabled || self.mds_enabled {
+            let xds = crdt::XdsDatacenterMap::new()?;
+            typemap.insert::<crdt::XdsDatacenterMap>(Arc::new(xds));
+        }
+
+        if self.phoenix_enabled {
+            let (tx, rx) = tokio::sync::mpsc::channel(128);
+            let pdm = crdt::PhoenixDatacenterMap::with_sender(tx);
+            typemap.insert::<crdt::PhoenixDatacenterMap>(Arc::new(pdm));
+
+            self.phoenix_rx = Some(rx);
         }
 
         if self.qcmp_enabled {
@@ -275,7 +290,7 @@ impl Service {
     ///
     ///
     pub fn read_config(
-        &self,
+        &mut self,
         config_path: &std::path::Path,
         icao_code: IcaoCode,
         locality: Option<crate::net::endpoint::Locality>,
@@ -285,7 +300,7 @@ impl Service {
 
         let file = loop {
             let Some(path) = paths.next() else {
-                return Ok(<_>::default());
+                return Ok(Arc::new(self.build_config(icao_code)?));
             };
 
             match std::fs::File::open(path) {
@@ -403,14 +418,18 @@ impl Service {
 
     /// Spawns an QCMP server if enabled, otherwise returns a future which never completes.
     fn publish_phoenix(
-        &self,
+        &mut self,
         config: &Arc<Config>,
     ) -> crate::Result<(
         impl std::future::Future<Output = crate::Result<()>> + use<>,
         Option<Finalizer>,
     )> {
         if self.phoenix_enabled {
-            let Some(datacenters) = config.dyn_cfg.datacenters() else {
+            let Some(rx) = self
+                .phoenix_rx
+                .take()
+                .filter(|_| config.dyn_cfg.phoenix_datacenters().is_some())
+            else {
                 tracing::info!(
                     "not starting phoenix service even though it was requested, datacenters were not configured"
                 );
@@ -419,9 +438,9 @@ impl Service {
 
             tracing::info!(port=%self.qcmp_port, "starting phoenix service");
             let phoenix = crate::net::TcpListener::bind(Some(self.phoenix_port))?;
-            let finalizer = crate::net::phoenix::spawn(
+            let finalizer = crate::net::phoenix::spawn_phoenix(
                 phoenix,
-                datacenters.clone(),
+                rx,
                 crate::net::phoenix::Phoenix::new(crate::codec::qcmp::QcmpMeasurement::new()?),
             )?;
 
