@@ -4,7 +4,10 @@ use divan::Bencher;
 use prost_types::{Value, value::Kind};
 use rand::SeedableRng;
 
-use quilkin::{net::cluster::proto::Endpoint as ProtoEndpoint, xds::Resource};
+use quilkin::{
+    config::crdt::datacenter_map::Datacenter, net::cluster::proto::Endpoint as ProtoEndpoint,
+    xds::Resource,
+};
 
 mod shared;
 
@@ -230,7 +233,7 @@ fn deserialize(a: prost_types::Any) {
         }
         Resource::Datacenter(dc) => {
             let _host: std::net::IpAddr = dc.host.parse().unwrap();
-            let _dc = quilkin::config::Datacenter {
+            let _dc = Datacenter {
                 qcmp_port: dc.qcmp_port.try_into().unwrap(),
                 icao_code: dc.icao_code.parse().unwrap(),
             };
@@ -255,7 +258,7 @@ fn deserialize_faster(a: prost_types::Any) {
         }
         Resource::Datacenter(dc) => {
             let _host: std::net::IpAddr = dc.host.parse().unwrap();
-            let _dc = quilkin::config::Datacenter {
+            let _dc = Datacenter {
                 qcmp_port: dc.qcmp_port.try_into().unwrap(),
                 icao_code: dc.icao_code.parse().unwrap(),
             };
