@@ -54,47 +54,48 @@ impl EndpointAddress {
 impl EndpointAddress {
     /// Returns the port for the endpoint address, or `0` if no port
     /// was specified.
+    #[inline]
     pub fn port(&self) -> u16 {
         self.port
     }
 
     /// Returns the socket address for the endpoint, resolving any DNS entries
     /// if present.
+    #[inline]
     pub fn to_socket_addr(&self) -> std::io::Result<SocketAddr> {
-        static DNS: Lazy<TokioResolver> =
-            Lazy::new(|| TokioResolver::builder_tokio().unwrap().build());
-
         let ip = match &self.host {
             AddressKind::Ip(ip) => *ip,
             AddressKind::Name(name) => {
-                static CACHE: Lazy<crate::collections::ttl::TtlMap<String, IpAddr>> =
-                    Lazy::new(<_>::default);
-
-                if let Some(ip) = CACHE.get(name) {
-                    **ip
-                } else {
-                    let handle = tokio::runtime::Handle::current();
-                    let set = handle
-                        .block_on(DNS.lookup_ip(&**name))?
-                        .iter()
-                        .collect::<std::collections::HashSet<_>>();
-
-                    let ip = set
-                        .iter()
-                        .find(|item| matches!(item, IpAddr::V6(_)))
-                        .or_else(|| set.iter().find(|item| matches!(item, IpAddr::V4(_))))
-                        .copied()
-                        .ok_or_else(|| {
-                            std::io::Error::new(std::io::ErrorKind::Other, "no ip address found")
-                        })?;
-
-                    CACHE.insert(name.clone(), ip);
-                    ip
-                }
+                let handle = tokio::runtime::Handle::current();
+                handle.block_on(Self::dns_resolve(name))?
             }
         };
 
         Ok(SocketAddr::from((ip, self.port)))
+    }
+
+    pub async fn dns_resolve(name: &str) -> std::io::Result<IpAddr> {
+        static DNS: Lazy<TokioResolver> =
+            Lazy::new(|| TokioResolver::builder_tokio().unwrap().build());
+        static CACHE: Lazy<crate::collections::ttl::TtlMap<String, IpAddr>> =
+            Lazy::new(<_>::default);
+
+        if let Some(ip) = CACHE.get(name) {
+            Ok(**ip)
+        } else {
+            let lookup = DNS.lookup_ip(name).await?;
+
+            let ip = lookup
+                .iter()
+                .find(|item| matches!(item, IpAddr::V6(_)))
+                .or_else(|| lookup.iter().find(|item| matches!(item, IpAddr::V4(_))))
+                .ok_or_else(|| {
+                    std::io::Error::new(std::io::ErrorKind::Other, "no ip address found")
+                })?;
+
+            CACHE.insert(name.to_owned(), ip);
+            Ok(ip)
+        }
     }
 }
 
