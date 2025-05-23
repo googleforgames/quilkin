@@ -2912,6 +2912,7 @@ dependencies = [
  "forwarded-header-value",
  "futures",
  "h2",
+ "hickory-resolver",
  "http",
  "once_cell",
  "parking_lot",
