@@ -18,6 +18,8 @@ use ::quilkin_xds::generated::quilkin::config::v1alpha1 as proto;
 use prost::Message;
 use prost_types::Any;
 
+use crate::config::IcaoCode;
+
 pub const CLUSTER_TYPE: &str = "type.googleapis.com/quilkin.config.v1alpha1.Cluster";
 pub const DATACENTER_TYPE: &str = "type.googleapis.com/quilkin.config.v1alpha1.Datacenter";
 pub const FILTER_CHAIN_TYPE: &str = "type.googleapis.com/quilkin.config.v1alpha1.FilterChain";
@@ -77,6 +79,16 @@ impl Resource {
             Self::Datacenter(_) => DATACENTER_TYPE,
             Self::FilterChain(_) => FILTER_CHAIN_TYPE,
         }
+    }
+}
+
+impl From<(IcaoCode, u16, Option<std::net::IpAddr>)> for Resource {
+    fn from(value: (IcaoCode, u16, Option<std::net::IpAddr>)) -> Self {
+        Self::Datacenter(proto::Datacenter {
+            icao_code: value.0.to_string(),
+            qcmp_port: value.1 as u32,
+            host: value.2.map_or(String::new(), |ip| ip.to_string()),
+        })
     }
 }
 

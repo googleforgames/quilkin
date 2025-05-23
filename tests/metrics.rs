@@ -32,36 +32,24 @@ async fn metrics_server() {
         .await
         .port();
 
-    // create server configuration
-    let server_config = std::sync::Arc::new(quilkin::Config::default());
-    server_config
-        .dyn_cfg
-        .clusters()
-        .unwrap()
-        .modify(|clusters| clusters.insert_default([Endpoint::new(echo.clone())].into()));
     let server_port = t
         .run_server(
-            server_config,
             None,
+            [Endpoint::new(echo.clone())].into(),
             Some(Some((std::net::Ipv4Addr::UNSPECIFIED, metrics_port).into())),
         )
         .await;
 
-    // create a local client
-    let client_config = std::sync::Arc::new(quilkin::Config::default());
-    client_config
-        .dyn_cfg
-        .clusters()
-        .unwrap()
-        .modify(|clusters| {
-            clusters.insert_default(
-                [Endpoint::new(
-                    (std::net::Ipv6Addr::LOCALHOST, server_port).into(),
-                )]
-                .into(),
-            );
-        });
-    let client_port = t.run_server(client_config, None, None).await;
+    let client_port = t
+        .run_server(
+            None,
+            [Endpoint::new(
+                (std::net::Ipv6Addr::LOCALHOST, server_port).into(),
+            )]
+            .into(),
+            None,
+        )
+        .await;
 
     // let's send the packet
     let (mut recv_chan, socket) = t.open_socket_and_recv_multiple_packets().await;

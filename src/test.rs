@@ -23,7 +23,6 @@ use tracing_subscriber::EnvFilter;
 
 use crate::{
     collections::BufferPool,
-    config::Config,
     filters::{FilterRegistry, prelude::*},
     net::DualStackEpollSocket as DualStackLocalSocket,
     net::endpoint::metadata::Value,
@@ -294,28 +293,26 @@ impl TestHelper {
 
     pub async fn run_server(
         &mut self,
-        config: Arc<Config>,
         server: Option<crate::components::proxy::Proxy>,
+        endpoints: std::collections::BTreeSet<crate::net::endpoint::Endpoint>,
         with_admin: Option<Option<SocketAddr>>,
     ) -> u16 {
         let (shutdown_tx, shutdown_rx) =
             crate::signal::channel(crate::signal::ShutdownKind::Testing);
         self.server_shutdown_tx.push(Some(shutdown_tx.clone()));
-        let ready = <_>::default();
-
-        if let Some(address) = with_admin {
-            crate::components::admin::server(config.clone(), ready, shutdown_tx, address);
-        }
 
         let server = server.unwrap_or_else(|| {
             let qcmp = crate::net::raw_socket_with_reuse(0).unwrap();
             let phoenix = crate::net::TcpListener::bind(None).unwrap();
 
             crate::components::proxy::Proxy {
-                num_workers: std::num::NonZeroUsize::new(1).unwrap(),
                 socket: Some(crate::net::raw_socket_with_reuse(0).unwrap()),
                 qcmp,
                 phoenix,
+                to: endpoints
+                    .into_iter()
+                    .map(|ep| ep.address.to_socket_addr().unwrap())
+                    .collect(),
                 ..Default::default()
             }
         });
@@ -326,19 +323,19 @@ impl TestHelper {
 
         tokio::spawn(async move {
             server
-                .run(
-                    crate::components::RunArgs {
-                        config,
-                        ready: Default::default(),
-                        shutdown_rx,
-                    },
-                    Some(prox_tx),
-                )
+                .run(Default::default(), shutdown_rx, Some(prox_tx))
                 .await
                 .unwrap();
         });
 
-        prox_rx.await.unwrap();
+        let config = prox_rx.await.unwrap();
+
+        let ready = <_>::default();
+
+        if let Some(address) = with_admin {
+            crate::components::admin::server(config, ready, shutdown_tx, address);
+        }
+
         port
     }
 

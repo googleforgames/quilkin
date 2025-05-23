@@ -23,7 +23,6 @@ use std::{
 };
 
 pub use crate::{
-    components::RunArgs,
     config::IcaoCode,
     net::{error::PipelineError, sessions::SessionPool},
 };
@@ -62,7 +61,6 @@ pub struct ToTokens {
 }
 
 pub struct Proxy {
-    pub num_workers: std::num::NonZeroUsize,
     pub mmdb: Option<crate::net::maxmind_db::Source>,
     pub management_servers: Vec<tonic::transport::Endpoint>,
     pub to: Vec<SocketAddr>,
@@ -73,6 +71,8 @@ pub struct Proxy {
     pub notifier: Option<tokio::sync::mpsc::UnboundedSender<String>>,
     pub xdp: crate::service::XdpOptions,
     pub termination_timeout: Option<crate::cli::Timeout>,
+    pub filters: Option<crate::filters::FilterChain>,
+    pub id: Option<String>,
 }
 
 impl Default for Proxy {
@@ -81,7 +81,6 @@ impl Default for Proxy {
         let phoenix = crate::net::TcpListener::bind(Some(crate::net::socket_port(&qcmp))).unwrap();
 
         Self {
-            num_workers: std::num::NonZeroUsize::new(1).unwrap(),
             mmdb: None,
             management_servers: Vec::new(),
             to: Vec::new(),
@@ -92,6 +91,8 @@ impl Default for Proxy {
             notifier: None,
             xdp: Default::default(),
             termination_timeout: None,
+            filters: None,
+            id: None,
         }
     }
 }
@@ -99,12 +100,9 @@ impl Default for Proxy {
 impl Proxy {
     pub async fn run(
         mut self,
-        RunArgs {
-            config,
-            ready,
-            mut shutdown_rx,
-        }: RunArgs<Ready>,
-        initialized: Option<tokio::sync::oneshot::Sender<()>>,
+        ready: Ready,
+        mut shutdown_rx: crate::signal::ShutdownRx,
+        initialized: Option<tokio::sync::oneshot::Sender<Arc<crate::Config>>>,
     ) -> crate::Result<()> {
         let _mmdb_task = self.mmdb.as_ref().map(|source| {
             let source = source.clone();
@@ -119,6 +117,34 @@ impl Proxy {
                 }
             })
         });
+
+        // TODO: Remove this once the CLI is fully moved over.
+        let udp_port = crate::net::socket_port(&self.socket.take().unwrap());
+        let qcmp_port = crate::net::socket_port(&std::mem::replace(
+            &mut self.qcmp,
+            crate::net::raw_socket_with_reuse(0).unwrap(),
+        ));
+        let phoenix_port = std::mem::replace(
+            &mut self.phoenix,
+            crate::net::TcpListener::bind(None).unwrap(),
+        )
+        .port();
+
+        let mut svc = crate::Service::default()
+            .udp()
+            .udp_port(udp_port)
+            .xdp(self.xdp)
+            .qcmp()
+            .qcmp_port(qcmp_port)
+            .phoenix()
+            .phoenix_port(phoenix_port)
+            .termination_timeout(self.termination_timeout);
+
+        let config = Arc::new(svc.build_config(Default::default())?);
+
+        if let Some(id) = self.id {
+            *config.dyn_cfg.id.lock() = id;
+        }
 
         let Some(clusters) = config.dyn_cfg.clusters() else {
             eyre::bail!("empty clusters were not created")
@@ -206,6 +232,10 @@ impl Proxy {
             ));
         }
 
+        if let Some(fc) = self.filters {
+            config.dyn_cfg.filters().unwrap().store(fc);
+        }
+
         #[allow(clippy::type_complexity)]
         const SUBS: &[(&str, &[(&str, Vec<String>)])] = &[
             (
@@ -278,32 +308,11 @@ impl Proxy {
                 .expect("failed to spawn proxy-subscription thread");
         }
 
-        // TODO: Remove this once the CLI is fully moved over.
-        let udp_port = crate::net::socket_port(&self.socket.take().unwrap());
-        let qcmp_port = crate::net::socket_port(&std::mem::replace(
-            &mut self.qcmp,
-            crate::net::raw_socket_with_reuse(0).unwrap(),
-        ));
-        let phoenix_port = std::mem::replace(
-            &mut self.phoenix,
-            crate::net::TcpListener::bind(None).unwrap(),
-        )
-        .port();
-
-        let svc_task = crate::Service::default()
-            .udp()
-            .udp_port(udp_port)
-            .xdp(self.xdp)
-            .qcmp()
-            .qcmp_port(qcmp_port)
-            .phoenix()
-            .phoenix_port(phoenix_port)
-            .termination_timeout(self.termination_timeout)
-            .spawn_services(&config, &shutdown_rx)?;
+        let svc_task = svc.spawn_services(&config, &shutdown_rx)?;
 
         tracing::info!("Quilkin is ready");
         if let Some(initialized) = initialized {
-            let _ = initialized.send(());
+            let _unused = initialized.send(config);
         }
 
         shutdown_rx
