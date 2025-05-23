@@ -32,7 +32,6 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    filters::FilterChain,
     generated::envoy::service::discovery::v3::Resource as XdsResource,
     net::cluster::{self, ClusterMap},
     xds::{self, ResourceType},
@@ -40,14 +39,13 @@ use crate::{
 
 pub use self::{
     config_type::ConfigType,
-    datacenter::{Datacenter, DatacenterMap},
     error::ValidationError,
     icao::{IcaoCode, NotifyingIcaoCode},
     watch::Watch,
 };
 
 mod config_type;
-mod datacenter;
+pub mod crdt;
 mod error;
 pub mod filter;
 mod icao;
@@ -101,10 +99,6 @@ impl typemap_rev::TypeMapKey for ClusterMap {
     type Value = Watch<ClusterMap>;
 }
 
-impl typemap_rev::TypeMapKey for DatacenterMap {
-    type Value = Watch<DatacenterMap>;
-}
-
 impl typemap_rev::TypeMapKey for LeaderLock {
     type Value = LeaderLock;
 }
@@ -112,10 +106,6 @@ impl typemap_rev::TypeMapKey for LeaderLock {
 impl DynamicConfig {
     pub fn clusters(&self) -> Option<&Watch<ClusterMap>> {
         self.typemap.get::<ClusterMap>()
-    }
-
-    pub fn datacenters(&self) -> Option<&Watch<DatacenterMap>> {
-        self.typemap.get::<DatacenterMap>()
     }
 
     pub(crate) fn init_leader_lock(&self) -> LeaderLock {
@@ -145,16 +135,18 @@ mod test_impls {
                 T: typemap_rev::TypeMapKey,
                 T::Value: PartialEq + Clone + std::fmt::Debug,
             {
-                let Some((a, b)) = a.get::<T>().zip(b.get::<T>()) else {
-                    return false;
-                };
-                a == b
+                match (a.get::<T>(), b.get::<T>()) {
+                    (Some(a), Some(b)) => a == b,
+                    (None, None) => true,
+                    _ => false,
+                }
             }
 
-            compare::<FilterChain>(&self.typemap, &other.typemap)
+            compare::<crate::filters::FilterChain>(&self.typemap, &other.typemap)
                 && compare::<qcmp::QcmpPort>(&self.typemap, &other.typemap)
                 && compare::<ClusterMap>(&self.typemap, &other.typemap)
-                && compare::<DatacenterMap>(&self.typemap, &other.typemap)
+                && compare::<crdt::XdsDatacenterMap>(&self.typemap, &other.typemap)
+                && compare::<crdt::PhoenixDatacenterMap>(&self.typemap, &other.typemap)
         }
     }
 
@@ -229,7 +221,7 @@ impl quilkin_xds::config::Configuration for Config {
 
         async move {
             let clusters = control_plane.config.dyn_cfg.clusters();
-            let datacenters = control_plane.config.dyn_cfg.datacenters();
+            let datacenters = control_plane.config.dyn_cfg.xds_datacenters();
             let filters = control_plane.config.dyn_cfg.subscribe_filter_changes();
             let qcmp_port = control_plane.config.dyn_cfg.qcmp_port();
 
@@ -259,7 +251,7 @@ impl quilkin_xds::config::Configuration for Config {
 
                 ls.spawn(async move {
                     loop {
-                        match dcw.changed().await {
+                        match dcw.recv().await {
                             Ok(()) => cp.push_update(xds::DATACENTER_TYPE),
                             Err(error) => {
                                 tracing::error!(%error, "error watching datacenter changes");
@@ -314,6 +306,12 @@ impl quilkin_xds::config::Configuration for Config {
             }
 
             ls.join_all().await;
+        }
+    }
+
+    fn client_disconnected(&self, ip: std::net::IpAddr) {
+        if let Some(dc) = self.dyn_cfg.xds_datacenters() {
+            dc.remove_datacenter(ip.into());
         }
     }
 }
@@ -384,45 +382,8 @@ impl Config {
                         });
                     }
 
-                    if let Some(datacenters) = self.dyn_cfg.datacenters() {
-                        for entry in datacenters.read().iter() {
-                            let host = entry.key().to_string();
-                            let qcmp_port = entry.qcmp_port;
-                            let version = format!("{}-{qcmp_port}", entry.icao_code);
-
-                            if client_state.version_matches(&host, &version) {
-                                continue;
-                            }
-
-                            let resource = crate::xds::Resource::Datacenter(
-                                crate::net::cluster::proto::Datacenter {
-                                    qcmp_port: qcmp_port as _,
-                                    icao_code: entry.icao_code.to_string(),
-                                    host,
-                                },
-                            );
-
-                            resources.push(XdsResource {
-                                name: entry.icao_code.to_string(),
-                                version,
-                                resource: Some(resource.try_encode()?),
-                                aliases: Vec::new(),
-                                ttl: None,
-                                cache_control: None,
-                            });
-                        }
-
-                        {
-                            let dc = datacenters.read();
-                            for key in client_state.versions.keys() {
-                                let Ok(addr) = key.parse() else {
-                                    continue;
-                                };
-                                if dc.get(&addr).is_none() {
-                                    removed.insert(key.clone());
-                                }
-                            }
-                        }
+                    if let Some(datacenters) = self.dyn_cfg.xds_datacenters() {
+                        datacenters.serialize_snapshot(&mut resources, &mut removed, client_state);
                     }
                 }
                 ResourceType::Cluster => {
@@ -536,65 +497,26 @@ impl Config {
                 filters.store(fc);
             }
             ResourceType::Datacenter => {
-                let Some(datacenters) = self.dyn_cfg.datacenters() else {
-                    return Ok(());
-                };
-
-                datacenters.modify(|wg| {
-                    if let Some(ip) = remote_addr.filter(|_| !removed_resources.is_empty()) {
-                        wg.remove(ip);
-                    }
-
-                    for res in resources {
-                        let Some(resource) = res.resource else {
-                            eyre::bail!("a datacenter resource could not be applied because it didn't contain an actual payload");
-                        };
-
-                        let dc = match crate::xds::Resource::try_decode(resource) {
-                            Ok(crate::xds::Resource::Datacenter(dc)) => dc,
-                            Ok(other) => {
-                                eyre::bail!("a datacenter resource could not be applied because the resource payload was '{}'", other.type_url());
-                            }
-                            Err(error) => {
-                                return Err(error.wrap_err("a datacenter resource could not be applied because the resource payload could not be decoded"));
-                            }
-                        };
-
-                        let host = if dc.host.is_empty() {
-                            if let Some(ra) = remote_addr {
-                                ra
-                            } else {
-                                continue;
-                            }
-                        } else {
-                            match dc.host.parse() {
-                                Ok(host) => host,
-                                Err(_err) => {
-                                    tracing::warn!("datacenter host not set, and there is not remote address");
-                                    continue;
-                                }
-                            }
-                        };
-
-                        let parse_payload = || -> crate::Result<Datacenter> {
-                            use eyre::Context;
-                            let dc = Datacenter {
-                                qcmp_port: dc.qcmp_port.try_into().context("unable to parse datacenter QCMP port")?,
-                                icao_code: dc.icao_code.parse().context("unable to parse datacenter ICAO")?,
-                            };
-
-                            Ok(dc)
-                        };
-
-                        let datacenter = parse_payload()?;
-                        wg.insert(
-                            host,
-                            datacenter,
+                if let Some(datacenters) = self.dyn_cfg.xds_datacenters() {
+                    if let Some(addr) = remote_addr {
+                        // This will always just be 1 resource, but it's fine
+                        datacenters.upsert_datacenters(resources, addr);
+                    } else {
+                        tracing::warn!(
+                            "unable to upsert Datacenter, remote address for server was not provided"
                         );
                     }
-
-                    Ok(())
-                })?;
+                } else if let Some(pdc) = self.dyn_cfg.phoenix_datacenters() {
+                    if let Some(addr) = remote_addr {
+                        pdc.apply_xds(resources, removed_resources, addr.into());
+                    } else {
+                        tracing::warn!(
+                            "unable to apply xDS resources, remote address for server was not provided"
+                        );
+                    }
+                } else {
+                    return Ok(());
+                }
             }
             ResourceType::Cluster => {
                 let Some(clusters) = self.dyn_cfg.clusters() else {
@@ -686,14 +608,11 @@ impl Config {
     pub fn id(&self) -> String {
         self.dyn_cfg.id.lock().clone()
     }
-}
 
-impl Default for Config {
-    fn default() -> Self {
+    pub fn test_default() -> Self {
         let mut typemap = default_typemap();
-        insert_default::<FilterChain>(&mut typemap);
+        insert_default::<crate::filters::FilterChain>(&mut typemap);
         insert_default::<ClusterMap>(&mut typemap);
-        insert_default::<DatacenterMap>(&mut typemap);
         insert_default::<qcmp::QcmpPort>(&mut typemap);
 
         Self {

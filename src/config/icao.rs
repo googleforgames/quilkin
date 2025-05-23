@@ -1,6 +1,6 @@
 use std::{fmt, sync::Arc};
 
-#[derive(Copy, Clone, Hash, Eq, PartialEq)]
+#[derive(Copy, Clone, Hash, Eq, PartialEq, PartialOrd, Ord)]
 pub struct IcaoCode([u8; 4]);
 
 impl AsRef<str> for IcaoCode {
