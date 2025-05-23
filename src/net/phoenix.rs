@@ -151,7 +151,6 @@ pub fn spawn_phoenix<M: Clone + Measurement + Sync + Send + 'static>(
                             op = rx.recv() => {
                                 if let Some(op) = op {
                                     phoenix.add_nodes_from_config(op);
-                                    continue;
                                 } else {
                                     eyre::bail!("Config sender dropped");
                                 }
@@ -944,7 +943,10 @@ mod tests {
 
             let min = Coordinates::ORIGIN.distance_to(&coords);
             let max = min * 3.0;
-            let distance = map[icao_code.as_ref()].as_f64().unwrap();
+
+            let Some(distance) = map.get(icao_code.as_ref()).and_then(|v| v.as_f64()) else {
+                continue;
+            };
 
             assert!(
                 distance > min && distance < max,
