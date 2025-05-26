@@ -568,7 +568,7 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
             let mut resource_subscriptions = resource_subscriptions;
 
             loop {
-                tracing::trace!("creating discovery response handler");
+                tracing::info!("creating discovery response handler");
                 let mut response_stream = crate::config::handle_delta_discovery_responses(
                     identifier.clone(),
                     stream,
@@ -578,6 +578,7 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
                     notifier.clone(),
                 );
 
+                tracing::info!("entering xDS stream loop");
                 loop {
                     let next_response =
                         tokio::time::timeout(IDLE_REQUEST_INTERVAL, response_stream.next());
@@ -626,9 +627,11 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
                     DeltaClientStream::connect(&endpoints, identifier.clone()).await?;
 
                 resource_subscriptions = handle_first_response(&mut stream, resources).await?;
+                tracing::info!("received first response");
 
                 ds.refresh(&identifier, resource_subscriptions.to_vec(), &local)
                     .await?;
+                tracing::info!("xDS connection refreshed");
             }
         }
         .instrument(tracing::trace_span!("xds_client_stream", id)),
