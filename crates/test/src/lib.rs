@@ -2,7 +2,7 @@ use quilkin::{
     Config,
     collections::{BufferPool, PoolBuffer},
     components,
-    net::TcpListener,
+    net::{NodeIp, TcpListener},
     signal::ShutdownTx,
     test::TestConfig,
 };
@@ -556,6 +556,15 @@ impl SandboxConfig {
     }
 
     pub async fn spinup(self) -> Sandbox {
+        static INITED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+        if !INITED.load(std::sync::atomic::Ordering::Relaxed) {
+            NodeIp::configure_remote_host("one.one.one.one")
+                .await
+                .unwrap();
+            INITED.store(true, std::sync::atomic::Ordering::Relaxed);
+        }
+
         // Validate that every dependency is satisfied
         for i in 0..self.pails.len() {
             let deps = self.pails[i].dependencies;
