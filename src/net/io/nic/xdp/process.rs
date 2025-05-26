@@ -667,7 +667,8 @@ fn process_server_packet<const TXN: usize>(
     tx_slab: &mut StackSlab<TXN>,
     jitter: i64,
 ) -> Result<Option<Packet>, (PipelineError, Packet)> {
-    let server_addr = packet.headers.source_address();
+    let mut server_addr = packet.headers.source_address();
+    server_addr.set_ip(server_addr.ip().to_canonical());
 
     let Some((client_addr, asn)) = state.lookup_client(server_addr, packet.headers.udp.destination)
     else {
