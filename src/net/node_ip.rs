@@ -24,6 +24,20 @@ impl NodeIp {
     pub async fn configure_remote_host(remote_hostname: &str) -> eyre::Result<()> {
         static ONCE: std::sync::Once = std::sync::Once::new();
 
+        if let Ok(ip) = remote_hostname.parse::<std::net::IpAddr>() {
+            tracing::info!(%ip, "using IP instead of hostname");
+            ONCE.call_once(|| {
+                // SAFETY: this should be called early before `Self::local_ip` is ever called
+                unsafe {
+                    match ip {
+                        std::net::IpAddr::V4(v4) => IPV4 = Some(v4),
+                        std::net::IpAddr::V6(v6) => IPV6 = Some(v6),
+                    }
+                }
+            });
+            return Ok(());
+        }
+
         let resolver = hickory_resolver::TokioResolver::builder_tokio()?.build();
         let lookup = resolver.lookup_ip(remote_hostname).await?;
 

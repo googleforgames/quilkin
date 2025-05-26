@@ -130,7 +130,7 @@ pub struct Cli {
     pub providers: crate::Providers,
     #[command(flatten)]
     pub service: crate::service::Service,
-    #[clap(long, default_value = "one.one.one.one")]
+    #[clap(long = "remote.host.ip.resolver", default_value = "one.one.one.one")]
     pub remote_host_ip_resolver: String,
 }
 
