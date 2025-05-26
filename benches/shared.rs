@@ -337,7 +337,10 @@ impl QuilkinLoop {
                         .port(),
                 );
 
-            let config = Arc::new(proxy.build_config(Default::default()).unwrap());
+            let config =
+                Arc::new(runtime.block_on(async {
+                    proxy.build_config(Default::default(), None).await.unwrap()
+                }));
             config.dyn_cfg.clusters().unwrap().modify(|clusters| {
                 clusters.insert_default(
                     [quilkin::net::endpoint::Endpoint::new(endpoint.into())].into(),

@@ -323,7 +323,7 @@ impl Pail {
                     .xds_port(xds_port)
                     .mds()
                     .mds_port(mds_port);
-                let config = Arc::new(svc.build_config(Default::default()).unwrap());
+                let config = Arc::new(svc.build_config(Default::default(), None).await.unwrap());
                 *config.dyn_cfg.id.lock() = spc.name.into();
                 let provider_task = quilkin::Providers::default()
                     .fs()
@@ -392,7 +392,8 @@ impl Pail {
                 let config_path = path.clone();
                 let mut svc = quilkin::Service::default().qcmp().qcmp_port(port);
                 let config = Arc::new(
-                    svc.build_config(apc.icao_code)
+                    svc.build_config(apc.icao_code, None)
+                        .await
                         .expect("failed to build agent config"),
                 );
                 *config.dyn_cfg.id.lock() = spc.name.into();

@@ -130,6 +130,8 @@ pub struct Cli {
     pub providers: crate::Providers,
     #[command(flatten)]
     pub service: crate::service::Service,
+    #[clap(long, default_value = "one.one.one.one")]
+    pub remote_host_ip_resolver: String,
 }
 
 /// The various log format options
@@ -257,9 +259,15 @@ impl Cli {
         tracing::debug!(cli = ?self, "config parameters");
 
         let locality = self.locality.locality();
-        let config =
-            self.service
-                .read_config(&self.config, self.locality.icao_code, locality.clone())?;
+        let config = self
+            .service
+            .read_config(
+                &self.config,
+                self.locality.icao_code,
+                locality.clone(),
+                Some(self.remote_host_ip_resolver),
+            )
+            .await?;
 
         let ready = Arc::<std::sync::atomic::AtomicBool>::default();
         let (shutdown_tx, shutdown_rx) = crate::signal::spawn_handler();

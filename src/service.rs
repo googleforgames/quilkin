@@ -128,8 +128,6 @@ pub struct Service {
     tls_key_path: Option<std::path::PathBuf>,
     #[clap(long = "termination-timeout")]
     termination_timeout: Option<crate::cli::Timeout>,
-    #[clap(skip)]
-    phoenix_rx: Option<crate::config::crdt::datacenter_map::PhoenixReceiver>,
 }
 
 pub type Finalizer = Box<dyn FnOnce(&crate::signal::ShutdownRx) + Send>;
@@ -142,7 +140,6 @@ impl Default for Service {
             mds_port: 7900,
             phoenix_enabled: <_>::default(),
             phoenix_port: 7600,
-            phoenix_rx: None,
             qcmp_enabled: <_>::default(),
             qcmp_port: 7600,
             udp_enabled: <_>::default(),
@@ -248,8 +245,15 @@ impl Service {
             || self.grpc_enabled
     }
 
-    pub fn build_config(&mut self, icao_code: IcaoCode) -> eyre::Result<Config> {
+    pub async fn build_config(
+        &mut self,
+        icao_code: IcaoCode,
+        remote_host_ip_resolver: Option<String>,
+    ) -> eyre::Result<Config> {
         use crate::config::{self, crdt, insert_default};
+
+        let remote_host_ip_resolver = remote_host_ip_resolver.unwrap_or("one.one.one.one".into());
+        crate::net::NodeIp::configure_remote_host(&remote_host_ip_resolver).await?;
 
         let mut typemap = crate::config::default_typemap();
 
@@ -257,17 +261,9 @@ impl Service {
             insert_default::<crate::filters::FilterChain>(&mut typemap);
         }
 
-        if self.xds_enabled || self.mds_enabled {
-            let xds = crdt::XdsDatacenterMap::new()?;
+        if self.xds_enabled || self.mds_enabled || self.phoenix_enabled {
+            let xds = crdt::XdsDatacenterMap::new(1000)?;
             typemap.insert::<crdt::XdsDatacenterMap>(Arc::new(xds));
-        }
-
-        if self.phoenix_enabled {
-            let (tx, rx) = tokio::sync::mpsc::channel(128);
-            let pdm = crdt::PhoenixDatacenterMap::with_sender(tx);
-            typemap.insert::<crdt::PhoenixDatacenterMap>(Arc::new(pdm));
-
-            self.phoenix_rx = Some(rx);
         }
 
         if self.qcmp_enabled {
@@ -280,6 +276,7 @@ impl Service {
             dyn_cfg: config::DynamicConfig {
                 id: Arc::new(parking_lot::Mutex::new(config::default_id())),
                 version: config::Version::default(),
+                remote_host_ip_resolver,
                 icao_code: config::NotifyingIcaoCode::new(icao_code),
                 typemap,
             },
@@ -289,18 +286,22 @@ impl Service {
     /// Attempts to find and configure a `Config` from a file
     ///
     ///
-    pub fn read_config(
+    pub async fn read_config(
         &mut self,
         config_path: &std::path::Path,
         icao_code: IcaoCode,
         locality: Option<crate::net::endpoint::Locality>,
+        remote_host_ip_resolver: Option<String>,
     ) -> Result<Arc<Config>, eyre::Error> {
         let paths = [config_path, std::path::Path::new(ETC_CONFIG_PATH)];
         let mut paths = paths.iter();
 
         let file = loop {
             let Some(path) = paths.next() else {
-                return Ok(Arc::new(self.build_config(icao_code)?));
+                return Ok(Arc::new(
+                    self.build_config(icao_code, remote_host_ip_resolver)
+                        .await?,
+                ));
             };
 
             match std::fs::File::open(path) {
@@ -316,7 +317,9 @@ impl Service {
             }
         };
 
-        let config = self.build_config(icao_code)?;
+        let config = self
+            .build_config(icao_code, remote_host_ip_resolver)
+            .await?;
         let json = serde_yaml::from_reader(file)?;
         config.update_from_json(json, locality)?;
 
@@ -425,11 +428,7 @@ impl Service {
         Option<Finalizer>,
     )> {
         if self.phoenix_enabled {
-            let Some(rx) = self
-                .phoenix_rx
-                .take()
-                .filter(|_| config.dyn_cfg.phoenix_datacenters().is_some())
-            else {
+            let Some(xdm) = config.dyn_cfg.xds_datacenters() else {
                 tracing::info!(
                     "not starting phoenix service even though it was requested, datacenters were not configured"
                 );
@@ -440,7 +439,7 @@ impl Service {
             let phoenix = crate::net::TcpListener::bind(Some(self.phoenix_port))?;
             let finalizer = crate::net::phoenix::spawn_phoenix(
                 phoenix,
-                rx,
+                xdm.clone(),
                 crate::net::phoenix::Phoenix::new(crate::codec::qcmp::QcmpMeasurement::new()?),
             )?;
 

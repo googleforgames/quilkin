@@ -140,7 +140,7 @@ impl Proxy {
             .phoenix_port(phoenix_port)
             .termination_timeout(self.termination_timeout);
 
-        let config = Arc::new(svc.build_config(Default::default())?);
+        let config = Arc::new(svc.build_config(Default::default(), None).await?);
 
         if let Some(id) = self.id {
             *config.dyn_cfg.id.lock() = id;

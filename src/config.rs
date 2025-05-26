@@ -90,6 +90,7 @@ impl PartialEq for Config {
 #[derive(Clone)]
 pub struct DynamicConfig {
     pub id: Arc<parking_lot::Mutex<String>>,
+    pub remote_host_ip_resolver: String,
     pub version: Version,
     pub icao_code: icao::NotifyingIcaoCode,
     pub typemap: ConfigMap,
@@ -146,7 +147,6 @@ mod test_impls {
                 && compare::<qcmp::QcmpPort>(&self.typemap, &other.typemap)
                 && compare::<ClusterMap>(&self.typemap, &other.typemap)
                 && compare::<crdt::XdsDatacenterMap>(&self.typemap, &other.typemap)
-                && compare::<crdt::PhoenixDatacenterMap>(&self.typemap, &other.typemap)
         }
     }
 
@@ -252,7 +252,7 @@ impl quilkin_xds::config::Configuration for Config {
                 ls.spawn(async move {
                     loop {
                         match dcw.recv().await {
-                            Ok(()) => cp.push_update(xds::DATACENTER_TYPE),
+                            Ok(_) => cp.push_update(xds::DATACENTER_TYPE),
                             Err(error) => {
                                 tracing::error!(%error, "error watching datacenter changes");
                             }
@@ -497,18 +497,9 @@ impl Config {
                 filters.store(fc);
             }
             ResourceType::Datacenter => {
-                if let Some(datacenters) = self.dyn_cfg.xds_datacenters() {
+                if let Some(dm) = self.dyn_cfg.xds_datacenters() {
                     if let Some(addr) = remote_addr {
-                        // This will always just be 1 resource, but it's fine
-                        datacenters.upsert_datacenters(resources, addr);
-                    } else {
-                        tracing::warn!(
-                            "unable to upsert Datacenter, remote address for server was not provided"
-                        );
-                    }
-                } else if let Some(pdc) = self.dyn_cfg.phoenix_datacenters() {
-                    if let Some(addr) = remote_addr {
-                        pdc.apply_xds(resources, removed_resources, addr.into());
+                        dm.apply_xds(resources, removed_resources, addr.into());
                     } else {
                         tracing::warn!(
                             "unable to apply xDS resources, remote address for server was not provided"
@@ -618,6 +609,7 @@ impl Config {
         Self {
             dyn_cfg: DynamicConfig {
                 id: Arc::new(parking_lot::Mutex::new(default_id())),
+                remote_host_ip_resolver: "one.one.one.one".into(),
                 icao_code: Default::default(),
                 version: Version::default(),
                 typemap,
