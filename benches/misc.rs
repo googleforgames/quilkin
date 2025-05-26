@@ -4,10 +4,7 @@ use divan::Bencher;
 use prost_types::{Value, value::Kind};
 use rand::SeedableRng;
 
-use quilkin::{
-    config::crdt::datacenter_map::Datacenter, net::cluster::proto::Endpoint as ProtoEndpoint,
-    xds::Resource,
-};
+use quilkin::{config::Datacenter, net::cluster::proto::Endpoint as ProtoEndpoint, xds::Resource};
 
 mod shared;
 

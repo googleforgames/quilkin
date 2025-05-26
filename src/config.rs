@@ -683,3 +683,9 @@ impl clap::ValueEnum for crate::config::AddrKind {
         })
     }
 }
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct Datacenter {
+    pub qcmp_port: u16,
+    pub icao_code: IcaoCode,
+}

@@ -160,7 +160,7 @@ trace_test!(datacenter_discovery, {
         unreachable!()
     };
 
-    use quilkin::config::crdt::datacenter_map::Datacenter;
+    use quilkin::config::Datacenter;
 
     let datacenter = Datacenter {
         qcmp_port: *qcmp_port,
