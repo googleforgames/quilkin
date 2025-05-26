@@ -50,13 +50,13 @@ impl NodeIp {
             "no Ipv4 nor Ipv6 addresses were resolved"
         );
 
-        ONCE.call_once(|| 
+        ONCE.call_once(|| {
             // SAFETY: this should be called early before `Self::local_ip` is ever called
             unsafe {
                 IPV4 = ipv4;
                 IPV6 = ipv6;
             }
-        );
+        });
 
         Ok(())
     }
