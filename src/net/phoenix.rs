@@ -660,6 +660,7 @@ impl Node {
 
 #[cfg(test)]
 mod tests {
+    use crate::net::NodeIp;
     use crate::net::raw_socket_with_reuse;
 
     use super::*;
@@ -895,6 +896,10 @@ mod tests {
         let qcmp_port = qcmp_listener.port();
 
         let icao_code = "ABCD".parse().unwrap();
+
+        NodeIp::configure_remote_host("one.one.one.one")
+            .await
+            .unwrap();
 
         let datacenters = Arc::new(crate::config::crdt::XdsDatacenterMap::new(1).unwrap());
 
