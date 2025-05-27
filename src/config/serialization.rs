@@ -85,7 +85,7 @@ impl serde::Serialize for Config {
         if let Some(clusters) = self.dyn_cfg.clusters() {
             map.serialize_entry("clusters", clusters)?;
         }
-        if let Some(datacenters) = self.dyn_cfg.xds_datacenters() {
+        if let Some(datacenters) = self.dyn_cfg.datacenters() {
             map.serialize_entry("datacenters", datacenters)?;
         }
 

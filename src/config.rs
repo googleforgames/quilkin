@@ -146,7 +146,7 @@ mod test_impls {
             compare::<crate::filters::FilterChain>(&self.typemap, &other.typemap)
                 && compare::<qcmp::QcmpPort>(&self.typemap, &other.typemap)
                 && compare::<ClusterMap>(&self.typemap, &other.typemap)
-                && compare::<crdt::XdsDatacenterMap>(&self.typemap, &other.typemap)
+                && compare::<crdt::DatacenterMap>(&self.typemap, &other.typemap)
         }
     }
 
@@ -221,7 +221,7 @@ impl quilkin_xds::config::Configuration for Config {
 
         async move {
             let clusters = control_plane.config.dyn_cfg.clusters();
-            let datacenters = control_plane.config.dyn_cfg.xds_datacenters();
+            let datacenters = control_plane.config.dyn_cfg.datacenters();
             let filters = control_plane.config.dyn_cfg.subscribe_filter_changes();
             let qcmp_port = control_plane.config.dyn_cfg.qcmp_port();
 
@@ -310,7 +310,7 @@ impl quilkin_xds::config::Configuration for Config {
     }
 
     fn client_disconnected(&self, ip: std::net::IpAddr) {
-        if let Some(dc) = self.dyn_cfg.xds_datacenters() {
+        if let Some(dc) = self.dyn_cfg.datacenters() {
             dc.remove_datacenter(ip.into());
         }
     }
@@ -382,7 +382,7 @@ impl Config {
                         });
                     }
 
-                    if let Some(datacenters) = self.dyn_cfg.xds_datacenters() {
+                    if let Some(datacenters) = self.dyn_cfg.datacenters() {
                         datacenters.serialize_snapshot(&mut resources, &mut removed, client_state);
                     }
                 }
@@ -497,7 +497,7 @@ impl Config {
                 filters.store(fc);
             }
             ResourceType::Datacenter => {
-                if let Some(dm) = self.dyn_cfg.xds_datacenters() {
+                if let Some(dm) = self.dyn_cfg.datacenters() {
                     if let Some(addr) = remote_addr {
                         dm.apply_xds(resources, removed_resources, addr.into());
                     } else {

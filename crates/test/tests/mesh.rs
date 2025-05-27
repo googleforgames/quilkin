@@ -217,14 +217,14 @@ trace_test!(datacenter_discovery, {
             }
         }
 
-        let xds = relay_config.dyn_cfg.xds_datacenters().unwrap();
+        let xds = relay_config.dyn_cfg.datacenters().unwrap();
         let ipv4_dc = xds.get_by_ip(std::net::Ipv4Addr::LOCALHOST.into());
         let ipv6_dc = xds.get_by_ip(std::net::Ipv6Addr::LOCALHOST.into());
         assert_config(datacenter, ipv4_dc, ipv6_dc, 0);
     }
 
     {
-        let pds = proxy_config.dyn_cfg.xds_datacenters().unwrap();
+        let pds = proxy_config.dyn_cfg.datacenters().unwrap();
         let ipv4_dc = pds.get_by_ip(std::net::Ipv4Addr::LOCALHOST.into());
         let ipv6_dc = pds.get_by_ip(std::net::Ipv6Addr::LOCALHOST.into());
 
@@ -240,7 +240,7 @@ trace_test!(datacenter_discovery, {
         }
     }
 
-    let pds = proxy_config.dyn_cfg.xds_datacenters().unwrap();
+    let pds = proxy_config.dyn_cfg.datacenters().unwrap();
     let ipv4_dc = pds.get_by_ip(std::net::Ipv4Addr::LOCALHOST.into());
     let ipv6_dc = pds.get_by_ip(std::net::Ipv6Addr::LOCALHOST.into());
     assert_config(datacenter, ipv4_dc, ipv6_dc, 1);

@@ -41,12 +41,12 @@ use dashmap::DashMap;
 
 use crate::config::{
     IcaoCode,
-    crdt::datacenter_map::{DatacenterMapOp, XdsDatacenterMap},
+    crdt::datacenter_map::{DatacenterMap, DatacenterMapOp},
 };
 
 pub fn spawn_phoenix<M: Clone + Measurement + Sync + Send + 'static>(
     listener: crate::net::TcpListener,
-    xdm: Arc<XdsDatacenterMap>,
+    xdm: Arc<DatacenterMap>,
     phoenix: Phoenix<M>,
 ) -> crate::Result<crate::service::Finalizer> {
     use eyre::WrapErr as _;
@@ -491,7 +491,7 @@ impl<M: Measurement + 'static> Phoenix<M> {
         }
     }
 
-    pub fn refresh(&self, xdm: &XdsDatacenterMap) {
+    pub fn refresh(&self, xdm: &DatacenterMap) {
         self.nodes
             .retain(|key, _val| xdm.get_by_ip(key.ip()).is_some());
 
@@ -901,7 +901,7 @@ mod tests {
             .await
             .unwrap();
 
-        let datacenters = Arc::new(crate::config::crdt::XdsDatacenterMap::new(1).unwrap());
+        let datacenters = Arc::new(crate::config::crdt::DatacenterMap::new(1).unwrap());
 
         datacenters.apply_xds(
             vec![Resource {

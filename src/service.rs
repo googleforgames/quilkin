@@ -262,8 +262,8 @@ impl Service {
         }
 
         if self.xds_enabled || self.mds_enabled || self.phoenix_enabled {
-            let xds = crdt::XdsDatacenterMap::new(1000)?;
-            typemap.insert::<crdt::XdsDatacenterMap>(Arc::new(xds));
+            let xds = crdt::DatacenterMap::new(1000)?;
+            typemap.insert::<crdt::DatacenterMap>(Arc::new(xds));
         }
 
         if self.qcmp_enabled {
@@ -428,7 +428,7 @@ impl Service {
         Option<Finalizer>,
     )> {
         if self.phoenix_enabled {
-            let Some(xdm) = config.dyn_cfg.xds_datacenters() else {
+            let Some(xdm) = config.dyn_cfg.datacenters() else {
                 tracing::info!(
                     "not starting phoenix service even though it was requested, datacenters were not configured"
                 );
