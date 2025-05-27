@@ -416,36 +416,20 @@ impl<K: Ord, V: Val<A>, A: Ord + Hash + Clone> Map<K, V, A> {
 
     /// Returns true if the map has no entries, false otherwise
     #[inline]
-    pub fn is_empty(&self) -> ReadCtx<bool, A> {
-        ReadCtx {
-            add_clock: self.clock.clone(),
-            rm_clock: self.clock.clone(),
-            val: self.entries.is_empty(),
-        }
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
     }
 
     /// Returns the number of entries in the Map
     #[inline]
-    pub fn len(&self) -> ReadCtx<usize, A> {
-        ReadCtx {
-            add_clock: self.clock.clone(),
-            rm_clock: self.clock.clone(),
-            val: self.entries.len(),
-        }
+    pub fn len(&self) -> usize {
+        self.entries.len()
     }
 
     /// Retrieve value stored under a key
     #[inline]
-    pub fn get(&self, key: &K) -> ReadCtx<Option<&'_ V>, A> {
-        let add_clock = self.clock.clone();
-        let entry_opt = self.entries.get(key);
-        ReadCtx {
-            add_clock,
-            rm_clock: entry_opt
-                .map(|map_entry| map_entry.clock.clone())
-                .unwrap_or_default(),
-            val: entry_opt.map(|me| &me.val),
-        }
+    pub fn get(&self, key: &K) -> Option<&'_ V> {
+        self.entries.get(key).map(|entry| &entry.val)
     }
 
     #[inline]
@@ -560,125 +544,18 @@ impl<K: Ord, V: Val<A>, A: Ord + Hash + Clone> Map<K, V, A> {
     }
 
     /// Gets an iterator over the keys of the `Map`.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use crdts::Map;
-    /// use crdts::MVReg;
-    /// use crdts::CmRDT;
-    ///
-    /// type Actor = &'static str;
-    /// type Key = &'static str;
-    ///
-    /// let actor = "actor";
-    ///
-    /// let mut map: Map<i32, MVReg<Key, Actor>, Actor> = Map::new();
-    ///
-    /// let add_ctx = map.read_ctx().derive_add_ctx(actor);
-    /// map.apply(map.update(100, add_ctx, |v, a| v.write("foo", a)));
-    ///
-    /// let add_ctx = map.read_ctx().derive_add_ctx(actor);
-    /// map.apply(map.update(50, add_ctx, |v, a| v.write("bar", a)));
-    ///
-    /// let add_ctx = map.read_ctx().derive_add_ctx(actor);
-    /// map.apply(map.update(200, add_ctx, |v, a| v.write("baz", a)));
-    ///
-    ///
-    /// let mut keys: Vec<_> = map.keys().map(|key_ctx| *key_ctx.val).collect();
-    ///
-    /// keys.sort();
-    ///
-    /// assert_eq!(keys, &[50, 100, 200]);
-    /// ```
     #[inline]
-    pub fn keys(&self) -> impl Iterator<Item = ReadCtx<&K, A>> {
-        self.entries.iter().map(move |(k, v)| ReadCtx {
-            add_clock: self.clock.clone(),
-            rm_clock: v.clock.clone(),
-            val: k,
-        })
+    pub fn keys(&self) -> impl Iterator<Item = &K> {
+        self.entries.keys()
     }
 
     /// Gets an iterator over the values of the `Map`.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use crdts::Map;
-    /// use crdts::MVReg;
-    /// use crdts::CmRDT;
-    ///
-    /// type Actor = &'static str;
-    /// type Key = &'static str;
-    ///
-    /// let actor = "actor";
-    ///
-    /// let mut map: Map<i32, MVReg<Key, Actor>, Actor> = Map::new();
-    ///
-    /// let add_ctx = map.read_ctx().derive_add_ctx(actor);
-    /// map.apply(map.update(100, add_ctx, |v, a| v.write("foo", a)));
-    ///
-    /// let add_ctx = map.read_ctx().derive_add_ctx(actor);
-    /// map.apply(map.update(50, add_ctx, |v, a| v.write("bar", a)));
-    ///
-    /// let add_ctx = map.read_ctx().derive_add_ctx(actor);
-    /// map.apply(map.update(200, add_ctx, |v, a| v.write("baz", a)));
-    ///
-    ///
-    /// let mut values: Vec<_> = map
-    ///     .values()
-    ///     .map(|val_ctx| val_ctx.val.read().val[0])
-    ///     .collect();
-    ///
-    /// values.sort();
-    ///
-    /// assert_eq!(values, &["bar", "baz", "foo"]);
-    /// ```
     #[inline]
-    pub fn values(&self) -> impl Iterator<Item = ReadCtx<&V, A>> {
-        self.entries.values().map(move |v| ReadCtx {
-            add_clock: self.clock.clone(),
-            rm_clock: v.clock.clone(),
-            val: &v.val,
-        })
+    pub fn values(&self) -> impl Iterator<Item = &V> {
+        self.entries.values().map(|v| &v.val)
     }
 
     /// Gets an iterator over the entries of the `Map`.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use crdts::Map;
-    /// use crdts::MVReg;
-    /// use crdts::CmRDT;
-    ///
-    /// type Actor = &'static str;
-    /// type Key = &'static str;
-    ///
-    /// let actor = "actor";
-    ///
-    /// let mut map: Map<i32, MVReg<Key, Actor>, Actor> = Map::new();
-    ///
-    /// let add_ctx = map.read_ctx().derive_add_ctx(actor);
-    /// map.apply(map.update(100, add_ctx, |v, a| v.write("foo", a)));
-    ///
-    /// let add_ctx = map.read_ctx().derive_add_ctx(actor);
-    /// map.apply(map.update(50, add_ctx, |v, a| v.write("bar", a)));
-    ///
-    /// let add_ctx = map.read_ctx().derive_add_ctx(actor);
-    /// map.apply(map.update(200, add_ctx, |v, a| v.write("baz", a)));
-    ///
-    ///
-    /// let mut items: Vec<_> = map
-    ///     .iter()
-    ///     .map(|item_ctx| (*item_ctx.val.0, item_ctx.val.1.read().val[0]))
-    ///     .collect();
-    ///
-    /// items.sort();
-    ///
-    /// assert_eq!(items, &[(50, "bar"), (100, "foo"), (200, "baz")]);
-    /// ```
     #[inline]
     pub fn iter(&self) -> impl Iterator<Item = ReadCtx<(&K, &V), A>> {
         self.entries.iter().map(move |(k, v)| ReadCtx {
@@ -688,6 +565,7 @@ impl<K: Ord, V: Val<A>, A: Ord + Hash + Clone> Map<K, V, A> {
         })
     }
 
+    /// Retrieves the clock for the specified actor, if present.
     #[inline]
     pub fn clock_for_actor(&self, actor: A) -> Option<VClock<A>> {
         let counter = self.clock.dots.get(&actor)?;

@@ -246,12 +246,6 @@ impl<M: Hash + Clone + Eq, A: Ord + Hash + Clone> Orswot<M, A> {
         Default::default()
     }
 
-    /// Return a snapshot of the ORSWOT clock
-    #[inline]
-    pub fn clock(&self) -> VClock<A> {
-        self.clock.clone()
-    }
-
     /// Add a single element.
     #[inline]
     pub fn add(&self, member: M, ctx: AddCtx<A>) -> Op<M, A> {
@@ -313,14 +307,8 @@ impl<M: Hash + Clone + Eq, A: Ord + Hash + Clone> Orswot<M, A> {
 
     /// Check if the set contains a member
     #[inline]
-    pub fn contains(&self, member: &M) -> ReadCtx<bool, A> {
-        let member_clock_opt = self.entries.get(member);
-        let exists = member_clock_opt.is_some();
-        ReadCtx {
-            add_clock: self.clock.clone(),
-            rm_clock: member_clock_opt.cloned().unwrap_or_default(),
-            val: exists,
-        }
+    pub fn contains(&self, member: &M) -> bool {
+        self.entries.contains_key(member)
     }
 
     #[inline]
@@ -329,31 +317,6 @@ impl<M: Hash + Clone + Eq, A: Ord + Hash + Clone> Orswot<M, A> {
     }
 
     /// Gets an iterator over the entries of the `Map`.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use crdts::{Orswot, CmRDT};
-    ///
-    /// let actor = "actor";
-    ///
-    /// let mut set: Orswot<u8, &'static str> = Default::default();
-    ///
-    /// let add_ctx = set.read_ctx().derive_add_ctx(actor);
-    /// set.apply(set.add(100, add_ctx));
-    ///
-    /// let add_ctx = set.read_ctx().derive_add_ctx(actor);
-    /// set.apply(set.add(50, add_ctx));
-    ///
-    /// let mut items: Vec<_> = set
-    ///     .iter()
-    ///     .map(|item_ctx| *item_ctx.val)
-    ///     .collect();
-    ///
-    /// items.sort();
-    ///
-    /// assert_eq!(items, &[50, 100]);
-    /// ```
     #[inline]
     pub fn iter(&self) -> impl Iterator<Item = &M> {
         self.entries.keys()
