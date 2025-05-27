@@ -12,26 +12,26 @@ pub type DatacenterMapCollection =
     collections::Map<IcaoCode, collections::Orswot<NodeAddress, NodeIp>, NodeIp>;
 pub type InnerDatacenterMapOp = MapOp<IcaoCode, collections::Orswot<NodeAddress, NodeIp>, NodeIp>;
 
-impl typemap_rev::TypeMapKey for XdsDatacenterMap {
-    type Value = Arc<XdsDatacenterMap>;
+impl typemap_rev::TypeMapKey for DatacenterMap {
+    type Value = Arc<DatacenterMap>;
 }
 
 impl crate::config::DynamicConfig {
     #[inline]
-    pub fn xds_datacenters(&self) -> Option<&Arc<XdsDatacenterMap>> {
-        self.typemap.get::<XdsDatacenterMap>()
+    pub fn xds_datacenters(&self) -> Option<&Arc<DatacenterMap>> {
+        self.typemap.get::<DatacenterMap>()
     }
 }
 
 #[derive(Debug)]
-pub struct XdsDatacenterMap {
+pub struct DatacenterMap {
     dm: parking_lot::Mutex<DatacenterMapCollection>,
     local_ip: NodeIp,
     remote: parking_lot::Mutex<NodeIp>,
     tx: DatacenterMapOpSender,
 }
 
-impl XdsDatacenterMap {
+impl DatacenterMap {
     pub fn new(capacity: usize) -> Result<Self, UnknownIp> {
         let local_ip = NodeIp::local_ip()?;
         let (tx, _rx) = tokio::sync::broadcast::channel(capacity);
@@ -216,7 +216,14 @@ impl XdsDatacenterMap {
 
     #[inline]
     pub fn get_by_ip(&self, ip: std::net::IpAddr) -> Option<Datacenter> {
-        get_by_ip(&self.dm.lock(), ip)
+        self.dm.lock().entries.iter().find_map(|(key, entry)| {
+            entry.val.entries.iter().find_map(|(addr, _)| {
+                (addr.ip == ip).then_some(Datacenter {
+                    icao_code: *key,
+                    qcmp_port: addr.port,
+                })
+            })
+        })
     }
 
     #[inline]
@@ -376,13 +383,13 @@ fn parse_old_key(s: &str) -> Option<(IcaoCode, u16)> {
     Some((icao.parse().ok()?, port.parse().ok()?))
 }
 
-impl PartialEq for XdsDatacenterMap {
+impl PartialEq for DatacenterMap {
     fn eq(&self, other: &Self) -> bool {
         self.dm.lock().content_equal(&other.dm.lock())
     }
 }
 
-impl serde::Serialize for XdsDatacenterMap {
+impl serde::Serialize for DatacenterMap {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -392,7 +399,7 @@ impl serde::Serialize for XdsDatacenterMap {
 }
 
 #[cfg(test)]
-impl Default for XdsDatacenterMap {
+impl Default for DatacenterMap {
     fn default() -> Self {
         Self {
             dm: Default::default(),
@@ -423,15 +430,3 @@ pub enum DatacenterMapOp {
 
 pub type DatacenterMapOpReceiver = tokio::sync::broadcast::Receiver<DatacenterMapOp>;
 pub type DatacenterMapOpSender = tokio::sync::broadcast::Sender<DatacenterMapOp>;
-
-#[inline]
-fn get_by_ip(dm: &DatacenterMapCollection, ip: std::net::IpAddr) -> Option<Datacenter> {
-    dm.entries.iter().find_map(|(key, entry)| {
-        entry.val.entries.iter().find_map(|(addr, _)| {
-            (addr.ip == ip).then_some(Datacenter {
-                icao_code: *key,
-                qcmp_port: addr.port,
-            })
-        })
-    })
-}
