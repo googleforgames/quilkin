@@ -39,19 +39,19 @@ use std::{collections::HashMap, net::SocketAddr, ops::Range, sync::Arc, time::Du
 use async_trait::async_trait;
 use dashmap::DashMap;
 
-use crate::config::{self, IcaoCode};
+use crate::config::{
+    IcaoCode,
+    crdt::datacenter_map::{DatacenterMap, DatacenterMapOp},
+};
 
-pub fn spawn<M: Clone + Measurement + Sync + Send + 'static>(
+pub fn spawn_phoenix<M: Clone + Measurement + Sync + Send + 'static>(
     listener: crate::net::TcpListener,
-    datacenters: config::Watch<config::DatacenterMap>,
+    xdm: Arc<DatacenterMap>,
     phoenix: Phoenix<M>,
 ) -> crate::Result<crate::service::Finalizer> {
     use eyre::WrapErr as _;
     use hyper::{Response, StatusCode};
 
-    phoenix.add_nodes_from_config(&datacenters);
-
-    let mut dc_watcher = datacenters.watch();
     let (shutdown_tx, mut shutdown_rx) = crate::signal::channel(Default::default());
 
     let ph_thread = std::thread::Builder::new()
@@ -70,7 +70,6 @@ pub fn spawn<M: Clone + Measurement + Sync + Send + 'static>(
                 .unwrap();
             let res = runtime.block_on({
                 let mut phoenix_watcher = phoenix.update_watcher();
-                let datacenters = datacenters.clone();
 
                 async move {
                     let json = Arc::new(arc_swap::ArcSwap::new(Arc::new(serde_json::Map::default())));
@@ -144,13 +143,25 @@ pub fn spawn<M: Clone + Measurement + Sync + Send + 'static>(
                             Ok(())
                         });
 
+                    phoenix.refresh(&xdm);
+                    let mut rx = xdm.watch();
+
                     let res = loop {
                         use eyre::WrapErr as _;
 
                         tokio::select! {
                             _ = shutdown_rx.changed() => break Ok::<_, eyre::Error>(()),
-                            result = dc_watcher.changed() => if let Err(err) = result {
-                                break Err(err).context("config watcher sender dropped");
+                            result = rx.recv() => {
+                                match result {
+                                    Ok(op) => phoenix.add_nodes_from_config(op),
+                                    Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+                                        eyre::bail!("Config sender dropped");
+                                    }
+                                    Err(tokio::sync::broadcast::error::RecvError::Lagged(count)) => {
+                                        tracing::warn!(count, "phoenix datacentermap op receiver lagged, performing a full refresh");
+                                        phoenix.refresh(&xdm);
+                                    }
+                                }
                             },
                             result = phoenix_watcher.changed() => if let Err(err) = result {
                                 break Err(err).context("phoenix watcher sender dropped");
@@ -158,7 +169,6 @@ pub fn spawn<M: Clone + Measurement + Sync + Send + 'static>(
                         }
 
                         tracing::trace!("change detected, updating phoenix");
-                        phoenix.add_nodes_from_config(&datacenters);
                         let nodes = phoenix.ordered_nodes_by_latency();
                         let mut new_json = serde_json::Map::default();
 
@@ -464,16 +474,34 @@ impl<M: Measurement + 'static> Phoenix<M> {
             .or_insert_with(|| Node::new(icao_code));
     }
 
-    pub fn add_nodes_from_config(&self, datacenters: &config::Watch<config::DatacenterMap>) {
-        let dcs = datacenters.write();
-
-        for removed in dcs.removed() {
-            self.nodes.remove(&removed);
+    pub fn add_nodes_from_config(&self, op: DatacenterMapOp) {
+        match op {
+            DatacenterMapOp::Add { icao, ip, port } => {
+                self.nodes.insert(ip.to_socket_addr(port), Node::new(icao));
+            }
+            DatacenterMapOp::Clear => {
+                self.nodes.clear();
+            }
+            DatacenterMapOp::Rm { ip, port, .. } => {
+                self.nodes.remove(&ip.to_socket_addr(port));
+            }
+            DatacenterMapOp::RmAll { icao } => {
+                self.nodes.retain(|_, node| node.icao_code != icao);
+            }
         }
+    }
 
-        for entry in dcs.iter() {
-            let addr = (*entry.key(), entry.value().qcmp_port).into();
-            self.add_node_if_not_exists(addr, entry.value().icao_code);
+    pub fn refresh(&self, xdm: &DatacenterMap) {
+        self.nodes
+            .retain(|key, _val| xdm.get_by_ip(key.ip()).is_some());
+
+        for (key, entry) in &xdm.inner().entries {
+            for addr in entry.val.entries.keys() {
+                let saddr = addr.to_socket_addr();
+                if !self.nodes.contains_key(&saddr) {
+                    self.nodes.insert(saddr, Node::new(*key));
+                }
+            }
         }
     }
 }
@@ -632,9 +660,11 @@ impl Node {
 
 #[cfg(test)]
 mod tests {
+    use crate::net::NodeIp;
     use crate::net::raw_socket_with_reuse;
 
     use super::*;
+    use quilkin_xds::discovery::Resource;
     use std::collections::HashMap;
     use std::collections::HashSet;
     use std::net::SocketAddr;
@@ -867,15 +897,32 @@ mod tests {
 
         let icao_code = "ABCD".parse().unwrap();
 
-        let datacenters =
-            crate::config::Watch::<crate::config::DatacenterMap>::new(Default::default());
+        NodeIp::configure_remote_host("one.one.one.one")
+            .await
+            .unwrap();
 
-        datacenters.write().insert(
-            std::net::Ipv4Addr::LOCALHOST.into(),
-            crate::config::Datacenter {
-                qcmp_port,
-                icao_code,
-            },
+        let datacenters = Arc::new(crate::config::crdt::DatacenterMap::new(1).unwrap());
+
+        datacenters.apply_xds(
+            vec![Resource {
+                resource: Some(
+                    crate::xds::Resource::from((
+                        icao_code,
+                        qcmp_port,
+                        Some(std::net::Ipv4Addr::LOCALHOST.into()),
+                    ))
+                    .try_encode()
+                    .unwrap(),
+                ),
+                // None of these matter for tests
+                name: String::new(),
+                aliases: Vec::new(),
+                version: String::new(),
+                ttl: None,
+                cache_control: None,
+            }],
+            &[],
+            std::net::Ipv4Addr::new(1, 2, 3, 4).into(),
         );
 
         let (_tx, rx) = crate::signal::channel(Default::default());
@@ -892,7 +939,7 @@ mod tests {
             .interval_range(Duration::from_millis(10)..Duration::from_millis(15))
             .build();
 
-        let end = super::spawn(qcmp_listener, datacenters, phoenix).unwrap();
+        let end = super::spawn_phoenix(qcmp_listener, datacenters.clone(), phoenix).unwrap();
         tokio::time::sleep(Duration::from_millis(150)).await;
 
         let client =
@@ -923,7 +970,10 @@ mod tests {
 
             let min = Coordinates::ORIGIN.distance_to(&coords);
             let max = min * 3.0;
-            let distance = map[icao_code.as_ref()].as_f64().unwrap();
+
+            let Some(distance) = map.get(icao_code.as_ref()).and_then(|v| v.as_f64()) else {
+                continue;
+            };
 
             assert!(
                 distance > min && distance < max,

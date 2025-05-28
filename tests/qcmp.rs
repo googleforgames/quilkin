@@ -31,8 +31,8 @@ async fn proxy_ping() {
         to: vec![(Ipv4Addr::UNSPECIFIED, 0).into()],
         ..<_>::default()
     };
-    let server_config = std::sync::Arc::new(quilkin::Config::default());
-    t.run_server(server_config, Some(server_proxy), None).await;
+    t.run_server(Some(server_proxy), Default::default(), None)
+        .await;
     ping(qcmp_port).await;
 }
 

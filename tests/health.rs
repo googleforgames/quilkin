@@ -25,18 +25,9 @@ const LIVE_ADDRESS: &str = "http://localhost:9093/live";
 async fn health_server() {
     let mut t = TestHelper::default();
 
-    // create server configuration
-    let server_config = std::sync::Arc::new(quilkin::Config::default());
-    server_config
-        .dyn_cfg
-        .clusters()
-        .unwrap()
-        .modify(|clusters| {
-            clusters.insert_default(["127.0.0.1:0".parse::<Endpoint>().unwrap()].into());
-        });
     t.run_server(
-        server_config,
         None,
+        ["127.0.0.1:0".parse::<Endpoint>().unwrap()].into(),
         Some(Some((std::net::Ipv6Addr::UNSPECIFIED, 9093).into())),
     )
     .await;

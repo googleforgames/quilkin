@@ -95,8 +95,8 @@ mod tests {
 
     #[tokio::test]
     async fn basic() {
-        let source = Arc::new(crate::Config::default());
-        let dest = Arc::new(crate::Config::default());
+        let source = Arc::new(crate::Config::test_default());
+        let dest = Arc::new(crate::Config::test_default());
         assert_eq!(source, dest);
 
         let tmp_dir = tempfile::tempdir().unwrap();

@@ -179,7 +179,11 @@ where
 {
     /// Returns a reference to value corresponding to key.
     #[inline]
-    pub fn get(&self, key: &K) -> Option<Ref<'_, K, Value<V>>> {
+    pub fn get<Q>(&self, key: &Q) -> Option<Ref<'_, K, Value<V>>>
+    where
+        K: std::borrow::Borrow<Q>,
+        Q: Hash + Eq + ?Sized,
+    {
         let value = self.0.inner.get(key);
         if let Some(value) = &value {
             value.update_expiration(self.0.ttl);

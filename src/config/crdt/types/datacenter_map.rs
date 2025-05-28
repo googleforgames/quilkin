@@ -18,7 +18,7 @@ impl typemap_rev::TypeMapKey for DatacenterMap {
 
 impl crate::config::DynamicConfig {
     #[inline]
-    pub fn xds_datacenters(&self) -> Option<&Arc<DatacenterMap>> {
+    pub fn datacenters(&self) -> Option<&Arc<DatacenterMap>> {
         self.typemap.get::<DatacenterMap>()
     }
 }

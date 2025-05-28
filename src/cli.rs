@@ -130,6 +130,8 @@ pub struct Cli {
     pub providers: crate::Providers,
     #[command(flatten)]
     pub service: crate::service::Service,
+    #[clap(long = "remote.host.ip.resolver", default_value = "one.one.one.one")]
+    pub remote_host_ip_resolver: String,
 }
 
 /// The various log format options
@@ -211,7 +213,7 @@ impl Cli {
     /// Drives the main quilkin application lifecycle using the command line
     /// arguments.
     #[tracing::instrument(skip_all)]
-    pub async fn drive(self) -> crate::Result<()> {
+    pub async fn drive(mut self) -> crate::Result<()> {
         // Configure rolling log file appender if directory has been specified.
         // _log_file_guard should be kept in scope and will trigger the final flush to file when dropped
         let (file_writer, _log_file_guard) = match &self.log_directory {
@@ -257,9 +259,15 @@ impl Cli {
         tracing::debug!(cli = ?self, "config parameters");
 
         let locality = self.locality.locality();
-        let config =
-            self.service
-                .read_config(&self.config, self.locality.icao_code, locality.clone())?;
+        let config = self
+            .service
+            .read_config(
+                &self.config,
+                self.locality.icao_code,
+                locality.clone(),
+                Some(self.remote_host_ip_resolver),
+            )
+            .await?;
 
         let ready = Arc::<std::sync::atomic::AtomicBool>::default();
         let (shutdown_tx, shutdown_rx) = crate::signal::spawn_handler();

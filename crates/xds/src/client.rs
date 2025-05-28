@@ -486,6 +486,42 @@ impl Drop for DeltaSubscription {
     }
 }
 
+use std::net::IpAddr;
+
+#[inline]
+async fn endpoint_ip(endpoint: &tonic::transport::Endpoint) -> Option<IpAddr> {
+    static DNS: once_cell::sync::Lazy<hickory_resolver::TokioResolver> =
+        once_cell::sync::Lazy::new(|| {
+            hickory_resolver::TokioResolver::builder_tokio()
+                .unwrap()
+                .build()
+        });
+
+    let host = endpoint.uri().host()?;
+    if let Ok(ip) = host.parse() {
+        Some(ip)
+    } else {
+        let lookup = DNS
+            .lookup_ip(host)
+            .await
+            .inspect_err(|error| {
+                tracing::warn!(%error, host, "failed to resolve IP address");
+            })
+            .ok()?;
+
+        let ip = lookup
+            .iter()
+            .find(|item| matches!(item, IpAddr::V6(_)))
+            .or_else(|| lookup.iter().find(|item| matches!(item, IpAddr::V4(_))));
+
+        if ip.is_none() {
+            tracing::warn!(host, "DNS lookup succeeded, but no IP records were found");
+        }
+
+        ip
+    }
+}
+
 /// Attempts to start a new delta stream to the xDS management server, if the
 /// management server does not support delta xDS we return the client as an error
 #[allow(clippy::type_complexity)]
@@ -509,6 +545,8 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
             return Err(err);
         }
     };
+
+    let mut remote_addr = endpoint_ip(&connected_endpoint).await;
 
     async fn handle_first_response(
         stream: &mut tonic::Streaming<DeltaDiscoveryResponse>,
@@ -574,7 +612,7 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
                     stream,
                     config.clone(),
                     local.clone(),
-                    None,
+                    remote_addr,
                     notifier.clone(),
                 );
 
@@ -625,6 +663,7 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
                 tracing::info!("Lost connection to xDS, retrying");
                 (ds, stream, connected_endpoint) =
                     DeltaClientStream::connect(&endpoints, identifier.clone()).await?;
+                remote_addr = endpoint_ip(&connected_endpoint).await;
 
                 resource_subscriptions = handle_first_response(&mut stream, resources).await?;
                 tracing::info!("received first response");

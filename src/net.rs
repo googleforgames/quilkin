@@ -19,9 +19,12 @@ pub mod endpoint;
 pub mod error;
 pub mod io;
 pub(crate) mod maxmind_db;
+mod node_ip;
 pub mod packet;
 pub mod phoenix;
 pub mod sessions;
+
+pub use node_ip::{NodeAddress, NodeIp, UnknownIp};
 
 use std::{
     io::Result as IoResult,

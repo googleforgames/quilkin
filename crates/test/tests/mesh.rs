@@ -160,7 +160,9 @@ trace_test!(datacenter_discovery, {
         unreachable!()
     };
 
-    let datacenter = quilkin::config::Datacenter {
+    use quilkin::config::Datacenter;
+
+    let datacenter = Datacenter {
         qcmp_port: *qcmp_port,
         icao_code,
     };
@@ -182,39 +184,54 @@ trace_test!(datacenter_discovery, {
 
     #[track_caller]
     fn assert_config(
-        which: &str,
-        config: &quilkin::Config,
-        datacenter: &quilkin::config::Datacenter,
+        expected: Datacenter,
+        ipv4_dc: Option<Datacenter>,
+        ipv6_dc: Option<Datacenter>,
         counter: u32,
     ) -> bool {
-        let dcs = config.dyn_cfg.datacenters().unwrap().read();
-
-        for i in dcs.iter() {
-            dbg!(which, i.key(), i.value());
-        }
-
-        let ipv4_dc = dcs.get(&std::net::Ipv4Addr::LOCALHOST.into());
-        let ipv6_dc = dcs.get(&std::net::Ipv6Addr::LOCALHOST.into());
-
         if counter > 0 {
             match (ipv4_dc, ipv6_dc) {
-                (Some(dc), None) | (None, Some(dc)) => assert_eq!(&*dc, datacenter),
+                (Some(dc), None) | (None, Some(dc)) => assert_eq!(dc, expected),
                 (Some(dc1), Some(dc2)) => {
-                    assert_eq!(&*dc1, datacenter);
-                    assert_eq!(&*dc2, datacenter);
+                    assert_eq!(dc1, expected);
+                    assert_eq!(dc2, expected);
                 }
                 (None, None) => panic!("No datacenter found"),
             };
             true
         } else {
             match (ipv4_dc, ipv6_dc) {
-                (Some(dc), None) | (None, Some(dc)) => &*dc == datacenter,
-                (Some(dc1), Some(dc2)) => &*dc1 == datacenter && &*dc2 == datacenter,
+                (Some(dc), None) | (None, Some(dc)) => dc == expected,
+                (Some(dc1), Some(dc2)) => dc1 == expected && dc2 == expected,
                 (None, None) => false,
             }
         }
     }
 
+    {
+        loop {
+            let rt = sandbox.timeout(10000, proxy_delta_rx.recv()).await.unwrap();
+
+            if matches!(rt.as_ref(), quilkin::xds::DATACENTER_TYPE) {
+                break;
+            }
+        }
+
+        let xds = relay_config.dyn_cfg.datacenters().unwrap();
+        let ipv4_dc = xds.get_by_ip(std::net::Ipv4Addr::LOCALHOST.into());
+        let ipv6_dc = xds.get_by_ip(std::net::Ipv6Addr::LOCALHOST.into());
+        assert_config(datacenter, ipv4_dc, ipv6_dc, 0);
+    }
+
+    {
+        let pds = proxy_config.dyn_cfg.datacenters().unwrap();
+        let ipv4_dc = pds.get_by_ip(std::net::Ipv4Addr::LOCALHOST.into());
+        let ipv6_dc = pds.get_by_ip(std::net::Ipv6Addr::LOCALHOST.into());
+
+        if assert_config(datacenter, ipv4_dc, ipv6_dc, 0) {
+            return;
+        }
+    }
     loop {
         let rt = sandbox.timeout(10000, proxy_delta_rx.recv()).await.unwrap();
 
@@ -222,19 +239,11 @@ trace_test!(datacenter_discovery, {
             break;
         }
     }
-    assert_config("relay", relay_config, &datacenter, 0);
 
-    if assert_config("proxy", proxy_config, &datacenter, 0) {
-        return;
-    }
-    loop {
-        let rt = sandbox.timeout(10000, proxy_delta_rx.recv()).await.unwrap();
-
-        if matches!(rt.as_ref(), quilkin::xds::DATACENTER_TYPE) {
-            break;
-        }
-    }
-    assert_config("proxy", proxy_config, &datacenter, 1);
+    let pds = proxy_config.dyn_cfg.datacenters().unwrap();
+    let ipv4_dc = pds.get_by_ip(std::net::Ipv4Addr::LOCALHOST.into());
+    let ipv6_dc = pds.get_by_ip(std::net::Ipv6Addr::LOCALHOST.into());
+    assert_config(datacenter, ipv4_dc, ipv6_dc, 1);
 });
 
 trace_test!(filter_update, {

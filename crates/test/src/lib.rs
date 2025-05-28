@@ -1,13 +1,13 @@
 use quilkin::{
     Config,
     collections::{BufferPool, PoolBuffer},
-    components::{self, RunArgs},
-    net::TcpListener,
+    components,
+    net::{NodeIp, TcpListener},
     signal::ShutdownTx,
     test::TestConfig,
 };
 pub use serde_json::json;
-use std::{net::SocketAddr, num::NonZeroUsize, path::PathBuf, sync::Arc};
+use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 use tokio::sync::mpsc;
 
 #[cfg(target_os = "linux")]
@@ -259,14 +259,8 @@ impl Pail {
 }
 
 impl Pail {
-    pub fn construct(
-        spc: SandboxPailConfig,
-        pails: &Pails,
-        td: &std::path::Path,
-    ) -> (Self, Option<tokio::sync::oneshot::Receiver<()>>) {
-        let mut rx = None;
-
-        let pail = match spc.config {
+    pub async fn construct(spc: SandboxPailConfig, pails: &Pails, td: &std::path::Path) -> Self {
+        match spc.config {
             PailConfig::Server(sspc) => {
                 let (packet_tx, packet_rx) = mpsc::channel::<String>(10);
                 let socket = quilkin::net::DualStackEpollSocket::new(0)
@@ -324,12 +318,12 @@ impl Pail {
                 let (shutdown, shutdown_rx) =
                     quilkin::signal::channel(quilkin::signal::ShutdownKind::Testing);
 
-                let svc = quilkin::Service::default()
+                let mut svc = quilkin::Service::default()
                     .xds()
                     .xds_port(xds_port)
                     .mds()
                     .mds_port(mds_port);
-                let config = Arc::new(svc.build_config(Default::default()).unwrap());
+                let config = Arc::new(svc.build_config(Default::default(), None).await.unwrap());
                 *config.dyn_cfg.id.lock() = spc.name.into();
                 let provider_task = quilkin::Providers::default()
                     .fs()
@@ -396,9 +390,10 @@ impl Pail {
                 );
 
                 let config_path = path.clone();
-                let svc = quilkin::Service::default().qcmp().qcmp_port(port);
+                let mut svc = quilkin::Service::default().qcmp().qcmp_port(port);
                 let config = Arc::new(
-                    svc.build_config(apc.icao_code)
+                    svc.build_config(apc.icao_code, None)
+                        .await
                         .expect("failed to build agent config"),
                 );
                 *config.dyn_cfg.id.lock() = spc.name.into();
@@ -452,28 +447,21 @@ impl Pail {
 
                 let (tx, orx) = tokio::sync::oneshot::channel();
 
-                let svc = quilkin::Service::default()
-                    .udp()
-                    .udp_port(port)
-                    .qcmp()
-                    .qcmp_port(qcmp_port)
-                    .phoenix()
-                    .phoenix_port(phoenix_port)
-                    .termination_timeout(None);
-
-                let config = Arc::new(svc.build_config(Default::default()).unwrap());
-
-                if let Some(cfg) = ppc.config {
+                let filters = if let Some(cfg) = ppc.config {
                     if !cfg.clusters.is_empty() {
                         panic!("not implemented");
                     }
 
                     if !cfg.filters.is_empty() {
-                        config.dyn_cfg.filters().unwrap().store(cfg.filters);
+                        Some(cfg.filters)
+                    } else {
+                        None
                     }
-                }
+                } else {
+                    None
+                };
 
-                let endpoints: std::collections::BTreeSet<_> = spc
+                let to = spc
                     .dependencies
                     .iter()
                     .filter_map(|dname| {
@@ -481,47 +469,29 @@ impl Pail {
                             return None;
                         };
 
-                        Some(quilkin::net::Endpoint::new(
-                            (std::net::Ipv6Addr::LOCALHOST, *port).into(),
-                        ))
+                        Some((std::net::Ipv6Addr::LOCALHOST, *port).into())
                     })
                     .collect();
-
-                if !endpoints.is_empty() {
-                    config
-                        .dyn_cfg
-                        .clusters()
-                        .unwrap()
-                        .modify(|clusters| clusters.insert_default(endpoints));
-                }
-
-                *config.dyn_cfg.id.lock() = spc.name.into();
-                let pconfig = config.clone();
 
                 let (rttx, rtrx) = tokio::sync::mpsc::unbounded_channel();
 
                 let task = tokio::spawn(async move {
                     components::proxy::Proxy {
-                        num_workers: NonZeroUsize::new(1).unwrap(),
                         management_servers,
                         socket: Some(socket),
                         qcmp,
                         phoenix,
                         notifier: Some(rttx),
+                        to,
+                        filters,
+                        id: Some(spc.name.into()),
                         ..Default::default()
                     }
-                    .run(
-                        RunArgs {
-                            config: pconfig,
-                            ready: Default::default(),
-                            shutdown_rx,
-                        },
-                        Some(tx),
-                    )
+                    .run(Default::default(), shutdown_rx, Some(tx))
                     .await
                 });
 
-                rx = Some(orx);
+                let config = orx.await.unwrap();
 
                 Self::Proxy(ProxyPail {
                     port,
@@ -533,8 +503,7 @@ impl Pail {
                     delta_applies: Some(rtrx),
                 })
             }
-        };
-        (pail, rx)
+        }
     }
 }
 
@@ -587,6 +556,15 @@ impl SandboxConfig {
     }
 
     pub async fn spinup(self) -> Sandbox {
+        static INITED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+        if !INITED.load(std::sync::atomic::Ordering::Relaxed) {
+            NodeIp::configure_remote_host("one.one.one.one")
+                .await
+                .unwrap();
+            INITED.store(true, std::sync::atomic::Ordering::Relaxed);
+        }
+
         // Validate that every dependency is satisfied
         for i in 0..self.pails.len() {
             let deps = self.pails[i].dependencies;
@@ -617,11 +595,7 @@ impl SandboxConfig {
         let mut pails = Pails::new();
         for pc in self.pails {
             let name = pc.name;
-            let (pail, rx) = Pail::construct(pc, &pails, td.path());
-
-            if let Some(rx) = rx {
-                rx.await.unwrap();
-            }
+            let pail = Pail::construct(pc, &pails, td.path()).await;
 
             if pails.insert(name, pail).is_some() {
                 panic!("{name} already existed");

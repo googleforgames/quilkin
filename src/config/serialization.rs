@@ -103,7 +103,7 @@ mod tests {
 
     #[test]
     fn deserialise_client() {
-        let config = Config::default();
+        let config = Config::test_default();
         config.dyn_cfg.clusters().unwrap().modify(|clusters| {
             clusters.insert_default([Endpoint::new("127.0.0.1:25999".parse().unwrap())].into());
         });
@@ -113,7 +113,7 @@ mod tests {
 
     #[test]
     fn deserialise_server() {
-        let config = Config::default();
+        let config = Config::test_default();
         config.dyn_cfg.clusters().unwrap().modify(|clusters| {
             clusters.insert_default(
                 [
@@ -129,7 +129,7 @@ mod tests {
 
     #[test]
     fn parse_default_values() {
-        let config = Config::default();
+        let config = Config::test_default();
         let before = config.id();
         assert!(!before.is_empty());
         config
@@ -148,7 +148,7 @@ mod tests {
 
     #[test]
     fn parse_client() {
-        let config = Config::default();
+        let config = Config::test_default();
         config
             .update_from_json(
                 serde_json::from_value(json!({
@@ -175,7 +175,7 @@ mod tests {
 
     #[test]
     fn parse_ipv6_endpoint() {
-        let config = Config::default();
+        let config = Config::test_default();
         config
             .update_from_json(
                 serde_json::from_value(json!({
@@ -211,7 +211,7 @@ mod tests {
 
     #[test]
     fn parse_server() {
-        let config = Config::default();
+        let config = Config::test_default();
         config
             .update_from_json(
                 serde_json::from_value(json!({
@@ -323,7 +323,7 @@ dynamic:
 ",
         ];
 
-        let config = Config::default();
+        let config = Config::test_default();
         for cstr in configs {
             let json = serde_yaml::from_str(cstr).unwrap();
             let result = config.update_from_json(json, None);
