@@ -25,13 +25,13 @@
 class FQuilkinModule : public IModuleInterface
 {
 public:
-	//~ Begin IModuleInterface interface
-	virtual void StartupModule() override;
-	virtual void ShutdownModule() override;
-	virtual bool SupportsDynamicReloading() override;
-	virtual bool SupportsAutomaticShutdown() override;
-	//~ End IModuleInterface Interface
+    //~ Begin IModuleInterface interface
+    virtual void StartupModule() override;
+    virtual void ShutdownModule() override;
+    virtual bool SupportsDynamicReloading() override;
+    virtual bool SupportsAutomaticShutdown() override;
+    //~ End IModuleInterface Interface
 
 private:
-	TSharedPtr<FQuilkinSocketSubsystem> QuilkinSocketSubsystem;
+    TSharedPtr<FQuilkinSocketSubsystem> QuilkinSocketSubsystem;
 };

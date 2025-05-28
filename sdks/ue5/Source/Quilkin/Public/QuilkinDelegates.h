@@ -25,33 +25,54 @@
 
 using EndpointMap = TMap <FString, EndpointPair>;
 using DatacenterMap = TMap <FString, int64>;
+using AddrLatency = TPair <TSharedPtr<FInternetAddr>, int64>;
 class QUILKIN_API FQuilkinDelegates
 {
 public:
-	/**
-	 * Delegate used to get a copy of the proxy endpoints with their latest median latency.
-	 */
-	DECLARE_DELEGATE_RetVal(TArray<EndpointPair>, FGetQuilkinEndpointMeasurements);
-	static FGetQuilkinEndpointMeasurements GetQuilkinEndpointMeasurements;
+    /**
+     * Delegate used to get a copy of the proxy endpoints with their latest median latency.
+     */
+    DECLARE_DELEGATE_RetVal(TArray<EndpointPair>, FGetQuilkinEndpointMeasurements);
+    static FGetQuilkinEndpointMeasurements GetQuilkinEndpointMeasurements;
 
-	/**
-	 * Delegate used to get the endpoint with the lowest median latency. Returns `None` if
-	 * there are no endpoints, or `MeasureEndpoints` is `false`.
-	 */
-	DECLARE_DELEGATE_RetVal(TOptional<EndpointPair>, FGetLowestLatencyEndpoint);
-	static FGetLowestLatencyEndpoint GetLowestLatencyEndpoint;
+    /**
+     * Delegate used to get the endpoint with the lowest median latency, if the parameter is
+     * an empty string, then it returns the lowest to the client, if a datacenter code is provided
+     * then it returns the endpoint creates the shortest path to the datacenter. Returns `None` if
+     * there are no endpoints, the datacenter parameter is non-empty and not found, or
+     * `MeasureEndpoints` is `false`.
+     */
+    DECLARE_DELEGATE_RetVal_OneParam(TOptional<EndpointPair>, FGetLowestLatencyEndpoint, FString);
+    static FGetLowestLatencyEndpoint GetLowestLatencyEndpoint;
 
-	/**
-	 * Delegate used to get the endpoint that matches the `Region` paramaeter with the
-	 * lowest median latency. Returns `None` if there are no endpoints matching that region,
-	 * or `MeasureEndpoints` is `false`.
-	 */
-	DECLARE_DELEGATE_RetVal_OneParam(TOptional<EndpointPair>, FGetLowestLatencyEndpointInRegion, FString);
-	static FGetLowestLatencyEndpointInRegion GetLowestLatencyEndpointInRegion;
+    /**
+     * Delegate used to get the endpoint that matches the `Region` paramaeter with the
+     * lowest median latency. Returns `None` if there are no endpoints matching that region,
+     * or `MeasureEndpoints` is `false`.
+     */
+    DECLARE_DELEGATE_RetVal_OneParam(TOptional<EndpointPair>, FGetLowestLatencyEndpointInRegion, FString);
+    static FGetLowestLatencyEndpointInRegion GetLowestLatencyEndpointInRegion;
 
-	/**
-	 * Delegate used to get the lowest latency measurement to each datacenter.
-	 */
-	DECLARE_DELEGATE_RetVal(DatacenterMap, FGetLowestLatencyToDatacenters);
-	static FGetLowestLatencyToDatacenters GetLowestLatencyToDatacenters;
+    /**
+     * Delegate used to get the endpoint that matches the `Region` paramaeter with the
+     * lowest median latency. Returns `None` if there are no endpoints matching that region,
+     * or `MeasureEndpoints` is `false`.
+     */
+    DECLARE_DELEGATE_RetVal(EndpointMap, FGetLowestLatencyEndpointInEachRegion);
+    static FGetLowestLatencyEndpointInEachRegion GetLowestLatencyEndpointInEachRegion;
+
+    /**
+     * Delegate used to get the lowest latency measurement to each datacenter.
+     */
+    DECLARE_DELEGATE_RetVal(DatacenterMap, FGetLowestLatencyToDatacenters);
+    static FGetLowestLatencyToDatacenters GetLowestLatencyToDatacenters;
+
+    /**
+     * Fired whenever a socket's connection to a proxy has changed with (from, to) as parameters.
+     *
+     * from: the old address and latency as a TPair.
+     * to: new address and latency as a TPair.
+     */
+    DECLARE_MULTICAST_DELEGATE_TwoParams(FFailoverTriggered, AddrLatency, AddrLatency);
+    static FFailoverTriggered FailoverTriggered;
 };

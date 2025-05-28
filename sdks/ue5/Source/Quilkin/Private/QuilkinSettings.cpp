@@ -1,17 +1,26 @@
-/*
- * Copyright 2024 Google LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 #include "QuilkinSettings.h"
+
+UQuilkinConfigSubsystem::UQuilkinConfigSubsystem() {
+    UE_LOG(LogQuilkin, Display, TEXT("Initialising UQuilkinConfigSubsystem"));
+    const UQuilkinDeveloperSettings* DefaultSettings = GetDefault<UQuilkinDeveloperSettings>();
+    Enabled = DefaultSettings->IsEnabled();
+    RoutingToken = DefaultSettings->RoutingToken;
+    MeasureEndpoints = DefaultSettings->MeasureEndpoints;
+    PingThresholdMillis = DefaultSettings->PingThresholdMillis;
+    JitterThreshold = DefaultSettings->JitterThreshold;
+    Endpoints = DefaultSettings->Endpoints;
+    IPv6Prioritised = DefaultSettings->IPv6Prioritised;
+    ProxyFailover = DefaultSettings->ProxyFailover;
+    Cooldown = DefaultSettings->Cooldown;
+}
+
+void UQuilkinConfigSubsystem::Deinitialize() {
+    UE_LOG(LogQuilkin, Display, TEXT("Tearing down UQuilkinConfigSubsystem"));
+}
+
+UQuilkinConfigSubsystem* UQuilkinConfigSubsystem::Get() {
+    checkf(GEngine != nullptr, TEXT("UQuilkinConfigSubsystem can only be called inside an Engine context"));
+    UQuilkinConfigSubsystem* Subsystem = GEngine->GetEngineSubsystem<UQuilkinConfigSubsystem>();
+    checkf(Subsystem != nullptr, TEXT("UQuilkinConfigSubsystem hasn't been initialised"));
+    return Subsystem;
+}

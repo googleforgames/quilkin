@@ -28,3 +28,10 @@ inline int64 NanosToMillis(int64 Nanoseconds)
 {
     return Nanoseconds / 1'000'000;
 }
+
+inline float NanosToSeconds(int64 Nanoseconds)
+{
+    float Nanos = Nanoseconds;
+    // nanos -> millis -> seconds
+    return (Nanos / 1'000'000) / 1000;
+}

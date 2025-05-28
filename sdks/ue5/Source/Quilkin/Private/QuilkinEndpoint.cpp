@@ -22,39 +22,26 @@
 const TResult<TSharedRef<FInternetAddr>, ResolveError>
 FQuilkinEndpoint::ToInternetAddr(FQuilkinSocketSubsystem* SocketSubsystem) const
 {
-	return ToInternetAddrBase(SocketSubsystem, Host, TrafficPort);
+    return ToInternetAddrBase(SocketSubsystem, Host, TrafficPort);
 }
 
 const TResult<TSharedRef<FInternetAddr>, ResolveError>
 FQuilkinEndpoint::ToQcmpInternetAddr(FQuilkinSocketSubsystem* SocketSubsystem) const
 {
-	return ToInternetAddrBase(SocketSubsystem, Host, QcmpPort);
+    return ToInternetAddrBase(SocketSubsystem, Host, QcmpPort);
 }
 
 const TResult<TSharedRef<FInternetAddr>, ResolveError>
 FQuilkinEndpoint::ToInternetAddrBase(FQuilkinSocketSubsystem* SocketSubsystem, FString InHost, uint16 Port) const
 {
-	const FName Name = FName();
-	TSharedRef<FInternetAddr> Addr = SocketSubsystem->CreateInternetAddr(Name);
+    TSharedPtr<FInternetAddr> Addr = SocketSubsystem->GetAddressFromString(InHost);
 
-	FIPv4Address IPv4Address;
-	if (FIPv4Address::Parse(*InHost, IPv4Address))
-	{
-		Addr->SetIp(IPv4Address.Value);
-	}
-	else
-	{
-		bool Resolved;
-		Addr->SetIp(*InHost, Resolved);
-
-		if (!Resolved)
-		{
-			ResolveError Error = {};
-			return TResult<TSharedRef<FInternetAddr>, ResolveError>(Error);
-		}
-	}
-
-	Addr->SetPort(Port);
-	return TResult<TSharedRef<FInternetAddr>, ResolveError>(Addr);
+    if (Addr.IsValid()) {
+        Addr->SetPort(Port);
+        return TResult<TSharedRef<FInternetAddr>, ResolveError>(Addr.ToSharedRef());
+    }
+    else {
+        return TResult<TSharedRef<FInternetAddr>, ResolveError>(ResolveError{});
+    }
 }
 

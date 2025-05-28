@@ -38,12 +38,12 @@ public:
 
     bool IsEmpty()
     {
-		return Num() == 0;
+        return Num() == 0;
     }
 
     size_t Num()
     {
-		return Buffer.Num();
+        return Buffer.Num();
     }
 
     T Median() const
@@ -53,13 +53,13 @@ public:
             return T{}; // Return default value if the buffer is empty
         }
 
-		TArray<T> Sorted;
-		for (const auto& Item : Buffer)
-		{
-			Sorted.Add(Item);
-		}
+        TArray<T> Sorted;
+        for (const auto& Item : Buffer)
+        {
+            Sorted.Add(Item);
+        }
 
-		Sorted.Sort();
+        Sorted.Sort();
 
         size_t Middle = Sorted.Num() / 2;
 
