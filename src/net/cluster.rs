@@ -320,8 +320,9 @@ where
     ) -> crate::Result<()> {
         if let Some(raddr) = self.localities.get(&locality) {
             if *raddr != remote_addr {
+                let raddr_deref = *raddr;
                 eyre::bail!(
-                    "skipping cluster apply, '{locality:?}' is managed by '{raddr:?}', not '{remote_addr:?}'"
+                    "skipping cluster apply, '{locality:?}' is managed by '{raddr_deref:?}', not '{remote_addr:?}'"
                 );
             }
         } else {
