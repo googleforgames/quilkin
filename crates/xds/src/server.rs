@@ -532,6 +532,22 @@ impl<C: crate::config::Configuration> AggregatedControlPlaneDiscoveryService for
 
         let _handle: tokio::task::JoinHandle<crate::Result<()>> = tokio::task::spawn(
             async move {
+                struct RemoveClient<'stack, C: crate::config::Configuration> {
+                    config: &'stack C,
+                    ip: std::net::IpAddr,
+                }
+
+                impl<C: crate::config::Configuration> Drop for RemoveClient<'_, C> {
+                    fn drop(&mut self) {
+                        self.config.client_disconnected(self.ip);
+                    }
+                }
+
+                let _remove_client = RemoveClient {
+                    config: config.as_ref(),
+                    ip: remote_addr,
+                };
+
                 tracing::info!(identifier, "sending initial delta discovery request");
 
                 let local = Arc::new(crate::config::LocalVersions::new(

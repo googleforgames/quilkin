@@ -226,6 +226,9 @@ pub trait Configuration: Send + Sync + Sized + 'static {
         &self,
         server_version: &str,
     ) -> impl Iterator<Item = (&'static str, Vec<String>)>;
+
+    /// Called when the remote endpoint disconnects from this server
+    fn client_disconnected(&self, ip: std::net::IpAddr);
 }
 
 pub struct DeltaDiscoveryRes {
