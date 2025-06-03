@@ -77,6 +77,7 @@ impl MaxmindDb {
     }
 
     pub fn lookup(ip: std::net::IpAddr) -> Option<IpNetEntry> {
+        let ip = ip.to_canonical();
         let Some(mmdb) = crate::MaxmindDb::instance().clone() else {
             tracing::trace!("skipping mmdb telemetry, no maxmind database available");
             return None;
