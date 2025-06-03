@@ -316,6 +316,15 @@ impl quilkin_xds::config::Configuration for Config {
             ls.join_all().await;
         }
     }
+
+    fn client_disconnected(&self, ip: std::net::IpAddr) {
+        if let Some(dc) = self.dyn_cfg.datacenters() {
+            dc.modify(|dc| {
+                tracing::debug!(%ip, "removing agent");
+                dc.remove(ip);
+            });
+        }
+    }
 }
 
 use crate::net::xds::config::DeltaDiscoveryRes;
