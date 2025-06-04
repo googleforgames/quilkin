@@ -214,7 +214,7 @@ impl<C: ServiceClient> Client<C> {
         let client = connect_to_server
             .instrument(tracing::trace_span!("client_connect"))
             .await?;
-        tracing::info!("Connected to management server");
+        tracing::info!(endpoint = %client.1.uri(), "Connected to management server");
         Ok(client)
     }
 }
@@ -514,8 +514,17 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
         stream: &mut tonic::Streaming<DeltaDiscoveryResponse>,
         resources: &'static [(&'static str, &'static [(&'static str, Vec<String>)])],
     ) -> eyre::Result<&'static [(&'static str, Vec<String>)]> {
-        match stream.message().await? {
-            Some(first) => {
+        const TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
+
+        match tokio::time::timeout(TIMEOUT, stream.message()).await {
+            Err(_elapsed) => {
+                eyre::bail!("timed out after {TIMEOUT:?} waiting for first response");
+            }
+            Ok(result) => {
+                let Some(first) = result? else {
+                    eyre::bail!("expected at least one response from the management server");
+                };
+
                 if first.type_url != "ignore-me" {
                     tracing::warn!("expected `ignore-me` response from management server");
                 }
@@ -529,9 +538,6 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
                             first.system_version_info
                         )
                     })
-            }
-            _ => {
-                eyre::bail!("expected at least one response from the management server");
             }
         }
     }
@@ -594,8 +600,8 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
                         Ok(Some(Err(error))) => {
                             if crate::is_broken_pipe(&error) {
                                 tracing::info!(
-                                    "remote {} terminated the connection",
-                                    connected_endpoint.uri(),
+                                    endpoint = %connected_endpoint.uri(),
+                                    "remoteterminated the connection",
                                 );
                             } else {
                                 tracing::warn!(%error, "xds stream error");
@@ -622,12 +628,29 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
                 // getting rid of any state the previously connected server gave us
                 local.clear(&config, None);
 
-                tracing::info!("Lost connection to xDS, retrying");
-                (ds, stream, connected_endpoint) =
-                    DeltaClientStream::connect(&endpoints, identifier.clone()).await?;
+                loop {
+                    tracing::info!("Lost connection to xDS, retrying");
+                    match DeltaClientStream::connect(&endpoints, identifier.clone()).await {
+                        Ok(res) => {
+                            (ds, stream, connected_endpoint) = res;
+                        }
+                        Err(error) => {
+                            tracing::error!(%error, "failed to establish connection");
+                            continue;
+                        }
+                    }
 
-                resource_subscriptions = handle_first_response(&mut stream, resources).await?;
-                tracing::info!("received first response");
+                    match handle_first_response(&mut stream, resources).await {
+                        Ok(rs) => {
+                            resource_subscriptions = rs;
+                            tracing::info!("received first response");
+                            break;
+                        }
+                        Err(error) => {
+                            tracing::error!(%error, "failed to receive first response");
+                        }
+                    }
+                }
 
                 ds.refresh(&identifier, resource_subscriptions.to_vec(), &local)
                     .await?;
