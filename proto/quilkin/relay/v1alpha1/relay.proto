@@ -37,13 +37,8 @@ service AggregatedControlPlaneDiscoveryService {
       stream envoy.service.discovery.v3.DiscoveryResponse)
       returns (stream envoy.service.discovery.v3.DiscoveryRequest) {}
 
-  // Delta (Incremental) xDS implementation, used by agents and/or management
-  // servers to update the relay with their configuration
+  // Delta (Incremental) xDS implementation
   rpc DeltaAggregatedResources(
       stream envoy.service.discovery.v3.DeltaDiscoveryResponse)
       returns (stream envoy.service.discovery.v3.DeltaDiscoveryRequest) {}
-
-  // Used by proxies to subscribe to changes from the relay
-  rpc SubscribeDeltaResources(stream envoy.service.discovery.v3.DeltaDiscoveryRequest)
-      returns (stream envoy.service.discovery.v3.DeltaDiscoveryResponse) {}
 }
