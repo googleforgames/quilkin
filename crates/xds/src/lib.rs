@@ -21,7 +21,7 @@ pub mod metrics;
 pub mod net;
 pub mod server;
 
-pub use client::{Client, delta_subscribe};
+pub use client::{AdsClient, Client};
 
 pub use generated::envoy::{
     config::core::v3::{self as core, socket_address},

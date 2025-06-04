@@ -256,19 +256,19 @@ impl Proxy {
                             .unwrap();
 
                         runtime.block_on(async move {
+                            let client = crate::net::xds::AdsClient::connect(
+                                String::clone(&id),
+                                management_servers,
+                            )
+                            .await?;
+
                             let xds_is_healthy =
                                 ready.xds_is_healthy.read().as_ref().unwrap().clone();
 
-                            let _stream = crate::net::xds::delta_subscribe(
-                                config,
-                                id,
-                                management_servers,
-                                xds_is_healthy.clone(),
-                                tx,
-                                SUBS,
-                            )
-                            .await
-                            .map_err(|_err| eyre::eyre!("failed to acquire delta stream"))?;
+                            let _stream = client
+                                .delta_subscribe(config.clone(), xds_is_healthy.clone(), tx, SUBS)
+                                .await
+                                .map_err(|_err| eyre::eyre!("failed to acquire delta stream"))?;
 
                             let _ = shutdown_rx.changed().await;
                             Ok::<_, eyre::Error>(())
