@@ -530,17 +530,12 @@ impl Providers {
             let health_check = health_check.clone();
             let tx = tx.clone();
             async move {
-                let identifier = config.id();
-                let _stream = crate::net::xds::delta_subscribe(
-                    config,
-                    identifier,
-                    endpoints,
-                    health_check.clone(),
-                    tx,
-                    Self::SUBS,
-                )
-                .await
-                .map_err(|_err| eyre::eyre!("failed to acquire delta stream"))?;
+                let client = crate::net::xds::AdsClient::connect(config.id(), endpoints).await?;
+
+                let _stream = client
+                    .delta_subscribe(config, health_check.clone(), tx, Self::SUBS)
+                    .await
+                    .map_err(|_err| eyre::eyre!("failed to acquire delta stream"))?;
 
                 health_check.store(true, Ordering::SeqCst);
 
