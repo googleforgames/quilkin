@@ -515,11 +515,6 @@ impl Config {
                     return Ok(());
                 };
 
-                if resources.is_empty() && !removed_resources.is_empty() {
-                    tracing::info!("ignoring filter chain removal");
-                    return Ok(());
-                }
-
                 // Server should only ever send exactly one filter chain, more or less indicates a bug
                 let Some(res) = resources.pop() else {
                     eyre::bail!("no resources in delta response");
