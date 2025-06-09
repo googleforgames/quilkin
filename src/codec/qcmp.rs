@@ -281,7 +281,6 @@ pub fn spawn(
                         };
 
                         metrics::qcmp::packets_total_valid(size, &asn_info);
-                        metrics::qcmp::ingress_latency(client_timestamp, received_at, &asn_info);
                         Protocol::ping_reply(nonce, client_timestamp, received_at)
                             .encode(&mut output_buf);
 

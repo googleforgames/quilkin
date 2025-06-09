@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use crate::{net::maxmind_db::MetricsIpNetEntry, time::UtcTimestamp};
+use crate::net::maxmind_db::MetricsIpNetEntry;
 use once_cell::sync::Lazy;
 use prometheus::{
     DEFAULT_BUCKETS, Gauge, GaugeVec, Histogram, HistogramOpts, HistogramVec, IntCounter,
@@ -249,29 +249,6 @@ pub(crate) mod qcmp {
         });
 
         METRIC.with_label_values(&[kind, asn.asn, asn.prefix])
-    }
-
-    pub fn ingress_latency(
-        client_timestamp: UtcTimestamp,
-        received_at: UtcTimestamp,
-        asn: &AsnInfo<'_>,
-    ) {
-        static METRIC: Lazy<HistogramVec> = Lazy::new(|| {
-            prometheus::register_histogram_vec_with_registry! {
-                prometheus::histogram_opts! {
-                    "service_qcmp_ingress_latency_seconds",
-                    "The time from when the client created the packet, to when QCMP received it.",
-                    prometheus::exponential_buckets(BUCKET_START, BUCKET_FACTOR, BUCKET_COUNT).unwrap(),
-                },
-                &[ASN_LABEL, PREFIX_LABEL],
-                registry(),
-            }
-            .unwrap()
-        });
-
-        METRIC
-            .with_label_values(&[asn.asn, asn.prefix])
-            .observe((received_at - client_timestamp).duration().as_secs_f64());
     }
 
     pub(crate) fn packets_total_invalid(size: usize, asn_info: &AsnInfo<'_>) {
