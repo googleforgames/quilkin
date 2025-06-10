@@ -594,7 +594,14 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
                             is_healthy.store(true, Ordering::SeqCst);
 
                             tracing::trace!("received delta response");
-                            ds.send_response(response).await?;
+                            match ds.send_response(response).await {
+                                Ok(_) => {},
+                                Err(err) => {
+                                    tracing::error!(error=?err, "failed to send xDS stream response");
+                                    return Err(err);
+                                },
+
+                            };
                             continue;
                         }
                         Ok(Some(Err(error))) => {
@@ -614,8 +621,16 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
                         }
                         Err(_) => {
                             tracing::debug!("exceeded idle request interval sending new requests");
-                            ds.refresh(&identifier, resource_subscriptions.to_vec(), &local)
-                                .await?;
+                            match ds
+                                .refresh(&identifier, resource_subscriptions.to_vec(), &local)
+                                .await
+                            {
+                                Ok(_) => {},
+                                Err(err) => {
+                                    tracing::error!(error=?err, "failed to refresh xDS stream");
+                                    return Err(err);
+                                },
+                            };
                         }
                     }
                 }

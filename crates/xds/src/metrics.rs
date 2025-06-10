@@ -128,6 +128,7 @@ pub struct StreamConnectionMetrics {
 
 impl StreamConnectionMetrics {
     pub fn new(control_plane: String) -> Self {
+        tracing::info!("StreamConnectionMetrics created");
         self::active_control_planes(&control_plane).inc();
 
         Self { control_plane }
@@ -136,6 +137,7 @@ impl StreamConnectionMetrics {
 
 impl Drop for StreamConnectionMetrics {
     fn drop(&mut self) {
+        tracing::info!("StreamConnectionMetrics dropped");
         self::active_control_planes(&self.control_plane).dec();
     }
 }
