@@ -26,6 +26,7 @@ use std::{
 };
 
 use crate::config;
+use eyre::Context;
 use futures::TryStreamExt;
 
 const RETRIES: u32 = 25;
@@ -531,7 +532,7 @@ impl Providers {
             let tx = tx.clone();
             async move {
                 let identifier = config.id();
-                let _stream = crate::net::xds::delta_subscribe(
+                let mut stream = crate::net::xds::delta_subscribe(
                     config,
                     identifier,
                     endpoints,
@@ -544,7 +545,14 @@ impl Providers {
 
                 health_check.store(true, Ordering::SeqCst);
 
-                std::future::pending().await
+                {
+                    // TODO SUPER HACKY DO NOT MERGE
+                    // need to prevent Drop of `stream` as that will abort the task, but we want to
+                    // wait on `handle` without causing move errors
+                    let handle =
+                        std::mem::replace(&mut stream.handle, tokio::spawn(async { Ok(()) }));
+                    handle.await.wrap_err("join handle error")?
+                }
             }
         })
     }

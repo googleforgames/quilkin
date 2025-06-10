@@ -476,7 +476,7 @@ impl DeltaServerStream {
 }
 
 pub struct DeltaSubscription {
-    handle: tokio::task::JoinHandle<Result<()>>,
+    pub handle: tokio::task::JoinHandle<Result<()>>,
 }
 
 impl Drop for DeltaSubscription {
