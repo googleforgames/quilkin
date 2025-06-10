@@ -26,6 +26,7 @@ use std::{
 };
 
 use crate::config;
+use eyre::Context;
 use futures::TryStreamExt;
 
 const RETRIES: u32 = 25;
@@ -502,7 +503,7 @@ impl Providers {
             let endpoints = endpoints.clone();
             let health_check = health_check.clone();
             async move {
-                let _stream = crate::net::xds::client::MdsClient::connect(config.id(), endpoints)
+                let stream = crate::net::xds::client::MdsClient::connect(config.id(), endpoints)
                     .await?
                     .delta_stream(config.clone(), health_check.clone())
                     .await
@@ -510,7 +511,7 @@ impl Providers {
 
                 health_check.store(true, Ordering::SeqCst);
 
-                std::future::pending().await
+                stream.await.wrap_err("join handle error")?
             }
         })
     }
@@ -531,7 +532,7 @@ impl Providers {
             let tx = tx.clone();
             async move {
                 let identifier = config.id();
-                let _stream = crate::net::xds::delta_subscribe(
+                let stream = crate::net::xds::delta_subscribe(
                     config,
                     identifier,
                     endpoints,
@@ -544,7 +545,7 @@ impl Providers {
 
                 health_check.store(true, Ordering::SeqCst);
 
-                std::future::pending().await
+                stream.await.wrap_err("join handle error")?
             }
         })
     }

@@ -20,7 +20,7 @@ use std::{
     time::Duration,
 };
 
-use eyre::ContextCompat;
+use eyre::{Context, ContextCompat};
 use futures::StreamExt;
 use rand::Rng;
 use tonic::transport::{Endpoint, Error as TonicError, channel::Channel as TonicChannel};
@@ -224,7 +224,7 @@ impl MdsClient {
         self,
         config: Arc<C>,
         is_healthy: Arc<AtomicBool>,
-    ) -> Result<DeltaSubscription, Self> {
+    ) -> Result<tokio::task::JoinHandle<Result<()>>, Self> {
         const LEADERSHIP_CHECK_INTERVAL: std::time::Duration = std::time::Duration::from_secs(1);
         let identifier = String::from(&*self.identifier);
 
@@ -327,7 +327,7 @@ impl MdsClient {
             .instrument(tracing::trace_span!("handle_delta_discovery_response", id)),
         );
 
-        Ok(DeltaSubscription { handle })
+        Ok(handle)
     }
 }
 
@@ -475,17 +475,6 @@ impl DeltaServerStream {
     }
 }
 
-pub struct DeltaSubscription {
-    handle: tokio::task::JoinHandle<Result<()>>,
-}
-
-impl Drop for DeltaSubscription {
-    fn drop(&mut self) {
-        tracing::debug!("dropped client delta stream");
-        self.handle.abort();
-    }
-}
-
 /// Attempts to start a new delta stream to the xDS management server, if the
 /// management server does not support delta xDS we return the client as an error
 #[allow(clippy::type_complexity)]
@@ -496,7 +485,7 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
     is_healthy: Arc<AtomicBool>,
     notifier: Option<tokio::sync::mpsc::UnboundedSender<String>>,
     resources: &'static [(&'static str, &'static [(&'static str, Vec<String>)])],
-) -> eyre::Result<DeltaSubscription> {
+) -> eyre::Result<tokio::task::JoinHandle<Result<()>>> {
     let (mut ds, mut stream, mut connected_endpoint) = match DeltaClientStream::connect(
         &endpoints,
         identifier.clone(),
@@ -594,7 +583,9 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
                             is_healthy.store(true, Ordering::SeqCst);
 
                             tracing::trace!("received delta response");
-                            ds.send_response(response).await?;
+                            ds.send_response(response)
+                                .await
+                                .wrap_err("send_response failed")?;
                             continue;
                         }
                         Ok(Some(Err(error))) => {
@@ -615,7 +606,8 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
                         Err(_) => {
                             tracing::debug!("exceeded idle request interval sending new requests");
                             ds.refresh(&identifier, resource_subscriptions.to_vec(), &local)
-                                .await?;
+                                .await
+                                .wrap_err("refresh failed")?;
                         }
                     }
                 }
@@ -653,14 +645,15 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
                 }
 
                 ds.refresh(&identifier, resource_subscriptions.to_vec(), &local)
-                    .await?;
+                    .await
+                    .wrap_err("refresh failed")?;
                 tracing::info!("xDS connection refreshed");
             }
         }
         .instrument(tracing::trace_span!("xds_client_stream", id)),
     );
 
-    Ok(DeltaSubscription { handle })
+    Ok(handle)
 }
 
 #[derive(Debug, thiserror::Error)]
