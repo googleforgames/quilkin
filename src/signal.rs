@@ -115,7 +115,7 @@ impl ShutdownHandler {
             std::future::poll_fn(move |cx| {
                 use std::task::Poll;
 
-                if let Poll::Ready(_) = srx.as_mut().poll(cx) {
+                if srx.as_mut().poll(cx).is_ready() {
                     return Poll::Ready(("", Ok(())));
                 }
 
