@@ -28,7 +28,7 @@ use crate::{
     net::DualStackEpollSocket as DualStackLocalSocket,
     net::endpoint::metadata::Value,
     net::endpoint::{Endpoint, EndpointAddress},
-    signal::{ShutdownKind, ShutdownRx, ShutdownTx},
+    signal::{ShutdownRx, ShutdownTx},
 };
 
 static LOG_ONCE: Once = Once::new();
@@ -163,7 +163,7 @@ impl Drop for TestHelper {
             .filter_map(|tx| tx.take())
         {
             shutdown_tx
-                .send(ShutdownKind::Testing)
+                .send(())
                 .map_err(|error| {
                     tracing::warn!(
                         %error,
@@ -174,7 +174,7 @@ impl Drop for TestHelper {
         }
 
         if let Some((shutdown_tx, _)) = self.shutdown_ch.take() {
-            shutdown_tx.send(ShutdownKind::Testing).unwrap();
+            shutdown_tx.send(()).unwrap();
         }
     }
 }
@@ -298,13 +298,12 @@ impl TestHelper {
         server: Option<crate::components::proxy::Proxy>,
         with_admin: Option<Option<SocketAddr>>,
     ) -> u16 {
-        let (shutdown_tx, shutdown_rx) =
-            crate::signal::channel(crate::signal::ShutdownKind::Testing);
+        let (shutdown_tx, shutdown_rx) = crate::signal::channel();
         self.server_shutdown_tx.push(Some(shutdown_tx.clone()));
         let ready = <_>::default();
 
         if let Some(address) = with_admin {
-            crate::components::admin::server(config.clone(), ready, shutdown_tx, address);
+            crate::components::admin::server(config.clone(), ready, shutdown_tx.clone(), address);
         }
 
         let server = server.unwrap_or_else(|| {
@@ -321,6 +320,7 @@ impl TestHelper {
         });
 
         let (prox_tx, prox_rx) = tokio::sync::oneshot::channel();
+        let shutdown = crate::signal::ShutdownHandler::new(shutdown_tx, shutdown_rx);
 
         let port = crate::net::socket_port(server.socket.as_ref().unwrap());
 
@@ -330,11 +330,10 @@ impl TestHelper {
                     crate::components::RunArgs {
                         config,
                         ready: Default::default(),
-                        shutdown_rx,
+                        shutdown,
                     },
                     Some(prox_tx),
                 )
-                .await
                 .unwrap();
         });
 
@@ -348,7 +347,7 @@ impl TestHelper {
         if let Some((_, rx)) = &self.shutdown_ch {
             rx.clone()
         } else {
-            let ch = crate::signal::channel(ShutdownKind::Testing);
+            let ch = crate::signal::channel();
             let recv = ch.1.clone();
             self.shutdown_ch = Some(ch);
             recv

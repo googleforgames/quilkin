@@ -21,6 +21,7 @@ use tokio_stream::StreamExt;
 use tracing_futures::Instrument;
 
 use crate::{
+    ShutdownSignal,
     discovery::{
         DeltaDiscoveryRequest, DeltaDiscoveryResponse, DiscoveryRequest, DiscoveryResponse,
         aggregated_discovery_service_server::{
@@ -105,6 +106,7 @@ pub struct ControlPlane<C> {
     pub idle_request_interval: Duration,
     tx: tokio::sync::broadcast::Sender<&'static str>,
     pub is_relay: bool,
+    pub shutdown: ShutdownSignal,
 }
 
 impl<C> Clone for ControlPlane<C> {
@@ -114,12 +116,17 @@ impl<C> Clone for ControlPlane<C> {
             idle_request_interval: self.idle_request_interval,
             tx: self.tx.clone(),
             is_relay: self.is_relay,
+            shutdown: self.shutdown.clone(),
         }
     }
 }
 
 impl<C: crate::config::Configuration> ControlPlane<C> {
-    pub fn from_arc(config: Arc<C>, idle_request_interval: Duration) -> Self {
+    pub fn from_arc(
+        config: Arc<C>,
+        idle_request_interval: Duration,
+        shutdown: ShutdownSignal,
+    ) -> Self {
         let (tx, _) = tokio::sync::broadcast::channel(10);
 
         Self {
@@ -127,6 +134,7 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
             idle_request_interval,
             tx,
             is_relay: false,
+            shutdown,
         }
     }
 
@@ -142,11 +150,13 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
         tls: Option<TlsIdentity>,
     ) -> eyre::Result<impl std::future::Future<Output = crate::Result<()>>> {
         self.is_relay = false;
+        let srx = self.shutdown.clone();
         tokio::spawn({
             let this = self.clone();
-            self.config.on_changed(this)
+            self.config.on_changed(this, srx)
         });
 
+        let mut shutdown = self.shutdown.clone();
         let server = AggregatedDiscoveryServiceServer::new(self)
             .max_encoding_message_size(crate::config::max_grpc_message_size());
         let builder = Self::server_builder();
@@ -160,7 +170,9 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
         let server = builder.add_service(server);
         tracing::info!("serving management server on port `{}`", listener.port());
         Ok(server
-            .serve_with_incoming(listener.into_stream()?)
+            .serve_with_incoming_shutdown(listener.into_stream()?, async move {
+                drop(shutdown.changed().await);
+            })
             .map_err(From::from))
     }
 
@@ -170,11 +182,13 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
         tls: Option<TlsIdentity>,
     ) -> eyre::Result<impl std::future::Future<Output = crate::Result<()>>> {
         self.is_relay = true;
+        let srx = self.shutdown.clone();
         tokio::spawn({
             let this = self.clone();
-            self.config.on_changed(this)
+            self.config.on_changed(this, srx)
         });
 
+        let mut shutdown = self.shutdown.clone();
         let server = AggregatedControlPlaneDiscoveryServiceServer::new(self)
             .max_encoding_message_size(crate::config::max_grpc_message_size());
         let builder = Self::server_builder();
@@ -188,7 +202,9 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
         let server = builder.add_service(server);
         tracing::info!("serving relay server on port `{}`", listener.port());
         Ok(server
-            .serve_with_incoming(listener.into_stream()?)
+            .serve_with_incoming_shutdown(listener.into_stream()?, async move {
+                drop(shutdown.changed().await);
+            })
             .map_err(From::from))
     }
 
@@ -231,15 +247,14 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
             return Err(tonic::Status::invalid_argument("Node identifier required"));
         };
 
-        let this = Self::clone(self);
-        let mut rx = this.tx.subscribe();
+        let mut rx = self.tx.subscribe();
+        let id = self.config.identifier();
 
-        let id = this.config.identifier();
         tracing::debug!(
             id,
             client = node_id,
-            count = this.tx.receiver_count(),
-            is_relay = this.is_relay,
+            count = self.tx.receiver_count(),
+            is_relay = self.is_relay,
             "subscribed to config updates"
         );
 
@@ -251,7 +266,9 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
         let mut client_tracker = ClientTracker::track_client(node_id.clone());
 
         let client = node_id.clone();
-        let cfg = this.config.clone();
+        let cfg = self.config.clone();
+        let mut shutdown = self.shutdown.clone();
+
         let responder = move |req: Option<DeltaDiscoveryRequest>,
                               type_url: &str,
                               client_tracker: &mut ClientTracker|
@@ -431,6 +448,9 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                         let Some(response) = responder(Some(client_request), &type_url, &mut client_tracker).unwrap() else { continue; };
                         yield response;
                     }
+                    _ = shutdown.changed() => {
+                        break;
+                    }
                 }
             }
 
@@ -526,6 +546,7 @@ impl<C: crate::config::Configuration> AggregatedControlPlaneDiscoveryService for
 
         tracing::info!(identifier, "new control plane delta discovery stream");
         let config = self.config.clone();
+        let mut shutdown = self.shutdown.clone();
         let idle_request_interval = self.idle_request_interval;
 
         let (ds, mut request_stream) = super::client::DeltaClientStream::new();
@@ -575,32 +596,39 @@ impl<C: crate::config::Configuration> AggregatedControlPlaneDiscoveryService for
                     let next_response =
                         tokio::time::timeout(idle_request_interval, response_stream.next());
 
-                    match next_response.await {
-                        Ok(Some(Ok(ack))) => {
-                            tracing::trace!("sending ack request");
-                            ds.send_response(ack).await.map_err(|_err| {
-                                tonic::Status::internal("this should not be reachable")
-                            })?;
-                        }
-                        Ok(Some(Err(error))) => {
-                            if crate::is_broken_pipe(&error) {
-                                break Ok(());
-                            } else {
-                                break Err(eyre::eyre!(error));
+                    tokio::select! {
+                        nr = next_response => {
+                            match nr {
+                                Ok(Some(Ok(ack))) => {
+                                    tracing::trace!("sending ack request");
+                                    ds.send_response(ack).await.map_err(|_err| {
+                                        tonic::Status::internal("this should not be reachable")
+                                    })?;
+                                }
+                                Ok(Some(Err(error))) => {
+                                    if crate::is_broken_pipe(&error) {
+                                        break Ok(());
+                                    } else {
+                                        break Err(eyre::eyre!(error));
+                                    }
+                                }
+                                Ok(None) => {
+                                    break Ok(());
+                                }
+                                Err(_) => {
+                                    tracing::trace!("exceeded idle interval, sending request");
+                                    ds.refresh(
+                                        &identifier,
+                                        config.interested_resources(&server_version).collect(),
+                                        &local,
+                                    )
+                                    .await
+                                    .map_err(|error| tonic::Status::internal(error.to_string()))?;
+                                }
                             }
                         }
-                        Ok(None) => {
+                        _ = shutdown.changed() => {
                             break Ok(());
-                        }
-                        Err(_) => {
-                            tracing::trace!("exceeded idle interval, sending request");
-                            ds.refresh(
-                                &identifier,
-                                config.interested_resources(&server_version).collect(),
-                                &local,
-                            )
-                            .await
-                            .map_err(|error| tonic::Status::internal(error.to_string()))?;
                         }
                     }
                 };
@@ -644,15 +672,16 @@ impl<C: crate::config::Configuration> AggregatedControlPlaneDiscoveryService for
             return Err(tonic::Status::invalid_argument("Node identifier required"));
         };
 
-        let this = Self::clone(self);
-        let mut rx = this.tx.subscribe();
+        let is_relay = self.is_relay;
+        let mut rx = self.tx.subscribe();
+        let id = self.config.identifier();
+        let mut shutdown = self.shutdown.clone();
 
-        let id = this.config.identifier();
         tracing::debug!(
             id,
             client = node_id,
-            count = this.tx.receiver_count(),
-            is_relay = this.is_relay,
+            count = self.tx.receiver_count(),
+            is_relay,
             "subscribed to config updates"
         );
 
@@ -664,7 +693,7 @@ impl<C: crate::config::Configuration> AggregatedControlPlaneDiscoveryService for
         let mut client_tracker = ClientTracker::track_client(node_id.clone());
 
         let client = node_id.clone();
-        let cfg = this.config.clone();
+        let cfg = self.config.clone();
         let responder = move |req: Option<DeltaDiscoveryRequest>,
                               type_url: &str,
                               client_tracker: &mut ClientTracker|
@@ -843,6 +872,9 @@ impl<C: crate::config::Configuration> AggregatedControlPlaneDiscoveryService for
 
                         let Some(response) = responder(Some(client_request), &type_url, &mut client_tracker).unwrap() else { continue; };
                         yield response;
+                    }
+                    _ = shutdown.changed() => {
+                        break;
                     }
                 }
             }

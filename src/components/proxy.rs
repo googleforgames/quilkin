@@ -97,15 +97,16 @@ impl Default for Proxy {
 }
 
 impl Proxy {
-    pub async fn run(
+    pub fn run(
         mut self,
         RunArgs {
             config,
             ready,
-            mut shutdown_rx,
+            shutdown,
         }: RunArgs<Ready>,
         initialized: Option<tokio::sync::oneshot::Sender<()>>,
-    ) -> crate::Result<()> {
+    ) -> crate::Result<tokio::task::JoinHandle<(crate::signal::ShutdownHandler, crate::Result<()>)>>
+    {
         let _mmdb_task = self.mmdb.as_ref().map(|source| {
             let source = source.clone();
             tokio::spawn(async move {
@@ -238,7 +239,7 @@ impl Proxy {
                 .name("proxy-subscription".into())
                 .spawn({
                     let config = config.clone();
-                    let mut shutdown_rx = shutdown_rx.clone();
+                    let mut shutdown_rx = shutdown.shutdown_rx();
                     let management_servers = self.management_servers.clone();
                     let tx = self.notifier.clone();
 
@@ -299,22 +300,13 @@ impl Proxy {
             .phoenix()
             .phoenix_port(phoenix_port)
             .termination_timeout(self.termination_timeout)
-            .spawn_services(&config, &shutdown_rx)?;
+            .spawn_services(&config, shutdown)?;
 
         tracing::info!("Quilkin is ready");
         if let Some(initialized) = initialized {
             let _ = initialized.send(());
         }
 
-        shutdown_rx
-            .changed()
-            .await
-            .map_err(|error| eyre::eyre!(error))?;
-
-        if let Ok(Err(error)) = svc_task.await {
-            tracing::error!(%error, "Quilkin proxy services exited with error");
-        }
-
-        Ok(())
+        Ok(svc_task)
     }
 }

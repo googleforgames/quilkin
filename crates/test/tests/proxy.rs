@@ -29,12 +29,14 @@ trace_test!(server, {
         msg,
         sb.timeout(100, server1_rx.recv())
             .await
+            .0
             .expect("should get a packet")
     );
     assert_eq!(
         msg,
         sb.timeout(100, server2_rx.recv())
             .await
+            .0
             .expect("should get a packet")
     );
 });
@@ -54,7 +56,7 @@ trace_test!(client, {
     let msg = "hello";
     tracing::debug!(%local_addr, "sending packet");
     client.send_to(msg.as_bytes(), &local_addr).await.unwrap();
-    assert_eq!(msg, sb.timeout(100, dest_rx.recv()).await.unwrap(),);
+    assert_eq!(msg, sb.timeout(100, dest_rx.recv()).await.0.unwrap(),);
 });
 
 trace_test!(with_filter, {
@@ -78,7 +80,7 @@ trace_test!(with_filter, {
     client.send_to(msg.as_bytes(), &local_addr).await.unwrap();
 
     // search for the filter strings.
-    let result = sb.timeout(100, rx.recv()).await.unwrap();
+    let result = sb.timeout(100, rx.recv()).await.0.unwrap();
     assert!(result.starts_with(&format!("{msg}:odr:[::1]:")));
 });
 
@@ -123,7 +125,7 @@ trace_test!(uring_receiver, {
     let msg = "hello-downstream";
     tracing::debug!("sending packet");
     socket.send_to(msg.as_bytes(), addr).await.unwrap();
-    assert_eq!(msg, sb.timeout(200, packet_rx.recv()).await.unwrap());
+    assert_eq!(msg, sb.timeout(200, packet_rx.recv()).await.0.unwrap());
 });
 
 trace_test!(
@@ -189,6 +191,7 @@ trace_test!(
                 msg,
                 sb.timeout(20, packet_rx.recv())
                     .await
+                    .0
                     .expect("should receive a packet")
             );
         }
