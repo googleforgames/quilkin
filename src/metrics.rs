@@ -30,7 +30,6 @@ pub const DIRECTION_LABEL: &str = "event";
 pub(crate) const READ: Direction = Direction::Read;
 pub(crate) const WRITE: Direction = Direction::Write;
 pub(crate) const ASN_LABEL: &str = "asn";
-pub(crate) const PREFIX_LABEL: &str = "ip_prefix";
 
 /// Label value for [`DIRECTION_LABEL`] for `read` events
 pub const READ_DIRECTION_LABEL: &str = "read";
@@ -210,13 +209,13 @@ pub(crate) mod qcmp {
                     "service_qcmp_bytes_total",
                     "Total number of bytes processed through QCMP",
                 },
-                &["kind", ASN_LABEL, PREFIX_LABEL],
+                &["kind", ASN_LABEL],
                 registry(),
             }
             .unwrap()
         });
 
-        METRIC.with_label_values(&[kind, asn.asn, asn.prefix])
+        METRIC.with_label_values(&[kind, asn.asn])
     }
 
     pub(crate) fn errors_total(reason: &str, asn: &AsnInfo<'_>) -> IntCounter {
@@ -226,13 +225,13 @@ pub(crate) mod qcmp {
                     "service_qcmp_errors_total",
                     "total number of errors QCMP has encountered",
                 },
-                &["reason", ASN_LABEL, PREFIX_LABEL],
+                &["reason", ASN_LABEL],
                 registry(),
             }
             .unwrap()
         });
 
-        METRIC.with_label_values(&[reason, asn.asn, asn.prefix])
+        METRIC.with_label_values(&[reason, asn.asn])
     }
 
     fn packets_total(kind: &'static str, asn: &AsnInfo<'_>) -> IntCounter {
@@ -242,13 +241,13 @@ pub(crate) mod qcmp {
                     "service_qcmp_packets_total",
                     "Total number of packets processed through QCMP",
                 },
-                &["kind", ASN_LABEL, PREFIX_LABEL],
+                &["kind", ASN_LABEL],
                 registry(),
             }
             .unwrap()
         });
 
-        METRIC.with_label_values(&[kind, asn.asn, asn.prefix])
+        METRIC.with_label_values(&[kind, asn.asn])
     }
 
     pub(crate) fn packets_total_invalid(size: usize, asn_info: &AsnInfo<'_>) {
@@ -447,13 +446,13 @@ pub(crate) fn bytes_total(direction: Direction, asn: &AsnInfo<'_>) -> IntCounter
                 "bytes_total",
                 "total number of bytes",
             },
-            &[Direction::LABEL, ASN_LABEL, PREFIX_LABEL],
+            &[Direction::LABEL, ASN_LABEL],
             registry(),
         }
         .unwrap()
     });
 
-    BYTES_TOTAL.with_label_values(&[direction.label(), asn.asn, asn.prefix])
+    BYTES_TOTAL.with_label_values(&[direction.label(), asn.asn])
 }
 
 pub(crate) fn errors_total(direction: Direction, display: &str, asn: &AsnInfo<'_>) -> IntCounter {
@@ -463,13 +462,13 @@ pub(crate) fn errors_total(direction: Direction, display: &str, asn: &AsnInfo<'_
                 "errors_total",
                 "total number of errors sending packets",
             },
-            &[Direction::LABEL, "display", ASN_LABEL, PREFIX_LABEL],
+            &[Direction::LABEL, "display", ASN_LABEL],
             registry(),
         }
         .unwrap()
     });
 
-    ERRORS_TOTAL.with_label_values(&[direction.label(), display, asn.asn, asn.prefix])
+    ERRORS_TOTAL.with_label_values(&[direction.label(), display, asn.asn])
 }
 
 pub(crate) fn packet_jitter(direction: Direction, asn: &AsnInfo<'_>) -> IntGauge {
@@ -479,13 +478,13 @@ pub(crate) fn packet_jitter(direction: Direction, asn: &AsnInfo<'_>) -> IntGauge
                 "packet_jitter",
                 "The time between new packets",
             },
-            &[Direction::LABEL, ASN_LABEL, PREFIX_LABEL],
+            &[Direction::LABEL, ASN_LABEL],
             registry(),
         }
         .unwrap()
     });
 
-    PACKET_JITTER.with_label_values(&[direction.label(), asn.asn, asn.prefix])
+    PACKET_JITTER.with_label_values(&[direction.label(), asn.asn])
 }
 
 pub(crate) fn packets_total(direction: Direction, asn: &AsnInfo<'_>) -> IntCounter {
@@ -495,13 +494,13 @@ pub(crate) fn packets_total(direction: Direction, asn: &AsnInfo<'_>) -> IntCount
                 "packets_total",
                 "Total number of packets",
             },
-            &[Direction::LABEL, ASN_LABEL, PREFIX_LABEL],
+            &[Direction::LABEL, ASN_LABEL],
             registry(),
         }
         .unwrap()
     });
 
-    PACKETS_TOTAL.with_label_values(&[direction.label(), asn.asn, asn.prefix])
+    PACKETS_TOTAL.with_label_values(&[direction.label(), asn.asn])
 }
 
 pub(crate) fn packets_dropped_total(
@@ -515,13 +514,13 @@ pub(crate) fn packets_dropped_total(
                 "packets_dropped_total",
                 "Total number of dropped packets",
             },
-            &[Direction::LABEL, "source", ASN_LABEL, PREFIX_LABEL],
+            &[Direction::LABEL, "source", ASN_LABEL],
             registry(),
         }
         .unwrap()
     });
 
-    PACKETS_DROPPED.with_label_values(&[direction.label(), source, asn.asn, asn.prefix])
+    PACKETS_DROPPED.with_label_values(&[direction.label(), source, asn.asn])
 }
 
 /// Create a generic metrics options.
