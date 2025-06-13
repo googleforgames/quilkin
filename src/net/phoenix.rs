@@ -868,7 +868,7 @@ mod tests {
             },
         );
 
-        let (_tx, rx) = crate::signal::channel();
+        let (tx, rx) = crate::signal::channel();
         let socket = raw_socket_with_reuse(qcmp_port).unwrap();
         let pc = crate::codec::qcmp::port_channel();
         crate::codec::qcmp::spawn(socket, pc.subscribe(), rx.clone()).unwrap();
@@ -921,6 +921,7 @@ mod tests {
             );
         }
 
+        let _ = tx.send(());
         end();
     }
 }
