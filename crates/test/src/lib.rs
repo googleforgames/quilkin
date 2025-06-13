@@ -1,3 +1,5 @@
+#![allow(clippy::unimplemented)]
+
 use quilkin::{
     Config,
     collections::{BufferPool, PoolBuffer},
@@ -7,7 +9,7 @@ use quilkin::{
     test::TestConfig,
 };
 pub use serde_json::json;
-use std::{net::SocketAddr, num::NonZeroUsize, path::PathBuf, sync::Arc};
+use std::{net::SocketAddr, num::NonZeroUsize, path::PathBuf, sync::Arc, time::Duration};
 use tokio::sync::mpsc;
 
 #[cfg(target_os = "linux")]
@@ -171,7 +173,9 @@ macro_rules! abort_task {
     ($pail:ty) => {
         impl Drop for $pail {
             fn drop(&mut self) {
-                self.task.abort();
+                if let Some(task) = self.task.take() {
+                    task.abort();
+                }
             }
         }
     };
@@ -188,7 +192,8 @@ pub struct SandboxConfig {
     pub pails: Vec<SandboxPailConfig>,
 }
 
-pub type JoinHandle = tokio::task::JoinHandle<quilkin::Result<()>>;
+pub type JoinHandle =
+    tokio::task::JoinHandle<(quilkin::signal::ShutdownHandler, quilkin::Result<()>)>;
 pub type JoinSet = tokio::task::JoinSet<quilkin::Result<()>>;
 
 pub struct ServerPail {
@@ -197,7 +202,7 @@ pub struct ServerPail {
     pub packet_rx: Option<mpsc::Receiver<String>>,
     /// The join handle to the task driving the socket. Used to both cancel the task
     /// and/or wait for it to finish
-    pub task: tokio::task::JoinHandle<usize>,
+    pub task: Option<tokio::task::JoinHandle<usize>>,
 }
 
 abort_task!(ServerPail);
@@ -205,7 +210,7 @@ abort_task!(ServerPail);
 pub struct RelayPail {
     pub xds_port: u16,
     pub mds_port: u16,
-    pub task: JoinHandle,
+    pub task: Option<JoinHandle>,
     pub provider_task: JoinSet,
     pub shutdown: ShutdownTx,
     pub config_file: Option<ConfigFile>,
@@ -216,7 +221,7 @@ abort_task!(RelayPail);
 
 pub struct AgentPail {
     pub qcmp_port: u16,
-    pub task: JoinHandle,
+    pub task: Option<JoinHandle>,
     pub provider_task: JoinSet,
     pub shutdown: ShutdownTx,
     pub config_file: Option<ConfigFile>,
@@ -229,7 +234,7 @@ pub struct ProxyPail {
     pub port: u16,
     pub qcmp_port: u16,
     pub phoenix_port: u16,
-    pub task: JoinHandle,
+    pub task: Option<JoinHandle>,
     pub shutdown: ShutdownTx,
     pub config: Arc<Config>,
     pub delta_applies: Option<tokio::sync::mpsc::UnboundedReceiver<String>>,
@@ -254,6 +259,40 @@ impl Pail {
             Self::Agent(p) => p.config.clone(),
             Self::Proxy(p) => p.config.clone(),
             Self::Server(_) => panic!("no config"),
+        }
+    }
+
+    async fn stop(&mut self) {
+        if let Self::Relay(rp) = self {
+            if let Some(task) = rp.task.take() {
+                let _ = rp.shutdown.send(());
+                let result = task.await.unwrap();
+                tracing::info!(result = ?result.1, "task finished");
+            }
+        } else {
+            unimplemented!();
+        }
+    }
+
+    async fn start(&mut self) {
+        if let Self::Relay(rp) = self {
+            if rp.task.is_some() {
+                panic!("relay still running");
+            }
+
+            let svc = quilkin::Service::default()
+                .xds()
+                .xds_port(rp.xds_port)
+                .mds()
+                .mds_port(rp.mds_port);
+            let (tx, rx) = quilkin::signal::channel();
+            let sh = quilkin::signal::ShutdownHandler::new(tx.clone(), rx);
+            let task = svc.spawn_services(&rp.config, sh).unwrap();
+
+            rp.shutdown = tx;
+            rp.task = Some(task);
+        } else {
+            unimplemented!();
         }
     }
 }
@@ -306,7 +345,7 @@ impl Pail {
 
                 Self::Server(ServerPail {
                     port,
-                    task,
+                    task: Some(task),
                     packet_rx: Some(packet_rx),
                 })
             }
@@ -321,8 +360,7 @@ impl Pail {
 
                 let config_path = path.clone();
 
-                let (shutdown, shutdown_rx) =
-                    quilkin::signal::channel(quilkin::signal::ShutdownKind::Testing);
+                let (shutdown, shutdown_rx) = quilkin::signal::channel();
 
                 let svc = quilkin::Service::default()
                     .xds()
@@ -334,13 +372,18 @@ impl Pail {
                 let provider_task = quilkin::Providers::default()
                     .fs()
                     .fs_path(path)
-                    .spawn_providers(&config, <_>::default(), None);
-                let task = svc.spawn_services(&config, &shutdown_rx).unwrap();
+                    .spawn_providers(&config, <_>::default(), None, shutdown_rx.clone());
+                let task = svc
+                    .spawn_services(
+                        &config,
+                        quilkin::signal::ShutdownHandler::new(shutdown.clone(), shutdown_rx),
+                    )
+                    .unwrap();
 
                 Self::Relay(RelayPail {
                     xds_port,
                     mds_port,
-                    task,
+                    task: Some(task),
                     provider_task,
                     shutdown,
                     config_file: Some(ConfigFile {
@@ -388,8 +431,7 @@ impl Pail {
                     })
                     .collect::<Vec<_>>();
 
-                let (shutdown, shutdown_rx) =
-                    quilkin::signal::channel(quilkin::signal::ShutdownKind::Testing);
+                let (shutdown, shutdown_rx) = quilkin::signal::channel();
 
                 let port = quilkin::net::socket_port(
                     &quilkin::net::raw_socket_with_reuse(0).expect("failed to bind qcmp socket"),
@@ -407,12 +449,17 @@ impl Pail {
                     .fs()
                     .fs_path(path)
                     .grpc_push_endpoints(relay_servers)
-                    .spawn_providers(&config, <_>::default(), None);
-                let task = svc.spawn_services(&config, &shutdown_rx).unwrap();
+                    .spawn_providers(&config, <_>::default(), None, shutdown_rx.clone());
+                let task = svc
+                    .spawn_services(
+                        &config,
+                        quilkin::signal::ShutdownHandler::new(shutdown.clone(), shutdown_rx),
+                    )
+                    .unwrap();
 
                 Self::Agent(AgentPail {
                     qcmp_port: port,
-                    task,
+                    task: Some(task),
                     provider_task,
                     shutdown,
                     config_file: Some(ConfigFile {
@@ -446,9 +493,6 @@ impl Pail {
                         )
                     })
                     .collect();
-
-                let (shutdown, shutdown_rx) =
-                    quilkin::signal::channel(quilkin::signal::ShutdownKind::Testing);
 
                 let (tx, orx) = tokio::sync::oneshot::channel();
 
@@ -499,27 +543,31 @@ impl Pail {
                 let pconfig = config.clone();
 
                 let (rttx, rtrx) = tokio::sync::mpsc::unbounded_channel();
+                let (shutdown, shutdown_rx) = quilkin::signal::channel();
+                let sh = quilkin::signal::ShutdownHandler::new(shutdown.clone(), shutdown_rx);
 
-                let task = tokio::spawn(async move {
-                    components::proxy::Proxy {
-                        num_workers: NonZeroUsize::new(1).unwrap(),
-                        management_servers,
-                        socket: Some(socket),
-                        qcmp,
-                        phoenix,
-                        notifier: Some(rttx),
-                        ..Default::default()
-                    }
-                    .run(
-                        RunArgs {
-                            config: pconfig,
-                            ready: Default::default(),
-                            shutdown_rx,
-                        },
-                        Some(tx),
-                    )
-                    .await
-                });
+                let task = components::proxy::Proxy {
+                    num_workers: NonZeroUsize::new(1).unwrap(),
+                    management_servers,
+                    socket: Some(socket),
+                    qcmp,
+                    phoenix,
+                    notifier: Some(rttx),
+                    mmdb: None,
+                    to: Default::default(),
+                    to_tokens: None,
+                    xdp: Default::default(),
+                    termination_timeout: None,
+                }
+                .run(
+                    RunArgs {
+                        config: pconfig,
+                        ready: Default::default(),
+                        shutdown: sh,
+                    },
+                    Some(tx),
+                )
+                .expect("failed to start proxy");
 
                 rx = Some(orx);
 
@@ -528,7 +576,7 @@ impl Pail {
                     qcmp_port,
                     phoenix_port,
                     shutdown,
-                    task,
+                    task: Some(task),
                     config,
                     delta_applies: Some(rtrx),
                 })
@@ -698,18 +746,21 @@ impl Sandbox {
     /// Sleeps for the specified number of milliseconds
     #[inline]
     pub async fn sleep(&self, ms: u64) {
-        tokio::time::sleep(std::time::Duration::from_millis(ms)).await;
+        tokio::time::sleep(Duration::from_millis(ms)).await;
     }
 
     /// Runs a future, expecting it complete before the specified timeout
     #[inline]
-    pub async fn timeout<F>(&self, ms: u64, fut: F) -> F::Output
+    pub async fn timeout<F>(&self, ms: u64, fut: F) -> (F::Output, Duration)
     where
         F: std::future::Future,
     {
-        tokio::time::timeout(std::time::Duration::from_millis(ms), fut)
+        let start = tokio::time::Instant::now();
+        let res = tokio::time::timeout(Duration::from_millis(ms), fut)
             .await
-            .expect("operation timed out")
+            .expect("operation timed out");
+
+        (res, start.elapsed())
     }
 
     #[inline]
@@ -717,7 +768,7 @@ impl Sandbox {
     where
         F: std::future::Future,
     {
-        tokio::time::timeout(std::time::Duration::from_millis(ms), fut)
+        tokio::time::timeout(Duration::from_millis(ms), fut)
             .await
             .ok()
     }
@@ -730,9 +781,39 @@ impl Sandbox {
         F: std::future::Future,
         F::Output: std::fmt::Debug,
     {
-        tokio::time::timeout(std::time::Duration::from_millis(ms), fut)
+        tokio::time::timeout(Duration::from_millis(ms), fut)
             .await
             .expect_err("expected future to timeout");
+    }
+
+    pub async fn restart(&mut self, which: &str, dead_time: Duration) {
+        let Some((_, pail)) = self.pails.iter_mut().find(|(name, _)| **name == which) else {
+            panic!("failed to find '{which}'");
+        };
+
+        const TIMEOUT: Duration = Duration::from_secs(10);
+
+        tokio::time::timeout(TIMEOUT, pail.stop())
+            .await
+            .expect("failed to stop");
+        tokio::time::sleep(dead_time).await;
+        tokio::time::timeout(TIMEOUT, pail.start())
+            .await
+            .expect("failed to start");
+    }
+
+    pub async fn stop(&mut self, which: &str) {
+        let Some((_, pail)) = self.pails.iter_mut().find(|(name, _)| **name == which) else {
+            panic!("failed to find '{which}'");
+        };
+        pail.stop().await;
+    }
+
+    pub async fn start(&mut self, which: &str) {
+        let Some((_, pail)) = self.pails.iter_mut().find(|(name, _)| **name == which) else {
+            panic!("failed to find '{which}'");
+        };
+        pail.start().await;
     }
 }
 

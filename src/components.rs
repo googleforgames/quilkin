@@ -24,5 +24,5 @@ pub struct RunArgs<T> {
     /// The ready check and idle duration
     pub ready: T,
     /// Channel used to indicate graceful shutdown requests
-    pub shutdown_rx: crate::signal::ShutdownRx,
+    pub shutdown: crate::signal::ShutdownHandler,
 }

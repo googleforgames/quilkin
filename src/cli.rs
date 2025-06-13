@@ -262,29 +262,33 @@ impl Cli {
                 .read_config(&self.config, self.locality.icao_code, locality.clone())?;
 
         let ready = Arc::<std::sync::atomic::AtomicBool>::default();
-        let (shutdown_tx, shutdown_rx) = crate::signal::spawn_handler();
+        let shutdown_handler = crate::signal::spawn_handler();
         if self.admin.enabled {
             crate::components::admin::server(
                 config.clone(),
                 ready.clone(),
-                shutdown_tx.clone(),
+                shutdown_handler.shutdown_tx(),
                 self.admin.address,
             );
         }
 
         crate::alloc::spawn_heap_stats_updates(
             std::time::Duration::from_secs(10),
-            shutdown_rx.clone(),
+            shutdown_handler.shutdown_rx(),
         );
 
         // Just call this early so there isn't a potential race when spawning xDS
         quilkin_xds::metrics::set_registry(crate::metrics::registry());
 
-        let mut provider_tasks =
-            self.providers
-                .spawn_providers(&config, ready.clone(), locality.clone());
+        let mut provider_tasks = self.providers.spawn_providers(
+            &config,
+            ready.clone(),
+            locality.clone(),
+            shutdown_handler.shutdown_rx(),
+        );
 
-        let mut service_task = self.service.spawn_services(&config, &shutdown_rx)?;
+        let shutdown_tx = shutdown_handler.shutdown_tx();
+        let mut service_task = self.service.spawn_services(&config, shutdown_handler)?;
 
         if provider_tasks.is_empty() {
             ready.store(true, std::sync::atomic::Ordering::SeqCst);
@@ -295,13 +299,20 @@ impl Cli {
                 Some(result) = provider_tasks.join_next() => {
                     tracing::error!(task_result=?result, "provider task completed unexpectedly, shutting down.");
                     // Trigger shutdown so we can drain the active sessions in the service_task
-                    if let Err(error) = shutdown_tx.send(crate::signal::ShutdownKind::Normal) {
+                    if let Err(error) = shutdown_tx.send(()) {
                         tracing::error!(error=?error, "failed to trigger shutdown");
                         return Err(error.into());
                     }
                 },
                 result = &mut service_task => {
-                    return result?;
+                    return match result {
+                        Ok((_, result)) => {
+                            result
+                        }
+                        Err(join_error) => {
+                            Err(eyre::format_err!("failed to join services task: {join_error}"))
+                        }
+                    };
                 },
             }
         }

@@ -201,16 +201,16 @@ pub fn port_channel() -> tokio::sync::broadcast::Sender<u16> {
 pub fn spawn(
     socket: socket2::Socket,
     mut port_rx: tokio::sync::broadcast::Receiver<u16>,
-    mut shutdown_rx: crate::signal::ShutdownRx,
-) -> crate::Result<()> {
+    mut shutdown_rx: tokio::sync::watch::Receiver<()>,
+) -> crate::Result<tokio::task::JoinHandle<()>> {
     use tracing::{Instrument as _, instrument::WithSubscriber as _};
 
     let mut port = crate::net::socket_port(&socket);
+    let mut socket = DualStackEpollSocket::new(port)?;
 
-    tokio::task::spawn(
+    Ok(tokio::task::spawn(
         async move {
             let mut input_buf = [0u8; MAX_QCMP_PACKET_LEN];
-            let mut socket = DualStackEpollSocket::new(port).unwrap();
             let mut output_buf = QcmpPacket::default();
             metrics::qcmp::active(true);
 
@@ -308,9 +308,7 @@ pub fn spawn(
         }
         .instrument(tracing::debug_span!("qcmp"))
         .with_current_subscriber(),
-    );
-
-    Ok(())
+    ))
 }
 
 fn track_error<T, E: std::fmt::Display>(
@@ -734,7 +732,7 @@ mod tests {
         let socket = raw_socket_with_reuse(0).unwrap();
         let addr = socket.local_addr().unwrap().as_socket().unwrap();
 
-        let (_tx, rx) = crate::signal::channel(Default::default());
+        let (_tx, rx) = crate::signal::channel();
         let pc = super::port_channel();
         spawn(socket, pc.subscribe(), rx).unwrap();
 

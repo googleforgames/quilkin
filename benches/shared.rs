@@ -319,8 +319,9 @@ impl QuilkinLoop {
     }
 
     fn spinup_inner(port: u16, endpoint: SocketAddr) -> Self {
-        let (shutdown_tx, shutdown_rx) =
-            quilkin::signal::channel(quilkin::signal::ShutdownKind::Benching);
+        let (t, r) = quilkin::signal::channel();
+        let shutdown = quilkin::signal::ShutdownHandler::new(t, r);
+        let shutdown_tx = shutdown.shutdown_tx();
 
         let thread = spawn("quilkin", move || {
             let runtime = tokio::runtime::Runtime::new().unwrap();
@@ -345,10 +346,11 @@ impl QuilkinLoop {
 
             runtime.block_on(async move {
                 proxy
-                    .spawn_services(&config, &shutdown_rx)
+                    .spawn_services(&config, shutdown)
                     .unwrap()
                     .await
                     .unwrap()
+                    .1
                     .unwrap();
             });
         });
@@ -367,7 +369,7 @@ impl Drop for QuilkinLoop {
         let Some(stx) = self.shutdown.take() else {
             return;
         };
-        stx.send(quilkin::signal::ShutdownKind::Benching).unwrap();
+        stx.send(()).unwrap();
         self.thread.take().unwrap().join().unwrap();
     }
 }

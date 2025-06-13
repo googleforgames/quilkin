@@ -45,6 +45,7 @@ pub fn spawn<M: Clone + Measurement + Sync + Send + 'static>(
     listener: crate::net::TcpListener,
     datacenters: config::Watch<config::DatacenterMap>,
     phoenix: Phoenix<M>,
+    mut shutdown_rx: crate::signal::ShutdownRx,
 ) -> crate::Result<crate::service::Finalizer> {
     use eyre::WrapErr as _;
     use hyper::{Response, StatusCode};
@@ -52,7 +53,6 @@ pub fn spawn<M: Clone + Measurement + Sync + Send + 'static>(
     phoenix.add_nodes_from_config(&datacenters);
 
     let mut dc_watcher = datacenters.watch();
-    let (shutdown_tx, mut shutdown_rx) = crate::signal::channel(Default::default());
 
     let ph_thread = std::thread::Builder::new()
         .name("phoenix-http".into())
@@ -212,17 +212,7 @@ pub fn spawn<M: Clone + Measurement + Sync + Send + 'static>(
         })
         .context("failed to spawn phoenix-http thread")?;
 
-    let finalizer = Box::new(move |shutdown: &crate::signal::ShutdownRx| {
-        let kind = *shutdown.borrow();
-        if shutdown_tx.send(kind).is_err() {
-            tracing::error!("phoenix thread is already shutdown");
-            return;
-        }
-
-        if kind != crate::signal::ShutdownKind::Normal {
-            return;
-        }
-
+    let finalizer = Box::new(move || {
         let start = std::time::Instant::now();
         if ph_thread.join().is_err() {
             tracing::error!("error joining phoenix thread");
@@ -878,7 +868,7 @@ mod tests {
             },
         );
 
-        let (_tx, rx) = crate::signal::channel(Default::default());
+        let (tx, rx) = crate::signal::channel();
         let socket = raw_socket_with_reuse(qcmp_port).unwrap();
         let pc = crate::codec::qcmp::port_channel();
         crate::codec::qcmp::spawn(socket, pc.subscribe(), rx.clone()).unwrap();
@@ -892,7 +882,7 @@ mod tests {
             .interval_range(Duration::from_millis(10)..Duration::from_millis(15))
             .build();
 
-        let end = super::spawn(qcmp_listener, datacenters, phoenix).unwrap();
+        let end = super::spawn(qcmp_listener, datacenters, phoenix, rx).unwrap();
         tokio::time::sleep(Duration::from_millis(150)).await;
 
         let client =
@@ -931,6 +921,7 @@ mod tests {
             );
         }
 
-        end(&rx);
+        let _ = tx.send(());
+        end();
     }
 }

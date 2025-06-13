@@ -1,9 +1,10 @@
 use eyre::ContextCompat;
-use std::{future::Future, sync::Arc};
+use std::sync::Arc;
 
 use crate::{
     components::proxy::SessionPool,
     config::{Config, IcaoCode},
+    signal::ShutdownHandler,
 };
 
 const ETC_CONFIG_PATH: &str = "/etc/quilkin/quilkin.yaml";
@@ -128,9 +129,11 @@ pub struct Service {
     tls_key_path: Option<std::path::PathBuf>,
     #[clap(long = "termination-timeout")]
     termination_timeout: Option<crate::cli::Timeout>,
+    #[clap(skip)]
+    testing: bool,
 }
 
-pub type Finalizer = Box<dyn FnOnce(&crate::signal::ShutdownRx) + Send>;
+pub type Finalizer = Box<dyn FnOnce() + Send>;
 
 impl Default for Service {
     fn default() -> Self {
@@ -154,6 +157,7 @@ impl Default for Service {
             tls_cert_path: None,
             tls_key_path: None,
             termination_timeout: None,
+            testing: false,
         }
     }
 }
@@ -232,6 +236,11 @@ impl Service {
 
     pub fn xdp(mut self, xdp_opts: XdpOptions) -> Self {
         self.xdp = xdp_opts;
+        self
+    }
+
+    pub fn testing(mut self) -> Self {
+        self.testing = true;
         self
     }
 
@@ -333,71 +342,49 @@ impl Service {
     pub fn spawn_services(
         mut self,
         config: &Arc<Config>,
-        shutdown_rx: &crate::signal::ShutdownRx,
-    ) -> crate::Result<tokio::task::JoinHandle<crate::Result<()>>> {
-        let mut shutdown_rx = shutdown_rx.clone();
-
-        let mds_task = self.publish_mds(config)?;
-        let (phoenix_task, phoenix_finalizer) = self.publish_phoenix(config)?;
-        // We need to call this before qcmp since if we use XDP we handle QCMP
-        // internally without a separate task
-        let (udp_task, finalizer, session_pool) = self.publish_udp(config)?;
-        let qcmp_task = self.publish_qcmp(config, &shutdown_rx)?;
-        let xds_task = self.publish_xds(config)?;
+        mut shutdown: ShutdownHandler,
+    ) -> crate::Result<tokio::task::JoinHandle<(ShutdownHandler, crate::Result<()>)>> {
+        {
+            let shutdown = &mut shutdown;
+            self.publish_mds(config, shutdown)?;
+            self.publish_phoenix(config, shutdown)?;
+            // We need to call this before qcmp since if we use XDP we handle QCMP
+            // internally without a separate task
+            self.publish_udp(config, shutdown)?;
+            self.publish_qcmp(config, shutdown)?;
+            self.publish_xds(config, shutdown)?;
+        }
 
         Ok(tokio::spawn(async move {
-            tokio::task::spawn(async move {
-                let (task, result) = tokio::select! {
-                    result = phoenix_task => ("phoenix", result),
-                    result = qcmp_task => ("qcmp", result),
-                    result = udp_task => ("udp", result),
-                    result = xds_task => ("xds", result),
-                    result = mds_task => ("mds", result),
-                };
+            let (tx, rx, results) = shutdown.await_any_then_shutdown().await;
 
-                if let Err(error) = result {
+            let mut errors = 0;
+            for (task, res) in &results {
+                if let Err(error) = res {
                     tracing::error!(task, %error, "service task failed");
-                }
-            });
-
-            shutdown_rx.changed().await?;
-
-            if let Some(finalizer) = finalizer {
-                (finalizer)(&shutdown_rx);
-
-                if let Some(session_pool) = session_pool {
-                    tracing::info!(sessions = %session_pool.sessions().len(), "waiting for active sessions to expire");
-                    let start = std::time::Instant::now();
-
-                    let mut sessions_check =
-                        tokio::time::interval(std::time::Duration::from_millis(100));
-
-                    loop {
-                        sessions_check.tick().await;
-                        let elapsed = start.elapsed();
-                        if let Some(tt) = &self.termination_timeout {
-                            if elapsed > **tt {
-                                tracing::info!(
-                                    ?elapsed,
-                                    "termination timeout was reached before all sessions expired"
-                                );
-                                break;
-                            }
-                        }
-
-                        if session_pool.sessions().is_empty() {
-                            tracing::info!(shutdown_duration = ?elapsed, "all sessions expired");
-                            break;
-                        }
-                    }
-                }
-
-                if let Some(pfin) = phoenix_finalizer {
-                    (pfin)(&shutdown_rx);
+                    errors += 1;
                 }
             }
 
-            Ok(())
+            let res = match errors {
+                0 => Ok(()),
+                1 => Err(results.into_iter().find_map(|(_, res)| res.err()).unwrap()),
+                _ => {
+                    use std::fmt::Write as _;
+                    let mut err_str = String::new();
+                    writeln!(&mut err_str, "encountered {errors} errors:").unwrap();
+
+                    for (which, res) in results {
+                        if let Err(error) = res {
+                            writeln!(&mut err_str, "  {which}: {error:#}").unwrap();
+                        }
+                    }
+
+                    Err(eyre::Report::msg(err_str))
+                }
+            };
+
+            (ShutdownHandler::new(tx, rx), res)
         }))
     }
 
@@ -405,117 +392,136 @@ impl Service {
     fn publish_phoenix(
         &self,
         config: &Arc<Config>,
-    ) -> crate::Result<(
-        impl std::future::Future<Output = crate::Result<()>> + use<>,
-        Option<Finalizer>,
-    )> {
-        if self.phoenix_enabled {
-            let Some(datacenters) = config.dyn_cfg.datacenters() else {
-                tracing::info!(
-                    "not starting phoenix service even though it was requested, datacenters were not configured"
-                );
-                return Ok((std::future::pending(), None));
-            };
-
-            tracing::info!(port=%self.qcmp_port, "starting phoenix service");
-            let phoenix = crate::net::TcpListener::bind(Some(self.phoenix_port))?;
-            let finalizer = crate::net::phoenix::spawn(
-                phoenix,
-                datacenters.clone(),
-                crate::net::phoenix::Phoenix::new(crate::codec::qcmp::QcmpMeasurement::new()?),
-            )?;
-
-            return Ok((std::future::pending(), Some(finalizer)));
+        shutdown: &mut ShutdownHandler,
+    ) -> crate::Result<()> {
+        if !self.phoenix_enabled {
+            return Ok(());
         }
 
-        Ok((std::future::pending(), None))
+        let Some(datacenters) = config.dyn_cfg.datacenters() else {
+            tracing::info!(
+                "not starting phoenix service even though it was requested, datacenters were not configured"
+            );
+            return Ok(());
+        };
+
+        tracing::info!(port=%self.qcmp_port, "starting phoenix service");
+        let phoenix = crate::net::TcpListener::bind(Some(self.phoenix_port))?;
+        let finalizer = crate::net::phoenix::spawn(
+            phoenix,
+            datacenters.clone(),
+            crate::net::phoenix::Phoenix::new(crate::codec::qcmp::QcmpMeasurement::new()?),
+            shutdown.shutdown_rx(),
+        )?;
+
+        let finished = shutdown.push("phoenix");
+        let mut srx = shutdown.shutdown_rx();
+        tokio::spawn(async move {
+            let _ = srx.changed().await;
+
+            tokio::task::spawn_blocking(|| {
+                finalizer();
+            });
+
+            drop(finished.send(Ok(())));
+        });
+
+        Ok(())
     }
 
     /// Spawns an QCMP server if enabled, otherwise returns a future which never completes.
-    fn publish_qcmp(
-        &self,
-        config: &Config,
-        shutdown_rx: &crate::signal::ShutdownRx,
-    ) -> crate::Result<impl Future<Output = crate::Result<()>> + use<>> {
-        if self.qcmp_enabled {
-            let qcmp_port = config
-                .dyn_cfg
-                .qcmp_port()
-                .context("QCMP was enabled, but QCMP port was not inserted into typemap")?;
-
-            tracing::info!(port=%self.qcmp_port, "starting qcmp service");
-            let qcmp = crate::net::raw_socket_with_reuse(self.qcmp_port)?;
-
-            crate::codec::qcmp::spawn(qcmp, qcmp_port.subscribe(), shutdown_rx.clone())?;
+    fn publish_qcmp(&self, config: &Config, shutdown: &mut ShutdownHandler) -> crate::Result<()> {
+        if !self.qcmp_enabled {
+            return Ok(());
         }
 
-        Ok(std::future::pending())
+        let qcmp_port = config
+            .dyn_cfg
+            .qcmp_port()
+            .context("QCMP was enabled, but QCMP port was not inserted into typemap")?;
+
+        tracing::info!(port=%self.qcmp_port, "starting qcmp service");
+        let qcmp = crate::net::raw_socket_with_reuse(self.qcmp_port)?;
+
+        let join = crate::codec::qcmp::spawn(qcmp, qcmp_port.subscribe(), shutdown.shutdown_rx())?;
+        let finished = shutdown.push("qcmp");
+        tokio::spawn(async move {
+            drop(join.await);
+            drop(finished.send(Ok(())));
+        });
+
+        Ok(())
     }
 
     /// Spawns an xDS server if enabled, otherwise returns a future which never completes.
     fn publish_xds(
         &self,
         config: &Arc<Config>,
-    ) -> crate::Result<impl Future<Output = crate::Result<()>> + use<>> {
+        shutdown: &mut ShutdownHandler,
+    ) -> crate::Result<()> {
         if !self.xds_enabled && !self.grpc_enabled {
-            return Ok(either::Left(std::future::pending()));
+            return Ok(());
         }
-
-        use futures::TryFutureExt as _;
 
         let listener = crate::net::TcpListener::bind(Some(self.xds_port))?;
 
-        Ok(either::Right(
-            tokio::spawn(
-                crate::net::xds::server::ControlPlane::from_arc(
-                    config.clone(),
-                    crate::components::admin::IDLE_REQUEST_INTERVAL,
-                )
-                .management_server(listener, self.tls_identity()?)?,
-            )
-            .map_err(From::from)
-            .and_then(std::future::ready),
-        ))
+        let finished = shutdown.push("xds");
+        let srx = shutdown.shutdown_rx();
+
+        let xds_server = crate::net::xds::server::ControlPlane::from_arc(
+            config.clone(),
+            crate::components::admin::IDLE_REQUEST_INTERVAL,
+            srx,
+        )
+        .management_server(listener, self.tls_identity()?)?;
+
+        tokio::spawn(async move {
+            let res = xds_server.await;
+            drop(finished.send(res));
+        });
+
+        Ok(())
     }
 
     /// Spawns an xDS server if enabled, otherwise returns a future which never completes.
     fn publish_mds(
         &self,
         config: &Arc<Config>,
-    ) -> crate::Result<impl Future<Output = crate::Result<()>> + use<>> {
+        shutdown: &mut ShutdownHandler,
+    ) -> crate::Result<()> {
         if !self.mds_enabled && !self.grpc_enabled {
-            return Ok(either::Left(std::future::pending()));
+            return Ok(());
         }
-
-        use futures::TryFutureExt as _;
 
         tracing::info!(port=%self.mds_port, "starting mds service");
         let listener = crate::net::TcpListener::bind(Some(self.mds_port))?;
 
-        Ok(either::Right(
-            tokio::spawn(
-                crate::net::xds::server::ControlPlane::from_arc(
-                    config.clone(),
-                    crate::components::admin::IDLE_REQUEST_INTERVAL,
-                )
-                .relay_server(listener, self.tls_identity()?)?,
-            )
-            .map_err(From::from)
-            .and_then(std::future::ready),
-        ))
+        let finished = shutdown.push("mds");
+        let srx = shutdown.shutdown_rx();
+
+        let mds_server = crate::net::xds::server::ControlPlane::from_arc(
+            config.clone(),
+            crate::components::admin::IDLE_REQUEST_INTERVAL,
+            srx,
+        )
+        .relay_server(listener, self.tls_identity()?)?;
+
+        tokio::spawn(async move {
+            let res = mds_server.await;
+            drop(finished.send(res));
+        });
+
+        Ok(())
     }
 
     #[allow(clippy::type_complexity)]
     pub fn publish_udp(
         &mut self,
         config: &Arc<Config>,
-    ) -> eyre::Result<(
-        impl Future<Output = crate::Result<()>> + use<>,
-        Option<Finalizer>,
-        Option<Arc<crate::components::proxy::SessionPool>>,
-    )> {
+        shutdown: &mut ShutdownHandler,
+    ) -> crate::Result<()> {
         if !self.udp_enabled && !self.qcmp_enabled {
-            return Ok((either::Left(std::future::pending()), None, None));
+            return Ok(());
         }
 
         tracing::info!(port=%self.udp_port, "starting udp service");
@@ -525,8 +531,23 @@ impl Service {
             match self.spawn_xdp(config.clone(), self.xdp.force_xdp) {
                 Ok(xdp) => {
                     if let Some(xdp) = xdp {
+                        // Disable this so that we don't create a separate user-space
+                        // QCMP service since we are handling QCMP messsages in XDP
                         self.qcmp_enabled = false;
-                        return Ok((either::Left(std::future::pending()), Some(xdp), None));
+
+                        let finished = shutdown.push("xdp");
+                        let mut srx = shutdown.shutdown_rx();
+                        tokio::spawn(async move {
+                            drop(srx.changed().await);
+
+                            tokio::task::block_in_place(|| {
+                                xdp();
+                            });
+
+                            drop(finished.send(Ok(())));
+                        });
+
+                        return Ok(());
                     } else if self.xdp.force_xdp {
                         eyre::bail!("XDP was forced on, but failed to initialize");
                     }
@@ -545,11 +566,10 @@ impl Service {
         }
 
         if !self.udp_enabled {
-            return Ok((either::Left(std::future::pending()), None, None));
+            return Ok(());
         }
 
-        self.spawn_user_space_router(config.clone())
-            .map(|(fut, func, sp)| (either::Right(fut), Some(func), Some(sp)))
+        self.spawn_user_space_router(config.clone(), shutdown)
     }
 
     /// Launches the user space implementation of the packet router using
@@ -560,11 +580,8 @@ impl Service {
     pub fn spawn_user_space_router(
         &self,
         config: Arc<Config>,
-    ) -> crate::Result<(
-        impl Future<Output = crate::Result<()>> + use<>,
-        Finalizer,
-        Arc<crate::components::proxy::SessionPool>,
-    )> {
+        shutdown: &mut ShutdownHandler,
+    ) -> crate::Result<()> {
         // If we're on linux, we're using io-uring, but we're probably running in a container
         // and may not be allowed to call io-uring related syscalls due to seccomp
         // profiles, so do a quick check here to validate that we can call io_uring_setup
@@ -620,15 +637,51 @@ impl Service {
             .dyn_cfg
             .cached_filter_chain()
             .context("a cached FilterChain should have been configured")?;
-        let sessions = SessionPool::new(session_sends, buffer_pool.clone(), cached_filters);
 
+        let sessions = SessionPool::new(session_sends, buffer_pool.clone(), cached_filters);
         crate::net::packet::spawn_receivers(config, socket, worker_sends, &sessions, buffer_pool)?;
 
-        Ok((
-            std::future::pending(),
-            Box::from(move |_shutdown_rx: &crate::signal::ShutdownRx| {}),
-            sessions,
-        ))
+        let finished = shutdown.push("udp");
+        let mut srx = shutdown.shutdown_rx();
+        let testing = self.testing;
+        let termination_timeout = self.termination_timeout;
+
+        tokio::spawn(async move {
+            drop(srx.changed().await);
+
+            if testing {
+                drop(finished.send(Ok(())));
+                return;
+            }
+
+            tracing::info!(sessions = %sessions.sessions().len(), "waiting for active sessions to expire");
+            let start = std::time::Instant::now();
+
+            let mut sessions_check = tokio::time::interval(std::time::Duration::from_millis(100));
+
+            loop {
+                sessions_check.tick().await;
+                let elapsed = start.elapsed();
+                if let Some(tt) = &termination_timeout {
+                    if elapsed > **tt {
+                        tracing::info!(
+                            ?elapsed,
+                            "termination timeout was reached before all sessions expired"
+                        );
+                        break;
+                    }
+                }
+
+                if sessions.sessions().is_empty() {
+                    tracing::info!(shutdown_duration = ?elapsed, "all sessions expired");
+                    break;
+                }
+            }
+
+            drop(finished.send(Ok(())));
+        });
+
+        Ok(())
     }
 
     #[cfg(target_os = "linux")]
@@ -672,8 +725,8 @@ impl Service {
         .context("failed to setup XDP")?;
 
         let io_loop = xdp::spawn(workers, config).context("failed to spawn XDP I/O loop")?;
-        Ok(Some(Box::new(move |srx: &crate::signal::ShutdownRx| {
-            io_loop.shutdown(*srx.borrow() == crate::signal::ShutdownKind::Normal);
+        Ok(Some(Box::new(move || {
+            io_loop.shutdown(true);
         })))
     }
 }

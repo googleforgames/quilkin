@@ -224,6 +224,7 @@ impl quilkin_xds::config::Configuration for Config {
     fn on_changed(
         &self,
         control_plane: quilkin_xds::server::ControlPlane<Self>,
+        mut shutdown: tokio::sync::watch::Receiver<()>,
     ) -> impl std::future::Future<Output = ()> + Send + 'static {
         tracing::trace!("waiting for changes");
 
@@ -313,7 +314,11 @@ impl quilkin_xds::config::Configuration for Config {
                 });
             }
 
-            ls.join_all().await;
+            drop(shutdown.changed().await);
+            ls.abort_all();
+
+            // join_all panics if a task is cancelled, we don't care
+            while ls.join_next().await.is_some() {}
         }
     }
 

@@ -224,6 +224,7 @@ impl MdsClient {
         self,
         config: Arc<C>,
         is_healthy: Arc<AtomicBool>,
+        mut shutdown: crate::ShutdownSignal,
     ) -> Result<tokio::task::JoinHandle<Result<()>>, Self> {
         const LEADERSHIP_CHECK_INTERVAL: std::time::Duration = std::time::Duration::from_secs(1);
         let identifier = String::from(&*self.identifier);
@@ -260,55 +261,63 @@ impl MdsClient {
                         let control_plane = super::server::ControlPlane::from_arc(
                             config.clone(),
                             IDLE_REQUEST_INTERVAL,
+                            shutdown.clone(),
                         );
 
                         let change_watcher = tokio::spawn({
                             let mut this = control_plane.clone();
                             this.is_relay = true; // This is a lie, but means we don't unneccessarily watch for filter changes on the agent, which doesn't perform them
-                            control_plane.config.on_changed(this)
+                            control_plane.config.on_changed(this, shutdown.clone())
                         });
 
-                        match control_plane.delta_aggregated_resources(stream).await {
-                            Ok(mut stream) => {
-                                is_healthy.store(true, Ordering::SeqCst);
+                        tokio::select! {
+                            res = control_plane.delta_aggregated_resources(stream) => {
+                                match res {
+                                    Ok(mut stream) => {
+                                        is_healthy.store(true, Ordering::SeqCst);
 
-                                loop {
-                                    if config.is_leader() == Some(false) {
-                                        tracing::warn!("lost leader lock mid-stream, disconnecting");
-                                        break;
-                                    }
-
-                                    const TIMEOUT_INTERVAL: Duration = Duration::from_secs(30);
-                                    match tokio::time::timeout(TIMEOUT_INTERVAL, stream.next()).await {
-                                        Ok(Some(Ok(response))) => match ds.send_response(response).await {
-                                            Ok(_) => {
-                                                tracing::trace!("ACK successfully sent");
-                                            }
-                                            Err(error) => {
-                                                tracing::warn!(%error, "error sending ACK");
+                                        loop {
+                                            if config.is_leader() == Some(false) {
+                                                tracing::warn!("lost leader lock mid-stream, disconnecting");
                                                 break;
                                             }
+
+                                            const TIMEOUT_INTERVAL: Duration = Duration::from_secs(30);
+                                            match tokio::time::timeout(TIMEOUT_INTERVAL, stream.next()).await {
+                                                Ok(Some(Ok(response))) => match ds.send_response(response).await {
+                                                    Ok(_) => {
+                                                        tracing::trace!("ACK successfully sent");
+                                                    }
+                                                    Err(error) => {
+                                                        tracing::warn!(%error, "error sending ACK");
+                                                        break;
+                                                    }
+                                                }
+                                                Ok(Some(Err(error))) => {
+                                                    tracing::warn!(%error, "error receiving delta response");
+                                                    break;
+                                                }
+                                                Ok(None) => {
+                                                    tracing::debug!("delta stream terminated by client");
+                                                    break;
+                                                }
+                                                Err(error) => {
+                                                    tracing::trace!(duration=TIMEOUT_INTERVAL.as_secs_f64(), %error, "no requests received");
+                                                    continue;
+                                                }
+                                            }
                                         }
-                                        Ok(Some(Err(error))) => {
-                                            tracing::warn!(%error, "error receiving delta response");
-                                            break;
-                                        }
-                                        Ok(None) => {
-                                            tracing::debug!("delta stream terminated by client");
-                                            break;
-                                        }
-                                        Err(error) => {
-                                            tracing::trace!(duration=TIMEOUT_INTERVAL.as_secs_f64(), %error, "no requests received");
-                                            continue;
-                                        }
+
+                                        change_watcher.abort();
+                                        let _unused = change_watcher.await;
+                                    },
+                                    Err(error) => {
+                                        tracing::warn!(%error, error_debug=?error, "failed to acquire internal delta stream from config");
                                     }
                                 }
-
-                                change_watcher.abort();
-                                let _unused = change_watcher.await;
-                            },
-                            Err(error) => {
-                                tracing::warn!(%error, error_debug=?error, "failed to acquire internal delta stream from config");
+                            }
+                            _ = shutdown.changed() => {
+                                return Ok(());
                             }
                         }
                     }

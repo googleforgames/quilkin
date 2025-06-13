@@ -495,6 +495,7 @@ impl Providers {
         &self,
         config: Arc<config::Config>,
         health_check: Arc<AtomicBool>,
+        shutdown: tokio::sync::watch::Receiver<()>,
     ) -> impl Future<Output = crate::Result<()>> + 'static {
         let config = config.clone();
         let endpoints = self.relay.clone();
@@ -502,10 +503,11 @@ impl Providers {
             let config = config.clone();
             let endpoints = endpoints.clone();
             let health_check = health_check.clone();
+            let shutdown = shutdown.clone();
             async move {
                 let stream = crate::net::xds::client::MdsClient::connect(config.id(), endpoints)
                     .await?
-                    .delta_stream(config.clone(), health_check.clone())
+                    .delta_stream(config.clone(), health_check.clone(), shutdown)
                     .await
                     .map_err(|_err| eyre::eyre!("failed to acquire delta stream"))?;
 
@@ -589,6 +591,7 @@ impl Providers {
         config: &Arc<config::Config>,
         health_check: Arc<AtomicBool>,
         locality: Option<crate::net::endpoint::Locality>,
+        shutdown: tokio::sync::watch::Receiver<()>,
     ) -> tokio::task::JoinSet<crate::Result<()>> {
         let mut providers = tokio::task::JoinSet::new();
 
@@ -612,7 +615,11 @@ impl Providers {
         }
 
         if self.grpc_push_enabled() {
-            providers.spawn(self.spawn_mds_provider(config.clone(), health_check.clone()));
+            providers.spawn(self.spawn_mds_provider(
+                config.clone(),
+                health_check.clone(),
+                shutdown,
+            ));
         }
 
         if self.k8s_enabled() || self.agones_enabled() {
