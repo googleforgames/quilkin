@@ -65,3 +65,5 @@ fn is_broken_pipe(err_status: &tonic::Status) -> bool {
 
     false
 }
+
+pub type ShutdownSignal = tokio::sync::watch::Receiver<()>;
