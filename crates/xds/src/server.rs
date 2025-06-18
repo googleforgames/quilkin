@@ -413,8 +413,9 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                             Ok(Some(value)) => value,
                             Ok(None) => break,
                             Err(error) => {
-                                tracing::error!(%error, "error receiving delta response");
-                                continue;
+                                let error = eyre::eyre!(error);
+                                tracing::error!(%error, "error receiving delta response, source: {:#}", error);
+                                break;
                             }
                         };
 
