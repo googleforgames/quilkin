@@ -591,10 +591,15 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
                         Ok(Some(Ok(response))) => {
                             is_healthy.store(true, Ordering::SeqCst);
 
-                            tracing::trace!("received delta response");
-                            ds.send_response(response)
-                                .await
-                                .wrap_err("send_response failed")?;
+                            let node_id = if let Some(node) = &response.node {
+                                node.id.clone()
+                            } else {
+                                "unknown".into()
+                            };
+                            tracing::trace!(%node_id, "received delta response");
+                            if let Err(error) = ds.send_response(response).await {
+                                tracing::error!(%error, %node_id, "failed to ack delta response");
+                            }
                             continue;
                         }
                         Ok(Some(Err(error))) => {
