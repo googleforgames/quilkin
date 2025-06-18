@@ -523,6 +523,22 @@ pub(crate) fn packets_dropped_total(
     PACKETS_DROPPED.with_label_values(&[direction.label(), source, asn.asn])
 }
 
+pub(crate) fn provider_task_failures_total(provider_task: &str) -> IntCounter {
+    static PROVIDER_TASK_FAILURES_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+        prometheus::register_int_counter_vec_with_registry! {
+            prometheus::opts! {
+                "provider_task_failures_total",
+                "The number of times a provider task has failed and had to be restarted",
+            },
+            &["task"],
+            registry(),
+        }
+        .unwrap()
+    });
+
+    PROVIDER_TASK_FAILURES_TOTAL.with_label_values(&[provider_task])
+}
+
 /// Create a generic metrics options.
 /// Use `filter_opts` instead if the intended target is a filter.
 pub fn opts(name: &str, subsystem: &str, description: &str) -> Opts {

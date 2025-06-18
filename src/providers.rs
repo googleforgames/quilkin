@@ -25,7 +25,7 @@ use std::{
     },
 };
 
-use crate::config;
+use crate::{config, metrics::provider_task_failures_total};
 use eyre::Context;
 use futures::TryStreamExt;
 
@@ -451,7 +451,7 @@ impl Providers {
             }
         };
 
-        Self::task(health_check.clone(), task)
+        Self::task("k8s_provider".into(), health_check.clone(), task)
     }
 
     async fn result_stream<T>(
@@ -499,7 +499,7 @@ impl Providers {
     ) -> impl Future<Output = crate::Result<()>> + 'static {
         let config = config.clone();
         let endpoints = self.relay.clone();
-        Self::task(health_check.clone(), move || {
+        Self::task("mds_provider".into(), health_check.clone(), move || {
             let config = config.clone();
             let endpoints = endpoints.clone();
             let health_check = health_check.clone();
@@ -527,7 +527,7 @@ impl Providers {
         let endpoints = self.xds_endpoints.clone();
         let tx = Option::<tokio::sync::mpsc::UnboundedSender<String>>::None;
 
-        Self::task(health_check.clone(), move || {
+        Self::task("xds_provider".into(), health_check.clone(), move || {
             let config = config.clone();
             let endpoints = endpoints.clone();
             let health_check = health_check.clone();
@@ -637,19 +637,23 @@ impl Providers {
         if self.fs_enabled() {
             let config = config.clone();
 
-            providers.spawn(Self::task(health_check.clone(), {
-                let path = self.fs_path.clone();
-                let health_check = health_check.clone();
+            providers.spawn(Self::task(
+                "fs_watch_provider".into(),
+                health_check.clone(),
+                {
+                    let path = self.fs_path.clone();
+                    let health_check = health_check.clone();
 
-                move || {
-                    fs::watch(
-                        config.clone(),
-                        health_check.clone(),
-                        path.clone(),
-                        locality.clone(),
-                    )
-                }
-            }));
+                    move || {
+                        fs::watch(
+                            config.clone(),
+                            health_check.clone(),
+                            path.clone(),
+                            locality.clone(),
+                        )
+                    }
+                },
+            ));
         }
 
         if let Some(fc) = self
@@ -672,6 +676,7 @@ impl Providers {
 
     #[tracing::instrument(level = "trace", skip_all)]
     pub async fn task<F>(
+        name: String,
         health_check: Arc<AtomicBool>,
         task: impl FnMut() -> F,
     ) -> crate::Result<()>
@@ -684,9 +689,11 @@ impl Providers {
             .max_delay(MAX_DELAY)
             .on_retry(|attempt, _, error: &eyre::Error| {
                 health_check.store(false, Ordering::SeqCst);
+                let name = name.clone();
                 let error = error.to_string();
                 async move {
-                    tracing::warn!(%attempt, %error, "provider task error, retrying");
+                    provider_task_failures_total(&name).inc();
+                    tracing::warn!(%attempt, %error, task=%name, "provider task error, retrying");
                 }
             })
             .await
