@@ -440,6 +440,8 @@ impl Service {
             .qcmp_port()
             .context("QCMP was enabled, but QCMP port was not inserted into typemap")?;
 
+        qcmp_port.store(self.qcmp_port);
+
         tracing::info!(port=%self.qcmp_port, "starting qcmp service");
         let qcmp = crate::net::raw_socket_with_reuse(self.qcmp_port)?;
 
