@@ -806,14 +806,18 @@ impl Sandbox {
         let Some((_, pail)) = self.pails.iter_mut().find(|(name, _)| **name == which) else {
             panic!("failed to find '{which}'");
         };
+        tracing::info!("stopping {which}");
         pail.stop().await;
+        tracing::info!("stopped {which}");
     }
 
     pub async fn start(&mut self, which: &str) {
         let Some((_, pail)) = self.pails.iter_mut().find(|(name, _)| **name == which) else {
             panic!("failed to find '{which}'");
         };
+        tracing::info!("starting {which}");
         pail.start().await;
+        tracing::info!("started {which}");
     }
 }
 

@@ -23,7 +23,7 @@ use std::{
 use eyre::{Context, ContextCompat};
 use futures::StreamExt;
 use rand::Rng;
-use tonic::transport::{Endpoint, Error as TonicError, channel::Channel as TonicChannel};
+use tonic::transport::{Endpoint, channel::Channel as TonicChannel};
 use tracing::Instrument;
 use tryhard::{
     RetryFutureConfig, RetryPolicy,
@@ -128,6 +128,17 @@ pub struct Client<C: ServiceClient> {
 impl<C: ServiceClient> Client<C> {
     #[tracing::instrument(skip_all, level = "trace", fields(servers = ?management_servers))]
     pub async fn connect(identifier: String, management_servers: Vec<Endpoint>) -> Result<Self> {
+        eyre::ensure!(
+            !management_servers.is_empty(),
+            "at least one endpoint must be specified"
+        );
+        for ms in &management_servers {
+            // make sure that we have everything we will need in our URI
+            let uri = ms.uri();
+            eyre::ensure!(uri.scheme().is_some(), "endpoint {uri} has no scheme");
+            eyre::ensure!(uri.host().is_some(), "endpoint {uri} has no host");
+        }
+
         let (client, connected_endpoint) = Self::connect_with_backoff(&management_servers).await?;
         Ok(Self {
             client,
@@ -157,55 +168,66 @@ impl<C: ServiceClient> Client<C> {
                 rand::rng().random_range(0..BACKOFF_MAX_JITTER.as_millis() as _),
             );
 
-            match error {
-                RpcSessionError::InvalidEndpoint(error) => {
-                    tracing::error!(?error, "Error creating endpoint");
-                    // Do not retry if this is an invalid URL error that we cannot recover from.
-                    RetryPolicy::Break
-                }
-                RpcSessionError::InitialConnect(error) => {
-                    tracing::warn!(?error, "Unable to connect to the XDS server");
-                    RetryPolicy::Delay(delay)
-                }
-                RpcSessionError::Receive(status) => {
-                    tracing::warn!(status = ?status, "Failed to receive response from XDS server");
-                    RetryPolicy::Delay(delay)
-                }
-            }
+            tracing::warn!(?error, "Unable to connect to the xDS server");
+            RetryPolicy::Delay(delay)
         });
 
-        let mut addresses = management_servers.iter().cycle();
         let connect_to_server = tryhard::retry_fn(|| {
-            let address = addresses.next();
+            let mut js = tokio::task::JoinSet::new();
+
+            tracing::info!(
+                server_count = management_servers.len(),
+                "attempting to connect to xDS server"
+            );
+            for ms in management_servers {
+                let endpoint = ms.clone();
+
+                js.spawn(async move {
+                    let res = C::connect_to_endpoint(endpoint.clone())
+                        .instrument(tracing::debug_span!(
+                            "AggregatedDiscoveryServiceClient::connect_to_endpoint"
+                        ))
+                        .await;
+
+                    (res, endpoint)
+                });
+            }
+
             async move {
-                match address {
-                    None => Err(RpcSessionError::Receive(tonic::Status::internal(
-                        "Failed initial connection",
-                    ))),
-                    Some(endpoint) => {
-                        tracing::info!("attempting to connect to `{}`", endpoint.uri());
-                        let cendpoint = endpoint.clone();
-                        let endpoint = endpoint.clone().connect_timeout(CONNECTION_TIMEOUT);
-
-                        // make sure that we have everything we will need in our URI
-                        if endpoint.uri().scheme().is_none() {
-                            return Err(RpcSessionError::InvalidEndpoint(
-                                "No scheme provided".into(),
-                            ));
-                        } else if endpoint.uri().host().is_none() {
-                            return Err(RpcSessionError::InvalidEndpoint(
-                                "No host provided".into(),
-                            ));
+                match tokio::time::timeout(CONNECTION_TIMEOUT, async {
+                    while let Some(join_result) = js.join_next().await {
+                        match join_result {
+                            Ok((result, endpoint)) => {
+                                match result {
+                                    Ok(client) => {
+                                        return Ok((client, endpoint));
+                                    }
+                                    Err(error) => {
+                                        tracing::warn!(uri = %endpoint.uri(), %error, "failed to connect");
+                                    }
+                                }
+                            }
+                            Err(join_error) => {
+                                if join_error.is_panic() {
+                                    tracing::error!(
+                                        ?join_error,
+                                        "panic occurred in task attempting to connect to xDS endpoint"
+                                    );
+                                }
+                            }
                         }
-
-                        C::connect_to_endpoint(endpoint)
-                            .instrument(tracing::debug_span!(
-                                "AggregatedDiscoveryServiceClient::connect_to_endpoint"
-                            ))
-                            .await
-                            .map_err(RpcSessionError::InitialConnect)
-                            .map(|client| (client, cendpoint))
                     }
+
+                    Err(RpcSessionError::NoSuccessfulConnections(management_servers.len()))
+                })
+                .await
+                {
+                    Ok(Ok(cae)) => Ok(cae),
+                    Ok(Err(err)) => Err(err),
+                    Err(_) => Err(RpcSessionError::TimedOut {
+                        endpoint_count: management_servers.len(),
+                        window: CONNECTION_TIMEOUT,
+                    }),
                 }
             }
         })
@@ -672,12 +694,13 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
 
 #[derive(Debug, thiserror::Error)]
 enum RpcSessionError {
-    #[error("Invalid endpoint. \n {0}")]
-    InvalidEndpoint(String),
-
-    #[error("Failed to establish initial connection.\n {0:?}")]
-    InitialConnect(TonicError),
-
-    #[error("Error occurred while receiving data. Status: {0}")]
-    Receive(tonic::Status),
+    #[error("No successful connections to {0} server(s) established")]
+    NoSuccessfulConnections(usize),
+    #[error(
+        "No connections to {endpoint_count} server(s) established within connection window of {window:?}"
+    )]
+    TimedOut {
+        endpoint_count: usize,
+        window: Duration,
+    },
 }
