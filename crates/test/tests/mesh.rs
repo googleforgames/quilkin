@@ -536,6 +536,8 @@ trace_test!(relay_restart, {
 
         let wait_time = wait_time.as_millis() as u64;
 
+        tracing::info!(stop, "waiting for relay shutdown completion");
+
         loop {
             client.send_to(&msg, &proxy_address).await.unwrap();
             if sandbox
