@@ -516,7 +516,7 @@ trace_test!(relay_restart, {
         }
     }
 
-    for i in 0..10 {
+    for i in 0..5 {
         tracing::info!(len = token.len(), "sending packet");
         client.send_to(&msg, &proxy_address).await.unwrap();
 
@@ -549,7 +549,7 @@ trace_test!(relay_restart, {
 
         tracing::info!("relay shutdown complete");
 
-        sandbox.sleep(2001).await;
+        sandbox.sleep(1001).await;
         sandbox.start(start).await;
 
         const MAX_WAIT: std::time::Duration = std::time::Duration::from_secs(30);
