@@ -72,7 +72,7 @@ pub struct Proxy {
     pub phoenix: crate::net::TcpListener,
     pub notifier: Option<tokio::sync::mpsc::UnboundedSender<String>>,
     pub xdp: crate::service::XdpOptions,
-    pub termination_timeout: Option<crate::cli::Timeout>,
+    pub termination_timeout: Option<crate::cli::Duration>,
 }
 
 impl Default for Proxy {
