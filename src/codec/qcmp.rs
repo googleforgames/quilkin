@@ -290,6 +290,10 @@ pub(crate) fn spawn_task(
 
                 match track_error(result.map_err(Error::from), &crate::metrics::AsnInfo::EMPTY) {
                     Ok((size, source)) => {
+                        tracing::debug!(
+                            %source,
+                            "received QCMP ping",
+                        );
                         let received_at = UtcTimestamp::now();
                         let ip_entry = crate::net::maxmind_db::MaxmindDb::lookup(source.ip()).map(crate::net::maxmind_db::MetricsIpNetEntry::from);
                         let asn_info = crate::metrics::AsnInfo::from(ip_entry.as_ref());
