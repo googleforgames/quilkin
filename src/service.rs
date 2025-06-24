@@ -443,12 +443,7 @@ impl Service {
         tracing::info!(port=%self.qcmp_port, "starting qcmp service");
         let qcmp = crate::net::raw_socket_with_reuse(self.qcmp_port)?;
 
-        let join = crate::codec::qcmp::spawn(qcmp, qcmp_port.subscribe(), shutdown.shutdown_rx())?;
-        let finished = shutdown.push("qcmp");
-        tokio::spawn(async move {
-            drop(join.await);
-            drop(finished.send(Ok(())));
-        });
+        crate::codec::qcmp::spawn(qcmp, qcmp_port.subscribe(), shutdown)?;
 
         Ok(())
     }

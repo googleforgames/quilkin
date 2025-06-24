@@ -168,7 +168,7 @@ impl ShutdownHandler {
             });
 
             if self.services.is_empty() {
-                tracing::debug!(elapsed = ?start.elapsed(), count = results.len(), "services all finished");
+                tracing::info!(elapsed = ?start.elapsed(), count = results.len(), "services all finished");
                 break;
             }
 
