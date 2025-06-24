@@ -320,9 +320,9 @@ impl Cli {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub struct Timeout(std::time::Duration);
+pub struct Duration(std::time::Duration);
 
-impl std::str::FromStr for Timeout {
+impl std::str::FromStr for Duration {
     type Err = clap::Error;
 
     fn from_str(src: &str) -> Result<Self, Self::Err> {
@@ -354,7 +354,7 @@ impl std::str::FromStr for Timeout {
     }
 }
 
-impl std::ops::Deref for Timeout {
+impl std::ops::Deref for Duration {
     type Target = std::time::Duration;
 
     fn deref(&self) -> &Self::Target {
