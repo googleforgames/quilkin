@@ -34,8 +34,12 @@ pub struct Ping {
     /// The number of pings to send to the endpoint (default: 5).
     #[clap(short, long, default_value_t = 5)]
     pub amount: usize,
+    /// Ping at a set interval instead of immediately after the last response
     #[clap(short, long)]
     pub interval: Option<crate::cli::Duration>,
+    /// The timeout threshold when waiting for a ping response
+    #[clap(short, long, default_value = "1s")]
+    pub timeout: crate::cli::Duration,
 }
 
 impl Ping {
@@ -63,11 +67,8 @@ impl Ping {
                 .await
                 .unwrap();
 
-            let Ok(socket_result) = tokio::time::timeout(
-                std::time::Duration::from_secs(1),
-                socket.recv_from(&mut recv_buf),
-            )
-            .await
+            let Ok(socket_result) =
+                tokio::time::timeout(self.timeout.0, socket.recv_from(&mut recv_buf)).await
             else {
                 tracing::error!(endpoint=%self.endpoint, "exceeded timeout duration");
                 continue;
