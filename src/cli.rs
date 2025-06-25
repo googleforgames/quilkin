@@ -336,12 +336,13 @@ impl std::str::FromStr for Duration {
         } else {
             &src[suffix_pos..]
         };
-
-        let seconds = match suffix {
-            "s" | "S" => num,
-            "m" | "M" => num * 60,
-            "h" | "H" => num * 60 * 60,
-            "d" | "D" => num * 60 * 60 * 24,
+        use std::time::Duration as D;
+        let duration = match suffix {
+            "ms" | "MS" => D::from_millis(num),
+            "s" | "S" => D::from_secs(num),
+            "m" | "M" => D::from_secs(num * 60),
+            "h" | "H" => D::from_secs(num * 60 * 60),
+            "d" | "D" => D::from_secs(num * 60 * 60 * 24),
             s => {
                 return Err(clap::Error::raw(
                     clap::error::ErrorKind::ValueValidation,
@@ -350,7 +351,7 @@ impl std::str::FromStr for Duration {
             }
         };
 
-        Ok(Self(std::time::Duration::from_secs(seconds)))
+        Ok(Self(duration))
     }
 }
 

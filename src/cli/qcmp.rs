@@ -36,6 +36,9 @@ pub struct Ping {
     pub amount: usize,
     #[clap(short, long)]
     pub interval: Option<crate::cli::Duration>,
+    // TODO default_value_t
+    #[clap(short, long)]
+    pub timeout: Option<crate::cli::Duration>,
 }
 
 impl Ping {
@@ -53,6 +56,10 @@ impl Ping {
 
         let mut ticker = self.interval.map(|d| tokio::time::interval(d.0));
 
+        let timeout = self
+            .timeout
+            .map_or(std::time::Duration::from_secs(1), |t| t.0);
+
         for _ in 0..self.amount {
             if let Some(ticker) = ticker.as_mut() {
                 let _ = ticker.tick().await;
@@ -63,11 +70,8 @@ impl Ping {
                 .await
                 .unwrap();
 
-            let Ok(socket_result) = tokio::time::timeout(
-                std::time::Duration::from_secs(1),
-                socket.recv_from(&mut recv_buf),
-            )
-            .await
+            let Ok(socket_result) =
+                tokio::time::timeout(timeout, socket.recv_from(&mut recv_buf)).await
             else {
                 tracing::error!(endpoint=%self.endpoint, "exceeded timeout duration");
                 continue;
