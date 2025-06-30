@@ -257,9 +257,16 @@ impl Cli {
         tracing::debug!(cli = ?self, "config parameters");
 
         let locality = self.locality.locality();
-        let config =
-            self.service
-                .read_config(&self.config, self.locality.icao_code, locality.clone())?;
+
+        // TODO should use self.service.id instead of default_id() here
+        let mut config = crate::Config::new(
+            crate::config::default_id(),
+            self.locality.icao_code,
+            &self.providers,
+            &self.service,
+        );
+        config.read_config(&self.config, locality.clone())?;
+        let config = Arc::new(config);
 
         let ready = Arc::<std::sync::atomic::AtomicBool>::default();
         let shutdown_handler = crate::signal::spawn_handler();

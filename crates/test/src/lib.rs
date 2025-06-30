@@ -362,17 +362,23 @@ impl Pail {
 
                 let (shutdown, shutdown_rx) = quilkin::signal::channel();
 
+                let providers = quilkin::Providers::default().fs().fs_path(path);
                 let svc = quilkin::Service::default()
                     .xds()
                     .xds_port(xds_port)
                     .mds()
                     .mds_port(mds_port);
-                let config = Arc::new(svc.build_config(Default::default()).unwrap());
+
+                let config = Arc::new(crate::Config::new(
+                    "test-relay".into(),
+                    Default::default(),
+                    &providers,
+                    &svc,
+                ));
+
                 *config.dyn_cfg.id.lock() = spc.name.into();
-                let provider_task = quilkin::Providers::default()
-                    .fs()
-                    .fs_path(path)
-                    .spawn_providers(&config, <_>::default(), None, shutdown_rx.clone());
+                let provider_task =
+                    providers.spawn_providers(&config, <_>::default(), None, shutdown_rx.clone());
                 let task = svc
                     .spawn_services(
                         &config,
@@ -439,17 +445,22 @@ impl Pail {
 
                 let config_path = path.clone();
                 let svc = quilkin::Service::default().qcmp().qcmp_port(port);
-                let config = Arc::new(
-                    svc.build_config(apc.icao_code)
-                        .expect("failed to build agent config"),
-                );
-                *config.dyn_cfg.id.lock() = spc.name.into();
-                let acfg = config.clone();
-                let provider_task = quilkin::Providers::default()
+                let providers = quilkin::Providers::default()
                     .fs()
                     .fs_path(path)
-                    .grpc_push_endpoints(relay_servers)
-                    .spawn_providers(&config, <_>::default(), None, shutdown_rx.clone());
+                    .grpc_push_endpoints(relay_servers);
+
+                let config = Arc::new(crate::Config::new(
+                    "test-agent".into(),
+                    apc.icao_code,
+                    &providers,
+                    &svc,
+                ));
+
+                *config.dyn_cfg.id.lock() = spc.name.into();
+                let acfg = config.clone();
+                let provider_task =
+                    providers.spawn_providers(&config, <_>::default(), None, shutdown_rx.clone());
                 let task = svc
                     .spawn_services(
                         &config,
@@ -505,7 +516,12 @@ impl Pail {
                     .phoenix_port(phoenix_port)
                     .termination_timeout(None);
 
-                let config = Arc::new(svc.build_config(Default::default()).unwrap());
+                let config = Arc::new(crate::Config::new(
+                    "test-proxy".into(),
+                    Default::default(),
+                    &Default::default(),
+                    &svc,
+                ));
 
                 if let Some(cfg) = ppc.config {
                     if !cfg.clusters.is_empty() {
