@@ -103,7 +103,14 @@ mod tests {
 
     #[test]
     fn deserialise_client() {
-        let config = Config::default();
+        let providers = Default::default();
+        let service = Default::default();
+        let config = Config::new(
+            "deserialize_client".into(),
+            Default::default(),
+            &providers,
+            &service,
+        );
         config.dyn_cfg.clusters().unwrap().modify(|clusters| {
             clusters.insert_default([Endpoint::new("127.0.0.1:25999".parse().unwrap())].into());
         });
@@ -113,7 +120,14 @@ mod tests {
 
     #[test]
     fn deserialise_server() {
-        let config = Config::default();
+        let providers = Default::default();
+        let service = Default::default();
+        let config = Config::new(
+            "deserialize_server".into(),
+            Default::default(),
+            &providers,
+            &service,
+        );
         config.dyn_cfg.clusters().unwrap().modify(|clusters| {
             clusters.insert_default(
                 [
@@ -129,8 +143,10 @@ mod tests {
 
     #[test]
     fn parse_default_values() {
-        let config = Config::default();
-        let before = config.id();
+        let providers = Default::default();
+        let service = Default::default();
+        let before = String::from("parse_default_values");
+        let config = Config::new(before.clone(), Default::default(), &providers, &service);
         assert!(!before.is_empty());
         config
             .update_from_json(
@@ -148,7 +164,14 @@ mod tests {
 
     #[test]
     fn parse_client() {
-        let config = Config::default();
+        let providers = Default::default();
+        let service = Default::default();
+        let config = Config::new(
+            "parse_client".into(),
+            Default::default(),
+            &providers,
+            &service,
+        );
         config
             .update_from_json(
                 serde_json::from_value(json!({
@@ -175,7 +198,14 @@ mod tests {
 
     #[test]
     fn parse_ipv6_endpoint() {
-        let config = Config::default();
+        let providers = Default::default();
+        let service = Default::default();
+        let config = Config::new(
+            "parse_ipv6_endpoint".into(),
+            Default::default(),
+            &providers,
+            &service,
+        );
         config
             .update_from_json(
                 serde_json::from_value(json!({
@@ -211,7 +241,14 @@ mod tests {
 
     #[test]
     fn parse_server() {
-        let config = Config::default();
+        let providers = Default::default();
+        let service = Default::default();
+        let config = Config::new(
+            "parse_server".into(),
+            Default::default(),
+            &providers,
+            &service,
+        );
         config
             .update_from_json(
                 serde_json::from_value(json!({
@@ -323,7 +360,16 @@ dynamic:
 ",
         ];
 
-        let config = Config::default();
+        let providers = crate::Providers::default();
+        let service = crate::Service::default();
+        let mut config = Config::new(
+            "deny_unused_fields".into(),
+            Default::default(),
+            &providers,
+            &service,
+        );
+        insert_default::<crate::filters::FilterChain>(&mut config.dyn_cfg.typemap);
+
         for cstr in configs {
             let json = serde_yaml::from_str(cstr).unwrap();
             let result = config.update_from_json(json, None);
