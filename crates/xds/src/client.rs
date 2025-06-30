@@ -324,6 +324,11 @@ impl MdsClient {
 
                     is_healthy.store(false, Ordering::SeqCst);
 
+                    if shutdown.has_changed().is_ok_and(|b| b) {
+                        // We are shutting down, just quit
+                        return Ok(());
+                    }
+
                     tracing::debug!("lost connection to relay server, retrying");
                     let new_client = MdsClient::connect_with_backoff(&self.management_servers)
                         .await
