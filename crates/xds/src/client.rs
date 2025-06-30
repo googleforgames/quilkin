@@ -516,7 +516,7 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
     async fn handle_first_response(
         stream: &mut tonic::Streaming<DeltaDiscoveryResponse>,
         resources: &'static [(&'static str, &'static [(&'static str, Vec<String>)])],
-    ) -> eyre::Result<&'static [(&'static str, Vec<String>)]> {
+    ) -> eyre::Result<(String, &'static [(&'static str, Vec<String>)])> {
         const TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
 
         match tokio::time::timeout(TIMEOUT, stream.message()).await {
@@ -528,6 +528,12 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
                     eyre::bail!("expected at least one response from the management server");
                 };
 
+                let control_plane_identifier = first
+                    .control_plane
+                    .as_ref()
+                    .map(|cp| cp.identifier.clone())
+                    .unwrap_or_default();
+
                 if first.type_url != "ignore-me" {
                     tracing::warn!("expected `ignore-me` response from management server");
                 }
@@ -535,6 +541,7 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
                 resources
                     .iter()
                     .find_map(|(vers, subs)| (*vers == first.system_version_info).then_some(*subs))
+                    .map(|rs| (control_plane_identifier, rs))
                     .with_context(|| {
                         format!(
                             "failed to find resources with version `{}` to subscribe to",
@@ -545,8 +552,13 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
         }
     }
 
-    let resource_subscriptions = match handle_first_response(&mut stream, resources).await {
-        Ok(rs) => rs,
+    let (mut control_plane, resource_subscriptions) = match handle_first_response(
+        &mut stream,
+        resources,
+    )
+    .await
+    {
+        Ok((id, rs)) => (id, rs),
         Err(error) => {
             tracing::error!(%error, "failed to acquire matching resource subscriptions based on response from management sever");
             return Err(error);
@@ -569,7 +581,7 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
         return Err(err);
     }
 
-    let id = identifier.clone();
+    let client_id = identifier.clone();
     let handle = tokio::task::spawn(
         async move {
             tracing::trace!("starting xDS delta stream task");
@@ -577,9 +589,9 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
             let mut resource_subscriptions = resource_subscriptions;
 
             loop {
-                tracing::info!("creating discovery response handler");
+                tracing::info!(%control_plane, "creating discovery response handler");
                 let mut response_stream = crate::config::handle_delta_discovery_responses(
-                    identifier.clone(),
+                    control_plane.clone(),
                     stream,
                     config.clone(),
                     local.clone(),
@@ -587,7 +599,7 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
                     notifier.clone(),
                 );
 
-                tracing::info!("entering xDS stream loop");
+                tracing::info!(%control_plane, "entering xDS stream loop");
                 loop {
                     let next_response =
                         tokio::time::timeout(IDLE_REQUEST_INTERVAL, response_stream.next());
@@ -610,6 +622,7 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
                         Ok(Some(Err(error))) => {
                             if crate::is_broken_pipe(&error) {
                                 tracing::info!(
+                                    %control_plane,
                                     endpoint = %connected_endpoint.uri(),
                                     "remoteterminated the connection",
                                 );
@@ -619,7 +632,7 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
                             break;
                         }
                         Ok(None) => {
-                            tracing::warn!("xDS stream terminated");
+                            tracing::warn!(%control_plane, "xDS stream terminated");
                             break;
                         }
                         Err(_) => {
@@ -640,7 +653,7 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
                 local.clear(&config, None);
 
                 loop {
-                    tracing::info!("Lost connection to xDS, retrying");
+                    tracing::info!(%control_plane, "Lost connection to xDS, retrying");
                     match DeltaClientStream::connect(&endpoints, identifier.clone()).await {
                         Ok(res) => {
                             (ds, stream, connected_endpoint) = res;
@@ -652,9 +665,10 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
                     }
 
                     match handle_first_response(&mut stream, resources).await {
-                        Ok(rs) => {
+                        Ok((id, rs)) => {
+                            control_plane = id;
                             resource_subscriptions = rs;
-                            tracing::info!("received first response");
+                            tracing::info!(%control_plane, "received first response");
                             break;
                         }
                         Err(error) => {
@@ -666,10 +680,10 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
                 ds.refresh(&identifier, resource_subscriptions.to_vec(), &local)
                     .await
                     .wrap_err("refresh failed")?;
-                tracing::info!("xDS connection refreshed");
+                tracing::info!(%control_plane, "xDS connection refreshed");
             }
         }
-        .instrument(tracing::trace_span!("xds_client_stream", id)),
+        .instrument(tracing::trace_span!("xds_client_stream", client_id)),
     );
 
     Ok(handle)
