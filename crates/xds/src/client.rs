@@ -20,7 +20,7 @@ use std::{
     time::Duration,
 };
 
-use eyre::{Context, ContextCompat};
+use eyre::ContextCompat;
 use futures::StreamExt;
 use rand::Rng;
 use tonic::transport::{Endpoint, channel::Channel as TonicChannel};
@@ -38,6 +38,7 @@ use crate::{
         aggregated_discovery_service_client::AggregatedDiscoveryServiceClient,
     },
     generated::quilkin::relay::v1alpha1::aggregated_control_plane_discovery_service_client::AggregatedControlPlaneDiscoveryServiceClient,
+    metrics::{KIND_CLIENT, KIND_SERVER},
 };
 
 type AdsGrpcClient = AggregatedDiscoveryServiceClient<TonicChannel>;
@@ -377,6 +378,7 @@ impl DeltaClientStream {
         endpoints: &[Endpoint],
         identifier: String,
     ) -> Result<(Self, tonic::Streaming<DeltaDiscoveryResponse>, Endpoint)> {
+        crate::metrics::actions_total(KIND_CLIENT, "connect").inc();
         if let Ok((mut client, ep)) = MdsClient::connect_with_backoff(endpoints).await {
             let (req_tx, requests_rx) =
                 tokio::sync::mpsc::channel(100 /*ResourceType::VARIANTS.len()*/);
@@ -444,6 +446,7 @@ impl DeltaClientStream {
         subs: Vec<(&'static str, Vec<String>)>,
         local: &crate::config::LocalVersions,
     ) -> Result<()> {
+        crate::metrics::actions_total(KIND_CLIENT, "refresh").inc();
         for (rt, names) in subs {
             let initial_resource_versions = local.get(rt).clone();
             self.req_tx
@@ -471,6 +474,7 @@ impl DeltaClientStream {
     /// Sends an n/ack "response" in response to the remote response
     #[inline]
     pub(crate) async fn send_response(&self, response: DeltaDiscoveryRequest) -> Result<()> {
+        crate::metrics::actions_total(KIND_CLIENT, "respond").inc();
         self.req_tx.send(response).await?;
         Ok(())
     }
@@ -486,6 +490,7 @@ impl DeltaServerStream {
         mut client: MdsGrpcClient,
         identifier: String,
     ) -> Result<(Self, tonic::Streaming<DeltaDiscoveryRequest>)> {
+        crate::metrics::actions_total(KIND_SERVER, "connect").inc();
         let (res_tx, responses_rx) = tokio::sync::mpsc::channel(100);
 
         res_tx
@@ -506,6 +511,7 @@ impl DeltaServerStream {
 
     #[inline]
     async fn send_response(&self, res: DeltaDiscoveryResponse) -> Result<()> {
+        crate::metrics::actions_total(KIND_SERVER, "respond").inc();
         self.res_tx.send(res).await?;
         Ok(())
     }
@@ -530,6 +536,7 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
     {
         Ok(ds) => ds,
         Err(err) => {
+            crate::metrics::errors_total(KIND_CLIENT, "connect").inc();
             tracing::error!(error = ?err, "failed to acquire aggregated delta stream from management server");
             return Err(err);
         }
@@ -543,10 +550,12 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
 
         match tokio::time::timeout(TIMEOUT, stream.message()).await {
             Err(_elapsed) => {
+                crate::metrics::errors_total(KIND_CLIENT, "timeout").inc();
                 eyre::bail!("timed out after {TIMEOUT:?} waiting for first response");
             }
             Ok(result) => {
                 let Some(first) = result? else {
+                    crate::metrics::errors_total(KIND_CLIENT, "unexpected").inc();
                     eyre::bail!("expected at least one response from the management server");
                 };
 
@@ -557,6 +566,7 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
                     .unwrap_or_default();
 
                 if first.type_url != "ignore-me" {
+                    crate::metrics::errors_total(KIND_CLIENT, "unexpected").inc();
                     tracing::warn!("expected `ignore-me` response from management server");
                 }
 
@@ -565,6 +575,7 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
                     .find_map(|(vers, subs)| (*vers == first.system_version_info).then_some(*subs))
                     .map(|rs| (control_plane_identifier, rs))
                     .with_context(|| {
+                        crate::metrics::errors_total(KIND_CLIENT, "no_resource").inc();
                         format!(
                             "failed to find resources with version `{}` to subscribe to",
                             first.system_version_info
@@ -599,6 +610,7 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
         .refresh(&identifier, resource_subscriptions.to_vec(), &local)
         .await
     {
+        crate::metrics::errors_total(KIND_CLIENT, "request_failed").inc();
         tracing::error!(error = ?err, "failed to send initial resource requests");
         return Err(err);
     }
@@ -637,31 +649,40 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
                             };
                             tracing::trace!(%node_id, "received delta response");
                             if let Err(error) = ds.send_response(response).await {
+                                crate::metrics::errors_total(KIND_CLIENT, "ack_failed").inc();
                                 tracing::error!(%error, %node_id, "failed to ack delta response");
                             }
                             continue;
                         }
                         Ok(Some(Err(error))) => {
                             if crate::is_broken_pipe(&error) {
+                                crate::metrics::actions_total(KIND_CLIENT, "remote_terminate")
+                                    .inc();
                                 tracing::info!(
                                     %control_plane,
                                     endpoint = %connected_endpoint.uri(),
                                     "remoteterminated the connection",
                                 );
                             } else {
+                                crate::metrics::errors_total(KIND_CLIENT, "unknown").inc();
                                 tracing::warn!(%error, "xds stream error");
                             }
                             break;
                         }
                         Ok(None) => {
+                            crate::metrics::actions_total(KIND_CLIENT, "terminate").inc();
                             tracing::warn!(%control_plane, "xDS stream terminated");
                             break;
                         }
                         Err(_) => {
                             tracing::debug!("exceeded idle request interval sending new requests");
-                            ds.refresh(&identifier, resource_subscriptions.to_vec(), &local)
+                            if let Err(error) = ds
+                                .refresh(&identifier, resource_subscriptions.to_vec(), &local)
                                 .await
-                                .wrap_err("refresh failed")?;
+                            {
+                                crate::metrics::errors_total(KIND_CLIENT, "refresh").inc();
+                                return Err(error.wrap_err("refresh failed"));
+                            }
                         }
                     }
                 }
@@ -681,6 +702,7 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
                             (ds, stream, connected_endpoint) = res;
                         }
                         Err(error) => {
+                            crate::metrics::errors_total(KIND_CLIENT, "connect").inc();
                             tracing::error!(%error, "failed to establish connection");
                             continue;
                         }
@@ -699,9 +721,13 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
                     }
                 }
 
-                ds.refresh(&identifier, resource_subscriptions.to_vec(), &local)
+                if let Err(error) = ds
+                    .refresh(&identifier, resource_subscriptions.to_vec(), &local)
                     .await
-                    .wrap_err("refresh failed")?;
+                {
+                    crate::metrics::errors_total(KIND_CLIENT, "refresh").inc();
+                    return Err(error.wrap_err("refresh failed"));
+                }
                 tracing::info!(%control_plane, "xDS connection refreshed");
             }
         }

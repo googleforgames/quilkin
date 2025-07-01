@@ -31,7 +31,7 @@ use crate::{
     generated::quilkin::relay::v1alpha1::aggregated_control_plane_discovery_service_server::{
         AggregatedControlPlaneDiscoveryService, AggregatedControlPlaneDiscoveryServiceServer,
     },
-    metrics,
+    metrics::{self, KIND_SERVER},
     net::TcpListener,
 };
 
@@ -216,6 +216,7 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
             is_relay = self.is_relay,
             "pushing update"
         );
+        crate::metrics::actions_total(KIND_SERVER, "push").inc();
         if self.tx.send(resource_type).is_err() {
             tracing::debug!("no client connections currently subscribed");
         }
@@ -388,6 +389,7 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                                     Ok(Some(res)) => yield res,
                                     Ok(None) => {}
                                     Err(error) => {
+                                        crate::metrics::errors_total(KIND_SERVER, "respond").inc();
                                         tracing::error!(%error, "responder failed to generate response");
                                         continue;
                                     },
@@ -401,6 +403,7 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                                         Ok(Some(res)) => yield res,
                                         Ok(None) => {},
                                         Err(error) => {
+                                            crate::metrics::errors_total(KIND_SERVER, "respond").inc();
                                             tracing::error!(%error, "responder failed to generate response");
                                             continue;
                                         }
@@ -414,6 +417,7 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                             Ok(Some(value)) => value,
                             Ok(None) => break,
                             Err(error) => {
+                                crate::metrics::errors_total(KIND_SERVER, "receive").inc();
                                 tracing::error!(%error, "error receiving delta response");
                                 continue;
                             }
@@ -436,6 +440,7 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                                     tracing::trace!(%nonce, "ACK");
                                 }
                                 Err(error) => {
+                                    crate::metrics::errors_total(KIND_SERVER, "ack").inc();
                                     tracing::error!(%nonce, %error, "failed to process client ack");
                                 }
                             }
