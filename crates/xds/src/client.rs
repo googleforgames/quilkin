@@ -667,12 +667,6 @@ pub async fn delta_subscribe<C: crate::config::Configuration>(
 
                 is_healthy.store(false, Ordering::SeqCst);
 
-                // Assume a new server we might connect to has completely different
-                // state from the previous one, so get rid of our current state
-                // and get a full refresh from the new relay, as well as
-                // getting rid of any state the previously connected server gave us
-                local.clear(&config, None);
-
                 loop {
                     tracing::info!(%control_plane, "Lost connection to xDS, retrying");
                     match DeltaClientStream::connect(&endpoints, identifier.clone()).await {
