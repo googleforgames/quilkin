@@ -243,6 +243,14 @@ impl Providers {
         self
     }
 
+    pub fn grpc_pull_endpoints(
+        mut self,
+        endpoints: impl Into<Vec<tonic::transport::Endpoint>>,
+    ) -> Self {
+        self.xds_endpoints = endpoints.into();
+        self
+    }
+
     pub fn spawn_static_provider(
         &self,
         config: FiltersAndClusters,
@@ -523,16 +531,16 @@ impl Providers {
         &self,
         config: Arc<config::Config>,
         health_check: Arc<AtomicBool>,
+        notifier: Option<tokio::sync::mpsc::UnboundedSender<String>>,
     ) -> impl Future<Output = crate::Result<()>> + 'static {
         let config = config.clone();
         let endpoints = self.xds_endpoints.clone();
-        let tx = Option::<tokio::sync::mpsc::UnboundedSender<String>>::None;
 
         Self::task("xds_provider".into(), health_check.clone(), move || {
             let config = config.clone();
             let endpoints = endpoints.clone();
             let health_check = health_check.clone();
-            let tx = tx.clone();
+            let tx = notifier.clone();
             async move {
                 let identifier = config.id();
                 let stream = crate::net::xds::delta_subscribe(
@@ -603,12 +611,14 @@ impl Providers {
         config: &Arc<config::Config>,
         health_check: Arc<AtomicBool>,
         locality: Option<crate::net::endpoint::Locality>,
+        notifier: Option<tokio::sync::mpsc::UnboundedSender<String>>,
         shutdown: tokio::sync::watch::Receiver<()>,
     ) -> tokio::task::JoinSet<crate::Result<()>> {
         let mut providers = tokio::task::JoinSet::new();
 
         if !self.any_provider_enabled() {
             tracing::info!("no configuration providers specified");
+            health_check.store(true, std::sync::atomic::Ordering::Relaxed);
             return providers;
         }
 
@@ -643,7 +653,11 @@ impl Providers {
         }
 
         if self.grpc_pull_enabled() {
-            providers.spawn(self.spawn_xds_provider(config.clone(), health_check.clone()));
+            providers.spawn(self.spawn_xds_provider(
+                config.clone(),
+                health_check.clone(),
+                notifier,
+            ));
         }
 
         if self.fs_enabled() {
