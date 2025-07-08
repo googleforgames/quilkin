@@ -3,18 +3,18 @@
 use quilkin::{
     Config,
     collections::{BufferPool, PoolBuffer},
-    components::{self, RunArgs},
     net::TcpListener,
     signal::ShutdownTx,
     test::TestConfig,
 };
 pub use serde_json::json;
-use std::{net::SocketAddr, num::NonZeroUsize, path::PathBuf, sync::Arc, time::Duration};
+use std::{net::SocketAddr, path::PathBuf, sync::Arc, time::Duration};
 use tokio::sync::mpsc;
 
 #[cfg(target_os = "linux")]
 pub mod xdp_util;
 
+pub const MAX_WAIT: std::time::Duration = std::time::Duration::from_secs(10);
 pub static BUFFER_POOL: once_cell::sync::Lazy<Arc<BufferPool>> =
     once_cell::sync::Lazy::new(|| Arc::new(BufferPool::default()));
 
@@ -212,6 +212,7 @@ pub struct RelayPail {
     pub mds_port: u16,
     pub task: Option<JoinHandle>,
     pub provider_task: JoinSet,
+    pub healthy: Arc<std::sync::atomic::AtomicBool>,
     pub shutdown: ShutdownTx,
     pub config_file: Option<ConfigFile>,
     pub config: Arc<Config>,
@@ -223,6 +224,7 @@ pub struct AgentPail {
     pub qcmp_port: u16,
     pub task: Option<JoinHandle>,
     pub provider_task: JoinSet,
+    pub healthy: Arc<std::sync::atomic::AtomicBool>,
     pub shutdown: ShutdownTx,
     pub config_file: Option<ConfigFile>,
     pub config: Arc<Config>,
@@ -235,6 +237,8 @@ pub struct ProxyPail {
     pub qcmp_port: u16,
     pub phoenix_port: u16,
     pub task: Option<JoinHandle>,
+    pub provider_task: JoinSet,
+    pub healthy: Arc<std::sync::atomic::AtomicBool>,
     pub shutdown: ShutdownTx,
     pub config: Arc<Config>,
     pub delta_applies: Option<tokio::sync::mpsc::UnboundedReceiver<String>>,
@@ -259,6 +263,15 @@ impl Pail {
             Self::Agent(p) => p.config.clone(),
             Self::Proxy(p) => p.config.clone(),
             Self::Server(_) => panic!("no config"),
+        }
+    }
+
+    pub fn is_healthy(&self) -> bool {
+        match self {
+            Pail::Relay(p) => p.healthy.load(std::sync::atomic::Ordering::Relaxed),
+            Pail::Agent(p) => p.healthy.load(std::sync::atomic::Ordering::Relaxed),
+            Pail::Proxy(p) => p.healthy.load(std::sync::atomic::Ordering::Relaxed),
+            Pail::Server(_) => panic!("no health"),
         }
     }
 
@@ -298,13 +311,7 @@ impl Pail {
 }
 
 impl Pail {
-    pub fn construct(
-        spc: SandboxPailConfig,
-        pails: &Pails,
-        td: &std::path::Path,
-    ) -> (Self, Option<tokio::sync::oneshot::Receiver<()>>) {
-        let mut rx = None;
-
+    pub fn construct(spc: SandboxPailConfig, pails: &Pails, td: &std::path::Path) -> Self {
         let pail = match spc.config {
             PailConfig::Server(sspc) => {
                 let (packet_tx, packet_rx) = mpsc::channel::<String>(10);
@@ -377,8 +384,14 @@ impl Pail {
                 ));
 
                 *config.dyn_cfg.id.lock() = spc.name.into();
-                let provider_task =
-                    providers.spawn_providers(&config, <_>::default(), None, shutdown_rx.clone());
+                let healthy = Arc::new(std::sync::atomic::AtomicBool::new(false));
+                let provider_task = providers.spawn_providers(
+                    &config,
+                    healthy.clone(),
+                    None,
+                    None,
+                    shutdown_rx.clone(),
+                );
                 let task = svc
                     .spawn_services(
                         &config,
@@ -391,6 +404,7 @@ impl Pail {
                     mds_port,
                     task: Some(task),
                     provider_task,
+                    healthy,
                     shutdown,
                     config_file: Some(ConfigFile {
                         path: config_path,
@@ -459,8 +473,14 @@ impl Pail {
 
                 *config.dyn_cfg.id.lock() = spc.name.into();
                 let acfg = config.clone();
-                let provider_task =
-                    providers.spawn_providers(&config, <_>::default(), None, shutdown_rx.clone());
+                let healthy = Arc::new(std::sync::atomic::AtomicBool::new(false));
+                let provider_task = providers.spawn_providers(
+                    &config,
+                    healthy.clone(),
+                    None,
+                    None,
+                    shutdown_rx.clone(),
+                );
                 let task = svc
                     .spawn_services(
                         &config,
@@ -472,6 +492,7 @@ impl Pail {
                     qcmp_port: port,
                     task: Some(task),
                     provider_task,
+                    healthy,
                     shutdown,
                     config_file: Some(ConfigFile {
                         path: config_path,
@@ -485,12 +506,13 @@ impl Pail {
                 let qcmp =
                     quilkin::net::raw_socket_with_reuse(0).expect("failed to bind qcmp socket");
                 let qcmp_port = quilkin::net::socket_port(&qcmp);
-                let phoenix = TcpListener::bind(None).expect("failed to bind phoenix socket");
-                let phoenix_port = phoenix.port();
+                let phoenix_port = TcpListener::bind(None)
+                    .expect("failed to bind phoenix socket")
+                    .port();
 
                 let port = quilkin::net::socket_port(&socket);
 
-                let management_servers = spc
+                let management_servers: Vec<_> = spc
                     .dependencies
                     .iter()
                     .filter_map(|dname| {
@@ -505,7 +527,8 @@ impl Pail {
                     })
                     .collect();
 
-                let (tx, orx) = tokio::sync::oneshot::channel();
+                let providers =
+                    quilkin::Providers::default().grpc_pull_endpoints(management_servers);
 
                 let svc = quilkin::Service::default()
                     .udp()
@@ -556,36 +579,24 @@ impl Pail {
                 }
 
                 *config.dyn_cfg.id.lock() = spc.name.into();
-                let pconfig = config.clone();
 
                 let (rttx, rtrx) = tokio::sync::mpsc::unbounded_channel();
                 let (shutdown, shutdown_rx) = quilkin::signal::channel();
-                let sh = quilkin::signal::ShutdownHandler::new(shutdown.clone(), shutdown_rx);
 
-                let task = components::proxy::Proxy {
-                    num_workers: NonZeroUsize::new(1).unwrap(),
-                    management_servers,
-                    socket: Some(socket),
-                    qcmp,
-                    phoenix,
-                    notifier: Some(rttx),
-                    mmdb: None,
-                    to: Default::default(),
-                    to_tokens: None,
-                    xdp: Default::default(),
-                    termination_timeout: None,
-                }
-                .run(
-                    RunArgs {
-                        config: pconfig,
-                        ready: Default::default(),
-                        shutdown: sh,
-                    },
-                    Some(tx),
-                )
-                .expect("failed to start proxy");
-
-                rx = Some(orx);
+                let healthy = Arc::new(std::sync::atomic::AtomicBool::new(false));
+                let provider_task = providers.spawn_providers(
+                    &config,
+                    healthy.clone(),
+                    None,
+                    Some(rttx),
+                    shutdown_rx.clone(),
+                );
+                let task = svc
+                    .spawn_services(
+                        &config,
+                        quilkin::signal::ShutdownHandler::new(shutdown.clone(), shutdown_rx),
+                    )
+                    .unwrap();
 
                 Self::Proxy(ProxyPail {
                     port,
@@ -593,12 +604,14 @@ impl Pail {
                     phoenix_port,
                     shutdown,
                     task: Some(task),
+                    provider_task,
+                    healthy,
                     config,
                     delta_applies: Some(rtrx),
                 })
             }
         };
-        (pail, rx)
+        pail
     }
 }
 
@@ -681,11 +694,7 @@ impl SandboxConfig {
         let mut pails = Pails::new();
         for pc in self.pails {
             let name = pc.name;
-            let (pail, rx) = Pail::construct(pc, &pails, td.path());
-
-            if let Some(rx) = rx {
-                rx.await.unwrap();
-            }
+            let pail = Pail::construct(pc, &pails, td.path());
 
             if pails.insert(name, pail).is_some() {
                 panic!("{name} already existed");
@@ -830,6 +839,75 @@ impl Sandbox {
             panic!("failed to find '{which}'");
         };
         pail.start().await;
+    }
+
+    #[inline]
+    pub async fn block_until_ready(&self, which: &str) {
+        self.wait_for_health_state(which, true).await;
+    }
+
+    #[inline]
+    pub async fn block_until_not_ready(&self, which: &str) {
+        self.wait_for_health_state(which, false).await;
+    }
+
+    async fn wait_for_health_state(&self, which: &str, health_state: bool) {
+        let Some((_, pail)) = self.pails.iter().find(|(name, _)| **name == which) else {
+            panic!("failed to find '{which}'");
+        };
+
+        let start = tokio::time::Instant::now();
+        while pail.is_healthy() != health_state {
+            tracing::debug!(
+                "waiting for '{}' to enter health state '{}'",
+                which,
+                health_state
+            );
+            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+
+            if start.elapsed() > MAX_WAIT {
+                panic!(
+                    "timed out waiting for '{which}' to enter healthy state '{health_state}' after {MAX_WAIT:?}"
+                );
+            }
+        }
+    }
+
+    pub async fn block_until_packet_gets_through(
+        &self,
+        msg: &[u8],
+        expected: &str,
+        client: &quilkin::net::DualStackEpollSocket,
+        proxy_address: &std::net::SocketAddr,
+        server_rx: &mut tokio::sync::mpsc::Receiver<String>,
+    ) {
+        const PACKET_TIMEOUT: std::time::Duration = std::time::Duration::from_millis(500);
+        let start = tokio::time::Instant::now();
+        loop {
+            tracing::debug!(len = msg.len(), "sending packet");
+            client.send_to(msg, &proxy_address).await.unwrap();
+
+            if let Some(rmsg) = self
+                .maybe_timeout(PACKET_TIMEOUT.as_millis() as u64, server_rx.recv())
+                .await
+            {
+                tracing::debug!(len = msg.len(), "received packet");
+                match rmsg {
+                    Some(rmsg) => {
+                        assert_eq!(expected, rmsg);
+                    }
+                    None => {
+                        panic!("got None message, was server_rx channel closed?");
+                    }
+                }
+                break;
+            }
+            tracing::warn!(len = msg.len(), "packet timeout, probably dropped");
+
+            if start.elapsed() > MAX_WAIT {
+                panic!("unable to pass message through proxy after {MAX_WAIT:?}");
+            }
+        }
     }
 }
 

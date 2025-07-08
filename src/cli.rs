@@ -291,6 +291,7 @@ impl Cli {
             &config,
             ready.clone(),
             locality.clone(),
+            None,
             shutdown_handler.shutdown_rx(),
         );
 
