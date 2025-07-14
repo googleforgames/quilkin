@@ -375,20 +375,53 @@ pub(crate) fn phoenix_requests() -> &'static IntCounter {
     &PHOENIX_REQUESTS
 }
 
-pub(crate) fn phoenix_distance(icao: crate::config::IcaoCode, error_estimate: f64) -> Gauge {
-    static PHOENIX_DISTANCE: Lazy<GaugeVec> = Lazy::new(|| {
-        prometheus::register_gauge_vec_with_registry! {
-            prometheus::opts! {
-                "service_phoenix_distance",
-                "The distance from this instance to another node in the network",
+pub(crate) fn phoenix_measurement_seconds(icao: crate::config::IcaoCode, direction: &str) -> Histogram {
+    static PHOENIX_MEASUREMENT: Lazy<HistogramVec> = Lazy::new(|| {
+        prometheus::register_histogram_vec_with_registry! {
+            prometheus::histogram_opts! {
+                "phoenix_measurement_seconds",
+                "Histogram of phoenix measurements for a given node",
+                prometheus::DEFAULT_BUCKETS.to_vec()
             },
-            &["icao", "error_estimate"],
+            &["icao", "direction"],
             registry(),
         }
         .unwrap()
     });
 
-    PHOENIX_DISTANCE.with_label_values(&[icao.as_ref(), &error_estimate.to_string()])
+    PHOENIX_MEASUREMENT.with_label_values(&[icao.as_ref(), direction])
+}
+
+pub(crate) fn phoenix_distance(icao: crate::config::IcaoCode) -> Gauge {
+    static PHOENIX_DISTANCE: Lazy<GaugeVec> = Lazy::new(|| {
+        prometheus::register_gauge_vec_with_registry! {
+            prometheus::opts! {
+                "phoenix_distance",
+                "The distance from this instance to another node in the network",
+            },
+            &["icao"],
+            registry(),
+        }
+        .unwrap()
+    });
+
+    PHOENIX_DISTANCE.with_label_values(&[icao.as_ref()])
+}
+
+pub(crate) fn phoenix_distance_error_estimate(icao: crate::config::IcaoCode) -> Gauge {
+    static PHOENIX_DISTANCE_ERROR_ESTIMATE: Lazy<GaugeVec> = Lazy::new(|| {
+        prometheus::register_gauge_vec_with_registry! {
+            prometheus::opts! {
+                "phoenix_distance_error_estimate",
+                "The distance from this instance to another node in the network",
+            },
+            &["icao"],
+            registry(),
+        }
+        .unwrap()
+    });
+
+    PHOENIX_DISTANCE_ERROR_ESTIMATE.with_label_values(&[icao.as_ref()])
 }
 
 pub(crate) fn phoenix_task_closed() -> &'static IntGauge {
