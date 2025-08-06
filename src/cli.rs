@@ -257,9 +257,16 @@ impl Cli {
         tracing::debug!(cli = ?self, "config parameters");
 
         let locality = self.locality.locality();
-        let config =
-            self.service
-                .read_config(&self.config, self.locality.icao_code, locality.clone())?;
+
+        // TODO should use self.service.id instead of default_id() here
+        let mut config = crate::Config::new(
+            crate::config::default_id(),
+            self.locality.icao_code,
+            &self.providers,
+            &self.service,
+        );
+        config.read_config(&self.config, locality.clone())?;
+        let config = Arc::new(config);
 
         let ready = Arc::<std::sync::atomic::AtomicBool>::default();
         let shutdown_handler = crate::signal::spawn_handler();
@@ -284,6 +291,7 @@ impl Cli {
             &config,
             ready.clone(),
             locality.clone(),
+            None,
             shutdown_handler.shutdown_rx(),
         );
 
@@ -297,11 +305,20 @@ impl Cli {
         loop {
             tokio::select! {
                 Some(result) = provider_tasks.join_next() => {
-                    tracing::error!(task_result=?result, "provider task completed unexpectedly, shutting down.");
-                    // Trigger shutdown so we can drain the active sessions in the service_task
-                    if let Err(error) = shutdown_tx.send(()) {
-                        tracing::error!(error=?error, "failed to trigger shutdown");
-                        return Err(error.into());
+                    match result {
+                        Ok(_) => {
+                            // TODO should improve the provider tasks shutdown so we can log
+                            // exactly which provider has stopped
+                            tracing::info!("provider task stopped");
+                        },
+                        Err(error) => {
+                            tracing::error!(task_result=?error, "provider task completed unexpectedly, shutting down.");
+                            // Trigger shutdown so we can drain the active sessions in the service_task
+                            if let Err(error) = shutdown_tx.send(()) {
+                                tracing::error!(error=?error, "failed to trigger shutdown");
+                                return Err(error.into());
+                            }
+                        },
                     }
                 },
                 result = &mut service_task => {
@@ -320,9 +337,9 @@ impl Cli {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub struct Timeout(std::time::Duration);
+pub struct Duration(std::time::Duration);
 
-impl std::str::FromStr for Timeout {
+impl std::str::FromStr for Duration {
     type Err = clap::Error;
 
     fn from_str(src: &str) -> Result<Self, Self::Err> {
@@ -336,12 +353,13 @@ impl std::str::FromStr for Timeout {
         } else {
             &src[suffix_pos..]
         };
-
-        let seconds = match suffix {
-            "s" | "S" => num,
-            "m" | "M" => num * 60,
-            "h" | "H" => num * 60 * 60,
-            "d" | "D" => num * 60 * 60 * 24,
+        use std::time::Duration as D;
+        let duration = match suffix {
+            "ms" | "MS" => D::from_millis(num),
+            "s" | "S" => D::from_secs(num),
+            "m" | "M" => D::from_secs(num * 60),
+            "h" | "H" => D::from_secs(num * 60 * 60),
+            "d" | "D" => D::from_secs(num * 60 * 60 * 24),
             s => {
                 return Err(clap::Error::raw(
                     clap::error::ErrorKind::ValueValidation,
@@ -350,11 +368,11 @@ impl std::str::FromStr for Timeout {
             }
         };
 
-        Ok(Self(std::time::Duration::from_secs(seconds)))
+        Ok(Self(duration))
     }
 }
 
-impl std::ops::Deref for Timeout {
+impl std::ops::Deref for Duration {
     type Target = std::time::Duration;
 
     fn deref(&self) -> &Self::Target {

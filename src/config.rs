@@ -32,7 +32,6 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    filters::FilterChain,
     generated::envoy::service::discovery::v3::Resource as XdsResource,
     net::cluster::{self, ClusterMap},
     xds::{self, ResourceType},
@@ -55,6 +54,7 @@ pub mod qcmp;
 mod serialization;
 pub mod watch;
 
+const ETC_CONFIG_PATH: &str = "/etc/quilkin/quilkin.yaml";
 pub(crate) const BACKOFF_INITIAL_DELAY: Duration = Duration::from_millis(500);
 
 pub type ConfigMap = typemap_rev::TypeMap<dyn typemap_rev::CloneDebuggableStorage>;
@@ -132,6 +132,7 @@ impl DynamicConfig {
 #[cfg(test)]
 mod test_impls {
     use super::*;
+    use crate::filters::FilterChain;
 
     impl PartialEq for DynamicConfig {
         fn eq(&self, other: &Self) -> bool {
@@ -145,10 +146,11 @@ mod test_impls {
                 T: typemap_rev::TypeMapKey,
                 T::Value: PartialEq + Clone + std::fmt::Debug,
             {
-                let Some((a, b)) = a.get::<T>().zip(b.get::<T>()) else {
-                    return false;
-                };
-                a == b
+                match (a.get::<T>(), b.get::<T>()) {
+                    (None, None) => true,
+                    (None, Some(_)) | (Some(_), None) => false,
+                    (Some(a), Some(b)) => a == b,
+                }
             }
 
             compare::<FilterChain>(&self.typemap, &other.typemap)
@@ -335,6 +337,58 @@ impl quilkin_xds::config::Configuration for Config {
 use crate::net::xds::config::DeltaDiscoveryRes;
 
 impl Config {
+    pub fn new(
+        id: String,
+        icao_code: IcaoCode,
+        providers: &crate::Providers,
+        service: &crate::Service,
+    ) -> Self {
+        let mut config = Config {
+            dyn_cfg: DynamicConfig {
+                id: Arc::new(parking_lot::Mutex::new(id)),
+                version: Version::default(),
+                icao_code: NotifyingIcaoCode::new(icao_code),
+                typemap: default_typemap(),
+            },
+        };
+        providers.init_config(&mut config);
+        service.init_config(&mut config);
+
+        config
+    }
+
+    pub fn read_config(
+        &mut self,
+        config_path: &std::path::Path,
+        locality: Option<crate::net::endpoint::Locality>,
+    ) -> Result<(), eyre::Error> {
+        let paths = [config_path, std::path::Path::new(ETC_CONFIG_PATH)];
+        let mut paths = paths.iter();
+
+        let file = loop {
+            let Some(path) = paths.next() else {
+                return Ok(());
+            };
+
+            match std::fs::File::open(path) {
+                Ok(file) => break file,
+                Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+                    tracing::debug!(path = %path.display(), "config path not found");
+                    continue;
+                }
+                Err(err) => {
+                    tracing::error!(path = %path.display(), error = ?err, "failed to read path");
+                    eyre::bail!(err);
+                }
+            }
+        };
+
+        let json = serde_yaml::from_reader(file)?;
+        self.update_from_json(json, locality)?;
+
+        Ok(())
+    }
+
     /// Given a list of subscriptions and the current state of the calling client,
     /// construct a response with the current state of our resources that differ
     /// from those of the client
@@ -704,25 +758,6 @@ impl Config {
     #[inline]
     pub fn id(&self) -> String {
         self.dyn_cfg.id.lock().clone()
-    }
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        let mut typemap = default_typemap();
-        insert_default::<FilterChain>(&mut typemap);
-        insert_default::<ClusterMap>(&mut typemap);
-        insert_default::<DatacenterMap>(&mut typemap);
-        insert_default::<qcmp::QcmpPort>(&mut typemap);
-
-        Self {
-            dyn_cfg: DynamicConfig {
-                id: Arc::new(parking_lot::Mutex::new(default_id())),
-                icao_code: Default::default(),
-                version: Version::default(),
-                typemap,
-            },
-        }
     }
 }
 

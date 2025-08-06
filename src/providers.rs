@@ -243,10 +243,19 @@ impl Providers {
         self
     }
 
+    pub fn grpc_pull_endpoints(
+        mut self,
+        endpoints: impl Into<Vec<tonic::transport::Endpoint>>,
+    ) -> Self {
+        self.xds_endpoints = endpoints.into();
+        self
+    }
+
     pub fn spawn_static_provider(
         &self,
         config: FiltersAndClusters,
         health_check: &AtomicBool,
+        locality: Option<crate::net::endpoint::Locality>,
     ) -> crate::Result<impl Future<Output = crate::Result<()>> + 'static> {
         let endpoint_tokens = self
             .endpoint_tokens
@@ -330,7 +339,7 @@ impl Providers {
             "setting endpoints"
         );
         config.clusters.modify(|clusters| {
-            clusters.insert(None, None, endpoints);
+            clusters.insert(None, locality, endpoints);
         });
 
         health_check.store(true, Ordering::SeqCst);
@@ -522,16 +531,16 @@ impl Providers {
         &self,
         config: Arc<config::Config>,
         health_check: Arc<AtomicBool>,
+        notifier: Option<tokio::sync::mpsc::UnboundedSender<String>>,
     ) -> impl Future<Output = crate::Result<()>> + 'static {
         let config = config.clone();
         let endpoints = self.xds_endpoints.clone();
-        let tx = Option::<tokio::sync::mpsc::UnboundedSender<String>>::None;
 
         Self::task("xds_provider".into(), health_check.clone(), move || {
             let config = config.clone();
             let endpoints = endpoints.clone();
             let health_check = health_check.clone();
-            let tx = tx.clone();
+            let tx = notifier.clone();
             async move {
                 let identifier = config.id();
                 let stream = crate::net::xds::delta_subscribe(
@@ -586,17 +595,30 @@ impl Providers {
             || self.static_enabled()
     }
 
+    /// Adds the required typemap entries to the config depending on what providers are enabled
+    pub fn init_config(&self, config: &mut config::Config) {
+        use crate::config::insert_default;
+
+        // TODO are these required by all providers or only some?
+        if self.any_provider_enabled() {
+            insert_default::<crate::filters::FilterChain>(&mut config.dyn_cfg.typemap);
+            insert_default::<crate::net::ClusterMap>(&mut config.dyn_cfg.typemap);
+        }
+    }
+
     pub fn spawn_providers(
         self,
         config: &Arc<config::Config>,
         health_check: Arc<AtomicBool>,
         locality: Option<crate::net::endpoint::Locality>,
+        notifier: Option<tokio::sync::mpsc::UnboundedSender<String>>,
         shutdown: tokio::sync::watch::Receiver<()>,
     ) -> tokio::task::JoinSet<crate::Result<()>> {
         let mut providers = tokio::task::JoinSet::new();
 
         if !self.any_provider_enabled() {
             tracing::info!("no configuration providers specified");
+            health_check.store(true, std::sync::atomic::Ordering::Relaxed);
             return providers;
         }
 
@@ -631,7 +653,11 @@ impl Providers {
         }
 
         if self.grpc_pull_enabled() {
-            providers.spawn(self.spawn_xds_provider(config.clone(), health_check.clone()));
+            providers.spawn(self.spawn_xds_provider(
+                config.clone(),
+                health_check.clone(),
+                notifier,
+            ));
         }
 
         if self.fs_enabled() {
@@ -643,6 +669,7 @@ impl Providers {
                 {
                     let path = self.fs_path.clone();
                     let health_check = health_check.clone();
+                    let locality = locality.clone();
 
                     move || {
                         fs::watch(
@@ -662,7 +689,10 @@ impl Providers {
             .flatten()
         {
             health_check.store(true, Ordering::SeqCst);
-            providers.spawn(self.spawn_static_provider(fc, &health_check).unwrap());
+            providers.spawn(
+                self.spawn_static_provider(fc, &health_check, locality.clone())
+                    .unwrap(),
+            );
         }
 
         assert!(

@@ -410,25 +410,20 @@ trace_test!(relay_restart, {
     let mut sandbox = sc.spinup().await;
 
     let (mut server_rx, server_addr) = sandbox.server("server");
-    let (proxy_address, mut proxy_delta_rx) = sandbox.proxy("proxy");
+    let (proxy_address, mut _proxy_delta_rx) = sandbox.proxy("proxy");
 
     let mut agent_config = sandbox.config_file("agent");
     let mut relay_config = sandbox.config_file("relay");
 
     let client = sandbox.client();
 
-    let token = b"g".to_vec();
+    for i in 0..10 {
+        // Use token of increasing length to ensure we test update of both filters and clusters on
+        // each iteration
+        let token = format!("token-{}", (0..i + 1).map(|_| "x").collect::<String>())
+            .as_bytes()
+            .to_vec();
 
-    sandbox.sleep(1000).await;
-    loop {
-        match proxy_delta_rx.try_recv() {
-            Ok(_rt) => {}
-            Err(tokio::sync::mpsc::error::TryRecvError::Empty) => break,
-            Err(_) => unreachable!(),
-        }
-    }
-
-    for _ in 0..10 {
         relay_config.update(|config| {
             config.filters = FilterChain::try_create([
                 Capture::as_labeled_filter_config(
@@ -459,63 +454,53 @@ trace_test!(relay_restart, {
             );
         });
 
-        let mut updates = 0x0;
-        while (updates & 0x11) != 0x11 {
-            let rt = sandbox
-                .timeout(10000, proxy_delta_rx.recv())
-                .await
-                .0
-                .unwrap();
-
-            match rt.as_ref() {
-                quilkin::xds::FILTER_CHAIN_TYPE => updates |= 0x1,
-                quilkin::xds::CLUSTER_TYPE => updates |= 0x10,
-                _ => {}
-            }
-        }
-
-        let mut msg = b"hello".to_vec();
+        let expected = "hello";
+        let mut msg = expected.as_bytes().to_vec();
         msg.extend_from_slice(&token);
 
-        tracing::info!(len = token.len(), "sending packet");
-        client.send_to(&msg, &proxy_address).await.unwrap();
-
-        tracing::info!(len = token.len(), "received packet");
-        let (rmsg, wait_time) = sandbox.timeout(10000, server_rx.recv()).await;
-        assert_eq!("hello", rmsg.unwrap(),);
+        sandbox
+            .block_until_packet_gets_through(
+                &msg,
+                expected,
+                &client,
+                &proxy_address,
+                &mut server_rx,
+            )
+            .await;
 
         tracing::info!("shutting down relay...");
         sandbox.stop("relay").await;
 
-        let wait_time = wait_time.as_millis() as u64;
+        // Ensure proxy has realized the connection was lost
+        sandbox.block_until_not_ready("proxy").await;
 
-        loop {
-            client.send_to(&msg, &proxy_address).await.unwrap();
-            if sandbox
-                .maybe_timeout(wait_time * 2, server_rx.recv())
-                .await
-                .is_none()
-            {
-                break;
-            }
-        }
-
-        tracing::info!("relay shutdown complete");
+        // Ensure that we haven't cleared the config state and packets for existing sessions can
+        // still get through
+        sandbox
+            .block_until_packet_gets_through(
+                &msg,
+                expected,
+                &client,
+                &proxy_address,
+                &mut server_rx,
+            )
+            .await;
 
         sandbox.start("relay").await;
 
-        const MAX_WAIT: std::time::Duration = std::time::Duration::from_secs(30);
-        let start = tokio::time::Instant::now();
-        loop {
-            client.send_to(&msg, &proxy_address).await.unwrap();
-            if let Some(rmsg) = sandbox.maybe_timeout(wait_time, server_rx.recv()).await {
-                assert_eq!("hello", rmsg.unwrap());
-                break;
-            }
+        // Wait for connection to be re-established
+        sandbox.block_until_ready("proxy").await;
 
-            if start.elapsed() > MAX_WAIT {
-                panic!("unable to pass message through proxy after {MAX_WAIT:?}");
-            }
-        }
+        tracing::info!("proxy is ready again");
+
+        sandbox
+            .block_until_packet_gets_through(
+                &msg,
+                expected,
+                &client,
+                &proxy_address,
+                &mut server_rx,
+            )
+            .await;
     }
 });

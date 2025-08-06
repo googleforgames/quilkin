@@ -20,6 +20,8 @@ use prometheus::{IntCounterVec, IntGaugeVec, Registry};
 pub(crate) const NODE_LABEL: &str = "node";
 pub(crate) const CONTROL_PLANE_LABEL: &str = "control_plane";
 pub(crate) const TYPE_LABEL: &str = "type";
+pub(crate) const KIND_CLIENT: &str = "client";
+pub(crate) const KIND_SERVER: &str = "server";
 
 /// TODO: Remove and replace with a local registry.
 static REGISTRY_ONCE: parking_lot::Once = parking_lot::Once::new();
@@ -120,6 +122,38 @@ pub(crate) fn nacks(control_plane: &str, type_url: &str) -> prometheus::IntCount
     });
 
     NACKS.with_label_values(&[control_plane, type_url])
+}
+
+pub(crate) fn errors_total(stream_kind: &str, reason: &str) -> prometheus::IntCounter {
+    static ERRORS_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+        prometheus::register_int_counter_vec_with_registry! {
+            prometheus::opts! {
+                "xds_errors_total",
+                "Total number of xDS errors",
+            },
+            &["kind", "reason"],
+            crate::metrics::registry(),
+        }
+        .unwrap()
+    });
+
+    ERRORS_TOTAL.with_label_values(&[stream_kind, reason])
+}
+
+pub(crate) fn actions_total(stream_kind: &str, action: &str) -> prometheus::IntCounter {
+    static ACTIONS_TOTAL: Lazy<IntCounterVec> = Lazy::new(|| {
+        prometheus::register_int_counter_vec_with_registry! {
+            prometheus::opts! {
+                "xds_actions_total",
+                "Total number of xDS actions",
+            },
+            &["kind", "action"],
+            crate::metrics::registry(),
+        }
+        .unwrap()
+    });
+
+    ACTIONS_TOTAL.with_label_values(&[stream_kind, action])
 }
 
 pub struct StreamConnectionMetrics {

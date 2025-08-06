@@ -1,13 +1,7 @@
 use eyre::ContextCompat;
 use std::sync::Arc;
 
-use crate::{
-    components::proxy::SessionPool,
-    config::{Config, IcaoCode},
-    signal::ShutdownHandler,
-};
-
-const ETC_CONFIG_PATH: &str = "/etc/quilkin/quilkin.yaml";
+use crate::{components::proxy::SessionPool, config::Config, signal::ShutdownHandler};
 
 #[derive(Debug, clap::Parser)]
 #[command(next_help_heading = "Service Options")]
@@ -128,7 +122,7 @@ pub struct Service {
     )]
     tls_key_path: Option<std::path::PathBuf>,
     #[clap(long = "termination-timeout")]
-    termination_timeout: Option<crate::cli::Timeout>,
+    termination_timeout: Option<crate::cli::Duration>,
     #[clap(skip)]
     testing: bool,
 }
@@ -254,70 +248,26 @@ impl Service {
             || self.grpc_enabled
     }
 
-    pub fn build_config(&self, icao_code: IcaoCode) -> eyre::Result<Config> {
+    /// Adds the required typemap entries to the config depending on what services are enabled
+    pub fn init_config(&self, config: &mut Config) {
         use crate::config::{self, insert_default};
 
-        let mut typemap = crate::config::default_typemap();
-
         if self.udp_enabled || self.xds_enabled || self.mds_enabled {
-            insert_default::<crate::filters::FilterChain>(&mut typemap);
-            insert_default::<config::DatacenterMap>(&mut typemap);
+            insert_default::<crate::filters::FilterChain>(&mut config.dyn_cfg.typemap);
+            insert_default::<config::DatacenterMap>(&mut config.dyn_cfg.typemap);
         }
 
         if self.qcmp_enabled {
-            typemap.insert::<config::qcmp::QcmpPort>(config::qcmp::QcmpPort::new(self.qcmp_port));
+            config
+                .dyn_cfg
+                .typemap
+                .insert::<config::qcmp::QcmpPort>(config::qcmp::QcmpPort::new(self.qcmp_port));
         }
 
-        insert_default::<crate::net::ClusterMap>(&mut typemap);
-
-        Ok(Config {
-            dyn_cfg: config::DynamicConfig {
-                id: Arc::new(parking_lot::Mutex::new(config::default_id())),
-                version: config::Version::default(),
-                icao_code: config::NotifyingIcaoCode::new(icao_code),
-                typemap,
-            },
-        })
+        insert_default::<crate::net::ClusterMap>(&mut config.dyn_cfg.typemap);
     }
 
-    /// Attempts to find and configure a `Config` from a file
-    ///
-    ///
-    pub fn read_config(
-        &self,
-        config_path: &std::path::Path,
-        icao_code: IcaoCode,
-        locality: Option<crate::net::endpoint::Locality>,
-    ) -> Result<Arc<Config>, eyre::Error> {
-        let paths = [config_path, std::path::Path::new(ETC_CONFIG_PATH)];
-        let mut paths = paths.iter();
-
-        let file = loop {
-            let Some(path) = paths.next() else {
-                return Ok(<_>::default());
-            };
-
-            match std::fs::File::open(path) {
-                Ok(file) => break file,
-                Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
-                    tracing::debug!(path = %path.display(), "config path not found");
-                    continue;
-                }
-                Err(err) => {
-                    tracing::error!(path = %path.display(), error = ?err, "failed to read path");
-                    eyre::bail!(err);
-                }
-            }
-        };
-
-        let config = self.build_config(icao_code)?;
-        let json = serde_yaml::from_reader(file)?;
-        config.update_from_json(json, locality)?;
-
-        Ok(Arc::new(config))
-    }
-
-    pub fn termination_timeout(mut self, timeout: Option<crate::cli::Timeout>) -> Self {
+    pub fn termination_timeout(mut self, timeout: Option<crate::cli::Duration>) -> Self {
         self.termination_timeout = timeout;
         self
     }
@@ -440,15 +390,12 @@ impl Service {
             .qcmp_port()
             .context("QCMP was enabled, but QCMP port was not inserted into typemap")?;
 
+        qcmp_port.store(self.qcmp_port);
+
         tracing::info!(port=%self.qcmp_port, "starting qcmp service");
         let qcmp = crate::net::raw_socket_with_reuse(self.qcmp_port)?;
 
-        let join = crate::codec::qcmp::spawn(qcmp, qcmp_port.subscribe(), shutdown.shutdown_rx())?;
-        let finished = shutdown.push("qcmp");
-        tokio::spawn(async move {
-            drop(join.await);
-            drop(finished.send(Ok(())));
-        });
+        crate::codec::qcmp::spawn(qcmp, qcmp_port.subscribe(), shutdown)?;
 
         Ok(())
     }
