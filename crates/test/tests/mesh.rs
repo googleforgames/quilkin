@@ -377,7 +377,28 @@ trace_test!(relay_restart, {
 
     sc.push("server", ServerPailConfig::default(), &[]);
     sc.push(
-        "relay",
+        "relay1",
+        RelayPailConfig {
+            config: Some(TestConfig {
+                filters: FilterChain::try_create([
+                    Capture::as_filter_config(capture::Config {
+                        metadata_key: filters::capture::CAPTURED_BYTES.into(),
+                        strategy: filters::capture::Strategy::Suffix(capture::Suffix {
+                            size: 0,
+                            remove: true,
+                        }),
+                    })
+                    .unwrap(),
+                    TokenRouter::as_filter_config(None).unwrap(),
+                ])
+                .unwrap(),
+                ..Default::default()
+            }),
+        },
+        &[],
+    );
+    sc.push(
+        "relay2",
         RelayPailConfig {
             config: Some(TestConfig {
                 filters: FilterChain::try_create([
@@ -403,9 +424,9 @@ trace_test!(relay_restart, {
             endpoints: vec![("server", &[])],
             ..Default::default()
         },
-        &["server", "relay"],
+        &["server", "relay1", "relay2"],
     );
-    sc.push("proxy", ProxyPailConfig::default(), &["relay"]);
+    sc.push("proxy", ProxyPailConfig::default(), &["relay1", "relay2"]);
 
     let mut sandbox = sc.spinup().await;
 
@@ -413,10 +434,10 @@ trace_test!(relay_restart, {
     let (proxy_address, mut proxy_delta_rx) = sandbox.proxy("proxy");
 
     let mut agent_config = sandbox.config_file("agent");
-    let mut relay_config = sandbox.config_file("relay");
+    let mut relay1_config = sandbox.config_file("relay1");
+    let mut relay2_config = sandbox.config_file("relay2");
 
     let client = sandbox.client();
-
     let token = b"g".to_vec();
 
     sandbox.sleep(1000).await;
@@ -428,55 +449,74 @@ trace_test!(relay_restart, {
         }
     }
 
-    for _ in 0..10 {
-        relay_config.update(|config| {
-            config.filters = FilterChain::try_create([
-                Capture::as_labeled_filter_config(
-                    capture::Config {
-                        metadata_key: filters::capture::CAPTURED_BYTES.into(),
-                        strategy: filters::capture::Strategy::Suffix(capture::Suffix {
-                            size: token.len() as _,
-                            remove: true,
-                        }),
-                    },
-                    token.len().to_string(),
-                )
-                .unwrap(),
-                TokenRouter::as_filter_config(None).unwrap(),
-            ])
+    relay1_config.update(|config| {
+        config.filters = FilterChain::try_create([
+            Capture::as_labeled_filter_config(
+                capture::Config {
+                    metadata_key: filters::capture::CAPTURED_BYTES.into(),
+                    strategy: filters::capture::Strategy::Suffix(capture::Suffix {
+                        size: token.len() as _,
+                        remove: true,
+                    }),
+                },
+                token.len().to_string(),
+            )
+            .unwrap(),
+            TokenRouter::as_filter_config(None).unwrap(),
+        ])
+        .unwrap();
+    });
+    relay2_config.update(|config| {
+        config.filters = FilterChain::try_create([
+            Capture::as_labeled_filter_config(
+                capture::Config {
+                    metadata_key: filters::capture::CAPTURED_BYTES.into(),
+                    strategy: filters::capture::Strategy::Suffix(capture::Suffix {
+                        size: token.len() as _,
+                        remove: true,
+                    }),
+                },
+                token.len().to_string(),
+            )
+            .unwrap(),
+            TokenRouter::as_filter_config(None).unwrap(),
+        ])
+        .unwrap();
+    });
+
+    agent_config.update(|config| {
+        config.clusters.insert_default(
+            [Endpoint::with_metadata(
+                server_addr.into(),
+                quilkin::net::endpoint::Metadata {
+                    tokens: Some(token.clone()).into_iter().collect(),
+                },
+            )]
+            .into(),
+        );
+    });
+
+    sandbox.stop("relay2").await;
+
+    let mut msg = b"hello".to_vec();
+    msg.extend_from_slice(&token);
+
+    let mut updates = 0x0;
+    while (updates & 0x11) != 0x11 {
+        let rt = sandbox
+            .timeout(10000, proxy_delta_rx.recv())
+            .await
+            .0
             .unwrap();
-        });
 
-        agent_config.update(|config| {
-            config.clusters.insert_default(
-                [Endpoint::with_metadata(
-                    server_addr.into(),
-                    quilkin::net::endpoint::Metadata {
-                        tokens: Some(token.clone()).into_iter().collect(),
-                    },
-                )]
-                .into(),
-            );
-        });
-
-        let mut updates = 0x0;
-        while (updates & 0x11) != 0x11 {
-            let rt = sandbox
-                .timeout(10000, proxy_delta_rx.recv())
-                .await
-                .0
-                .unwrap();
-
-            match rt.as_ref() {
-                quilkin::xds::FILTER_CHAIN_TYPE => updates |= 0x1,
-                quilkin::xds::CLUSTER_TYPE => updates |= 0x10,
-                _ => {}
-            }
+        match rt.as_ref() {
+            quilkin::xds::FILTER_CHAIN_TYPE => updates |= 0x1,
+            quilkin::xds::CLUSTER_TYPE => updates |= 0x10,
+            _ => {}
         }
+    }
 
-        let mut msg = b"hello".to_vec();
-        msg.extend_from_slice(&token);
-
+    for i in 0..5 {
         tracing::info!(len = token.len(), "sending packet");
         client.send_to(&msg, &proxy_address).await.unwrap();
 
@@ -485,9 +525,18 @@ trace_test!(relay_restart, {
         assert_eq!("hello", rmsg.unwrap(),);
 
         tracing::info!("shutting down relay...");
-        sandbox.stop("relay").await;
+
+        let (stop, start) = if i % 2 == 0 {
+            ("relay1", "relay2")
+        } else {
+            ("relay2", "relay1")
+        };
+
+        sandbox.stop(stop).await;
 
         let wait_time = wait_time.as_millis() as u64;
+
+        tracing::info!(stop, "waiting for relay shutdown completion");
 
         loop {
             client.send_to(&msg, &proxy_address).await.unwrap();
@@ -502,7 +551,8 @@ trace_test!(relay_restart, {
 
         tracing::info!("relay shutdown complete");
 
-        sandbox.start("relay").await;
+        sandbox.sleep(1001).await;
+        sandbox.start(start).await;
 
         const MAX_WAIT: std::time::Duration = std::time::Duration::from_secs(30);
         let start = tokio::time::Instant::now();
