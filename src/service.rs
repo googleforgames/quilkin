@@ -128,7 +128,7 @@ pub struct Service {
     )]
     tls_key_path: Option<std::path::PathBuf>,
     #[clap(long = "termination-timeout")]
-    termination_timeout: Option<crate::cli::Timeout>,
+    termination_timeout: Option<crate::cli::Duration>,
     #[clap(skip)]
     testing: bool,
 }
@@ -317,7 +317,7 @@ impl Service {
         Ok(Arc::new(config))
     }
 
-    pub fn termination_timeout(mut self, timeout: Option<crate::cli::Timeout>) -> Self {
+    pub fn termination_timeout(mut self, timeout: Option<crate::cli::Duration>) -> Self {
         self.termination_timeout = timeout;
         self
     }
