@@ -16,6 +16,8 @@
 
 //! Logic for parsing and generating Quilkin Control Message Protocol (QCMP) messages.
 
+use eyre::Context;
+
 use crate::{
     metrics,
     net::{
@@ -200,6 +202,39 @@ pub fn port_channel() -> tokio::sync::broadcast::Sender<u16> {
 
 pub fn spawn(
     socket: socket2::Socket,
+    port_rx: tokio::sync::broadcast::Receiver<u16>,
+    shutdown: &mut crate::signal::ShutdownHandler,
+) -> crate::Result<()> {
+    let finished = shutdown.push("qcmp");
+    let shutdown_rx = shutdown.shutdown_rx();
+
+    let _qcmp_thread = std::thread::Builder::new()
+        .name("qcmp".into())
+        .spawn(move || {
+            let runtime = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .thread_name("qcmp-worker")
+                .build()
+                .expect("couldn't create tokio runtime in thread");
+
+            let res = runtime.block_on(async move {
+                let task = spawn_task(socket, port_rx, shutdown_rx)?;
+                drop(finished.send(task.await.wrap_err("qcmp task error")));
+
+                Ok::<_, eyre::Report>(())
+            });
+
+            if let Err(error) = res {
+                tracing::error!(%error, "qcmp thread failed with an error");
+            }
+        })
+        .expect("failed to spawn qcmp thread");
+
+    Ok(())
+}
+
+pub(crate) fn spawn_task(
+    socket: socket2::Socket,
     mut port_rx: tokio::sync::broadcast::Receiver<u16>,
     mut shutdown_rx: tokio::sync::watch::Receiver<()>,
 ) -> crate::Result<tokio::task::JoinHandle<()>> {
@@ -222,6 +257,7 @@ pub fn spawn(
                         return;
                     }
                     new_port = port_rx.recv() => {
+                        tracing::info!(change=?new_port, "received qcmp port change");
                         match new_port {
                             Ok(new_port) => {
                                 // Attempt to bind the new port
@@ -233,7 +269,7 @@ pub fn spawn(
                                     }
                                     Err(error) => {
                                         tracing::error!(%error, old_port = port, new_port, "failed to bind QCMP to new port, continuing to use old port to respond to QCMP pings");
-                                        metrics::qcmp::errors_total("failed to change port", &crate::metrics::AsnInfo::EMPTY).inc();
+                                        metrics::qcmp::errors_total("failed_port_change", &crate::metrics::AsnInfo::EMPTY).inc();
                                     }
                                 }
                             }
@@ -252,8 +288,12 @@ pub fn spawn(
                     }
                 };
 
-                match track_error(result, &crate::metrics::AsnInfo::EMPTY) {
+                match track_error(result.map_err(Error::from), &crate::metrics::AsnInfo::EMPTY) {
                     Ok((size, source)) => {
+                        tracing::debug!(
+                            %source,
+                            "received QCMP ping",
+                        );
                         let received_at = UtcTimestamp::now();
                         let ip_entry = crate::net::maxmind_db::MaxmindDb::lookup(source.ip()).map(crate::net::maxmind_db::MetricsIpNetEntry::from);
                         let asn_info = crate::metrics::AsnInfo::from(ip_entry.as_ref());
@@ -279,6 +319,11 @@ pub fn spawn(
                             metrics::qcmp::packets_total_unsupported(size, &asn_info);
                             continue;
                         };
+                        tracing::debug!(
+                            %source,
+                            %nonce,
+                            "received QCMP ping",
+                        );
 
                         metrics::qcmp::packets_total_valid(size, &asn_info);
                         Protocol::ping_reply(nonce, client_timestamp, received_at)
@@ -286,10 +331,11 @@ pub fn spawn(
 
                         tracing::debug!(
                             %source,
+                            %nonce,
                             "sending QCMP pong",
                         );
 
-                        match track_error(socket.send_to(&output_buf, source).await, &asn_info) {
+                        match track_error(socket.send_to(&output_buf, source).await.map_err(Error::from), &asn_info) {
                             Ok(len) => {
                                 if len != output_buf.len() {
                                     tracing::error!(%source, "failed to send entire QCMP pong response, expected {} but only sent {len}", output_buf.len());
@@ -311,12 +357,14 @@ pub fn spawn(
     ))
 }
 
-fn track_error<T, E: std::fmt::Display>(
-    result: Result<T, E>,
-    asn_info: &crate::metrics::AsnInfo<'_>,
-) -> Result<T, E> {
+fn track_error<T>(result: Result<T>, asn_info: &crate::metrics::AsnInfo<'_>) -> Result<T> {
     result.inspect_err(|error| {
-        let reason = error.to_string();
+        let reason = match error {
+            Error::UnknownVersion(version) => format!("unknown_version: {}", version),
+            Error::LengthMismatch(_, _) => "length_mismatch".into(),
+            Error::InvalidCommand(command) => format!("invalid_command: {}", command),
+            Error::Io(e) => format!("io: {}", e),
+        };
         metrics::qcmp::errors_total(&reason, asn_info).inc();
     })
 }
@@ -590,6 +638,8 @@ pub enum Error {
     LengthMismatch(u16, usize),
     #[error("unknown command code: {0}")]
     InvalidCommand(u8),
+    #[error("io error: {0}")]
+    Io(#[from] std::io::Error),
 }
 
 #[cfg(test)]
@@ -734,7 +784,7 @@ mod tests {
 
         let (_tx, rx) = crate::signal::channel();
         let pc = super::port_channel();
-        spawn(socket, pc.subscribe(), rx).unwrap();
+        spawn_task(socket, pc.subscribe(), rx).unwrap();
 
         let delay = Duration::from_millis(50);
         let node = QcmpMeasurement::with_artificial_delay(delay).unwrap();
