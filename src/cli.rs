@@ -297,11 +297,20 @@ impl Cli {
         loop {
             tokio::select! {
                 Some(result) = provider_tasks.join_next() => {
-                    tracing::error!(task_result=?result, "provider task completed unexpectedly, shutting down.");
-                    // Trigger shutdown so we can drain the active sessions in the service_task
-                    if let Err(error) = shutdown_tx.send(()) {
-                        tracing::error!(error=?error, "failed to trigger shutdown");
-                        return Err(error.into());
+                    match result {
+                        Ok(_) => {
+                            // TODO should improve the provider tasks shutdown so we can log
+                            // exactly which provider has stopped
+                            tracing::info!("provider task stopped");
+                        },
+                        Err(error) => {
+                            tracing::error!(task_result=?error, "provider task completed unexpectedly, shutting down.");
+                            // Trigger shutdown so we can drain the active sessions in the service_task
+                            if let Err(error) = shutdown_tx.send(()) {
+                                tracing::error!(error=?error, "failed to trigger shutdown");
+                                return Err(error.into());
+                            }
+                        },
                     }
                 },
                 result = &mut service_task => {
