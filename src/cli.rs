@@ -320,9 +320,9 @@ impl Cli {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub struct Timeout(std::time::Duration);
+pub struct Duration(std::time::Duration);
 
-impl std::str::FromStr for Timeout {
+impl std::str::FromStr for Duration {
     type Err = clap::Error;
 
     fn from_str(src: &str) -> Result<Self, Self::Err> {
@@ -336,12 +336,13 @@ impl std::str::FromStr for Timeout {
         } else {
             &src[suffix_pos..]
         };
-
-        let seconds = match suffix {
-            "s" | "S" => num,
-            "m" | "M" => num * 60,
-            "h" | "H" => num * 60 * 60,
-            "d" | "D" => num * 60 * 60 * 24,
+        use std::time::Duration as D;
+        let duration = match suffix {
+            "ms" | "MS" => D::from_millis(num),
+            "s" | "S" => D::from_secs(num),
+            "m" | "M" => D::from_secs(num * 60),
+            "h" | "H" => D::from_secs(num * 60 * 60),
+            "d" | "D" => D::from_secs(num * 60 * 60 * 24),
             s => {
                 return Err(clap::Error::raw(
                     clap::error::ErrorKind::ValueValidation,
@@ -350,11 +351,11 @@ impl std::str::FromStr for Timeout {
             }
         };
 
-        Ok(Self(std::time::Duration::from_secs(seconds)))
+        Ok(Self(duration))
     }
 }
 
-impl std::ops::Deref for Timeout {
+impl std::ops::Deref for Duration {
     type Target = std::time::Duration;
 
     fn deref(&self) -> &Self::Target {
