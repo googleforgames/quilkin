@@ -257,9 +257,15 @@ impl Cli {
         tracing::debug!(cli = ?self, "config parameters");
 
         let locality = self.locality.locality();
-        let config =
-            self.service
-                .read_config(&self.config, self.locality.icao_code, locality.clone())?;
+
+        let mut config = crate::Config::new(
+            self.service.id.clone(),
+            self.locality.icao_code,
+            &self.providers,
+            &self.service,
+        );
+        config.read_config(&self.config, locality.clone())?;
+        let config = Arc::new(config);
 
         let ready = Arc::<std::sync::atomic::AtomicBool>::default();
         let shutdown_handler = crate::signal::spawn_handler();
