@@ -92,7 +92,13 @@ trace_test!(uring_receiver, {
 
     let (mut packet_rx, endpoint) = sb.server("server");
 
-    let config = std::sync::Arc::new(quilkin::Config::default());
+    let service = quilkin::Service::builder().udp();
+    let config = std::sync::Arc::new(quilkin::Config::new(
+        None,
+        Default::default(),
+        &Default::default(),
+        &service,
+    ));
     config
         .dyn_cfg
         .clusters()
@@ -139,7 +145,12 @@ trace_test!(
 
         let (mut packet_rx, endpoint) = sb.server("server");
 
-        let config = std::sync::Arc::new(quilkin::Config::default());
+        let config = std::sync::Arc::new(quilkin::Config::new(
+            None,
+            Default::default(),
+            &Default::default(),
+            &Default::default(),
+        ));
         config
             .dyn_cfg
             .clusters()

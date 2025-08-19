@@ -257,9 +257,15 @@ impl Cli {
         tracing::debug!(cli = ?self, "config parameters");
 
         let locality = self.locality.locality();
-        let config =
-            self.service
-                .read_config(&self.config, self.locality.icao_code, locality.clone())?;
+
+        let mut config = crate::Config::new(
+            self.service.id.clone(),
+            self.locality.icao_code,
+            &self.providers,
+            &self.service,
+        );
+        config.read_config(&self.config, locality.clone())?;
+        let config = Arc::new(config);
 
         let ready = Arc::<std::sync::atomic::AtomicBool>::default();
         let shutdown_handler = crate::signal::spawn_handler();
@@ -297,11 +303,20 @@ impl Cli {
         loop {
             tokio::select! {
                 Some(result) = provider_tasks.join_next() => {
-                    tracing::error!(task_result=?result, "provider task completed unexpectedly, shutting down.");
-                    // Trigger shutdown so we can drain the active sessions in the service_task
-                    if let Err(error) = shutdown_tx.send(()) {
-                        tracing::error!(error=?error, "failed to trigger shutdown");
-                        return Err(error.into());
+                    match result {
+                        Ok(_) => {
+                            // TODO should improve the provider tasks shutdown so we can log
+                            // exactly which provider has stopped
+                            tracing::info!("provider task stopped");
+                        },
+                        Err(error) => {
+                            tracing::error!(task_result=?error, "provider task completed unexpectedly, shutting down.");
+                            // Trigger shutdown so we can drain the active sessions in the service_task
+                            if let Err(error) = shutdown_tx.send(()) {
+                                tracing::error!(error=?error, "failed to trigger shutdown");
+                                return Err(error.into());
+                            }
+                        },
                     }
                 },
                 result = &mut service_task => {

@@ -292,6 +292,17 @@ impl TestHelper {
         addr.into()
     }
 
+    pub fn new_config() -> Config {
+        let providers = crate::Providers::default();
+        let service = crate::Service::builder().udp().qcmp();
+        crate::Config::new(
+            Some("test-server".into()),
+            Default::default(),
+            &providers,
+            &service,
+        )
+    }
+
     pub async fn run_server(
         &mut self,
         config: Arc<Config>,
