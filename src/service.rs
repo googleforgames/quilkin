@@ -8,7 +8,7 @@ use crate::{components::proxy::SessionPool, config::Config, signal::ShutdownHand
 pub struct Service {
     /// The identifier for an instance.
     #[arg(long = "service.id", env = "QUILKIN_SERVICE_ID")]
-    id: Option<String>,
+    pub id: Option<String>,
     /// Whether to serve mDS requests.
     #[arg(
         long = "service.mds",

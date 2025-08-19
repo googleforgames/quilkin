@@ -258,9 +258,8 @@ impl Cli {
 
         let locality = self.locality.locality();
 
-        // TODO should use self.service.id instead of default_id() here
         let mut config = crate::Config::new(
-            crate::config::default_id(),
+            self.service.id.clone(),
             self.locality.icao_code,
             &self.providers,
             &self.service,

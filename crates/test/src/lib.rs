@@ -370,7 +370,7 @@ impl Pail {
                     .mds_port(mds_port);
 
                 let config = Arc::new(crate::Config::new(
-                    "test-relay".into(),
+                    Some("test-relay".into()),
                     Default::default(),
                     &providers,
                     &svc,
@@ -451,7 +451,7 @@ impl Pail {
                     .grpc_push_endpoints(relay_servers);
 
                 let config = Arc::new(crate::Config::new(
-                    "test-agent".into(),
+                    Some("test-agent".into()),
                     apc.icao_code,
                     &providers,
                     &svc,
@@ -517,7 +517,7 @@ impl Pail {
                     .termination_timeout(None);
 
                 let config = Arc::new(crate::Config::new(
-                    "test-proxy".into(),
+                    Some("test-proxy".into()),
                     Default::default(),
                     &Default::default(),
                     &svc,

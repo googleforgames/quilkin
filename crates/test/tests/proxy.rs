@@ -94,7 +94,7 @@ trace_test!(uring_receiver, {
 
     let service = quilkin::Service::builder().udp();
     let config = std::sync::Arc::new(quilkin::Config::new(
-        "".into(),
+        None,
         Default::default(),
         &Default::default(),
         &service,
@@ -146,7 +146,7 @@ trace_test!(
         let (mut packet_rx, endpoint) = sb.server("server");
 
         let config = std::sync::Arc::new(quilkin::Config::new(
-            "".into(),
+            None,
             Default::default(),
             &Default::default(),
             &Default::default(),

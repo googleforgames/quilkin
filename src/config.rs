@@ -336,16 +336,36 @@ impl quilkin_xds::config::Configuration for Config {
 
 use crate::net::xds::config::DeltaDiscoveryRes;
 
+fn resolve_id(id: Option<String>) -> String {
+    fn uuid() -> String {
+        Uuid::new_v4().as_hyphenated().to_string()
+    }
+
+    fn hostname() -> Option<String> {
+        cfg_if::cfg_if! {
+            if #[cfg(target_os = "linux")] {
+                sys_info::hostname().ok()
+            } else {
+                None
+            }
+        }
+    }
+
+    id.filter(|v| !v.is_empty())
+        .or_else(hostname)
+        .unwrap_or_else(uuid)
+}
+
 impl Config {
     pub fn new(
-        id: String,
+        id: Option<String>,
         icao_code: IcaoCode,
         providers: &crate::Providers,
         service: &crate::Service,
     ) -> Self {
         let mut config = Config {
             dyn_cfg: DynamicConfig {
-                id: Arc::new(parking_lot::Mutex::new(id)),
+                id: Arc::new(parking_lot::Mutex::new(resolve_id(id))),
                 version: Version::default(),
                 icao_code: NotifyingIcaoCode::new(icao_code),
                 typemap: default_typemap(),
@@ -771,20 +791,6 @@ impl Default for Version {
     fn default() -> Self {
         Self::V1Alpha1
     }
-}
-
-pub(crate) fn default_id() -> String {
-    std::env::var("QUILKIN_SERVICE_ID")
-        .or_else(|_| {
-            cfg_if::cfg_if! {
-                if #[cfg(target_os = "linux")] {
-                    sys_info::hostname()
-                } else {
-                    eyre::bail!("no sys_info support")
-                }
-            }
-        })
-        .unwrap_or_else(|_| Uuid::new_v4().as_hyphenated().to_string())
 }
 
 pub(crate) fn default_typemap() -> ConfigMap {

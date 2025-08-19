@@ -296,7 +296,7 @@ impl TestHelper {
         let providers = crate::Providers::default();
         let service = crate::Service::builder().udp().qcmp();
         crate::Config::new(
-            "test-server".into(),
+            Some("test-server".into()),
             Default::default(),
             &providers,
             &service,

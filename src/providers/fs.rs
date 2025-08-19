@@ -98,13 +98,13 @@ mod tests {
         let providers = Default::default();
         let service = Default::default();
         let source = Arc::new(crate::Config::new(
-            "basic".into(),
+            Some("basic".into()),
             Default::default(),
             &providers,
             &service,
         ));
         let dest = Arc::new(crate::Config::new(
-            "basic".into(),
+            Some("basic".into()),
             Default::default(),
             &providers,
             &service,

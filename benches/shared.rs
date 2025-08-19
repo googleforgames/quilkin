@@ -328,7 +328,7 @@ impl QuilkinLoop {
             let providers = quilkin::Providers::default();
             let service = quilkin::Service::default();
             let config = Arc::new(quilkin::Config::new(
-                "".into(),
+                None,
                 Default::default(),
                 &providers,
                 &service,

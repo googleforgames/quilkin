@@ -106,7 +106,7 @@ mod tests {
         let providers = Default::default();
         let service = Default::default();
         let config = Config::new(
-            "deserialize_client".into(),
+            Some("deserialize_client".into()),
             Default::default(),
             &providers,
             &service,
@@ -123,7 +123,7 @@ mod tests {
         let providers = Default::default();
         let service = Default::default();
         let config = Config::new(
-            "deserialize_server".into(),
+            Some("deserialize_server".into()),
             Default::default(),
             &providers,
             &service,
@@ -146,7 +146,12 @@ mod tests {
         let providers = Default::default();
         let service = Default::default();
         let before = String::from("parse_default_values");
-        let config = Config::new(before.clone(), Default::default(), &providers, &service);
+        let config = Config::new(
+            Some(before.clone()),
+            Default::default(),
+            &providers,
+            &service,
+        );
         assert!(!before.is_empty());
         config
             .update_from_json(
@@ -167,7 +172,7 @@ mod tests {
         let providers = Default::default();
         let service = Default::default();
         let config = Config::new(
-            "parse_client".into(),
+            Some("parse_client".into()),
             Default::default(),
             &providers,
             &service,
@@ -201,7 +206,7 @@ mod tests {
         let providers = Default::default();
         let service = Default::default();
         let config = Config::new(
-            "parse_ipv6_endpoint".into(),
+            Some("parse_ipv6_endpoint".into()),
             Default::default(),
             &providers,
             &service,
@@ -244,7 +249,7 @@ mod tests {
         let providers = Default::default();
         let service = Default::default();
         let config = Config::new(
-            "parse_server".into(),
+            Some("parse_server".into()),
             Default::default(),
             &providers,
             &service,
@@ -363,7 +368,7 @@ dynamic:
         let providers = crate::Providers::default();
         let service = crate::Service::default();
         let mut config = Config::new(
-            "deny_unused_fields".into(),
+            Some("deny_unused_fields".into()),
             Default::default(),
             &providers,
             &service,
