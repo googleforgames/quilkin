@@ -258,13 +258,14 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
             "subscribed to config updates"
         );
 
-        let control_plane_id = crate::core::ControlPlane {
+        let control_plane = Some(crate::core::ControlPlane {
             identifier: id.clone(),
-        };
+        });
 
         use crate::config::ClientTracker;
         let mut client_tracker = ClientTracker::track_client(node_id.clone());
 
+        let responder_control_plane = control_plane.clone();
         let client = node_id.clone();
         let cfg = self.config.clone();
         let mut shutdown = self.shutdown.clone();
@@ -322,7 +323,7 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                     let response = DeltaDiscoveryResponse {
                         resources: req.resources,
                         nonce: nonce.to_string(),
-                        control_plane: Some(control_plane_id.clone()),
+                        control_plane: responder_control_plane.clone(),
                         type_url: type_url.into(),
                         removed_resources,
                         system_version_info: VERSION_INFO.into(),
@@ -351,7 +352,7 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                 DeltaDiscoveryResponse {
                     resources: Vec::new(),
                     nonce: String::new(),
-                    control_plane: None,
+                    control_plane: control_plane.clone(),
                     type_url: message.type_url,
                     removed_resources: Vec::new(),
                     system_version_info: VERSION_INFO.into(),
@@ -364,7 +365,7 @@ impl<C: crate::config::Configuration> ControlPlane<C> {
                     DeltaDiscoveryResponse {
                         resources: Vec::new(),
                         nonce: String::new(),
-                        control_plane: None,
+                        control_plane: control_plane.clone(),
                         type_url,
                         removed_resources: Vec::new(),
                         system_version_info: VERSION_INFO.into(),
@@ -685,13 +686,14 @@ impl<C: crate::config::Configuration> AggregatedControlPlaneDiscoveryService for
             "subscribed to config updates"
         );
 
-        let control_plane_id = crate::core::ControlPlane {
+        let control_plane = Some(crate::core::ControlPlane {
             identifier: id.clone(),
-        };
+        });
 
         use crate::config::ClientTracker;
         let mut client_tracker = ClientTracker::track_client(node_id.clone());
 
+        let responder_control_plane = control_plane.clone();
         let client = node_id.clone();
         let cfg = self.config.clone();
         let responder = move |req: Option<DeltaDiscoveryRequest>,
@@ -747,7 +749,7 @@ impl<C: crate::config::Configuration> AggregatedControlPlaneDiscoveryService for
                     let response = DeltaDiscoveryResponse {
                         resources: req.resources,
                         nonce: nonce.to_string(),
-                        control_plane: Some(control_plane_id.clone()),
+                        control_plane: responder_control_plane.clone(),
                         type_url: type_url.into(),
                         removed_resources,
                         system_version_info: VERSION_INFO.into(),
@@ -776,7 +778,7 @@ impl<C: crate::config::Configuration> AggregatedControlPlaneDiscoveryService for
                 DeltaDiscoveryResponse {
                     resources: Vec::new(),
                     nonce: String::new(),
-                    control_plane: None,
+                    control_plane: control_plane.clone(),
                     type_url: message.type_url,
                     removed_resources: Vec::new(),
                     system_version_info: VERSION_INFO.into(),
@@ -789,7 +791,7 @@ impl<C: crate::config::Configuration> AggregatedControlPlaneDiscoveryService for
                     DeltaDiscoveryResponse {
                         resources: Vec::new(),
                         nonce: String::new(),
-                        control_plane: None,
+                        control_plane: control_plane.clone(),
                         type_url,
                         removed_resources: Vec::new(),
                         system_version_info: VERSION_INFO.into(),
