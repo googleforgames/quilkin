@@ -29,7 +29,9 @@ use crate::{config, metrics::provider_task_failures_total};
 use eyre::Context;
 use futures::TryStreamExt;
 
-const RETRIES: u32 = 25;
+/// Functionally infinite retries as provider tasks are long running tasks
+/// that we continually want to retry and Quilkin can run for days or weeks.
+const RETRIES: u32 = u32::MAX;
 const BACKOFF_STEP: std::time::Duration = std::time::Duration::from_millis(250);
 const MAX_DELAY: std::time::Duration = std::time::Duration::from_secs(2);
 pub(crate) const NO_UPDATE_INTERVAL: std::time::Duration = std::time::Duration::from_secs(30);
