@@ -228,7 +228,9 @@ use crate::time::DurationNanos;
 #[derive(Copy, Clone)]
 #[cfg_attr(test, derive(Debug))]
 pub struct DistanceMeasure {
+    /// Latency for a packet travelling to a given target (incoming for the target)
     pub incoming: DurationNanos,
+    /// Latency for a packet arriving from a given target (outgoing for the target)
     pub outgoing: DurationNanos,
 }
 
@@ -584,6 +586,7 @@ struct Node {
 
 impl Node {
     fn new(icao_code: IcaoCode) -> Self {
+        crate::metrics::phoenix_distance_error_estimate(icao_code).set(1.0);
         Node {
             coordinates: None,
             icao_code,
@@ -593,18 +596,26 @@ impl Node {
 
     fn increase_error_estimate(&mut self) {
         self.error_estimate += 0.1;
+        crate::metrics::phoenix_distance_error_estimate(self.icao_code).set(self.error_estimate);
     }
 
     fn adjust_coordinates(&mut self, distance: DistanceMeasure) {
         let incoming = distance.incoming.nanos() as f64;
         let outgoing = distance.outgoing.nanos() as f64;
 
+        crate::metrics::phoenix_measurement_seconds(self.icao_code, "incoming")
+            .observe(distance.incoming.duration().as_secs_f64());
+        crate::metrics::phoenix_measurement_seconds(self.icao_code, "outgoing")
+            .observe(distance.outgoing.duration().as_secs_f64());
+
         let Some(coordinates) = &mut self.coordinates else {
             let coordinates = Coordinates {
                 x: incoming,
                 y: outgoing,
             };
-            crate::metrics::phoenix_distance(self.icao_code, self.error_estimate)
+            crate::metrics::phoenix_coordinates(self.icao_code, "x").set(coordinates.x);
+            crate::metrics::phoenix_coordinates(self.icao_code, "y").set(coordinates.y);
+            crate::metrics::phoenix_distance(self.icao_code)
                 .set(Coordinates::ORIGIN.distance_to(&coordinates));
             self.coordinates = Some(coordinates);
             return;
@@ -615,7 +626,9 @@ impl Node {
         coordinates.x = (coordinates.x + (incoming * weight)) / 2.0;
         coordinates.y = (coordinates.y + (outgoing * weight)) / 2.0;
 
-        crate::metrics::phoenix_distance(self.icao_code, self.error_estimate)
+        crate::metrics::phoenix_coordinates(self.icao_code, "x").set(coordinates.x);
+        crate::metrics::phoenix_coordinates(self.icao_code, "y").set(coordinates.y);
+        crate::metrics::phoenix_distance(self.icao_code)
             .set(Coordinates::ORIGIN.distance_to(coordinates));
     }
 }

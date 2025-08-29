@@ -269,7 +269,7 @@ pub(crate) fn spawn_task(
                                     }
                                     Err(error) => {
                                         tracing::error!(%error, old_port = port, new_port, "failed to bind QCMP to new port, continuing to use old port to respond to QCMP pings");
-                                        metrics::qcmp::errors_total("failed_port_change", &crate::metrics::AsnInfo::EMPTY).inc();
+                                        metrics::qcmp::errors_total("failed_port_change").inc();
                                     }
                                 }
                             }
@@ -288,20 +288,18 @@ pub(crate) fn spawn_task(
                     }
                 };
 
-                match track_error(result.map_err(Error::from), &crate::metrics::AsnInfo::EMPTY) {
+                match track_error(result.map_err(Error::from)) {
                     Ok((size, source)) => {
                         tracing::debug!(
                             %source,
                             "received QCMP ping",
                         );
                         let received_at = UtcTimestamp::now();
-                        let ip_entry = crate::net::maxmind_db::MaxmindDb::lookup(source.ip()).map(crate::net::maxmind_db::MetricsIpNetEntry::from);
-                        let asn_info = crate::metrics::AsnInfo::from(ip_entry.as_ref());
-                        let command = match track_error(Protocol::parse(&input_buf[..size]), &asn_info) {
+                        let command = match track_error(Protocol::parse(&input_buf[..size])) {
                             Ok(Some(command)) => command,
                             Ok(None) => {
                                 tracing::debug!("rejected non-qcmp packet");
-                                metrics::qcmp::packets_total_invalid(size, &asn_info);
+                                metrics::qcmp::packets_total_invalid(size);
                                 continue;
                             }
                             Err(error) => {
@@ -316,7 +314,7 @@ pub(crate) fn spawn_task(
                         } = command
                         else {
                             tracing::warn!(%source, "rejected unsupported QCMP packet");
-                            metrics::qcmp::packets_total_unsupported(size, &asn_info);
+                            metrics::qcmp::packets_total_unsupported(size);
                             continue;
                         };
                         tracing::debug!(
@@ -325,7 +323,7 @@ pub(crate) fn spawn_task(
                             "received QCMP ping",
                         );
 
-                        metrics::qcmp::packets_total_valid(size, &asn_info);
+                        metrics::qcmp::packets_total_valid(size);
                         Protocol::ping_reply(nonce, client_timestamp, received_at)
                             .encode(&mut output_buf);
 
@@ -335,7 +333,7 @@ pub(crate) fn spawn_task(
                             "sending QCMP pong",
                         );
 
-                        match track_error(socket.send_to(&output_buf, source).await.map_err(Error::from), &asn_info) {
+                        match track_error(socket.send_to(&output_buf, source).await.map_err(Error::from)) {
                             Ok(len) => {
                                 if len != output_buf.len() {
                                     tracing::error!(%source, "failed to send entire QCMP pong response, expected {} but only sent {len}", output_buf.len());
@@ -357,7 +355,7 @@ pub(crate) fn spawn_task(
     ))
 }
 
-fn track_error<T>(result: Result<T>, asn_info: &crate::metrics::AsnInfo<'_>) -> Result<T> {
+fn track_error<T>(result: Result<T>) -> Result<T> {
     result.inspect_err(|error| {
         let reason = match error {
             Error::UnknownVersion(version) => format!("unknown_version: {}", version),
@@ -365,7 +363,7 @@ fn track_error<T>(result: Result<T>, asn_info: &crate::metrics::AsnInfo<'_>) -> 
             Error::InvalidCommand(command) => format!("invalid_command: {}", command),
             Error::Io(e) => format!("io: {}", e),
         };
-        metrics::qcmp::errors_total(&reason, asn_info).inc();
+        metrics::qcmp::errors_total(&reason).inc();
     })
 }
 

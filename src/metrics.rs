@@ -202,70 +202,70 @@ pub(crate) mod qcmp {
         METRIC.set(active as _);
     }
 
-    fn bytes_total(kind: &'static str, asn: &AsnInfo<'_>) -> IntCounter {
+    fn bytes_total(kind: &'static str) -> IntCounter {
         static METRIC: Lazy<IntCounterVec> = Lazy::new(|| {
             prometheus::register_int_counter_vec_with_registry! {
                 prometheus::opts! {
                     "service_qcmp_bytes_total",
                     "Total number of bytes processed through QCMP",
                 },
-                &["kind", ASN_LABEL],
+                &["kind"],
                 registry(),
             }
             .unwrap()
         });
 
-        METRIC.with_label_values(&[kind, asn.asn])
+        METRIC.with_label_values(&[kind])
     }
 
-    pub(crate) fn errors_total(reason: &str, asn: &AsnInfo<'_>) -> IntCounter {
+    pub(crate) fn errors_total(reason: &str) -> IntCounter {
         static METRIC: Lazy<IntCounterVec> = Lazy::new(|| {
             prometheus::register_int_counter_vec_with_registry! {
                 prometheus::opts! {
                     "service_qcmp_errors_total",
                     "total number of errors QCMP has encountered",
                 },
-                &["reason", ASN_LABEL],
+                &["reason"],
                 registry(),
             }
             .unwrap()
         });
 
-        METRIC.with_label_values(&[reason, asn.asn])
+        METRIC.with_label_values(&[reason])
     }
 
-    fn packets_total(kind: &'static str, asn: &AsnInfo<'_>) -> IntCounter {
+    fn packets_total(kind: &'static str) -> IntCounter {
         static METRIC: Lazy<IntCounterVec> = Lazy::new(|| {
             prometheus::register_int_counter_vec_with_registry! {
                 prometheus::opts! {
                     "service_qcmp_packets_total",
                     "Total number of packets processed through QCMP",
                 },
-                &["kind", ASN_LABEL],
+                &["kind"],
                 registry(),
             }
             .unwrap()
         });
 
-        METRIC.with_label_values(&[kind, asn.asn])
+        METRIC.with_label_values(&[kind])
     }
 
-    pub(crate) fn packets_total_invalid(size: usize, asn_info: &AsnInfo<'_>) {
+    pub(crate) fn packets_total_invalid(size: usize) {
         const KIND: &str = "invalid";
-        bytes_total(KIND, asn_info).inc_by(size as u64);
-        packets_total(KIND, asn_info).inc();
+        bytes_total(KIND).inc_by(size as u64);
+        packets_total(KIND).inc();
     }
 
-    pub(crate) fn packets_total_unsupported(size: usize, asn_info: &AsnInfo<'_>) {
+    pub(crate) fn packets_total_unsupported(size: usize) {
         const KIND: &str = "unsupported";
-        bytes_total(KIND, asn_info).inc_by(size as u64);
-        packets_total(KIND, asn_info).inc();
+        bytes_total(KIND).inc_by(size as u64);
+        packets_total(KIND).inc();
     }
 
-    pub(crate) fn packets_total_valid(size: usize, asn_info: &AsnInfo<'_>) {
+    pub(crate) fn packets_total_valid(size: usize) {
         const KIND: &str = "valid";
-        bytes_total(KIND, asn_info).inc_by(size as u64);
-        packets_total(KIND, asn_info).inc();
+        bytes_total(KIND).inc_by(size as u64);
+        packets_total(KIND).inc();
     }
 }
 
@@ -375,20 +375,72 @@ pub(crate) fn phoenix_requests() -> &'static IntCounter {
     &PHOENIX_REQUESTS
 }
 
-pub(crate) fn phoenix_distance(icao: crate::config::IcaoCode, error_estimate: f64) -> Gauge {
-    static PHOENIX_DISTANCE: Lazy<GaugeVec> = Lazy::new(|| {
-        prometheus::register_gauge_vec_with_registry! {
-            prometheus::opts! {
-                "service_phoenix_distance",
-                "The distance from this instance to another node in the network",
+pub(crate) fn phoenix_measurement_seconds(
+    icao: crate::config::IcaoCode,
+    direction: &str,
+) -> Histogram {
+    static PHOENIX_MEASUREMENT: Lazy<HistogramVec> = Lazy::new(|| {
+        prometheus::register_histogram_vec_with_registry! {
+            prometheus::histogram_opts! {
+                "phoenix_measurement_seconds",
+                "Histogram of phoenix measurements for a given node",
+                prometheus::DEFAULT_BUCKETS.to_vec()
             },
-            &["icao", "error_estimate"],
+            &["icao", "direction"],
             registry(),
         }
         .unwrap()
     });
 
-    PHOENIX_DISTANCE.with_label_values(&[icao.as_ref(), &error_estimate.to_string()])
+    PHOENIX_MEASUREMENT.with_label_values(&[icao.as_ref(), direction])
+}
+
+pub(crate) fn phoenix_distance(icao: crate::config::IcaoCode) -> Gauge {
+    static PHOENIX_DISTANCE: Lazy<GaugeVec> = Lazy::new(|| {
+        prometheus::register_gauge_vec_with_registry! {
+            prometheus::opts! {
+                "phoenix_distance",
+                "The distance from this instance to another node in the network",
+            },
+            &["icao"],
+            registry(),
+        }
+        .unwrap()
+    });
+
+    PHOENIX_DISTANCE.with_label_values(&[icao.as_ref()])
+}
+
+pub(crate) fn phoenix_coordinates(icao: crate::config::IcaoCode, axis: &str) -> Gauge {
+    static PHOENIX_COORDINATES: Lazy<GaugeVec> = Lazy::new(|| {
+        prometheus::register_gauge_vec_with_registry! {
+            prometheus::opts! {
+                "phoenix_coordinates",
+                "The phoenix coordinates relative to this node",
+            },
+            &["icao", "axis"],
+            registry(),
+        }
+        .unwrap()
+    });
+
+    PHOENIX_COORDINATES.with_label_values(&[icao.as_ref(), axis])
+}
+
+pub(crate) fn phoenix_distance_error_estimate(icao: crate::config::IcaoCode) -> Gauge {
+    static PHOENIX_DISTANCE_ERROR_ESTIMATE: Lazy<GaugeVec> = Lazy::new(|| {
+        prometheus::register_gauge_vec_with_registry! {
+            prometheus::opts! {
+                "phoenix_distance_error_estimate",
+                "The distance from this instance to another node in the network",
+            },
+            &["icao"],
+            registry(),
+        }
+        .unwrap()
+    });
+
+    PHOENIX_DISTANCE_ERROR_ESTIMATE.with_label_values(&[icao.as_ref()])
 }
 
 pub(crate) fn phoenix_task_closed() -> &'static IntGauge {
