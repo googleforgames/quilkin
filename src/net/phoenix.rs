@@ -613,6 +613,8 @@ impl Node {
                 x: incoming,
                 y: outgoing,
             };
+            crate::metrics::phoenix_coordinates(self.icao_code, "x").set(coordinates.x);
+            crate::metrics::phoenix_coordinates(self.icao_code, "y").set(coordinates.y);
             crate::metrics::phoenix_distance(self.icao_code)
                 .set(Coordinates::ORIGIN.distance_to(&coordinates));
             self.coordinates = Some(coordinates);
@@ -624,6 +626,8 @@ impl Node {
         coordinates.x = (coordinates.x + (incoming * weight)) / 2.0;
         coordinates.y = (coordinates.y + (outgoing * weight)) / 2.0;
 
+        crate::metrics::phoenix_coordinates(self.icao_code, "x").set(coordinates.x);
+        crate::metrics::phoenix_coordinates(self.icao_code, "y").set(coordinates.y);
         crate::metrics::phoenix_distance(self.icao_code)
             .set(Coordinates::ORIGIN.distance_to(coordinates));
     }

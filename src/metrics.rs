@@ -375,7 +375,10 @@ pub(crate) fn phoenix_requests() -> &'static IntCounter {
     &PHOENIX_REQUESTS
 }
 
-pub(crate) fn phoenix_measurement_seconds(icao: crate::config::IcaoCode, direction: &str) -> Histogram {
+pub(crate) fn phoenix_measurement_seconds(
+    icao: crate::config::IcaoCode,
+    direction: &str,
+) -> Histogram {
     static PHOENIX_MEASUREMENT: Lazy<HistogramVec> = Lazy::new(|| {
         prometheus::register_histogram_vec_with_registry! {
             prometheus::histogram_opts! {
@@ -406,6 +409,22 @@ pub(crate) fn phoenix_distance(icao: crate::config::IcaoCode) -> Gauge {
     });
 
     PHOENIX_DISTANCE.with_label_values(&[icao.as_ref()])
+}
+
+pub(crate) fn phoenix_coordinates(icao: crate::config::IcaoCode, axis: &str) -> Gauge {
+    static PHOENIX_COORDINATES: Lazy<GaugeVec> = Lazy::new(|| {
+        prometheus::register_gauge_vec_with_registry! {
+            prometheus::opts! {
+                "phoenix_coordinates",
+                "The phoenix coordinates relative to this node",
+            },
+            &["icao", "axis"],
+            registry(),
+        }
+        .unwrap()
+    });
+
+    PHOENIX_COORDINATES.with_label_values(&[icao.as_ref(), axis])
 }
 
 pub(crate) fn phoenix_distance_error_estimate(icao: crate::config::IcaoCode) -> Gauge {
