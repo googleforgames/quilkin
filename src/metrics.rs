@@ -202,70 +202,70 @@ pub(crate) mod qcmp {
         METRIC.set(active as _);
     }
 
-    fn bytes_total(kind: &'static str, asn: &AsnInfo<'_>) -> IntCounter {
+    fn bytes_total(kind: &'static str) -> IntCounter {
         static METRIC: Lazy<IntCounterVec> = Lazy::new(|| {
             prometheus::register_int_counter_vec_with_registry! {
                 prometheus::opts! {
                     "service_qcmp_bytes_total",
                     "Total number of bytes processed through QCMP",
                 },
-                &["kind", ASN_LABEL],
+                &["kind"],
                 registry(),
             }
             .unwrap()
         });
 
-        METRIC.with_label_values(&[kind, asn.asn])
+        METRIC.with_label_values(&[kind])
     }
 
-    pub(crate) fn errors_total(reason: &str, asn: &AsnInfo<'_>) -> IntCounter {
+    pub(crate) fn errors_total(reason: &str) -> IntCounter {
         static METRIC: Lazy<IntCounterVec> = Lazy::new(|| {
             prometheus::register_int_counter_vec_with_registry! {
                 prometheus::opts! {
                     "service_qcmp_errors_total",
                     "total number of errors QCMP has encountered",
                 },
-                &["reason", ASN_LABEL],
+                &["reason"],
                 registry(),
             }
             .unwrap()
         });
 
-        METRIC.with_label_values(&[reason, asn.asn])
+        METRIC.with_label_values(&[reason])
     }
 
-    fn packets_total(kind: &'static str, asn: &AsnInfo<'_>) -> IntCounter {
+    fn packets_total(kind: &'static str) -> IntCounter {
         static METRIC: Lazy<IntCounterVec> = Lazy::new(|| {
             prometheus::register_int_counter_vec_with_registry! {
                 prometheus::opts! {
                     "service_qcmp_packets_total",
                     "Total number of packets processed through QCMP",
                 },
-                &["kind", ASN_LABEL],
+                &["kind"],
                 registry(),
             }
             .unwrap()
         });
 
-        METRIC.with_label_values(&[kind, asn.asn])
+        METRIC.with_label_values(&[kind])
     }
 
-    pub(crate) fn packets_total_invalid(size: usize, asn_info: &AsnInfo<'_>) {
+    pub(crate) fn packets_total_invalid(size: usize) {
         const KIND: &str = "invalid";
-        bytes_total(KIND, asn_info).inc_by(size as u64);
-        packets_total(KIND, asn_info).inc();
+        bytes_total(KIND).inc_by(size as u64);
+        packets_total(KIND).inc();
     }
 
-    pub(crate) fn packets_total_unsupported(size: usize, asn_info: &AsnInfo<'_>) {
+    pub(crate) fn packets_total_unsupported(size: usize) {
         const KIND: &str = "unsupported";
-        bytes_total(KIND, asn_info).inc_by(size as u64);
-        packets_total(KIND, asn_info).inc();
+        bytes_total(KIND).inc_by(size as u64);
+        packets_total(KIND).inc();
     }
 
-    pub(crate) fn packets_total_valid(size: usize, asn_info: &AsnInfo<'_>) {
+    pub(crate) fn packets_total_valid(size: usize) {
         const KIND: &str = "valid";
-        bytes_total(KIND, asn_info).inc_by(size as u64);
-        packets_total(KIND, asn_info).inc();
+        bytes_total(KIND).inc_by(size as u64);
+        packets_total(KIND).inc();
     }
 }
 
