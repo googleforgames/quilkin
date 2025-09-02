@@ -44,12 +44,10 @@ multiple-versions = "deny"
 skip = [
     { crate = "object@0.32.2", reason = "transitive dependency due to backtrace, backtrace is updated, but stable-eyre using a feature that doesn't exist any longer, and can't update, sigh" },
     { crate = "hashbrown@0.14.5", reason = "many crates use this old version" },
-    { crate = "webpki-roots@0.26.11", reason = "webpki-roots depends on itself :-/" },
+    { crate = "getrandom@0.2.16", reason = "ring" },
 ]
 skip-tree = [
-    { crate = "regex-automata@0.1", reason = "matchers is using an old version, https://github.com/hawkw/matchers/pull/5, but it's also barely maintained..." },
     { crate = "thiserror@1.0.69", reason = "many crates use this old version" },
-    { crate = "tower@0.4.13", reason = "several crates use this old version" },
 ]
 
 [bans.workspace-dependencies]
