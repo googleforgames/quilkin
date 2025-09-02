@@ -101,7 +101,7 @@ hyper = { version = "1.7", features = ["http2", "http1", "server"] }
 hyper-rustls = { version = "0.27", default-features = false, features = [
     "http2",
     "webpki-roots",
-    "aws-lc-rs",
+    "ring",
 ] }
 ipnetwork = "0.20.0" # keep in sync with maxmind
 k8s-openapi.workspace = true
@@ -142,7 +142,7 @@ lasso = { version = "0.7.3", features = ["multi-threaded"] }
 kube.workspace = true
 kube-core.workspace = true
 hickory-resolver = { version = "0.25.2", features = [
-    "https-aws-lc-rs",
+    "https-ring",
     "system-config",
 ] }
 async-trait = "0.1.88"
@@ -153,7 +153,7 @@ form_urlencoded = "1.2.1"
 enum_dispatch = "0.3.13"
 gxhash = "3.5.0"
 kube-leader-election = "0.41.0"
-rustls = "0.23.27"
+rustls = { version = "0.23", default-features = false }
 tracing-appender.workspace = true
 
 [dependencies.hyper-util]
@@ -187,6 +187,7 @@ debug = true
 members = [
     ".",
     "crates/agones",
+    "crates/corrosion-agent",
     "crates/macros",
     #"crates/nmap-service-probes",
     "crates/proto-gen",
@@ -241,7 +242,7 @@ tokio = { version = "1.45.0", features = [
     "parking_lot",
     "tracing",
 ] }
-tonic = { version = "0.14", features = ["tls-ring"] }
+tonic = { version = "0.14", default-features = false, features = ["codegen", "router", "tls-ring", "transport"] }
 tonic-prost = "0.14"
 tower = "0.5"
 tracing = "0.1.41"

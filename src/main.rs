@@ -29,7 +29,7 @@ fn main() {
         .block_on(async {
             // Unwrap is safe here as it will only fail if called more than once.
             stable_eyre::install().unwrap();
-            rustls::crypto::aws_lc_rs::default_provider()
+            rustls::crypto::ring::default_provider()
                 .install_default()
                 .unwrap();
 
