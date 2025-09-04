@@ -187,7 +187,7 @@ debug = true
 members = [
     ".",
     "crates/agones",
-    "crates/corrosion-agent",
+    "crates/corrosion",
     "crates/macros",
     #"crates/nmap-service-probes",
     "crates/proto-gen",

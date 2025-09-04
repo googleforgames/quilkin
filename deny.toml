@@ -32,6 +32,7 @@ ignore = [
 deny = [
     { crate = "openssl-sys", use-instead = "rustls" },
     { crate = "openssl", use-instead = "rustls" },
+    { crate = "aws-lc-sys", use-instead = "ring" },
     { crate = "cmake", use-instead = "cc" },
     { crate = "chrono", use-instead = "time", wrappers = [
         "k8s-openapi",
