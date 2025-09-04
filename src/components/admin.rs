@@ -203,7 +203,7 @@ async fn collect_pprof(
 
     tokio::time::sleep(duration).await;
 
-    let encoded_profile = crate::codec::prost::encode(&guard.report().build()?.pprof()?)?;
+    let encoded_profile = encode_pprof(guard.report().build()?)?;
 
     // gzip profile
     let mut encoder = libflate::gzip::Encoder::new(Vec::new())?;
@@ -217,6 +217,131 @@ async fn collect_pprof(
         .header(hyper::header::CONTENT_ENCODING, "gzip")
         .body(Body::new(Bytes::from(gzip_body)))
         .map_err(From::from)
+}
+
+/// Encodes a pprof report into a binary protobuf
+///
+/// We do this encoding ourselves instead of the using the built-in method in
+/// pprof since pprof takes a long time to update its tonic version, and the pprof
+/// protobuf never changes so the transitive dependency doesn't make any sense for us
+#[cfg(target_os = "linux")]
+fn encode_pprof(report: pprof::Report) -> eyre::Result<Vec<u8>> {
+    use quilkin_xds::generated::perftools::profiles as protos;
+    use std::collections::HashMap;
+
+    const SAMPLES: &str = "samples";
+    const COUNT: &str = "count";
+    const CPU: &str = "cpu";
+    const NANOSECONDS: &str = "nanoseconds";
+    const THREAD: &str = "thread";
+
+    let mut dedup_str = std::collections::HashSet::new();
+    for key in report.data.keys() {
+        dedup_str.insert(key.thread_name_or_id());
+        for frame in key.frames.iter() {
+            for symbol in frame {
+                dedup_str.insert(symbol.name());
+                dedup_str.insert(symbol.sys_name().into_owned());
+                dedup_str.insert(symbol.filename().into_owned());
+            }
+        }
+    }
+    dedup_str.insert(SAMPLES.into());
+    dedup_str.insert(COUNT.into());
+    dedup_str.insert(CPU.into());
+    dedup_str.insert(NANOSECONDS.into());
+    dedup_str.insert(THREAD.into());
+    // string table's first element must be an empty string
+    let mut string_table = vec!["".to_owned()];
+    string_table.extend(dedup_str);
+
+    let mut strings = HashMap::new();
+    for (index, name) in string_table.iter().enumerate() {
+        strings.insert(name.as_str(), index);
+    }
+
+    let mut sample = vec![];
+    let mut location = vec![];
+    let mut function = vec![];
+    let mut functions = HashMap::new();
+    for (key, count) in report.data.iter() {
+        let mut locs = vec![];
+        for frame in key.frames.iter() {
+            for symbol in frame {
+                let name = symbol.name();
+                if let Some(loc_idx) = functions.get(&name) {
+                    locs.push(*loc_idx);
+                    continue;
+                }
+                let sys_name = symbol.sys_name();
+                let filename = symbol.filename();
+                let lineno = symbol.lineno();
+                let function_id = function.len() as u64 + 1;
+                let func = protos::Function {
+                    id: function_id,
+                    name: *strings.get(name.as_str()).unwrap() as i64,
+                    system_name: *strings.get(sys_name.as_ref()).unwrap() as i64,
+                    filename: *strings.get(filename.as_ref()).unwrap() as i64,
+                    ..protos::Function::default()
+                };
+                functions.insert(name, function_id);
+                let line = protos::Line {
+                    function_id,
+                    line: lineno as i64,
+                };
+                let loc = protos::Location {
+                    id: function_id,
+                    line: vec![line],
+                    ..protos::Location::default()
+                };
+                // the fn_tbl has the same length with loc_tbl
+                function.push(func);
+                location.push(loc);
+                // current frame locations
+                locs.push(function_id);
+            }
+        }
+        let thread_name = protos::Label {
+            key: *strings.get(THREAD).unwrap() as i64,
+            str: *strings.get(&key.thread_name_or_id().as_str()).unwrap() as i64,
+            ..protos::Label::default()
+        };
+        sample.push(protos::Sample {
+            location_id: locs,
+            value: vec![
+                *count as i64,
+                *count as i64 * 1_000_000_000 / report.timing.frequency as i64,
+            ],
+            label: vec![thread_name],
+        });
+    }
+    let samples_value = protos::ValueType {
+        ty: *strings.get(SAMPLES).unwrap() as i64,
+        unit: *strings.get(COUNT).unwrap() as i64,
+    };
+    let time_value = protos::ValueType {
+        ty: *strings.get(CPU).unwrap() as i64,
+        unit: *strings.get(NANOSECONDS).unwrap() as i64,
+    };
+    let profile = protos::Profile {
+        sample_type: vec![samples_value, time_value],
+        sample,
+        string_table,
+        function,
+        location,
+        time_nanos: report
+            .timing
+            .start_time
+            .duration_since(std::time::SystemTime::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos() as i64,
+        duration_nanos: report.timing.duration.as_nanos() as i64,
+        period_type: Some(time_value),
+        period: 1_000_000_000 / report.timing.frequency as i64,
+        ..protos::Profile::default()
+    };
+
+    Ok(crate::codec::prost::encode(&profile)?)
 }
 
 #[cfg(test)]

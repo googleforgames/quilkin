@@ -20,7 +20,7 @@ use std::{
 };
 
 // The proto-gen version to use, installing if needed
-const VERSION: &str = "0.3.0";
+const VERSION: &str = "0.4.0";
 
 fn check_version(name: &str, prefix: &str, wanted: &str) -> bool {
     if let Ok(output) = Command::new(name).arg("--version").output() {
@@ -111,8 +111,24 @@ fn install() {
         if !child.wait().expect("tar is not installed").success() {
             panic!("failed to extract proto-gen binary from tarball");
         }
+    } else if let Ok(local) = std::env::var("PROTO_GEN_SRC") {
+        if !Command::new("cargo")
+            .args(["install", "--locked", "-f", "--path", &local])
+            .status()
+            .expect("cargo not installed")
+            .success()
+        {
+            panic!("failed to install proto-gen from local path");
+        }
     } else if !Command::new("cargo")
-        .args(["install", "--locked", "-f", "proto-gen"])
+        .args([
+            "install",
+            "--version",
+            VERSION,
+            "--locked",
+            "-f",
+            "proto-gen",
+        ])
         .status()
         .expect("cargo not installed")
         .success()
@@ -121,7 +137,7 @@ fn install() {
     }
 }
 
-const VERSION_PROTOC: &str = "25.3";
+const VERSION_PROTOC: &str = "32.0";
 
 fn install_protoc() {
     if std::env::var_os("CI").is_none() {
@@ -215,6 +231,7 @@ fn execute(which: &str) {
                 "filters/pass/v1alpha1/pass",
                 "filters/token_router/v1alpha1/token_router",
                 "filters/timestamp/v1alpha1/timestamp",
+                "pprof",
             ],
         ),
     ];

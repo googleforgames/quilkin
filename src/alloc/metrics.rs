@@ -78,19 +78,19 @@ pub fn spawn_heap_stats_updates(period: std::time::Duration, mut srx: crate::sig
                 let stats = super::tracking::Allocator::stats();
 
                 BYTES_TOTAL
-                    .with_label_values(&[])
+                    .with_label_values::<&str>(&[])
                     .inc_by(stats.cumul_alloc_size - bytes_total);
                 bytes_total = stats.cumul_alloc_size;
                 ALLOCS_TOTAL
-                    .with_label_values(&[])
+                    .with_label_values::<&str>(&[])
                     .inc_by(stats.cumul_alloc_count - alloc_total);
                 alloc_total = stats.cumul_alloc_count;
 
                 if let Ok(val) = stats.current_allocated_size().try_into() {
-                    EXTANT_SIZE.with_label_values(&[]).set(val);
+                    EXTANT_SIZE.with_label_values::<&str>(&[]).set(val);
                 }
                 if let Ok(val) = stats.current_allocation_count().try_into() {
-                    EXTANT_COUNT.with_label_values(&[]).set(val);
+                    EXTANT_COUNT.with_label_values::<&str>(&[]).set(val);
                 }
             } else {
                 tracing::trace!("exiting heap-stats task");

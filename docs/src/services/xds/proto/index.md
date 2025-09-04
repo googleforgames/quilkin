@@ -65,6 +65,16 @@
 - [quilkin/filters/timestamp/v1alpha1/timestamp.proto](#quilkin_filters_timestamp_v1alpha1_timestamp-proto)
     - [Timestamp](#quilkin-filters-timestamp-v1alpha1-Timestamp)
   
+- [quilkin/pprof.proto](#quilkin_pprof-proto)
+    - [Function](#perftools-profiles-Function)
+    - [Label](#perftools-profiles-Label)
+    - [Line](#perftools-profiles-Line)
+    - [Location](#perftools-profiles-Location)
+    - [Mapping](#perftools-profiles-Mapping)
+    - [Profile](#perftools-profiles-Profile)
+    - [Sample](#perftools-profiles-Sample)
+    - [ValueType](#perftools-profiles-ValueType)
+  
 - [Scalar Value Types](#scalar-value-types)
 
 
@@ -775,6 +785,206 @@ of xDS servers to connect to in the relay itself.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | metadata_key | [google.protobuf.StringValue](#google-protobuf-StringValue) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="quilkin_pprof-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## quilkin/pprof.proto
+
+
+
+<a name="perftools-profiles-Function"></a>
+
+### Function
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [uint64](#uint64) |  | Unique nonzero id for the function. |
+| name | [int64](#int64) |  | Name of the function, in human-readable form if available.
+
+Index into string table |
+| system_name | [int64](#int64) |  | Name of the function, as identified by the system. For instance, it can be a C&#43;&#43; mangled name.
+
+Index into string table |
+| filename | [int64](#int64) |  | Source file containing the function.
+
+Index into string table |
+| start_line | [int64](#int64) |  | Line number in source file. |
+
+
+
+
+
+
+<a name="perftools-profiles-Label"></a>
+
+### Label
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| key | [int64](#int64) |  | Index into string table |
+| str | [int64](#int64) |  | At most one of the following must be present
+
+Index into string table |
+| num | [int64](#int64) |  |  |
+| num_unit | [int64](#int64) |  | Should only be present when num is present. Specifies the units of num. Use arbitrary string (for example, &#34;requests&#34;) as a custom count unit. If no unit is specified, consumer may apply heuristic to deduce the unit. Consumers may also interpret units like &#34;bytes&#34; and &#34;kilobytes&#34; as memory units and units like &#34;seconds&#34; and &#34;nanoseconds&#34; as time units, and apply appropriate unit conversions to these.
+
+Index into string table |
+
+
+
+
+
+
+<a name="perftools-profiles-Line"></a>
+
+### Line
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| function_id | [uint64](#uint64) |  | The id of the corresponding profile.Function for this line. |
+| line | [int64](#int64) |  | Line number in source code. |
+
+
+
+
+
+
+<a name="perftools-profiles-Location"></a>
+
+### Location
+Describes function and line table debug information.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [uint64](#uint64) |  | Unique nonzero id for the location. A profile could use instruction addresses or any integer sequence as ids. |
+| mapping_id | [uint64](#uint64) |  | The id of the corresponding profile.Mapping for this location. It can be unset if the mapping is unknown or not applicable for this profile type. |
+| address | [uint64](#uint64) |  | The instruction address for this location, if available. It should be within [Mapping.memory_start...Mapping.memory_limit] for the corresponding mapping. A non-leaf address may be in the middle of a call instruction. It is up to display tools to find the beginning of the instruction if necessary. |
+| line | [Line](#perftools-profiles-Line) | repeated | Multiple line indicates this location has inlined functions, where the last entry represents the caller into which the preceding entries were inlined.
+
+E.g., if memcpy() is inlined into printf: line[0].function_name == &#34;memcpy&#34; line[1].function_name == &#34;printf&#34; |
+| is_folded | [bool](#bool) |  | Provides an indication that multiple symbols map to this location&#39;s address, for example due to identical code folding by the linker. In that case the line information above represents one of the multiple symbols. This field must be recomputed when the symbolization state of the profile changes. |
+
+
+
+
+
+
+<a name="perftools-profiles-Mapping"></a>
+
+### Mapping
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [uint64](#uint64) |  | Unique nonzero id for the mapping. |
+| memory_start | [uint64](#uint64) |  | Address at which the binary (or DLL) is loaded into memory. |
+| memory_limit | [uint64](#uint64) |  | The limit of the address range occupied by this mapping. |
+| file_offset | [uint64](#uint64) |  | Offset in the binary that corresponds to the first mapped address. |
+| filename | [int64](#int64) |  | The object this entry is loaded from. This can be a filename on disk for the main binary and shared libraries, or virtual abstractions like &#34;[vdso]&#34;.
+
+Index into string table |
+| build_id | [int64](#int64) |  | A string that uniquely identifies a particular program version with high probability. E.g., for binaries generated by GNU tools, it could be the contents of the .note.gnu.build-id field.
+
+Index into string table |
+| has_functions | [bool](#bool) |  | The following fields indicate the resolution of symbolic info. |
+| has_filenames | [bool](#bool) |  |  |
+| has_line_numbers | [bool](#bool) |  |  |
+| has_inline_frames | [bool](#bool) |  |  |
+
+
+
+
+
+
+<a name="perftools-profiles-Profile"></a>
+
+### Profile
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| sample_type | [ValueType](#perftools-profiles-ValueType) | repeated | A description of the samples associated with each Sample.value. For a cpu profile this might be: [[&#34;cpu&#34;,&#34;nanoseconds&#34;]] or [[&#34;wall&#34;,&#34;seconds&#34;]] or [[&#34;syscall&#34;,&#34;count&#34;]] For a heap profile, this might be: [[&#34;allocations&#34;,&#34;count&#34;], [&#34;space&#34;,&#34;bytes&#34;]], If one of the values represents the number of events represented by the sample, by convention it should be at index 0 and use sample_type.unit == &#34;count&#34;. |
+| sample | [Sample](#perftools-profiles-Sample) | repeated | The set of samples recorded in this profile. |
+| mapping | [Mapping](#perftools-profiles-Mapping) | repeated | Mapping from address ranges to the image/binary/library mapped into that address range. mapping[0] will be the main binary. |
+| location | [Location](#perftools-profiles-Location) | repeated | Useful program location |
+| function | [Function](#perftools-profiles-Function) | repeated | Functions referenced by locations |
+| string_table | [string](#string) | repeated | A common table for strings referenced by various messages. string_table[0] must always be &#34;&#34;. |
+| drop_frames | [int64](#int64) |  | frames with Function.function_name fully matching the following regexp will be dropped from the samples, along with their successors.
+
+Index into string table. |
+| keep_frames | [int64](#int64) |  | frames with Function.function_name fully matching the following regexp will be kept, even if it matches drop_functions.
+
+Index into string table. |
+| time_nanos | [int64](#int64) |  | Time of collection (UTC) represented as nanoseconds past the epoch. |
+| duration_nanos | [int64](#int64) |  | Duration of the profile, if a duration makes sense. |
+| period_type | [ValueType](#perftools-profiles-ValueType) |  | The kind of events between sampled ocurrences. e.g [ &#34;cpu&#34;,&#34;cycles&#34; ] or [ &#34;heap&#34;,&#34;bytes&#34; ] |
+| period | [int64](#int64) |  | The number of events between sampled occurrences. |
+| comment | [int64](#int64) | repeated | Freeform text associated to the profile.
+
+Indices into string table. |
+| default_sample_type | [int64](#int64) |  | Index into the string table of the type of the preferred sample value. If unset, clients should default to the last sample value. |
+
+
+
+
+
+
+<a name="perftools-profiles-Sample"></a>
+
+### Sample
+Each Sample records values encountered in some program
+context. The program context is typically a stack trace, perhaps
+augmented with auxiliary information like the thread-id, some
+indicator of a higher level request being handled etc.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| location_id | [uint64](#uint64) | repeated | The ids recorded here correspond to a Profile.location.id. The leaf is at location_id[0]. |
+| value | [int64](#int64) | repeated | The type and unit of each value is defined by the corresponding entry in Profile.sample_type. All samples must have the same number of values, the same as the length of Profile.sample_type. When aggregating multiple samples into a single sample, the result has a list of values that is the elemntwise sum of the lists of the originals. |
+| label | [Label](#perftools-profiles-Label) | repeated | label includes additional context for this sample. It can include things like a thread id, allocation size, etc |
+
+
+
+
+
+
+<a name="perftools-profiles-ValueType"></a>
+
+### ValueType
+ValueType describes the semantics and measurement units of a value.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| ty | [int64](#int64) |  | Rename it from type to ty to avoid using keyword in Rust.
+
+Index into string table. |
+| unit | [int64](#int64) |  | Index into string table. |
 
 
 

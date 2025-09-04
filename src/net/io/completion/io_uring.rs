@@ -162,7 +162,7 @@ enum LoopPacketInner {
 #[repr(C)]
 struct LoopPacket {
     msghdr: libc::msghdr,
-    addr: libc::sockaddr_storage,
+    addr: socket2::SockAddrStorage,
     packet: Option<LoopPacketInner>,
     io_vec: libc::iovec,
 }
@@ -178,8 +178,7 @@ impl LoopPacket {
                 iov_base: std::ptr::null_mut(),
                 iov_len: 0,
             },
-            // SAFETY: sockaddr_storage is POD
-            addr: unsafe { std::mem::zeroed() },
+            addr: socket2::SockAddrStorage::zeroed(),
         }
     }
 
@@ -216,7 +215,7 @@ impl LoopPacket {
         self.msghdr.msg_iov = std::ptr::addr_of_mut!(self.io_vec);
         self.msghdr.msg_iovlen = 1;
         self.msghdr.msg_name = std::ptr::addr_of_mut!(self.addr).cast();
-        self.msghdr.msg_namelen = std::mem::size_of::<libc::sockaddr_storage>() as _;
+        self.msghdr.msg_namelen = std::mem::size_of::<socket2::SockAddrStorage>() as _;
     }
 
     #[inline]
