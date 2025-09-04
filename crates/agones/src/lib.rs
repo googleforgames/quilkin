@@ -91,7 +91,7 @@ impl Client {
     /// * Removes previous test namespaces
     /// * Retrieves the `IMAGE_TAG` to test from env vars, and panics if it if not available.
     pub async fn new() -> Client {
-        let _provider = rustls::crypto::aws_lc_rs::default_provider().install_default();
+        let _provider = rustls::crypto::ring::default_provider().install_default();
         let mut client = CLIENT
             .get_or_init(|| async {
                 let client = kube::Client::try_default()
