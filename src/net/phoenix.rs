@@ -301,55 +301,63 @@ impl<M: Measurement + 'static> Phoenix<M> {
         Builder::new(measurement)
     }
 
+    async fn update(&self, mut current_interval: std::time::Duration) -> std::time::Duration {
+        let mut total_difference = 0;
+        let mut count = 0;
+
+        let nodes = self.select_nodes_to_probe();
+
+        for address in nodes {
+            let Some(mut node) = self.nodes.get_mut(&address) else {
+                tracing::debug!(%address, "node removed between selection and measurement");
+                continue;
+            };
+
+            match self.measurement.measure_distance(address).await {
+                Ok(distance) => {
+                    node.adjust_coordinates(distance);
+                    total_difference += distance.total_nanos();
+                    count += 1;
+                }
+                Err(error) => {
+                    node.increase_error_estimate();
+                    let consecutive_errors = node.consecutive_errors();
+                    if consecutive_errors > 3 {
+                        tracing::warn!(%address, %error, %consecutive_errors, "error measuring distance");
+                    } else {
+                        tracing::debug!(%address, %error, "error measuring distance");
+                    }
+                }
+            }
+        }
+
+        if count > 0 {
+            let avg_difference_ns = total_difference / count;
+
+            // Adjust the interval based on the avg_difference
+            if Duration::from_nanos(avg_difference_ns as u64) < self.stability_threshold {
+                current_interval += self.adjustment_duration;
+            } else {
+                current_interval -= self.adjustment_duration;
+            }
+
+            // Ensure current_interval remains within bounds
+            current_interval =
+                current_interval.clamp(self.interval_range.start, self.interval_range.end);
+        }
+
+        let _ = self.update_watcher.0.send(());
+        current_interval
+    }
+
     /// Starts the background update task to continously sample from nodes
     /// and update their coordinates.
     pub async fn background_update_task(&self) {
         let mut current_interval = self.interval_range.start;
-        let mut first = Some(self.all_nodes());
 
         loop {
-            let mut total_difference = 0;
-            let mut count = 0;
+            current_interval = self.update(current_interval).await;
 
-            let nodes_to_probe = first
-                .take()
-                .unwrap_or_else(|| self.random_subset_of_nodes());
-
-            for address in nodes_to_probe {
-                let Some(mut node) = self.nodes.get_mut(&address) else {
-                    tracing::debug!(%address, "node removed between selection and measurement");
-                    continue;
-                };
-
-                match self.measurement.measure_distance(address).await {
-                    Ok(distance) => {
-                        node.adjust_coordinates(distance);
-                        total_difference += distance.total_nanos();
-                        count += 1;
-                    }
-                    Err(error) => {
-                        tracing::debug!(%address, %error, "error measuring distance");
-                        node.increase_error_estimate();
-                    }
-                }
-            }
-
-            if count > 0 {
-                let avg_difference_ns = total_difference / count;
-
-                // Adjust the interval based on the avg_difference
-                if Duration::from_nanos(avg_difference_ns as u64) < self.stability_threshold {
-                    current_interval += self.adjustment_duration;
-                } else {
-                    current_interval -= self.adjustment_duration;
-                }
-
-                // Ensure current_interval remains within bounds
-                current_interval =
-                    current_interval.clamp(self.interval_range.start, self.interval_range.end);
-            }
-
-            let _ = self.update_watcher.0.send(());
             tokio::time::sleep(current_interval).await;
         }
     }
@@ -358,6 +366,7 @@ impl<M: Measurement + 'static> Phoenix<M> {
         self.update_watcher.1.clone()
     }
 
+    #[allow(dead_code)]
     fn all_nodes(&self) -> Vec<SocketAddr> {
         self.nodes
             .iter()
@@ -365,26 +374,32 @@ impl<M: Measurement + 'static> Phoenix<M> {
             .collect::<Vec<_>>()
     }
 
-    fn random_subset_of_nodes(&self) -> Vec<SocketAddr> {
+    /// Returns a set of node addresses to probe.
+    ///
+    /// - Always returns at least 1 node unless the list of nodes is empty
+    /// - Always returns all of the nodes that have not been mapped yet
+    /// - Returns a randomly selected subset of nodes that have been mapped
+    fn select_nodes_to_probe(&self) -> Vec<SocketAddr> {
         use rand::seq::SliceRandom;
-        let unmapped_nodes = self
+
+        let (unmapped, mut mapped): (Vec<_>, Vec<_>) = self
             .nodes
             .iter()
-            .filter(|entry| entry.coordinates.is_none());
+            .partition(|entry| entry.coordinates.is_none());
 
-        if unmapped_nodes.clone().count() > 0 {
-            unmapped_nodes.map(|entry| *entry.key()).collect()
-        } else {
-            let mut nodes = self
-                .nodes
-                .iter()
-                .map(|entry| *entry.key())
-                .collect::<Vec<_>>();
-            nodes.shuffle(&mut rand::rng());
-            let subset_size = (nodes.len() as f64 * self.subset_percentage).abs() as usize;
+        mapped.shuffle(&mut rand::rng());
 
-            nodes[..subset_size].to_vec()
-        }
+        // Select a subset of the already mapped nodes, but always at least one node
+        let subset_size = (mapped.len() as f64 * self.subset_percentage)
+            .abs()
+            .max(1.0) as usize;
+
+        mapped
+            .iter()
+            .map(|entry| *entry.key())
+            .take(subset_size)
+            .chain(unmapped.iter().map(|entry| *entry.key())) // Always include all unmapped nodes
+            .collect()
     }
 
     #[cfg(test)]
@@ -582,6 +597,7 @@ struct Node {
     coordinates: Option<Coordinates>,
     icao_code: IcaoCode,
     error_estimate: f64,
+    consecutive_errors: u64,
 }
 
 impl Node {
@@ -591,15 +607,22 @@ impl Node {
             coordinates: None,
             icao_code,
             error_estimate: 1.0,
+            consecutive_errors: 0,
         }
+    }
+
+    fn consecutive_errors(&self) -> u64 {
+        self.consecutive_errors
     }
 
     fn increase_error_estimate(&mut self) {
         self.error_estimate += 0.1;
+        self.consecutive_errors += 1;
         crate::metrics::phoenix_distance_error_estimate(self.icao_code).set(self.error_estimate);
     }
 
     fn adjust_coordinates(&mut self, distance: DistanceMeasure) {
+        self.consecutive_errors = 0;
         let incoming = distance.incoming.nanos() as f64;
         let outgoing = distance.outgoing.nanos() as f64;
 
@@ -714,6 +737,78 @@ mod tests {
         let _phoenix = Phoenix::new(MockMeasurement {
             latencies: <_>::default(),
         });
+    }
+
+    #[test]
+    fn zero_nodes_return_empty_subset() {
+        let phoenix = Phoenix::new(MockMeasurement {
+            latencies: <_>::default(),
+        });
+
+        assert_eq!(phoenix.select_nodes_to_probe(), vec![]);
+    }
+
+    #[tokio::test]
+    async fn one_node_returns_single_node_subset() {
+        let phoenix = Phoenix::new(MockMeasurement {
+            latencies: <_>::default(),
+        });
+
+        let socket_addr = "127.0.0.1:8080".parse().unwrap();
+        phoenix.add_node(socket_addr, abcd());
+
+        // First time it will be returned as part of "unmapped_nodes"
+        assert_eq!(phoenix.select_nodes_to_probe(), vec![socket_addr]);
+        phoenix.measure_all_nodes().await;
+        // After it has been measured it should still be returned so we don't get stuck without
+        // ever making additional measurements
+        assert_eq!(phoenix.select_nodes_to_probe(), vec![socket_addr]);
+    }
+
+    #[tokio::test]
+    async fn select_nodes_to_probe() {
+        let latencies = HashMap::from([
+            ("127.0.0.1:8080".parse().unwrap(), (100, 100).into()),
+            ("127.0.0.1:8081".parse().unwrap(), (200, 200).into()),
+            ("127.0.0.1:8082".parse().unwrap(), (200, 200).into()),
+            ("127.0.0.1:8083".parse().unwrap(), (200, 200).into()),
+            ("127.0.0.1:8084".parse().unwrap(), (200, 200).into()),
+        ]);
+        let failed_address = "127.0.0.1:8080".parse::<SocketAddr>().unwrap();
+        let failed_addresses = Arc::new(Mutex::new(HashSet::from([failed_address])));
+        let phoenix = Phoenix::builder(FailedAddressesMock {
+            latencies,
+            failed_addresses,
+        })
+        .subset_percentage(0.25)
+        .build();
+
+        phoenix.add_node("127.0.0.1:8080".parse().unwrap(), abcd());
+        phoenix.add_node("127.0.0.1:8081".parse().unwrap(), efgh());
+        phoenix.add_node("127.0.0.1:8082".parse().unwrap(), efgh());
+        phoenix.add_node("127.0.0.1:8083".parse().unwrap(), efgh());
+        phoenix.add_node("127.0.0.1:8084".parse().unwrap(), efgh());
+
+        let mut nodes_to_probe = phoenix.select_nodes_to_probe();
+        nodes_to_probe.sort();
+        let expected_nodes_to_probe = vec![
+            "127.0.0.1:8080".parse().unwrap(),
+            "127.0.0.1:8081".parse().unwrap(),
+            "127.0.0.1:8082".parse().unwrap(),
+            "127.0.0.1:8083".parse().unwrap(),
+            "127.0.0.1:8084".parse().unwrap(),
+        ];
+        assert_eq!(nodes_to_probe, expected_nodes_to_probe);
+
+        phoenix.measure_all_nodes().await;
+
+        // Ensure that we always get the node that has not been mapped yet, as well as 1 out of the
+        // 4 mapped nodes due to the 25% subset percentage
+        for _ in 0..10 {
+            let nodes_to_probe = phoenix.select_nodes_to_probe();
+            assert_eq!(nodes_to_probe.len(), 2);
+            assert!(nodes_to_probe.contains(&failed_address));
+        }
     }
 
     #[tokio::test]
