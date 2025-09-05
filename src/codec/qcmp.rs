@@ -164,12 +164,15 @@ impl Measurement for QcmpMeasurement {
         &self,
         address: std::net::SocketAddr,
     ) -> eyre::Result<DistanceMeasure> {
-        {
-            let mut ping = QcmpPacket::default();
+        let nonce = {
+            let mut payload = QcmpPacket::default();
+            let ping = Protocol::ping();
+            let nonce = ping.nonce();
             self.socket
-                .send_to(Protocol::ping().encode(&mut ping), address)
+                .send_to(ping.encode(&mut payload), address)
                 .await?;
-        }
+            nonce
+        };
 
         let mut recv = [0u8; 512];
 
@@ -189,8 +192,44 @@ impl Measurement for QcmpMeasurement {
             return Err(eyre::eyre!("received non qcmp packet {:?}", &recv[..size]));
         };
 
+        if reply.nonce() != nonce {
+            tracing::warn!(sent = nonce, got = reply.nonce(), "qcmp nonce mismatch");
+            return Err(eyre::eyre!(
+                "qcmp nonce mismatch (sent, got): {} != {}",
+                nonce,
+                reply.nonce()
+            ));
+        }
+
         reply
             .distance(now)
+            .inspect(|d| {
+                if d.total() > std::time::Duration::from_secs(5) {
+                    let Protocol::PingReply {
+                        nonce: pong_nonce,
+                        client_timestamp,
+                        server_start_timestamp,
+                        server_transmit_timestamp,
+                    } = &reply
+                    else {
+                        return;
+                    };
+                    let outgoing = now - *server_transmit_timestamp;
+                    let incoming = *server_start_timestamp - *client_timestamp;
+                    let server_processing = *server_transmit_timestamp - *server_start_timestamp;
+                    tracing::warn!(
+                        ping_nonce=nonce,
+                        pong_nonce,
+                        outgoing=?outgoing.duration(),
+                        incoming=?incoming.duration(),
+                        server_processing=?server_processing.duration(),
+                        client_timestamp=?client_timestamp.unix_nanos(),
+                        server_start_timestamp=?server_start_timestamp.unix_nanos(),
+                        server_transmit_timestamp=?server_transmit_timestamp.unix_nanos(),
+                        now=?now.unix_nanos(),
+                        "total distance larger than timeout");
+                }
+            })
             .ok_or_else(|| eyre::eyre!("received non ping reply"))
     }
 }
