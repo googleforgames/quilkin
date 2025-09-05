@@ -427,6 +427,22 @@ pub(crate) fn phoenix_coordinates(icao: crate::config::IcaoCode, axis: &str) -> 
     PHOENIX_COORDINATES.with_label_values(&[icao.as_ref(), axis])
 }
 
+pub(crate) fn phoenix_coordinates_alpha(icao: crate::config::IcaoCode) -> Gauge {
+    static PHOENIX_COORDINATES_ALPHA: Lazy<GaugeVec> = Lazy::new(|| {
+        prometheus::register_gauge_vec_with_registry! {
+            prometheus::opts! {
+                "phoenix_coordinates_alpha",
+                "The alpha used when adjusting coordinates",
+            },
+            &["icao"],
+            registry(),
+        }
+        .unwrap()
+    });
+
+    PHOENIX_COORDINATES_ALPHA.with_label_values(&[icao.as_ref()])
+}
+
 pub(crate) fn phoenix_distance_error_estimate(icao: crate::config::IcaoCode) -> Gauge {
     static PHOENIX_DISTANCE_ERROR_ESTIMATE: Lazy<GaugeVec> = Lazy::new(|| {
         prometheus::register_gauge_vec_with_registry! {

@@ -598,16 +598,19 @@ struct Node {
     icao_code: IcaoCode,
     error_estimate: f64,
     consecutive_errors: u64,
+    alpha: f64,
 }
 
 impl Node {
     fn new(icao_code: IcaoCode) -> Self {
         crate::metrics::phoenix_distance_error_estimate(icao_code).set(1.0);
+        crate::metrics::phoenix_coordinates_alpha(icao_code).set(1.0);
         Node {
             coordinates: None,
             icao_code,
             error_estimate: 1.0,
             consecutive_errors: 0,
+            alpha: 1.0,
         }
     }
 
@@ -619,6 +622,8 @@ impl Node {
         self.error_estimate += 0.1;
         self.consecutive_errors += 1;
         crate::metrics::phoenix_distance_error_estimate(self.icao_code).set(self.error_estimate);
+        self.alpha = (self.alpha - 0.1).clamp(0.2, 1.0);
+        crate::metrics::phoenix_coordinates_alpha(self.icao_code).set(self.alpha);
     }
 
     fn adjust_coordinates(&mut self, distance: DistanceMeasure) {
@@ -644,10 +649,11 @@ impl Node {
             return;
         };
 
-        let weight = self.error_estimate;
-
-        coordinates.x = (coordinates.x + (incoming * weight)) / 2.0;
-        coordinates.y = (coordinates.y + (outgoing * weight)) / 2.0;
+        // Exponentially weighted moving average
+        coordinates.x = self.alpha * incoming + (1.0 - self.alpha) * coordinates.x;
+        coordinates.y = self.alpha * outgoing + (1.0 - self.alpha) * coordinates.y;
+        self.alpha = (self.alpha + 0.05).clamp(0.2, 1.0);
+        crate::metrics::phoenix_coordinates_alpha(self.icao_code).set(self.alpha);
 
         crate::metrics::phoenix_coordinates(self.icao_code, "x").set(coordinates.x);
         crate::metrics::phoenix_coordinates(self.icao_code, "y").set(coordinates.y);
