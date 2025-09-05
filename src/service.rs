@@ -360,7 +360,7 @@ impl Service {
         let finalizer = crate::net::phoenix::spawn(
             phoenix,
             datacenters.clone(),
-            crate::net::phoenix::Phoenix::new(crate::codec::qcmp::QcmpMeasurement::new()?),
+            crate::net::phoenix::Phoenix::new(crate::codec::qcmp::QcmpTransceiver::new()?),
             shutdown.shutdown_rx(),
         )?;
 

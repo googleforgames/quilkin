@@ -129,6 +129,7 @@ thiserror.workspace = true
 time = { version = "0.3", default-features = false, features = ["std"] }
 tokio.workspace = true
 tokio-stream.workspace = true
+tokio-util.workspace = true
 tonic.workspace = true
 tower.workspace = true
 tracing.workspace = true
@@ -242,6 +243,7 @@ tokio = { version = "1.45.0", features = [
     "parking_lot",
     "tracing",
 ] }
+tokio-util = "0.7.16"
 tonic = { version = "0.14", default-features = false, features = ["codegen", "router", "tls-ring", "transport"] }
 tonic-prost = "0.14"
 tower = "0.5"
