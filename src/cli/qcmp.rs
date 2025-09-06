@@ -15,10 +15,7 @@
  */
 use std::net::SocketAddr;
 
-use crate::{
-    codec::qcmp::{self, Protocol},
-    time::{DurationNanos, UtcTimestamp},
-};
+use crate::time::DurationNanos;
 
 #[derive(Clone, Debug, clap::Subcommand)]
 pub enum Qcmp {
@@ -45,50 +42,27 @@ pub struct Ping {
 impl Ping {
     pub async fn run(&self) -> crate::Result<()> {
         tracing::info!("starting ping task");
-        let addr: SocketAddr = match self.endpoint {
-            SocketAddr::V4(_) => (std::net::Ipv4Addr::UNSPECIFIED, 0).into(),
-            SocketAddr::V6(_) => (std::net::Ipv6Addr::UNSPECIFIED, 0).into(),
-        };
 
-        let socket = tokio::net::UdpSocket::bind(addr).await?;
         let mut results = Vec::new();
-        let mut recv_buf = [0; 1500 /* MTU */];
-        let mut send_buf = qcmp::QcmpPacket::default();
 
+        let qcmp_transceiver = std::sync::Arc::new(crate::codec::qcmp::QcmpTransceiver::new()?);
         let mut ticker = self.interval.map(|d| tokio::time::interval(d.0));
 
         for _ in 0..self.amount {
             if let Some(ticker) = ticker.as_mut() {
                 let _ = ticker.tick().await;
             }
-            let ping = Protocol::ping();
-            socket
-                .send_to(ping.encode(&mut send_buf), &self.endpoint)
+
+            let (recv_time, reply) = match qcmp_transceiver
+                .ping(self.endpoint, std::time::Duration::from_secs(5))
                 .await
-                .unwrap();
-
-            let Ok(socket_result) =
-                tokio::time::timeout(self.timeout.0, socket.recv_from(&mut recv_buf)).await
-            else {
-                tracing::error!(endpoint=%self.endpoint, "exceeded timeout duration");
-                continue;
-            };
-
-            let size = match socket_result {
-                Ok((size, _)) => size,
+            {
+                Ok((recv_time, reply)) => (recv_time, reply),
                 Err(error) => {
-                    tracing::error!(%error, "unable to receive data from socket");
+                    tracing::error!(endpoint=%self.endpoint, ?error, "ping failed");
                     continue;
                 }
             };
-
-            let recv_time = UtcTimestamp::now();
-            let reply = Protocol::parse(&recv_buf[..size]).unwrap().unwrap();
-
-            if ping.nonce() != reply.nonce() {
-                tracing::error!(sent_nonce=%ping.nonce(), recv_nonce=%reply.nonce(), "mismatched nonces");
-                continue;
-            }
 
             let delay = reply.round_trip_delay(recv_time).unwrap();
             tracing::info!(delay_millis=%format!("{:.2}", delay.duration().as_secs_f64() * 1000.0), "successful ping");

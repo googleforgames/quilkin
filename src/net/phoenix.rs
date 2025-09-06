@@ -983,7 +983,7 @@ mod tests {
         tokio::time::sleep(Duration::from_millis(150)).await;
 
         let measurement =
-            crate::codec::qcmp::QcmpMeasurement::with_artificial_delay(Duration::from_millis(50))
+            crate::codec::qcmp::QcmpTransceiver::with_artificial_delay(Duration::from_millis(50))
                 .unwrap();
 
         let phoenix = Phoenix::builder(measurement)
