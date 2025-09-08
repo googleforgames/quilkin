@@ -395,6 +395,22 @@ pub(crate) fn phoenix_measurement_seconds(
     PHOENIX_MEASUREMENT.with_label_values(&[icao.as_ref(), direction])
 }
 
+pub(crate) fn phoenix_measurement_errors(icao: crate::config::IcaoCode) -> IntCounter {
+    static PHOENIX_MEASUREMENT_ERRORS: Lazy<IntCounterVec> = Lazy::new(|| {
+        prometheus::register_int_counter_vec_with_registry! {
+            prometheus::opts! {
+                "phoenix_measurement_errors_total",
+                "The number of measurement errors",
+            },
+            &["icao"],
+            registry(),
+        }
+        .unwrap()
+    });
+
+    PHOENIX_MEASUREMENT_ERRORS.with_label_values(&[icao.as_ref()])
+}
+
 pub(crate) fn phoenix_distance(icao: crate::config::IcaoCode) -> Gauge {
     static PHOENIX_DISTANCE: Lazy<GaugeVec> = Lazy::new(|| {
         prometheus::register_gauge_vec_with_registry! {
