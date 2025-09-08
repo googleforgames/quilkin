@@ -131,66 +131,244 @@ impl<'buf> PacketParser<'buf> {
     }
 }
 
-/// A measurement implementation using QCMP pings for measuring the distance
-/// between nodes.
+/// The maximum capacity of concurrent in-flight qcmp pings are bound by the number of unique
+/// nonces we can hold, since that is how we pair a response to a request
+const MAX_WAITER_CAPACITY: usize = u8::MAX as usize + 1;
+
+/// `NoncePool` keeps a pool of nonces that can be leased and ensures that a given nonce lease can
+/// only be held by one lessee at a time
 #[derive(Debug, Clone)]
-pub struct QcmpMeasurement {
+struct NoncePool {
+    nonces: Arc<std::sync::Mutex<Vec<u8>>>,
+}
+
+impl NoncePool {
+    pub fn new() -> Self {
+        let mut nonces = Vec::with_capacity(MAX_WAITER_CAPACITY);
+        for i in 0..u8::MAX {
+            nonces.push(i);
+        }
+
+        Self {
+            nonces: Arc::new(std::sync::Mutex::new(nonces)),
+        }
+    }
+
+    /// Return a `NonceLease` with a randomly selected nonce, or None if there are no more nonces to
+    /// lease. The `NonceLease` will return the lease when dropped.
+    pub fn lease(&self) -> Option<NonceLease> {
+        let mut guard = match self.nonces.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => {
+                let guard = poisoned.into_inner();
+                tracing::warn!("recovered from poisoned mutex");
+                guard
+            }
+        };
+
+        let length = guard.len();
+
+        if length == 0 {
+            None
+        } else {
+            let nonce = guard.swap_remove(rand::random_range(..length));
+            Some(NonceLease {
+                pool: self.nonces.clone(),
+                nonce,
+            })
+        }
+    }
+}
+
+/// A lease of a nonce that will return the lease when dropped
+struct NonceLease {
+    pool: Arc<std::sync::Mutex<Vec<u8>>>,
+    nonce: u8,
+}
+
+impl NonceLease {
+    pub fn nonce(&self) -> u8 {
+        self.nonce
+    }
+}
+
+impl Drop for NonceLease {
+    fn drop(&mut self) {
+        let mut guard = match self.pool.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => {
+                let guard = poisoned.into_inner();
+                tracing::warn!("recovered from poisoned mutex");
+                guard
+            }
+        };
+        guard.push(self.nonce);
+    }
+}
+
+/// A transciever that can handle multiple simultaneous QCMP pings over the same socket and ensure
+/// that responses are forwarded to the correct receiver via the QCMP nonce
+#[derive(Debug, Clone)]
+pub struct QcmpTransceiver {
     socket: Arc<DualStackEpollSocket>,
     #[cfg(test)]
     delay: Option<Duration>,
+    nonces: NoncePool,
+    waiters: Arc<dashmap::DashMap<u8, tokio::sync::oneshot::Sender<(UtcTimestamp, Protocol)>>>,
+    cancellation_token: tokio_util::sync::CancellationToken,
 }
 
-impl QcmpMeasurement {
+impl Drop for QcmpTransceiver {
+    fn drop(&mut self) {
+        self.cancellation_token.cancel();
+    }
+}
+
+/// Asynchronous receive task that listens on the socket and receives all responses as soon as
+/// possible, recording the receive time, and forwarding to the matching request channel if it is
+/// registered.
+async fn receive_task(
+    socket: Arc<DualStackEpollSocket>,
+    waiters: Arc<dashmap::DashMap<u8, tokio::sync::oneshot::Sender<(UtcTimestamp, Protocol)>>>,
+    cancellation_token: tokio_util::sync::CancellationToken,
+) {
+    loop {
+        let mut recv = [0u8; 512];
+        tokio::select! {
+            _ = cancellation_token.cancelled() => {
+                tracing::debug!("task cancelled, stopping receiving on socket");
+                return;
+            }
+            result = socket.recv_from(&mut recv) => {
+                match result {
+                    Ok((size, addr)) => {
+                        let recv_timestamp = UtcTimestamp::now();
+                        let Ok(Some(reply)) = Protocol::parse(&recv[..size]) else {
+                            tracing::warn!("received non qcmp packet {:?}", &recv[..size]);
+                            continue;
+                        };
+
+                        let key = reply.nonce();
+                        if let Some((_, waiter)) = waiters.remove(&key) {
+                            if let Err(error) = waiter.send((recv_timestamp, reply)) {
+                                tracing::error!(?error, "failed to inform waiter");
+                            }
+                        } else {
+                            tracing::debug!(
+                                ?addr,
+                                nonce = reply.nonce(),
+                                "received packet without a waiter"
+                            );
+                        }
+                    }
+                    Err(error) => tracing::error!(?error, "recv error"),
+                }
+            }
+        }
+    }
+}
+
+impl QcmpTransceiver {
     pub fn new() -> crate::Result<Self> {
+        let socket = Arc::new(DualStackEpollSocket::new(0)?);
+        let nonces = NoncePool::new();
+        let waiters = Arc::new(dashmap::DashMap::with_capacity(MAX_WAITER_CAPACITY));
+        let cancellation_token = tokio_util::sync::CancellationToken::new();
+
+        let task_socket = socket.clone();
+        let task_waiters = waiters.clone();
+        let task_cancellation_token = cancellation_token.clone();
+
+        // Spawn receiver task that will receive and route packets to the registered waiters
+        tokio::spawn(async move {
+            receive_task(task_socket, task_waiters, task_cancellation_token).await;
+        });
+
         Ok(Self {
-            socket: Arc::new(DualStackEpollSocket::new(0)?),
+            socket,
             #[cfg(test)]
             delay: None,
+            nonces,
+            waiters,
+            cancellation_token,
         })
     }
 
     #[cfg(test)]
     pub fn with_artificial_delay(delay: Duration) -> crate::Result<Self> {
-        Ok(Self {
-            socket: Arc::new(DualStackEpollSocket::new(0)?),
-            delay: Some(delay),
+        QcmpTransceiver::new().map(|mut q| {
+            q.delay = Some(delay);
+            q
         })
+    }
+
+    /// Attempt to ping the address with the given timeout
+    pub async fn ping(
+        &self,
+        address: std::net::SocketAddr,
+        timeout: std::time::Duration,
+    ) -> eyre::Result<(UtcTimestamp, Protocol)> {
+        let (tx, rx) = tokio::sync::oneshot::channel::<(UtcTimestamp, Protocol)>();
+
+        let nonce_lease = self
+            .nonces
+            .lease()
+            .ok_or(eyre::eyre!("maximum bandwidth reached"))?;
+
+        let nonce = nonce_lease.nonce();
+
+        // Register our sender channel so the receiver task knows where to forward the packet
+        drop(
+            self.waiters
+                .insert(nonce, tx)
+                .inspect(|_| tracing::warn!(nonce, "waiter channel collision")),
+        );
+
+        self.socket
+            .send_to(
+                Protocol::ping_with_nonce(nonce).encode(&mut QcmpPacket::default()),
+                address,
+            )
+            .await?;
+
+        // Wait until timeout for the receiver task to forward the packet to us
+        let result = tokio::time::timeout(timeout, rx).await;
+
+        // Unregister our sender channel as we are no longer interested in a response
+        drop(self.waiters.remove(&nonce));
+
+        match result {
+            Ok(result) => match result {
+                #[cfg(test)]
+                Ok(mut pong) => {
+                    if let Some(ad) = self.delay {
+                        pong.0 =
+                            UtcTimestamp::from_nanos(pong.0.unix_nanos() + ad.as_nanos() as i64);
+                    }
+
+                    Ok(pong)
+                }
+                #[cfg(not(test))]
+                Ok(pong) => Ok(pong),
+                Err(error) => Err(error.into()),
+            },
+            Err(error) => Err(error.into()),
+        }
     }
 }
 
 #[async_trait::async_trait]
-impl Measurement for QcmpMeasurement {
+impl Measurement for QcmpTransceiver {
     async fn measure_distance(
         &self,
         address: std::net::SocketAddr,
     ) -> eyre::Result<DistanceMeasure> {
-        {
-            let mut ping = QcmpPacket::default();
-            self.socket
-                .send_to(Protocol::ping().encode(&mut ping), address)
-                .await?;
-        }
-
-        let mut recv = [0u8; 512];
-
-        let (size, _) = tokio::time::timeout(
-            std::time::Duration::from_secs(5),
-            self.socket.recv_from(&mut recv),
-        )
-        .await??;
-
-        #[cfg(test)]
-        if let Some(ad) = self.delay {
-            tokio::time::sleep(ad).await;
-        }
-
-        let now = UtcTimestamp::now();
-        let Some(reply) = Protocol::parse(&recv[..size])? else {
-            return Err(eyre::eyre!("received non qcmp packet {:?}", &recv[..size]));
-        };
+        let (recv_timestamp, reply) = self
+            .ping(address, std::time::Duration::from_secs(5))
+            .await?;
 
         reply
-            .distance(now)
+            .distance(recv_timestamp)
             .ok_or_else(|| eyre::eyre!("received non ping reply"))
     }
 }
@@ -785,7 +963,7 @@ mod tests {
         spawn_task(socket, pc.subscribe(), rx).unwrap();
 
         let delay = Duration::from_millis(50);
-        let node = QcmpMeasurement::with_artificial_delay(delay).unwrap();
+        let node = QcmpTransceiver::with_artificial_delay(delay).unwrap();
 
         // fire messages until we get one back, so we know the socket is ready.
         let mut check = false;
@@ -808,5 +986,56 @@ mod tests {
                 delay * 2
             );
         }
+    }
+
+    #[tokio::test]
+    async fn nonce_pool() {
+        // we want to lease _all_ of the available nonces
+        let num_leasers = u8::MAX as usize;
+        // and then wait for one extra lease attempt that will fail
+        let barrier_limit = num_leasers + 1;
+
+        let nonce_pool = NoncePool::new();
+        let barrier_one = Arc::new(tokio::sync::Barrier::new(barrier_limit));
+        let barrier_two = Arc::new(tokio::sync::Barrier::new(barrier_limit));
+        let mut handles = Vec::with_capacity(num_leasers);
+
+        for _ in 0..num_leasers {
+            let nb = nonce_pool.clone();
+            let b1 = barrier_one.clone();
+            let b2 = barrier_two.clone();
+
+            handles.push(tokio::spawn(async move {
+                let nonce_lease = nb.lease();
+                assert!(nonce_lease.is_some());
+                let nonce_lease = nonce_lease.unwrap();
+                let nonce = nonce_lease.nonce();
+
+                b1.wait().await;
+                b2.wait().await;
+
+                nonce
+            }));
+        }
+
+        // Make sure all tasks have reached the first barrier
+        println!("waiting at barrier one");
+        barrier_one.wait().await;
+
+        // Ensure all nonces have been leased out
+        assert!(nonce_pool.lease().is_none());
+
+        // Release all waiting tasks
+        println!("waiting at barrier two");
+        barrier_two.wait().await;
+
+        let mut results = Vec::with_capacity(num_leasers);
+        for handle in handles {
+            results.push(handle.await.unwrap());
+        }
+
+        // Ensure that all leased nonces were unique
+        let mut set = std::collections::HashSet::with_capacity(num_leasers);
+        assert!(results.iter().all(|x| set.insert(x)));
     }
 }

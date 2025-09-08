@@ -618,6 +618,7 @@ impl Node {
     fn increase_error_estimate(&mut self) {
         self.error_estimate += 0.1;
         self.consecutive_errors += 1;
+        crate::metrics::phoenix_measurement_errors(self.icao_code).inc();
         crate::metrics::phoenix_distance_error_estimate(self.icao_code).set(self.error_estimate);
     }
 
@@ -983,7 +984,7 @@ mod tests {
         tokio::time::sleep(Duration::from_millis(150)).await;
 
         let measurement =
-            crate::codec::qcmp::QcmpMeasurement::with_artificial_delay(Duration::from_millis(50))
+            crate::codec::qcmp::QcmpTransceiver::with_artificial_delay(Duration::from_millis(50))
                 .unwrap();
 
         let phoenix = Phoenix::builder(measurement)
